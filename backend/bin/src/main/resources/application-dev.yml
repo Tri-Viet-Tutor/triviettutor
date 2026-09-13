@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/viettritutor
+    username: viettri
+    password: ${DB_PASSWORD:dev_password_change_me}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate         # Flyway owns the schema; JPA only validates
+    show-sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+# Load from .env in development (use Spring Boot dotenv or IDE env vars)
+app:
+  jwt:
+    secret: ${JWT_SECRET:dev_secret_at_least_32_chars_long_!!}
+    expiration-ms: 86400000
+
+logging:
+  level:
+    com.viettritutor: DEBUG
+    org.springframework.security: DEBUG
