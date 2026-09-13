@@ -14,7 +14,7 @@ It manages courses, class scheduling, student enrollments, tutor assignments, at
 | UI          | Tailwind CSS, shadcn/ui                                                    |
 | State       | Zustand (auth session)                                                     |
 | Forms       | React Hook Form + Zod                                                      |
-| Backend     | Spring Boot 3, Java 17, Spring Web, Spring Data JPA, Spring Security      |
+| Backend     | Spring Boot 3, Java 21, Spring Web, Spring Data JPA, Spring Security      |
 | Database    | PostgreSQL 16                                                              |
 | Migration   | Flyway                                                                     |
 | API Docs    | springdoc-openapi (Swagger UI @ `/swagger-ui.html`)                        |
@@ -30,6 +30,7 @@ triviettutor/
 ├── Documentation/          # Business rules & architecture docs
 ├── frontend/               # React + Vite + TypeScript SPA
 ├── backend/                # Spring Boot 3 REST API
+├── db/                     # Seed data for local database
 ├── docker-compose.yml      # Local dev database (PostgreSQL + pgAdmin)
 ├── .env.example            # Backend environment variable template
 └── README.md
@@ -41,8 +42,8 @@ triviettutor/
 
 ### Prerequisites
 
-- **Java 17+** (e.g., Temurin / OpenJDK)
-- **Node.js 20+** + npm
+- **Java 21** (e.g., Temurin / OpenJDK)
+- **Node.js 22.23.2** + npm 10.9.8
 - **Docker Desktop** (for local database)
 
 ### 1. Clone the repository
