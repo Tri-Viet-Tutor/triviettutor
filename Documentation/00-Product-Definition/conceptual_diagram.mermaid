@@ -1,0 +1,189 @@
+flowchart TB
+    %% =========================================================================
+    %% CONCEPTUAL DATA MODEL - PETER CHEN NOTATION (1976)
+    %% System: VietTriTutor (Centralized Tutor Center & LMS)
+    %% Convention:
+    %%   - Strong Entities: [ENTITY_NAME] (Single Rectangle)
+    %%   - Weak / Dependent Entities: [[WEAK_ENTITY_NAME]] (Double Rectangle)
+    %%   - Relationships: {"RELATIONSHIP_NAME"} (Rhombus / Diamond)
+    %%   - Cardinality: ---|"1"| REL ---|"N"| ENTITY (Only "1", "N", "M")
+    %% =========================================================================
+
+    %% -------------------------------------------------------------------------
+    %% 1. PHÂN HỆ TÀI KHOẢN, NHÂN SỰ & HỒ SƠ NGƯỜI HỌC
+    %% -------------------------------------------------------------------------
+    subgraph SUB_USER ["1. Phân hệ Tài khoản, Nhân sự & Người học"]
+        USER[USER]
+        STUDENT_PROFILE[[STUDENT_PROFILE]]
+        TUTOR_PROFILE[[TUTOR_PROFILE]]
+        TUTOR_CREDENTIAL[[TUTOR_CREDENTIAL]]
+        TUTOR_AVAILABILITY[[TUTOR_AVAILABILITY]]
+        TUTOR_EXPERIENCE[[TUTOR_EXPERIENCE]]
+
+        REL_HAS_STUDENT{"HAS_STUDENT"}
+        REL_HAS_TUTOR{"HAS_TUTOR_PROFILE"}
+        REL_HAS_CRED{"HAS_CREDENTIAL"}
+        REL_HAS_AVAIL{"DECLARES_AVAILABILITY"}
+        REL_HAS_EXP{"HAS_EXPERIENCE"}
+
+        USER ---|"1"| REL_HAS_STUDENT ---|"N"| STUDENT_PROFILE
+        USER ---|"1"| REL_HAS_TUTOR ---|"1"| TUTOR_PROFILE
+        TUTOR_PROFILE ---|"1"| REL_HAS_CRED ---|"N"| TUTOR_CREDENTIAL
+        TUTOR_PROFILE ---|"1"| REL_HAS_AVAIL ---|"N"| TUTOR_AVAILABILITY
+        TUTOR_PROFILE ---|"1"| REL_HAS_EXP ---|"N"| TUTOR_EXPERIENCE
+    end
+
+    %% -------------------------------------------------------------------------
+    %% 2. PHÂN HỆ KHÓA HỌC, GIÁO TRÌNH & HỌC LIỆU SỐ
+    %% -------------------------------------------------------------------------
+    subgraph SUB_COURSE ["2. Phân hệ Khóa học, Giáo trình & Học liệu"]
+        COURSE_CATEGORY[COURSE_CATEGORY]
+        COURSE[COURSE]
+        SYLLABUS[[SYLLABUS]]
+        SYLLABUS_ITEM[[SYLLABUS_ITEM]]
+        LEARNING_MATERIAL[[LEARNING_MATERIAL]]
+
+        REL_CATEGORIZES{"CATEGORIZES"}
+        REL_HAS_SYLLABUS{"HAS_SYLLABUS"}
+        REL_CONTAINS_ITEM{"CONTAINS_ITEM"}
+        REL_ATTACHED_TO{"ATTACHED_TO"}
+
+        COURSE_CATEGORY ---|"1"| REL_CATEGORIZES ---|"N"| COURSE
+        COURSE ---|"1"| REL_HAS_SYLLABUS ---|"N"| SYLLABUS
+        SYLLABUS ---|"1"| REL_CONTAINS_ITEM ---|"N"| SYLLABUS_ITEM
+        SYLLABUS_ITEM ---|"1"| REL_ATTACHED_TO ---|"N"| LEARNING_MATERIAL
+    end
+
+    %% -------------------------------------------------------------------------
+    %% 3. PHÂN HỆ LỚP HỌC, LỊCH TRÌNH & VẬN HÀNH CA HỌC
+    %% -------------------------------------------------------------------------
+    subgraph SUB_CLASS ["3. Phân hệ Lớp học, Lịch trình & Vận hành"]
+        ACADEMIC_CLASS[ACADEMIC_CLASS]
+        SESSION[[SESSION]]
+        ONLINE_ROOM[[ONLINE_ROOM]]
+        VIDEO_RECORD[[VIDEO_RECORD]]
+        ATTENDANCE_RECORD[[ATTENDANCE_RECORD]]
+        RESCHEDULE_REQUEST[[RESCHEDULE_REQUEST]]
+        CLASS_ANNOUNCEMENT[[CLASS_ANNOUNCEMENT]]
+
+        REL_INSTANTIATED{"INSTANTIATED_INTO"}
+        REL_COMPOSED_OF{"COMPOSED_OF"}
+        REL_HOSTED_IN{"HOSTED_IN"}
+        REL_RECORDS_INTO{"RECORDS_INTO"}
+        REL_HAS_ATTENDANCE{"HAS_ATTENDANCE"}
+        REL_HAS_RESCHEDULE{"REQUESTS_RESCHEDULE"}
+        REL_POSTS_ANNOUNCE{"POSTS_ANNOUNCEMENT"}
+
+        COURSE ---|"1"| REL_INSTANTIATED ---|"N"| ACADEMIC_CLASS
+        ACADEMIC_CLASS ---|"1"| REL_COMPOSED_OF ---|"N"| SESSION
+        SESSION ---|"1"| REL_HOSTED_IN ---|"1"| ONLINE_ROOM
+        SESSION ---|"1"| REL_RECORDS_INTO ---|"1"| VIDEO_RECORD
+        SESSION ---|"1"| REL_HAS_ATTENDANCE ---|"N"| ATTENDANCE_RECORD
+        SESSION ---|"1"| REL_HAS_RESCHEDULE ---|"N"| RESCHEDULE_REQUEST
+        ACADEMIC_CLASS ---|"1"| REL_POSTS_ANNOUNCE ---|"N"| CLASS_ANNOUNCEMENT
+    end
+
+    %% -------------------------------------------------------------------------
+    %% 4. PHÂN HỆ KHẢO THÍ, BÀI TẬP & ĐÁNH GIÁ
+    %% -------------------------------------------------------------------------
+    subgraph SUB_ASSESSMENT ["4. Phân hệ Khảo thí & Đánh giá Năng lực"]
+        EXAM[EXAM]
+        QUESTION[[QUESTION]]
+        SUBMISSION[[SUBMISSION]]
+        SUBMISSION_DETAIL[[SUBMISSION_DETAIL]]
+
+        REL_EVALUATES{"EVALUATES_FOR"}
+        REL_CONSISTS_OF{"CONSISTS_OF"}
+        REL_RECEIVES_SUB{"RECEIVES_SUBMISSION"}
+        REL_ITEMIZED_SUB{"ITEMIZED_INTO"}
+        REL_ANSWERS_QUESTION{"ANSWERS_QUESTION"}
+
+        COURSE ---|"1"| REL_EVALUATES ---|"N"| EXAM
+        EXAM ---|"1"| REL_CONSISTS_OF ---|"N"| QUESTION
+        EXAM ---|"1"| REL_RECEIVES_SUB ---|"N"| SUBMISSION
+        SUBMISSION ---|"1"| REL_ITEMIZED_SUB ---|"N"| SUBMISSION_DETAIL
+        QUESTION ---|"1"| REL_ANSWERS_QUESTION ---|"N"| SUBMISSION_DETAIL
+    end
+
+    %% -------------------------------------------------------------------------
+    %% 5. PHÂN HỆ THƯƠNG MẠI ĐIỆN TỬ, ĐƠN HÀNG & QUYẾT TOÁN
+    %% -------------------------------------------------------------------------
+    subgraph SUB_FINANCE ["5. Phân hệ Thương mại, Đơn hàng & Quyết toán"]
+        CART[CART]
+        CART_ITEM[[CART_ITEM]]
+        PROMOTION[PROMOTION]
+        ORDER[ORDER]
+        ORDER_ITEM[[ORDER_ITEM]]
+        PAYMENT[PAYMENT]
+        PAYROLL[PAYROLL]
+        PAYROLL_ITEM[[PAYROLL_ITEM]]
+
+        REL_OWNS_CART{"OWNS_CART"}
+        REL_CONTAINS_CART_ITEM{"CONTAINS_CART_ITEM"}
+        REL_TARGETS_CLASS{"TARGETS_CLASS"}
+        REL_APPLIED_PROMO{"APPLIED_PROMOTION"}
+        REL_PLACES_ORDER{"PLACES_ORDER"}
+        REL_CONTAINS_ORD_ITEM{"CONTAINS_ORDER_ITEM"}
+        REL_PURCHASES_CLASS{"PURCHASES_CLASS"}
+        REL_PAID_BY{"PAID_BY"}
+        REL_MAKES_PAYMENT{"MAKES_PAYMENT"}
+        REL_RECEIVES_PAYROLL{"RECEIVES_PAYROLL"}
+        REL_ITEMIZED_PAYROLL{"ITEMIZED_PAYROLL"}
+        REL_CREDITED_SESSION{"CREDITED_FROM"}
+
+        USER ---|"1"| REL_OWNS_CART ---|"1"| CART
+        CART ---|"1"| REL_CONTAINS_CART_ITEM ---|"N"| CART_ITEM
+        CART_ITEM ---|"N"| REL_TARGETS_CLASS ---|"1"| ACADEMIC_CLASS
+        USER ---|"1"| REL_PLACES_ORDER ---|"N"| ORDER
+        PROMOTION ---|"1"| REL_APPLIED_PROMO ---|"N"| ORDER
+        ORDER ---|"1"| REL_CONTAINS_ORD_ITEM ---|"N"| ORDER_ITEM
+        ORDER_ITEM ---|"N"| REL_PURCHASES_CLASS ---|"1"| ACADEMIC_CLASS
+        ORDER ---|"1"| REL_PAID_BY ---|"N"| PAYMENT
+        USER ---|"1"| REL_MAKES_PAYMENT ---|"N"| PAYMENT
+        USER ---|"1"| REL_RECEIVES_PAYROLL ---|"N"| PAYROLL
+        PAYROLL ---|"1"| REL_ITEMIZED_PAYROLL ---|"N"| PAYROLL_ITEM
+        SESSION ---|"1"| REL_CREDITED_SESSION ---|"1"| PAYROLL_ITEM
+    end
+
+    %% -------------------------------------------------------------------------
+    %% 6. PHÂN HỆ QUẢN LÝ CHẤT LƯỢNG, TƯ VẤN & CHĂM SÓC
+    %% -------------------------------------------------------------------------
+    subgraph SUB_ENGAGEMENT ["6. Phân hệ Chất lượng, Tư vấn & CSKH"]
+        CONSULTATION_LEAD[CONSULTATION_LEAD]
+        FEEDBACK_REVIEW[[FEEDBACK_REVIEW]]
+        NOTIFICATION[[NOTIFICATION]]
+
+        REL_INQUIRES_COURSE{"INQUIRES_FOR"}
+        REL_REVIEWS_CLASS{"REVIEWS_CLASS"}
+        REL_WRITES_REVIEW{"WRITES_REVIEW"}
+        REL_RECEIVES_NOTIF{"RECEIVES_NOTIFICATION"}
+
+        CONSULTATION_LEAD ---|"N"| REL_INQUIRES_COURSE ---|"1"| COURSE
+        ACADEMIC_CLASS ---|"1"| REL_REVIEWS_CLASS ---|"N"| FEEDBACK_REVIEW
+        USER ---|"1"| REL_WRITES_REVIEW ---|"N"| FEEDBACK_REVIEW
+        USER ---|"1"| REL_RECEIVES_NOTIF ---|"N"| NOTIFICATION
+    end
+
+    %% =========================================================================
+    %% 7. LIÊN KẾT LIÊN PHÂN HỆ & MỐI QUAN HỆ NGHIỆP VỤ CỐT LÕI (M:N & 1:N)
+    %% =========================================================================
+    REL_QUALIFIES{"QUALIFIES_TO_TEACH"}
+    TUTOR_PROFILE ---|"N"| REL_QUALIFIES ---|"M"| COURSE
+
+    REL_ASSIGNED_TEACH{"ASSIGNED_TO_TEACH"}
+    TUTOR_PROFILE ---|"1"| REL_ASSIGNED_TEACH ---|"N"| ACADEMIC_CLASS
+
+    REL_ENROLLS{"ENROLLS_IN"}
+    STUDENT_PROFILE ---|"N"| REL_ENROLLS ---|"M"| ACADEMIC_CLASS
+
+    REL_ATTENDS_RECORD{"ATTENDS_AS"}
+    STUDENT_PROFILE ---|"1"| REL_ATTENDS_RECORD ---|"N"| ATTENDANCE_RECORD
+
+    REL_SUBMITS_EXAM{"SUBMITS_WORK"}
+    STUDENT_PROFILE ---|"1"| REL_SUBMITS_EXAM ---|"N"| SUBMISSION
+
+    REL_COVERS_TOPIC{"COVERS_TOPIC"}
+    SESSION ---|"N"| REL_COVERS_TOPIC ---|"M"| SYLLABUS_ITEM
+
+    REL_REQUESTED_BY{"SUBMITTED_BY"}
+    USER ---|"1"| REL_REQUESTED_BY ---|"N"| RESCHEDULE_REQUEST
