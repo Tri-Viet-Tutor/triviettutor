@@ -1,5 +1,6 @@
 package com.viettritutor.service;
 
+import com.viettritutor.dto.meeting.MeetingRecordingInfoResponse;
 import com.viettritutor.dto.meeting.MeetingSessionLogsResponse;
 import com.viettritutor.dto.meeting.MeetingTokenResponse;
 import com.viettritutor.entity.User;
@@ -39,5 +40,10 @@ public interface MeetingService {
      * Retrieve the audio recording resource for streaming or download.
      */
     org.springframework.core.io.Resource getMeetingAudioRecording(Long sessionId, User currentUser);
+
+    /**
+     * Retrieve recording metadata and availability status for a session.
+     */
+    MeetingRecordingInfoResponse getMeetingRecordingInfo(Long sessionId, User currentUser);
 }
 

@@ -1,5 +1,5 @@
 import { api, unwrap } from "./api";
-import { ApiResponse, MeetingSessionLogsResponse, MeetingTokenResponse } from "../interfaces/api";
+import { ApiResponse, MeetingRecordingInfoResponse, MeetingSessionLogsResponse, MeetingTokenResponse } from "../interfaces/api";
 
 /** POST /api/v1/meetings/sessions/{sessionId}/token — lấy token truy cập phòng học trực tuyến LiveKit */
 export async function getSessionMeetingToken(sessionId: number): Promise<MeetingTokenResponse> {
@@ -29,4 +29,9 @@ export async function uploadMeetingRecording(sessionId: number, audioBlob: Blob)
       }
     )
   );
+}
+
+/** GET /api/v1/meetings/sessions/{sessionId}/recording-info — lấy thông tin và trạng thái bản ghi âm buổi học */
+export async function getMeetingRecordingInfo(sessionId: number): Promise<MeetingRecordingInfoResponse> {
+  return unwrap(await api.get<ApiResponse<MeetingRecordingInfoResponse>>(`/meetings/sessions/${sessionId}/recording-info`));
 }

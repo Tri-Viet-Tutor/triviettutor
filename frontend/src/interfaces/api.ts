@@ -469,6 +469,7 @@ export interface MeetingSessionLogDto {
   endTime?: string;
   durationSeconds?: number;
   status?: string;
+  recordingUrl?: string;
   maxParticipants?: number;
   totalParticipantsCount?: number;
 }
@@ -498,6 +499,13 @@ export interface MeetingSessionLogsResponse {
   sessionLog: MeetingSessionLogDto | null;
   participantLogs: MeetingParticipantLogDto[];
   totalParticipants: number;
+}
+
+export interface MeetingRecordingInfoResponse {
+  sessionId: number;
+  hasRecording: boolean;
+  recordingUrl: string | null;
+  fileName: string | null;
 }
 
 /** Tham số lọc của GET /me/sessions */

@@ -4,6 +4,7 @@ import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.common.exception.ErrorCode;
 import com.viettritutor.document.MeetingParticipantLog;
 import com.viettritutor.document.MeetingSessionLog;
+import com.viettritutor.dto.meeting.MeetingRecordingInfoResponse;
 import com.viettritutor.dto.meeting.MeetingSessionLogsResponse;
 import com.viettritutor.dto.meeting.MeetingTokenResponse;
 import com.viettritutor.entity.ClassGroup;
@@ -671,5 +672,63 @@ public class MeetingServiceImpl implements MeetingService {
             log.error("Error reading audio recording for session {}: {}", sessionId, e.getMessage(), e);
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "Lỗi khi đọc bản ghi âm");
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MeetingRecordingInfoResponse getMeetingRecordingInfo(Long sessionId, User currentUser) {
+        if (currentUser == null) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));
+
+        validateAndResolveRole(session, session.getClassGroupId(), currentUser);
+
+        String recordingUrl = null;
+        String fileName = null;
+        boolean hasRecording = false;
+
+        try {
+            Path targetDir = Paths.get(recordingDir).toAbsolutePath().normalize();
+            if (Files.exists(targetDir)) {
+                String prefix = "audio-session-" + sessionId + "-";
+                try (Stream<Path> stream = Files.list(targetDir)) {
+                    Path latestFile = stream
+                            .filter(p -> p.getFileName().toString().startsWith(prefix))
+                            .max(Comparator.comparingLong(p -> p.toFile().lastModified()))
+                            .orElse(null);
+
+                    if (latestFile != null && Files.exists(latestFile)) {
+                        hasRecording = true;
+                        fileName = latestFile.getFileName().toString();
+                        recordingUrl = "/api/v1/meetings/sessions/" + sessionId + "/recording";
+                    }
+                }
+            }
+        } catch (IOException e) {
+            log.warn("Error scanning recordings folder for session {}: {}", sessionId, e.getMessage());
+        }
+
+        if (!hasRecording && meetingSessionLogRepository != null) {
+            try {
+                String roomName = "classroom-session-" + sessionId;
+                MeetingSessionLog sLog = meetingSessionLogRepository.findBySessionId(roomName).orElse(null);
+                if (sLog != null && sLog.getRecordingUrl() != null && !sLog.getRecordingUrl().isBlank()) {
+                    hasRecording = true;
+                    recordingUrl = sLog.getRecordingUrl();
+                }
+            } catch (Exception e) {
+                log.warn("Error checking MongoDB recording info for session {}: {}", sessionId, e.getMessage());
+            }
+        }
+
+        return MeetingRecordingInfoResponse.builder()
+                .sessionId(sessionId)
+                .hasRecording(hasRecording)
+                .recordingUrl(recordingUrl)
+                .fileName(fileName)
+                .build();
     }
 }

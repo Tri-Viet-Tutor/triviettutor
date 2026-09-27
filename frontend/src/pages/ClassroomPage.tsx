@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Room, RoomEvent, Track, RemoteTrack, ConnectionState } from "livekit-client";
 import { getSessionMeetingToken, getSessionMeetingLogs, uploadMeetingRecording } from "../services/meeting";
 import { MeetingTokenResponse, MeetingSessionLogsResponse } from "../interfaces/api";
-import { ClassroomParticipant, MeetingSignalPayload, WhiteboardStrokePayload } from "../interfaces/meetingSignal.contract";
+import { ClassroomParticipant, MeetingSignalPayload } from "../interfaces/meetingSignal.contract";
 import { getSessionRoster } from "../services/rosterService";
 import type { SessionRosterResponse } from "../interfaces/classRoster.contract";
 import { ClassroomParticipantsSidebar } from "../components/classroom/ClassroomParticipantsSidebar";
@@ -25,9 +26,9 @@ export default function ClassroomPage() {
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [screenSharing, setScreenSharing] = useState(false);
   const [showWhiteboard, setShowWhiteboard] = useState(false);
-  const [showChat, setShowChat] = useState(false);
+  const [activeSidePanel, setActiveSidePanel] = useState<"participants" | "chat" | null>(null);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
-  const [showParticipants, setShowParticipants] = useState(false);
+  const [copiedRoomCode, setCopiedRoomCode] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
 
   // Danh sách người học trong phòng & hiện diện trực tiếp
@@ -52,9 +53,17 @@ export default function ClassroomPage() {
   const [isSavingRecording, setIsSavingRecording] = useState(false);
   const [recordingSaveNotice, setRecordingSaveNotice] = useState<string | null>(null);
 
-  // WebRTC Media Streams
+  // WebRTC Media Streams & LiveKit SFU
+  const roomRef = useRef<Room | null>(null);
+  const [livekitState, setLivekitState] = useState<ConnectionState>(ConnectionState.Disconnected);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const screenVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteTutorVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteScreenVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteStudentVideoRef = useRef<HTMLVideoElement | null>(null);
+  const [remoteTutorTrack, setRemoteTutorTrack] = useState<RemoteTrack | null>(null);
+  const [remoteScreenTrack, setRemoteScreenTrack] = useState<RemoteTrack | null>(null);
+  const [remoteStudentTrack, setRemoteStudentTrack] = useState<RemoteTrack | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   // Bản mới nhất của screenStream cho hàm dọn dẹp của effect
@@ -235,230 +244,464 @@ export default function ClassroomPage() {
     }
   }, [meetingData, user]);
 
-  // Thiết lập BroadcastChannel để truyền tín hiệu điều khiển, hiện diện, chat và bảng trắng giữa các bên
-  useEffect(() => {
-    if (!sessionId || !meetingData) return;
-    const channelName = `classroom_meeting_session_${sessionId}`;
-    const channel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel(channelName) : null;
-    broadcastChannelRef.current = channel;
+  // Hàm phát tín hiệu đa kênh: LiveKit SFU Data Channel (Ưu tiên cross-browser) + BroadcastChannel (Fallback)
+  const sendMeetingSignal = useCallback(
+    (signal: MeetingSignalPayload) => {
+      if (roomRef.current && roomRef.current.state === ConnectionState.Connected) {
+        try {
+          const encoder = new TextEncoder();
+          const data = encoder.encode(JSON.stringify(signal));
+          roomRef.current.localParticipant.publishData(data, { reliable: true });
+        } catch (err) {
+          console.warn("Failed to publish data via LiveKit SFU:", err);
+        }
+      }
+      try {
+        broadcastChannelRef.current?.postMessage(signal);
+      } catch (err) {
+        console.warn("BroadcastChannel postMessage failed:", err);
+      }
+    },
+    []
+  );
 
-    const isHost = meetingData.role === "TUTOR" || meetingData.role === "ADMIN";
-    const currentUserId = String(user?.id || (isHost ? "tutor" : "student"));
-    const currentUserName = user?.fullName || (isHost ? (meetingData.tutorName || "Gia sư") : "Học sinh");
+  // Xử lý thống nhất tín hiệu thời gian thực từ LiveKit SFU và BroadcastChannel
+  const handleIncomingSignal = useCallback(
+    (signal: MeetingSignalPayload) => {
+      if (!signal || !signal.action) return;
+      const isHost = meetingData?.role === "TUTOR" || meetingData?.role === "ADMIN";
+      const currentUserId = String(user?.id || (isHost ? "tutor" : "student"));
 
-    const myPresence: ClassroomParticipant = {
-      id: currentUserId,
-      name: isHost ? `${currentUserName} (Gia sư)` : currentUserName,
-      role: meetingData.role,
-      micEnabled: micEnabled,
-      cameraEnabled: cameraEnabled,
-      handRaised: handRaised,
-      isSelf: false,
-    };
+      // Bỏ qua tín hiệu do chính mình phát đi
+      if (signal.senderId === currentUserId && signal.action !== "MUTE_MIC") return;
 
-    if (channel) {
-      channel.onmessage = (event: MessageEvent<MeetingSignalPayload>) => {
-        const signal = event.data;
-        if (!signal || !signal.action) return;
+      if (signal.action === "PARTICIPANT_JOIN" && signal.participant) {
+        if (signal.participant.id === currentUserId) return;
+        const peer = { ...signal.participant, isSelf: false };
+        setParticipants((prev) => {
+          const exists = prev.some((p) => p.id === peer.id);
+          return exists ? prev.map((p) => (p.id === peer.id ? peer : p)) : [...prev, peer];
+        });
 
-        // Bỏ qua tín hiệu do chính mình phát đi
-        if (signal.senderId === currentUserId && signal.action !== "MUTE_MIC") return;
+        const numId = Number(signal.participant.id);
+        if (!isNaN(numId) && numId > 0 && signal.participant.role === "STUDENT") {
+          setOnlineParticipantIds((prev) => new Set(prev).add(numId));
+        }
+        if (signal.participant.role === "TUTOR") {
+          setTutorOnline(true);
+        }
 
-        if (signal.action === "PARTICIPANT_JOIN" && signal.participant) {
-          if (signal.participant.id === currentUserId) return;
-          const peer = { ...signal.participant, isSelf: false };
-          setParticipants((prev) => {
-            const exists = prev.some((p) => p.id === peer.id);
-            return exists ? prev.map((p) => (p.id === peer.id ? peer : p)) : [...prev, peer];
+        const myPresence: ClassroomParticipant = {
+          id: currentUserId,
+          name: isHost ? `${user?.fullName || "Gia sư"} (Gia sư)` : user?.fullName || "Học sinh",
+          role: meetingData?.role || "STUDENT",
+          micEnabled: micEnabled,
+          cameraEnabled: cameraEnabled,
+          handRaised: handRaised,
+          isSelf: false,
+        };
+
+        sendMeetingSignal({
+          action: "PARTICIPANT_SYNC",
+          senderId: currentUserId,
+          senderRole: meetingData?.role || "STUDENT",
+          participant: myPresence,
+          timestamp: Date.now(),
+        });
+      } else if (signal.action === "PARTICIPANT_SYNC" && signal.participant) {
+        if (signal.participant.id === currentUserId) return;
+        const peer = { ...signal.participant, isSelf: false };
+        setParticipants((prev) => {
+          const exists = prev.some((p) => p.id === peer.id);
+          return exists ? prev.map((p) => (p.id === peer.id ? peer : p)) : [...prev, peer];
+        });
+
+        const numId = Number(signal.participant.id);
+        if (!isNaN(numId) && numId > 0 && signal.participant.role === "STUDENT") {
+          setOnlineParticipantIds((prev) => new Set(prev).add(numId));
+        }
+        if (signal.participant.role === "TUTOR") {
+          setTutorOnline(true);
+        }
+      } else if (signal.action === "PARTICIPANT_LEAVE") {
+        setParticipants((prev) => prev.filter((p) => p.id !== signal.senderId));
+        const numId = Number(signal.senderId);
+        if (!isNaN(numId)) {
+          setOnlineParticipantIds((prev) => {
+            const next = new Set(prev);
+            next.delete(numId);
+            return next;
           });
-
-          const numId = Number(signal.participant.id);
-          if (!isNaN(numId) && numId > 0 && signal.participant.role === "STUDENT") {
-            setOnlineParticipantIds((prev) => new Set(prev).add(numId));
+        }
+        if (signal.senderRole === "TUTOR") {
+          setTutorOnline(false);
+        }
+      } else if (signal.action === "CHAT_MESSAGE" && signal.chatMessage) {
+        if (signal.chatMessage.senderId === currentUserId) return;
+        const msg = signal.chatMessage;
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            sender: msg.senderName,
+            text: msg.text,
+            time: msg.time,
+            isMe: false,
+          },
+        ]);
+        setUnreadChatCount((c) => c + 1);
+      } else if (signal.action === "WHITEBOARD_DRAW" && signal.drawStroke) {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        const stroke = signal.drawStroke;
+        ctx.save();
+        ctx.lineWidth = stroke.isEraser ? 24 : stroke.size;
+        ctx.lineCap = "round";
+        ctx.strokeStyle = stroke.isEraser ? "#ffffff" : stroke.color;
+        ctx.beginPath();
+        ctx.moveTo(stroke.fromX, stroke.fromY);
+        ctx.lineTo(stroke.toX, stroke.toY);
+        ctx.stroke();
+        ctx.restore();
+      } else if (signal.action === "WHITEBOARD_CLEAR") {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else if (signal.action === "MUTE_MIC") {
+        const isTarget = signal.targetUserId === currentUserId || signal.targetUserId === "ALL";
+        if (isTarget && !isHost) {
+          if (roomRef.current?.localParticipant) {
+            roomRef.current.localParticipant.setMicrophoneEnabled(false).catch(() => {});
           }
-          if (signal.participant.role === "TUTOR") {
-            setTutorOnline(true);
+          if (localStream) {
+            localStream.getAudioTracks().forEach((track) => {
+              track.enabled = false;
+            });
           }
+          setMicEnabled(false);
+          setHostMutedNotice(
+            signal.targetUserId === "ALL"
+              ? "Gia sư đã tắt micro của toàn bộ phòng học. Bạn có thể tự bật lại khi phát biểu."
+              : "Micro của bạn đã bị tắt bởi Gia sư. Bạn có thể tự bật lại khi cần phát biểu."
+          );
+        }
 
-          // Phản hồi lại thông tin của mình để người mới vào phòng cập nhật
-          channel.postMessage({
-            action: "PARTICIPANT_SYNC",
-            senderId: currentUserId,
-            senderRole: meetingData.role,
-            participant: myPresence,
-            timestamp: Date.now(),
-          } as MeetingSignalPayload);
-
-        } else if (signal.action === "PARTICIPANT_SYNC" && signal.participant) {
-          if (signal.participant.id === currentUserId) return;
-          const peer = { ...signal.participant, isSelf: false };
-          setParticipants((prev) => {
-            const exists = prev.some((p) => p.id === peer.id);
-            return exists ? prev.map((p) => (p.id === peer.id ? peer : p)) : [...prev, peer];
-          });
-
-          const numId = Number(signal.participant.id);
-          if (!isNaN(numId) && numId > 0 && signal.participant.role === "STUDENT") {
-            setOnlineParticipantIds((prev) => new Set(prev).add(numId));
-          }
-          if (signal.participant.role === "TUTOR") {
-            setTutorOnline(true);
-          }
-
-        } else if (signal.action === "PARTICIPANT_LEAVE") {
-          setParticipants((prev) => prev.filter((p) => p.id !== signal.senderId));
-          const numId = Number(signal.senderId);
-          if (!isNaN(numId)) {
-            setOnlineParticipantIds((prev) => {
+        setParticipants((prev) =>
+          prev.map((p) => {
+            if (signal.targetUserId === "ALL") {
+              return p.role === "STUDENT" ? { ...p, micEnabled: false } : p;
+            }
+            return p.id === signal.targetUserId ? { ...p, micEnabled: false } : p;
+          })
+        );
+      } else if (signal.action === "REQUEST_UNMUTE") {
+        if (signal.targetUserId === currentUserId) {
+          setUnmuteRequestModal(true);
+        }
+      } else if (signal.action === "UPDATE_MEDIA_STATE") {
+        setParticipants((prev) =>
+          prev.map((p) => {
+            if (p.id === signal.senderId) {
+              return {
+                ...p,
+                micEnabled: signal.micEnabled !== undefined ? signal.micEnabled : p.micEnabled,
+                cameraEnabled: signal.cameraEnabled !== undefined ? signal.cameraEnabled : p.cameraEnabled,
+                handRaised: signal.handRaised !== undefined ? signal.handRaised : p.handRaised,
+              };
+            }
+            return p;
+          })
+        );
+        const numId = Number(signal.senderId);
+        if (!isNaN(numId) && numId > 0) {
+          if (signal.handRaised) {
+            setHandRaisedIds((prev) => new Set(prev).add(numId));
+          } else {
+            setHandRaisedIds((prev) => {
               const next = new Set(prev);
               next.delete(numId);
               return next;
             });
           }
-          if (signal.senderRole === "TUTOR") {
-            setTutorOnline(false);
-          }
-
-        } else if (signal.action === "CHAT_MESSAGE" && signal.chatMessage) {
-          if (signal.chatMessage.senderId === currentUserId) return;
-          const msg = signal.chatMessage;
-          setChatMessages((prev) => [
-            ...prev,
-            {
-              sender: msg.senderName,
-              text: msg.text,
-              time: msg.time,
-              isMe: false,
-            },
-          ]);
-          setUnreadChatCount((c) => c + 1);
-
-        } else if (signal.action === "WHITEBOARD_DRAW" && signal.drawStroke) {
-          const canvas = canvasRef.current;
-          if (!canvas) return;
-          const ctx = canvas.getContext("2d");
-          if (!ctx) return;
-          const stroke = signal.drawStroke;
-          ctx.save();
-          ctx.lineWidth = stroke.isEraser ? 24 : stroke.size;
-          ctx.lineCap = "round";
-          ctx.strokeStyle = stroke.isEraser ? "#ffffff" : stroke.color;
-          ctx.beginPath();
-          ctx.moveTo(stroke.fromX, stroke.fromY);
-          ctx.lineTo(stroke.toX, stroke.toY);
-          ctx.stroke();
-          ctx.restore();
-
-        } else if (signal.action === "WHITEBOARD_CLEAR") {
-          const canvas = canvasRef.current;
-          if (!canvas) return;
-          const ctx = canvas.getContext("2d");
-          if (!ctx) return;
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        } else if (signal.action === "MUTE_MIC") {
-          const isTarget = signal.targetUserId === currentUserId || signal.targetUserId === "ALL";
-          if (isTarget && !isHost) {
-            if (localStream) {
-              localStream.getAudioTracks().forEach((track) => {
-                track.enabled = false;
-              });
-            }
-            setMicEnabled(false);
-            setHostMutedNotice(
-              signal.targetUserId === "ALL"
-                ? "Gia sư đã tắt micro của toàn bộ phòng học. Bạn có thể tự bật lại khi phát biểu."
-                : "Micro của bạn đã bị tắt bởi Gia sư. Bạn có thể tự bật lại khi cần phát biểu."
-            );
-          }
-
-          setParticipants((prev) =>
-            prev.map((p) => {
-              if (signal.targetUserId === "ALL") {
-                return p.role === "STUDENT" ? { ...p, micEnabled: false } : p;
-              }
-              return p.id === signal.targetUserId ? { ...p, micEnabled: false } : p;
-            })
-          );
-        } else if (signal.action === "REQUEST_UNMUTE") {
-          if (signal.targetUserId === currentUserId) {
-            setUnmuteRequestModal(true);
-          }
-        } else if (signal.action === "UPDATE_MEDIA_STATE") {
-          setParticipants((prev) =>
-            prev.map((p) => {
-              if (p.id === signal.senderId) {
-                return {
-                  ...p,
-                  micEnabled: signal.micEnabled !== undefined ? signal.micEnabled : p.micEnabled,
-                  cameraEnabled: signal.cameraEnabled !== undefined ? signal.cameraEnabled : p.cameraEnabled,
-                  handRaised: signal.handRaised !== undefined ? signal.handRaised : p.handRaised,
-                };
-              }
-              return p;
-            })
-          );
-          const numId = Number(signal.senderId);
-          if (!isNaN(numId) && numId > 0) {
-            if (signal.handRaised) {
-              setHandRaisedIds((prev) => new Set(prev).add(numId));
-            } else {
-              setHandRaisedIds((prev) => {
-                const next = new Set(prev);
-                next.delete(numId);
-                return next;
-              });
-            }
-            if (signal.micEnabled === false) {
-              setMutedStudentIds((prev) => new Set(prev).add(numId));
-            } else if (signal.micEnabled === true) {
-              setMutedStudentIds((prev) => {
-                const next = new Set(prev);
-                next.delete(numId);
-                return next;
-              });
-            }
+          if (signal.micEnabled === false) {
+            setMutedStudentIds((prev) => new Set(prev).add(numId));
+          } else if (signal.micEnabled === true) {
+            setMutedStudentIds((prev) => {
+              const next = new Set(prev);
+              next.delete(numId);
+              return next;
+            });
           }
         }
+      }
+    },
+    [cameraEnabled, handRaised, localStream, meetingData, micEnabled, sendMeetingSignal, user]
+  );
+
+  // Gắn luồng Remote Tutor Video vào thẻ video của Học sinh
+  useEffect(() => {
+    if (remoteTutorVideoRef.current && remoteTutorTrack) {
+      remoteTutorTrack.attach(remoteTutorVideoRef.current);
+    }
+  }, [remoteTutorTrack]);
+
+  // Gắn luồng Remote Screen Share vào thẻ video
+  useEffect(() => {
+    if (remoteScreenVideoRef.current && remoteScreenTrack) {
+      remoteScreenTrack.attach(remoteScreenVideoRef.current);
+    }
+  }, [remoteScreenTrack]);
+
+  // Gắn luồng Remote Student Video vào thẻ video của Gia sư
+  useEffect(() => {
+    if (remoteStudentVideoRef.current && remoteStudentTrack) {
+      remoteStudentTrack.attach(remoteStudentVideoRef.current);
+    }
+  }, [remoteStudentTrack]);
+
+  // Kết nối và đồng bộ LiveKit SFU Room thời gian thực
+  useEffect(() => {
+    if (!sessionId || !meetingData || !meetingData.serverUrl || !meetingData.token) return;
+
+    let isMounted = true;
+    const room = new Room({
+      adaptiveStream: true,
+      dynacast: true,
+    });
+    roomRef.current = room;
+
+    const isHost = meetingData.role === "TUTOR" || meetingData.role === "ADMIN";
+    const currentUserId = String(user?.id || (isHost ? "tutor" : "student"));
+    const currentUserName = user?.fullName || (isHost ? (meetingData.tutorName || "Gia sư") : "Học sinh");
+
+    const syncLiveKitParticipants = () => {
+      if (!isMounted) return;
+      const selfParticipant: ClassroomParticipant = {
+        id: currentUserId,
+        name: isHost ? `${currentUserName} (Host)` : `${currentUserName} (Tôi)`,
+        role: meetingData.role,
+        micEnabled: micEnabled,
+        cameraEnabled: cameraEnabled,
+        handRaised: handRaised,
+        isSelf: true,
       };
 
-      // Phát thông báo tham gia phòng học
-      channel.postMessage({
+      const remotes: ClassroomParticipant[] = [];
+      let foundTutor = isHost;
+
+      room.remoteParticipants.forEach((rp) => {
+        let metaRole: string = "STUDENT";
+        try {
+          if (rp.metadata) {
+            const parsed = JSON.parse(rp.metadata);
+            if (parsed.role) metaRole = parsed.role;
+          }
+        } catch {}
+        if (!metaRole) {
+          metaRole = rp.name?.includes("Gia sư") ? "TUTOR" : "STUDENT";
+        }
+        if (metaRole === "TUTOR") {
+          foundTutor = true;
+        }
+
+        remotes.push({
+          id: rp.identity,
+          name: rp.name || "Thành viên",
+          role: metaRole as ClassroomParticipant["role"],
+          micEnabled: rp.isMicrophoneEnabled,
+          cameraEnabled: rp.isCameraEnabled,
+          handRaised: false,
+          isSelf: false,
+        });
+
+        const numId = Number(rp.identity);
+        if (!isNaN(numId) && numId > 0 && metaRole === "STUDENT") {
+          setOnlineParticipantIds((prev) => new Set(prev).add(numId));
+        }
+      });
+
+      setTutorOnline(foundTutor);
+      setParticipants([selfParticipant, ...remotes]);
+    };
+
+    room.on(RoomEvent.ConnectionStateChanged, (state) => {
+      if (isMounted) setLivekitState(state);
+    });
+
+    room.on(RoomEvent.Connected, async () => {
+      if (!isMounted) return;
+      setLivekitState(ConnectionState.Connected);
+      syncLiveKitParticipants();
+
+      // Xuất bản camera/micro lên SFU nếu đang bật
+      try {
+        if (cameraEnabled) {
+          await room.localParticipant.setCameraEnabled(true);
+          const camPub = room.localParticipant.getTrackPublication(Track.Source.Camera);
+          if (camPub?.videoTrack && localVideoRef.current) {
+            camPub.videoTrack.attach(localVideoRef.current);
+          }
+        }
+        if (micEnabled) {
+          await room.localParticipant.setMicrophoneEnabled(true);
+        }
+      } catch (pubErr) {
+        console.warn("Could not publish initial local media to LiveKit:", pubErr);
+      }
+
+      // Thông báo chào phòng qua Data Channel
+      const myPresence: ClassroomParticipant = {
+        id: currentUserId,
+        name: isHost ? `${currentUserName} (Gia sư)` : currentUserName,
+        role: meetingData.role,
+        micEnabled: micEnabled,
+        cameraEnabled: cameraEnabled,
+        handRaised: handRaised,
+        isSelf: false,
+      };
+
+      sendMeetingSignal({
         action: "PARTICIPANT_JOIN",
         senderId: currentUserId,
         senderRole: meetingData.role,
         participant: myPresence,
         timestamp: Date.now(),
-      } as MeetingSignalPayload);
+      });
+    });
+
+    room.on(RoomEvent.ParticipantConnected, () => {
+      syncLiveKitParticipants();
+    });
+
+    room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+      syncLiveKitParticipants();
+      const numId = Number(participant.identity);
+      if (!isNaN(numId)) {
+        setOnlineParticipantIds((prev) => {
+          const next = new Set(prev);
+          next.delete(numId);
+          return next;
+        });
+      }
+    });
+
+    room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+      if (track.kind === Track.Kind.Video) {
+        if (publication.source === Track.Source.ScreenShare) {
+          setRemoteScreenTrack(track);
+        } else {
+          let metaRole = "";
+          try {
+            if (participant.metadata) {
+              const meta = JSON.parse(participant.metadata);
+              metaRole = meta.role;
+            }
+          } catch {}
+          if (metaRole === "TUTOR" || participant.name?.includes("Gia sư")) {
+            setRemoteTutorTrack(track);
+          } else {
+            setRemoteStudentTrack(track);
+          }
+        }
+      } else if (track.kind === Track.Kind.Audio) {
+        const audioEl = track.attach();
+        audioEl.autoplay = true;
+      }
+      syncLiveKitParticipants();
+    });
+
+    room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+      track.detach();
+      if (publication.source === Track.Source.ScreenShare) {
+        setRemoteScreenTrack(null);
+      } else {
+        let metaRole = "";
+        try {
+          if (participant.metadata) {
+            const meta = JSON.parse(participant.metadata);
+            metaRole = meta.role;
+          }
+        } catch {}
+        if (metaRole === "TUTOR" || participant.name?.includes("Gia sư")) {
+          setRemoteTutorTrack(null);
+        } else {
+          setRemoteStudentTrack(null);
+        }
+      }
+      syncLiveKitParticipants();
+    });
+
+    room.on(RoomEvent.TrackMuted, () => syncLiveKitParticipants());
+    room.on(RoomEvent.TrackUnmuted, () => syncLiveKitParticipants());
+
+    room.on(RoomEvent.DataReceived, (payload: Uint8Array) => {
+      try {
+        const decoder = new TextDecoder();
+        const jsonStr = decoder.decode(payload);
+        const signal = JSON.parse(jsonStr) as MeetingSignalPayload;
+        handleIncomingSignal(signal);
+      } catch (err) {
+        console.warn("Could not decode LiveKit data payload:", err);
+      }
+    });
+
+    // Kết nối đến LiveKit SFU Server
+    room.connect(meetingData.serverUrl, meetingData.token).catch((err) => {
+      console.warn("LiveKit Room connection failed:", err);
+    });
+
+    // Fallback BroadcastChannel cho tab cùng trình duyệt
+    const channelName = `classroom_meeting_session_${sessionId}`;
+    const channel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel(channelName) : null;
+    broadcastChannelRef.current = channel;
+    if (channel) {
+      channel.onmessage = (event: MessageEvent<MeetingSignalPayload>) => {
+        handleIncomingSignal(event.data);
+      };
     }
 
     const handleBeforeUnload = () => {
-      channel?.postMessage({
+      sendMeetingSignal({
         action: "PARTICIPANT_LEAVE",
         senderId: currentUserId,
         senderRole: meetingData.role,
         timestamp: Date.now(),
-      } as MeetingSignalPayload);
+      });
+      room.disconnect();
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
+      isMounted = false;
       window.removeEventListener("beforeunload", handleBeforeUnload);
+      sendMeetingSignal({
+        action: "PARTICIPANT_LEAVE",
+        senderId: currentUserId,
+        senderRole: meetingData.role,
+        timestamp: Date.now(),
+      });
+      room.disconnect();
+      roomRef.current = null;
       if (channel) {
-        channel.postMessage({
-          action: "PARTICIPANT_LEAVE",
-          senderId: currentUserId,
-          senderRole: meetingData.role,
-          timestamp: Date.now(),
-        } as MeetingSignalPayload);
         channel.close();
+        broadcastChannelRef.current = null;
       }
     };
-  }, [sessionId, user, meetingData, localStream, micEnabled, cameraEnabled, handRaised]);
+  }, [sessionId, meetingData, user, handleIncomingSignal, sendMeetingSignal]);
 
-  const toggleMic = () => {
+  const toggleMic = async () => {
     const nextState = !micEnabled;
+    if (roomRef.current?.localParticipant) {
+      try {
+        await roomRef.current.localParticipant.setMicrophoneEnabled(nextState);
+      } catch (err) {
+        console.warn("LiveKit setMicrophoneEnabled error:", err);
+      }
+    }
     if (localStream) {
       localStream.getAudioTracks().forEach((t) => {
         t.enabled = nextState;
@@ -472,13 +715,15 @@ export default function ClassroomPage() {
     const isHost = meetingData?.role === "TUTOR" || meetingData?.role === "ADMIN";
     const currentUserId = String(user?.id || (isHost ? "tutor" : "student"));
 
-    broadcastChannelRef.current?.postMessage({
+    sendMeetingSignal({
       action: "UPDATE_MEDIA_STATE",
       senderId: currentUserId,
       senderRole: meetingData?.role || "STUDENT",
       micEnabled: nextState,
+      cameraEnabled: cameraEnabled,
+      handRaised: handRaised,
       timestamp: Date.now(),
-    } as MeetingSignalPayload);
+    });
 
     setParticipants((prev) =>
       prev.map((p) => (p.isSelf ? { ...p, micEnabled: nextState } : p))
@@ -487,14 +732,14 @@ export default function ClassroomPage() {
 
   const handleHostMuteParticipant = (targetId: string) => {
     const currentUserId = String(user?.id || "tutor");
-    broadcastChannelRef.current?.postMessage({
+    sendMeetingSignal({
       action: "MUTE_MIC",
       senderId: currentUserId,
       senderRole: meetingData?.role || "TUTOR",
       targetUserId: targetId,
       timestamp: Date.now(),
       reason: "HOST_MUTED",
-    } as MeetingSignalPayload);
+    });
 
     setParticipants((prev) =>
       prev.map((p) => (p.id === targetId ? { ...p, micEnabled: false } : p))
@@ -503,14 +748,14 @@ export default function ClassroomPage() {
 
   const handleHostMuteAll = () => {
     const currentUserId = String(user?.id || "tutor");
-    broadcastChannelRef.current?.postMessage({
+    sendMeetingSignal({
       action: "MUTE_MIC",
       senderId: currentUserId,
       senderRole: meetingData?.role || "TUTOR",
       targetUserId: "ALL",
       timestamp: Date.now(),
       reason: "HOST_MUTED_ALL",
-    } as MeetingSignalPayload);
+    });
 
     setParticipants((prev) =>
       prev.map((p) => (p.role === "STUDENT" ? { ...p, micEnabled: false } : p))
@@ -519,17 +764,30 @@ export default function ClassroomPage() {
 
   const handleHostRequestUnmute = (targetId: string) => {
     const currentUserId = String(user?.id || "tutor");
-    broadcastChannelRef.current?.postMessage({
+    sendMeetingSignal({
       action: "REQUEST_UNMUTE",
       senderId: currentUserId,
       senderRole: meetingData?.role || "TUTOR",
       targetUserId: targetId,
       timestamp: Date.now(),
-    } as MeetingSignalPayload);
+    });
   };
 
-  const toggleCamera = () => {
+  const toggleCamera = async () => {
     const nextCam = !cameraEnabled;
+    if (roomRef.current?.localParticipant) {
+      try {
+        await roomRef.current.localParticipant.setCameraEnabled(nextCam);
+        if (nextCam && localVideoRef.current) {
+          const camPub = roomRef.current.localParticipant.getTrackPublication(Track.Source.Camera);
+          if (camPub?.videoTrack) {
+            camPub.videoTrack.attach(localVideoRef.current);
+          }
+        }
+      } catch (err) {
+        console.warn("LiveKit setCameraEnabled error:", err);
+      }
+    }
     if (localStream) {
       localStream.getVideoTracks().forEach((t) => {
         t.enabled = nextCam;
@@ -540,7 +798,7 @@ export default function ClassroomPage() {
     const isHost = meetingData?.role === "TUTOR" || meetingData?.role === "ADMIN";
     const currentUserId = String(user?.id || (isHost ? "tutor" : "student"));
 
-    broadcastChannelRef.current?.postMessage({
+    sendMeetingSignal({
       action: "UPDATE_MEDIA_STATE",
       senderId: currentUserId,
       senderRole: meetingData?.role || "STUDENT",
@@ -548,7 +806,7 @@ export default function ClassroomPage() {
       cameraEnabled: nextCam,
       handRaised: handRaised,
       timestamp: Date.now(),
-    } as MeetingSignalPayload);
+    });
 
     setParticipants((prev) =>
       prev.map((p) => (p.isSelf ? { ...p, cameraEnabled: nextCam } : p))
@@ -570,7 +828,7 @@ export default function ClassroomPage() {
     const isHost = meetingData?.role === "TUTOR" || meetingData?.role === "ADMIN";
     const currentUserId = String(user?.id || (isHost ? "tutor" : "student"));
 
-    broadcastChannelRef.current?.postMessage({
+    sendMeetingSignal({
       action: "UPDATE_MEDIA_STATE",
       senderId: currentUserId,
       senderRole: meetingData?.role || "STUDENT",
@@ -578,7 +836,7 @@ export default function ClassroomPage() {
       cameraEnabled: cameraEnabled,
       handRaised: nextHand,
       timestamp: Date.now(),
-    } as MeetingSignalPayload);
+    });
 
     setParticipants((prev) =>
       prev.map((p) => (p.isSelf ? { ...p, handRaised: nextHand } : p))
@@ -586,6 +844,16 @@ export default function ClassroomPage() {
   };
 
   const toggleScreenShare = async () => {
+    const nextScreen = !screenSharing;
+    if (roomRef.current?.localParticipant) {
+      try {
+        await roomRef.current.localParticipant.setScreenShareEnabled(nextScreen);
+        setScreenSharing(nextScreen);
+        return;
+      } catch (err) {
+        console.warn("LiveKit screen share error:", err);
+      }
+    }
     if (screenSharing) {
       if (screenStream) {
         screenStream.getTracks().forEach((t) => t.stop());
@@ -671,7 +939,7 @@ export default function ClassroomPage() {
     const isHost = meetingData?.role === "TUTOR" || meetingData?.role === "ADMIN";
     const currentUserId = String(user?.id || (isHost ? "tutor" : "student"));
 
-    broadcastChannelRef.current?.postMessage({
+    sendMeetingSignal({
       action: "WHITEBOARD_DRAW",
       senderId: currentUserId,
       senderRole: meetingData?.role || "TUTOR",
@@ -685,7 +953,7 @@ export default function ClassroomPage() {
         size: brushSize,
         isEraser: isEraser,
       },
-    } as MeetingSignalPayload);
+    });
 
     lastDrawPosRef.current = { x, y };
   };
@@ -706,12 +974,12 @@ export default function ClassroomPage() {
     const isHost = meetingData?.role === "TUTOR" || meetingData?.role === "ADMIN";
     const currentUserId = String(user?.id || (isHost ? "tutor" : "student"));
 
-    broadcastChannelRef.current?.postMessage({
+    sendMeetingSignal({
       action: "WHITEBOARD_CLEAR",
       senderId: currentUserId,
       senderRole: meetingData?.role || "TUTOR",
       timestamp: Date.now(),
-    } as MeetingSignalPayload);
+    });
   };
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -739,7 +1007,7 @@ export default function ClassroomPage() {
     ]);
     setInputMsg("");
 
-    broadcastChannelRef.current?.postMessage({
+    sendMeetingSignal({
       action: "CHAT_MESSAGE",
       senderId: currentUserId,
       senderName: broadcastDisplayName,
@@ -1129,8 +1397,8 @@ export default function ClassroomPage() {
               <div className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-800 bg-slate-900 p-3 shadow-lg">
                 <div className="flex items-center justify-between z-10">
                   <span className="rounded-full bg-indigo-600/80 px-2.5 py-0.5 text-xs font-semibold text-white">
-                    {screenSharing
-                      ? "🖥️ Màn hình đang chia sẻ"
+                    {screenSharing || remoteScreenTrack
+                      ? "Màn hình đang chia sẻ"
                       : isTutor
                       ? "Màn hình của bạn (Gia sư)"
                       : `Gia sư: ${meetingData.tutorName || "Thầy phụ trách"}`}
@@ -1151,35 +1419,92 @@ export default function ClassroomPage() {
                       playsInline
                       className="h-full w-full object-contain rounded"
                     />
-                  ) : localStream && cameraEnabled ? (
+                  ) : remoteScreenTrack ? (
                     <video
-                      ref={localVideoRef}
+                      ref={remoteScreenVideoRef}
                       autoPlay
                       playsInline
-                      muted
-                      className="h-full w-full object-cover rounded mirror"
+                      className="h-full w-full object-contain rounded"
                     />
-                  ) : cameraEnabled ? (
+                  ) : isTutor ? (
+                    cameraEnabled ? (
+                      <video
+                        ref={localVideoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="h-full w-full object-cover rounded mirror"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center text-slate-500">
+                        <Icon name="videocam_off" className="text-3xl mb-1" />
+                        <p className="mt-2 text-xs">Camera của bạn đã tắt</p>
+                      </div>
+                    )
+                  ) : remoteTutorTrack ? (
+                    <video
+                      ref={remoteTutorVideoRef}
+                      autoPlay
+                      playsInline
+                      className="h-full w-full object-cover rounded"
+                    />
+                  ) : tutorOnline ? (
                     <div className="flex flex-col items-center text-center">
                       <div className="flex h-20 w-20 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-400 text-3xl font-bold border-2 border-indigo-500/30">
-                        {isTutor ? "T" : "G"}
+                        GS
                       </div>
                       <p className="mt-3 text-sm font-semibold text-slate-200">
-                        {isTutor ? user?.fullName || "Gia sư" : meetingData.tutorName || "Gia sư"}
+                        {meetingData.tutorName || "Gia sư phụ trách"}
                       </p>
-                      <p className="text-xs text-slate-400">Đang đồng bộ luồng video HD</p>
+                      <p className="text-xs text-slate-400">Gia sư đang trong phòng (Camera tắt)</p>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center text-slate-500">
-                      <span className="text-3xl">📷</span>
-                      <p className="mt-2 text-xs">Camera đã tắt</p>
+                    <div className="flex flex-col items-center text-center text-slate-400">
+                      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-800 text-slate-500 text-3xl font-bold border border-slate-700">
+                        GS
+                      </div>
+                      <p className="mt-3 text-sm font-semibold text-slate-300">
+                        {meetingData.tutorName || "Gia sư phụ trách"}
+                      </p>
+                      <p className="text-xs text-amber-400/90 mt-1">Gia sư chưa vào phòng học</p>
+                    </div>
+                  )}
+
+                  {/* Floating Self Preview cho Học sinh */}
+                  {!isTutor && cameraEnabled && (
+                    <div className="absolute bottom-3 right-3 z-20 h-24 w-36 overflow-hidden rounded-lg border border-slate-700 bg-slate-900/90 shadow-xl">
+                      <video
+                        ref={localVideoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="h-full w-full object-cover mirror"
+                      />
+                      <span className="absolute bottom-1 left-1.5 rounded bg-black/70 px-1 py-0.5 text-[10px] text-slate-200">
+                        Camera của bạn
+                      </span>
                     </div>
                   )}
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-800 pt-2">
                   <span>Chất lượng: 1080p @ 30fps</span>
-                  <span>LiveKit SFU: Connected</span>
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        livekitState === ConnectionState.Connected
+                          ? "bg-emerald-400 animate-pulse"
+                          : livekitState === ConnectionState.Connecting
+                          ? "bg-amber-400 animate-ping"
+                          : "bg-rose-400"
+                      }`}
+                    />
+                    {livekitState === ConnectionState.Connected
+                      ? "LiveKit SFU: Trực tuyến"
+                      : livekitState === ConnectionState.Connecting
+                      ? "LiveKit SFU: Đang kết nối..."
+                      : "LiveKit SFU: Ngoại tuyến"}
+                  </span>
                 </div>
               </div>
 
@@ -1585,6 +1910,9 @@ export default function ClassroomPage() {
               </button>
               <button
                 onClick={() => {
+                  if (roomRef.current?.localParticipant) {
+                    roomRef.current.localParticipant.setMicrophoneEnabled(true).catch(() => {});
+                  }
                   if (localStream) {
                     localStream.getAudioTracks().forEach((t) => {
                       t.enabled = true;
@@ -1597,13 +1925,13 @@ export default function ClassroomPage() {
                   const isHost = meetingData?.role === "TUTOR" || meetingData?.role === "ADMIN";
                   const currentUserId = String(user?.id || (isHost ? "tutor" : "student"));
 
-                  broadcastChannelRef.current?.postMessage({
+                  sendMeetingSignal({
                     action: "UPDATE_MEDIA_STATE",
                     senderId: currentUserId,
                     senderRole: meetingData?.role || "STUDENT",
                     micEnabled: true,
                     timestamp: Date.now(),
-                  } as MeetingSignalPayload);
+                  });
 
                   setParticipants((prev) =>
                     prev.map((p) => (p.isSelf ? { ...p, micEnabled: true } : p))

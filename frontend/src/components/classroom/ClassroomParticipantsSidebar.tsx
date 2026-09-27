@@ -14,6 +14,8 @@ interface ClassroomParticipantsSidebarProps {
   handRaisedIds: Set<number>;
   mutedStudentIds: Set<number>;
   onToggleMuteStudent?: (studentId: number) => void;
+  onMuteAll?: () => void;
+  embedded?: boolean;
 }
 
 export function ClassroomParticipantsSidebar({
@@ -28,6 +30,8 @@ export function ClassroomParticipantsSidebar({
   handRaisedIds,
   mutedStudentIds,
   onToggleMuteStudent,
+  onMuteAll,
+  embedded = false,
 }: ClassroomParticipantsSidebarProps) {
   if (!isOpen) return null;
 
@@ -36,29 +40,8 @@ export function ClassroomParticipantsSidebar({
 
   const totalInRoom = presentStudents.length + (tutorOnline ? 1 : 0);
 
-  return (
-    <aside
-      aria-label="Danh sách người tham gia"
-      className="flex w-80 flex-col border-l border-slate-800 bg-slate-900 text-slate-100 shadow-xl z-20"
-    >
-      {/* Header */}
-      <div className="flex h-14 items-center justify-between border-b border-slate-800 px-4">
-        <div className="flex items-center gap-2">
-          <Icon name="groups" className="text-[20px] text-indigo-400" />
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-            Người tham gia ({totalInRoom})
-          </h2>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Đóng danh sách"
-          className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-        >
-          <Icon name="close" className="text-[18px]" />
-        </button>
-      </div>
-
+  const content = (
+    <>
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {/* Gia sư phụ trách */}
         {tutorInfo && (
@@ -99,6 +82,17 @@ export function ClassroomParticipantsSidebar({
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               Đang có mặt ({presentStudents.length})
             </h3>
+            {(isTutor || isAdmin) && onMuteAll && presentStudents.length > 0 && (
+              <button
+                type="button"
+                onClick={onMuteAll}
+                className="flex items-center gap-1 rounded-lg bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 text-[11px] font-semibold text-rose-300 hover:bg-rose-500/20 transition"
+                title="Tắt micro toàn bộ học sinh"
+              >
+                <Icon name="volume_off" className="text-xs" />
+                <span>Tắt tất cả mic</span>
+              </button>
+            )}
           </div>
 
           {presentStudents.length === 0 ? (
@@ -195,6 +189,37 @@ export function ClassroomParticipantsSidebar({
       <div className="border-t border-slate-800 p-3 bg-slate-950/40 text-[11px] text-slate-500 text-center">
         Thông tin liên lạc học viên được bảo mật bởi nền tảng.
       </div>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex flex-1 flex-col overflow-hidden">{content}</div>;
+  }
+
+  return (
+    <aside
+      aria-label="Danh sách người tham gia"
+      className="flex w-80 flex-col border-l border-slate-800 bg-slate-900 text-slate-100 shadow-xl z-20"
+    >
+      {/* Header */}
+      <div className="flex h-14 items-center justify-between border-b border-slate-800 px-4">
+        <div className="flex items-center gap-2">
+          <Icon name="groups" className="text-[20px] text-indigo-400" />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+            Người tham gia ({totalInRoom})
+          </h2>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Đóng danh sách"
+          className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+        >
+          <Icon name="close" className="text-[18px]" />
+        </button>
+      </div>
+
+      {content}
     </aside>
   );
 }

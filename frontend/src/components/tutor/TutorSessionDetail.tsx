@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { AttendanceEditor } from "@/components/dashboard/AttendanceEditor";
 import { SessionHomework } from "@/components/tutor/SessionHomework";
 import { SessionMaterials } from "@/components/tutor/SessionMaterials";
+import { SessionRecordingPlayer } from "@/components/dashboard/SessionRecordingPlayer";
 import { StatusChip } from "@/components/dashboard/StatusChip";
 import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING, PORTAL_BTN_SECONDARY } from "@/constants/classNames";
@@ -117,6 +118,10 @@ export function TutorSessionDetail({ session, now, tutorId, hasPendingLeave }: T
             )
           )}
         </div>
+      )}
+
+      {started && session.status !== "CANCELLED" && (
+        <SessionRecordingPlayer sessionId={session.sessionId} />
       )}
 
       {showTabs && (

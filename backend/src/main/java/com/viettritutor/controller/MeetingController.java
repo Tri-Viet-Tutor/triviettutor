@@ -1,6 +1,7 @@
 package com.viettritutor.controller;
 
 import com.viettritutor.common.api.ApiResponse;
+import com.viettritutor.dto.meeting.MeetingRecordingInfoResponse;
 import com.viettritutor.dto.meeting.MeetingSessionLogsResponse;
 import com.viettritutor.dto.meeting.MeetingTokenResponse;
 import com.viettritutor.entity.User;
@@ -125,5 +126,17 @@ public class MeetingController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
                 .header(HttpHeaders.ACCEPT_RANGES, "bytes")
                 .body(audioResource);
+    }
+
+    @GetMapping("/sessions/{sessionId}/recording-info")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TUTOR', 'STUDENT')")
+    @Operation(summary = "Get audio voice recording metadata and availability for a session")
+    public ApiResponse<MeetingRecordingInfoResponse> getSessionAudioInfo(
+            @Parameter(description = "Session ID", required = true)
+            @PathVariable @Min(1) Long sessionId,
+            @CurrentUser User currentUser) {
+        log.info("Checking audio recording info for session {} by user {} ({})",
+                sessionId, currentUser.getId(), currentUser.getRole());
+        return ApiResponse.ok(meetingService.getMeetingRecordingInfo(sessionId, currentUser));
     }
 }
