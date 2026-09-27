@@ -1,15 +1,22 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 // Layouts
 import { AuthLayout } from "@/layouts/AuthLayout";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { TutorLayout } from "@/layouts/TutorLayout";
 import { StudentLayout } from "@/layouts/StudentLayout";
+import { PublicLayout } from "@/layouts/PublicLayout";
 
 // Auth pages
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { RegisterPage } from "@/pages/auth/RegisterPage";
 
+// Public Stitch pages
+import { HomePage } from "@/pages/public/HomePage";
+import { SubjectsPage } from "@/pages/public/SubjectsPage";
+import { SearchPage } from "@/pages/public/SearchPage";
+import { PricingPage } from "@/pages/public/PricingPage";
+import { ContactPage } from "@/pages/public/ContactPage";
 
 // Guard components
 import { PrivateRoute } from "@/components/PrivateRoute";
@@ -23,20 +30,26 @@ import { ForbiddenPage } from "@/pages/ForbiddenPage";
  * Application router.
  *
  * Route protection strategy (BR-01.10):
- *  - Unauthenticated users → redirected to /login
- *  - Wrong role → /403
- *
- * Route prefixes:
- *  /login, /register        → public (AuthLayout)
- *  /admin/**                → ROLE_ADMIN only
- *  /tutor/**                → ROLE_TUTOR only
- *  /student/**              → ROLE_STUDENT only
+ *  - Public marketing/landing pages → PublicLayout (/, /cap-hoc-mon-hoc, /tim-gia-su, /bang-hoc-phi, /lien-he)
+ *  - /login, /register             → public (AuthLayout)
+ *  - /admin/**                     → ROLE_ADMIN only
+ *  - /tutor/**                     → ROLE_TUTOR only
+ *  - /student/**                   → ROLE_STUDENT only
  */
 export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ── Public routes ──────────────────────────────────────────── */}
+        {/* ── Public Stitch landing & educational routes ──────────────── */}
+        <Route element={<PublicLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/cap-hoc-mon-hoc" element={<SubjectsPage />} />
+          <Route path="/tim-gia-su" element={<SearchPage />} />
+          <Route path="/bang-hoc-phi" element={<PricingPage />} />
+          <Route path="/lien-he" element={<ContactPage />} />
+        </Route>
+
+        {/* ── Auth routes ─────────────────────────────────────────────── */}
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -71,7 +84,6 @@ export function AppRouter() {
 
         {/* ── Error pages ──────────────────────────────────────────────── */}
         <Route path="/403" element={<ForbiddenPage />} />
-        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
