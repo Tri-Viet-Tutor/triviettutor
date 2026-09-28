@@ -16,8 +16,17 @@
   }
 
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-slate-50 text-slate-900;
     font-family: "Be Vietnam Pro", sans-serif;
+  }
+
+  /* Một phông chữ duy nhất cho toàn web (trừ bộ biểu tượng Material Symbols) */
+  *:not(.material-symbols-outlined),
+  input,
+  select,
+  textarea,
+  button {
+    font-family: "Be Vietnam Pro", system-ui, sans-serif !important;
   }
 
   .material-symbols-outlined {

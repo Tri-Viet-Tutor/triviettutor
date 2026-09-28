@@ -2,7 +2,7 @@
  * Centralized mapping of UI assets extracted from the stitch designs.
  */
 export const ASSETS = {
-  logo: "/assets/vector_style_emblem_logo_for_gia_s_tp._h_ch_minh_tutoring_academy._a_circular.png",
+  logo: "/assets/LogoSBA.png",
   mascot: "/assets/a_cute_flat_2d_vector_cartoon_chibi_horse_student_mascot_for_an_edtech_learning.png",
   mascotGamified: "/assets/a_cute_flat_2d_vector_cartoon_chibi_horse_student_mascot_for_a_gamified_edtech.png",
   mascotPencil: "/assets/a_cute_flat_2d_vector_cartoon_chibi_horse_student_mascot_holding_a_colorful.png",
@@ -15,7 +15,11 @@ export const ASSETS = {
   tutoringOnline: "/assets/a_high_quality_realistic_photograph_of_an_online_tutoring_session_in_vietnam._a.png",
   tutoringInspiring: "/assets/a_modern_warm_high_quality_photograph_of_an_inspiring_educational_tutoring.png",
   mapMockup: "/assets/a_realistic_clean_screenshot_mockup_of_a_google_maps_location_card_showing_an.png",
-  tutorMaleYoung: "/assets/portrait_of_an_encouraging_young_male_vietnamese_tutor_in_his_late_20s_wearing.png",
-  tutorFemaleYoung: "/assets/portrait_of_an_inspiring_vietnamese_female_tutor_in_her_late_20s_smiling_warmly.png",
-  tutorMaleSenior: "/assets/portrait_of_a_dedicated_young_male_vietnamese_teacher_or_university_tutor_in.png",
+  // Ảnh giảng viên (tên file: TênThầyCô_Môn.png)
+  tutorHoDucThuan: "/assets/HoDucThuan_Toan.png",
+  tutorNguyenCongChinh: "/assets/NguyenCongChinh_Toan.png",
+  tutorTrangAnh: "/assets/TrangAnh_English.png",
+  tutorLuongTaKinhLuan: "/assets/LuongTaKinhLua_NguVan.png",
+  tutorNguyenCongKhanh: "/assets/NguyenCongKhanh_Hoa.png",
+  tutorLeThiHien: "/assets/LeThiHien_TinHoc.png",
 };
