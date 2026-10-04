@@ -27,6 +27,9 @@ public interface SessionRepository extends JpaRepository<Session, Long>, JpaSpec
 
     List<Session> findByStatusAndSessionDateLessThanEqual(SessionStatus status, LocalDate date);
 
+    @Query("select distinct s.classGroupId from Session s")
+    List<Long> findDistinctClassGroupIds();
+
     @Query("""
             select s from Session s
             where (:from is null or s.sessionDate >= :from)
