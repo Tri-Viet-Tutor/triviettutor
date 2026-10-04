@@ -26,13 +26,16 @@ public class LearningScheduleService {
             Long classGroupId,
             LocalDate startDate,
             LocalDate endDate) {
-        return repository.save(LearningSchedule.builder()
-                .enrollmentId(enrollmentId)
-                .studentId(studentId)
-                .classGroupId(classGroupId)
-                .startDate(startDate)
-                .endDate(endDate)
-                .status(LearningScheduleStatus.ACTIVE)
-                .build());
+        if (startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("startDate must not be after endDate");
+        }
+        LearningSchedule schedule = repository.findByEnrollmentId(enrollmentId)
+                .orElseGet(() -> LearningSchedule.builder().enrollmentId(enrollmentId).build());
+        schedule.setStudentId(studentId);
+        schedule.setClassGroupId(classGroupId);
+        schedule.setStartDate(startDate);
+        schedule.setEndDate(endDate);
+        schedule.setStatus(LearningScheduleStatus.ACTIVE);
+        return repository.save(schedule);
     }
 }
