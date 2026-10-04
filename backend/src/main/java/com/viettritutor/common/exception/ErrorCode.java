@@ -33,6 +33,9 @@ public enum ErrorCode {
     // ── Schedule / Assignment (BR-03) ──────────────────────────────────────────
     SCHEDULE_CONFLICT         (HttpStatus.CONFLICT,       "This tutor has an overlapping session in another class"),
     STUDENT_SCHEDULE_CONFLICT (HttpStatus.CONFLICT,       "You are already enrolled in a class at this time"),
+    SESSION_CONFIG_MISMATCH   (HttpStatus.CONFLICT,       "Existing sessions do not match the class schedule configuration"),
+    INVALID_DATE_RANGE        (HttpStatus.BAD_REQUEST,    "The 'from' date must not be after the 'to' date"),
+    INVALID_MEETING_URL       (HttpStatus.BAD_REQUEST,    "Meeting URL must be a valid HTTPS URL"),
 
     // ── Enrollment (BR-02) ────────────────────────────────────────────────────
     CLASS_FULL                (HttpStatus.CONFLICT,       "This class has reached maximum capacity"),
