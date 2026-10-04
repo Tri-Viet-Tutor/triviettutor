@@ -2,6 +2,10 @@
 -- class_group_id and enrollment_id intentionally remain scalar contracts until
 -- the catalog/enrollment module owns and creates their foreign keys.
 
+CREATE TABLE IF NOT EXISTS session_generation_locks (
+    class_group_id BIGINT PRIMARY KEY
+);
+
 CREATE TABLE IF NOT EXISTS sessions (
     id                  BIGSERIAL PRIMARY KEY,
     class_group_id      BIGINT       NOT NULL,

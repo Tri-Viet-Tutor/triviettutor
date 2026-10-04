@@ -4,9 +4,11 @@ import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.common.exception.ErrorCode;
 import com.viettritutor.modules.schedule.domain.SchedulePattern;
 import com.viettritutor.modules.schedule.domain.Session;
+import com.viettritutor.modules.schedule.domain.SessionGenerationLock;
 import com.viettritutor.modules.schedule.domain.SessionStatus;
 import com.viettritutor.modules.schedule.domain.TimeSlot;
 import com.viettritutor.modules.schedule.repository.SessionRepository;
+import com.viettritutor.modules.schedule.repository.SessionGenerationLockRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,12 +30,16 @@ class DefaultSessionGeneratorTest {
 
     @Mock
     private SessionRepository repository;
+    @Mock
+    private SessionGenerationLockRepository generationLockRepository;
 
     private DefaultSessionGenerator generator;
 
     @BeforeEach
     void setUp() {
-        generator = new DefaultSessionGenerator(repository, new SessionDateCalculator());
+        generator = new DefaultSessionGenerator(repository, generationLockRepository, new SessionDateCalculator());
+        lenient().when(generationLockRepository.findForUpdate(11L))
+                .thenReturn(java.util.Optional.of(new SessionGenerationLock(11L)));
         lenient().when(repository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -65,6 +71,7 @@ class DefaultSessionGeneratorTest {
 
         assertThat(result).containsExactlyElementsOf(existing);
         verify(repository, never()).saveAll(anyList());
+        verify(generationLockRepository).findForUpdate(11L);
     }
 
     @Test

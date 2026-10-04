@@ -38,4 +38,16 @@ public class LearningScheduleService {
         schedule.setStatus(LearningScheduleStatus.ACTIVE);
         return repository.save(schedule);
     }
+
+    /** Called in the same transaction that cancels or deactivates enrollment. */
+    @Transactional
+    public LearningSchedule deactivate(Long enrollmentId, LearningScheduleStatus status) {
+        if (status == LearningScheduleStatus.ACTIVE) {
+            throw new IllegalArgumentException("Use activate to set an active learning schedule");
+        }
+        LearningSchedule schedule = repository.findByEnrollmentId(enrollmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Learning schedule not found for enrollment"));
+        schedule.setStatus(status);
+        return repository.save(schedule);
+    }
 }

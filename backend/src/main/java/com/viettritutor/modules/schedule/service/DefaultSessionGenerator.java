@@ -4,6 +4,7 @@ import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.common.exception.ErrorCode;
 import com.viettritutor.modules.schedule.domain.Session;
 import com.viettritutor.modules.schedule.domain.SessionStatus;
+import com.viettritutor.modules.schedule.repository.SessionGenerationLockRepository;
 import com.viettritutor.modules.schedule.repository.SessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,11 +20,13 @@ import java.util.stream.Collectors;
 public class DefaultSessionGenerator implements SessionGenerator {
 
     private final SessionRepository sessionRepository;
+    private final SessionGenerationLockRepository generationLockRepository;
     private final SessionDateCalculator dateCalculator;
 
     @Override
     @Transactional
     public List<Session> ensureGenerated(SessionGenerationSpec spec) {
+        lockClassGeneration(spec.classGroupId());
         List<LocalDate> expectedDates = dateCalculator.calculate(
                 spec.startDate(), spec.pattern(), spec.totalSessions());
         List<Session> existing = sessionRepository.findOriginalSessionsForUpdate(spec.classGroupId());
@@ -65,6 +68,12 @@ public class DefaultSessionGenerator implements SessionGenerator {
             sessionRepository.saveAll(missing).forEach(session -> byNumber.put(session.getSessionNumber(), session));
         }
         return List.copyOf(byNumber.values());
+    }
+
+    private void lockClassGeneration(Long classGroupId) {
+        generationLockRepository.insertIfAbsent(classGroupId);
+        generationLockRepository.findForUpdate(classGroupId)
+                .orElseThrow(() -> new IllegalStateException("Could not acquire session generation lock"));
     }
 
     private void verifyMatches(Session existing, LocalDate expectedDate, SessionGenerationSpec spec) {
