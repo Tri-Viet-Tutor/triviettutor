@@ -17,7 +17,7 @@ Dùng **monorepo 2 ứng dụng** (phù hợp đồ án SBA301): một thư mụ
 VietTriTutor/
 ├── documentation/                 # Tài liệu nghiệp vụ & kiến trúc (thư mục hiện tại)
 ├── frontend/                      # React + Vite + TypeScript
-├── backend/                       # Spring Boot 3 + Java 17
+├── backend/                       # Spring Boot 3 + Java 21
 ├── docker-compose.yml             # Postgres + (tùy chọn) backend/frontend local
 └── README.md                      # Hướng dẫn chạy dự án
 ```
@@ -27,7 +27,7 @@ VietTriTutor/
 | Frontend | React 18, Vite, TypeScript, React Router, TanStack Query, Axios | SPA theo vai trò, gọi REST. |
 | UI | Tailwind CSS + component tự viết (hoặc shadcn/ui) | Nhanh, đồng nhất Admin / Tutor / Student. |
 | Auth FE | JWT lưu memory + refresh cookie httpOnly (hoặc localStorage giai đoạn đồ án) | Khớp Spring Security. |
-| Backend | Spring Boot 3, Java 17, Spring Web, Spring Data JPA, Spring Security | REST API, phân quyền `ROLE_*`. |
+| Backend | Spring Boot 3, Java 21, Spring Web, Spring Data JPA, Spring Security | REST API, phân quyền `ROLE_*`. |
 | Database | PostgreSQL | Quan hệ lớp–buổi–enrollment rõ ràng. |
 | Migration | Flyway | Version schema theo sprint. |
 | API doc | springdoc-openapi (Swagger UI) | FE và tester dùng chung contract. |
@@ -136,101 +136,94 @@ Route guard: chưa đăng nhập → `/login`. Sai role → `/403`.
 
 ## 3. Backend — Spring Boot
 
-Package gốc: `com.viettritutor`.
+Package gốc: `com.viettritutor`. Backend dùng **kiến trúc phân tầng (package by layer)**, phù hợp cấu trúc thực hành SBA301. Các chức năng chạy trong cùng một ứng dụng Spring Boot và dùng chung PostgreSQL.
 
-Chia **theo module nghiệp vụ** (không nhét toàn bộ entity vào một package `model`). Mỗi module đủ 4 lớp: `api` (controller) → `service` → `repository` + `domain`.
+Luồng xử lý: **`controller` → `service` → `repository` → database**. Entity ánh xạ bảng dữ liệu; DTO mô tả request/response của API.
+
+Cấu trúc đang triển khai:
 
 ```text
 backend/
-├── pom.xml
+├── pom.xml                            # Spring Boot 3, Java 21
 ├── src/main/java/com/viettritutor/
-│   ├── VietTriTutorApplication.java
-│   ├── common/                        # Dùng chung, không chứa nghiệp vụ
-│   │   ├── api/
-│   │   │   ├── ApiResponse.java
-│   │   │   └── PageResponse.java
-│   │   ├── exception/
-│   │   │   ├── GlobalExceptionHandler.java
-│   │   │   ├── BusinessException.java
-│   │   │   └── ErrorCode.java         # Ví dụ SCHEDULE_CONFLICT, CLASS_FULL
-│   │   └── util/
-│   │       └── TimeOverlap.java       # BR-03.30
-│   ├── config/
-│   │   ├── SecurityConfig.java
-│   │   ├── OpenApiConfig.java
-│   │   └── CorsConfig.java
+│   ├── VietTriTutorApplication.java   # Package gốc để Spring quét các tầng
+│   ├── common/
+│   │   ├── api/                       # ApiResponse, PageResponse
+│   │   └── exception/                 # BusinessException, ErrorCode, handler
+│   ├── config/                        # Security, CORS, OpenAPI, Clock
 │   ├── security/
-│   │   ├── jwt/
-│   │   │   ├── JwtService.java
-│   │   │   └── JwtAuthFilter.java
-│   │   └── CurrentUser.java
-│   └── modules/
-│       ├── auth/
-│       │   ├── api/AuthController.java
-│       │   ├── service/AuthService.java
-│       │   └── dto/
-│       ├── user/
-│       │   ├── domain/User.java       # roles: ADMIN | TUTOR | STUDENT
-│       │   ├── domain/TutorProfile.java
-│       │   ├── domain/StudentProfile.java
-│       │   ├── api/UserController.java
-│       │   ├── service/
-│       │   └── repository/
-│       ├── catalog/                   # Course + Class (Admin tạo, Student xem)
-│       │   ├── domain/Course.java
-│       │   ├── domain/ClassGroup.java # "Class" là keyword Java → ClassGroup / CourseClass
-│       │   ├── domain/enums/
-│       │   │   ├── ClassType.java     # ONE_ON_ONE, GROUP
-│       │   │   ├── ClassStatus.java   # DRAFT ... CANCELLED (BR-04)
-│       │   │   ├── DeliveryMode.java  # ONLINE, OFFLINE
-│       │   │   ├── SchedulePattern.java
-│       │   │   └── TimeSlot.java
-│       │   ├── api/AdminCourseController.java
-│       │   ├── api/CatalogController.java
-│       │   ├── service/PricingService.java   # BR-02 bảng chiết khấu
-│       │   └── repository/
-│       ├── enrollment/
-│       │   ├── domain/Enrollment.java
-│       │   ├── domain/Payment.java
-│       │   ├── api/EnrollmentController.java
-│       │   ├── service/EnrollmentService.java
-│       │   └── service/StudentConflictService.java
-│       ├── schedule/
-│       │   ├── domain/Session.java
-│       │   ├── domain/LeaveRequest.java
-│       │   ├── service/SessionGenerator.java    # Sinh buổi từ pattern
-│       │   ├── service/RescheduleService.java
-│       │   └── api/
-│       ├── assignment/
-│       │   ├── domain/Assignment.java
-│       │   ├── service/ConflictValidationService.java
-│       │   ├── service/AssignmentService.java
-│       │   └── api/AdminAssignmentController.java
-│       ├── attendance/
-│       │   ├── domain/AttendanceRecord.java
-│       │   ├── service/AttendanceService.java
-│       │   └── api/AttendanceController.java
-│       └── payroll/
-│           ├── domain/PayrollPeriod.java
-│           ├── domain/PayrollLine.java
-│           ├── service/PayrollService.java      # BR-02.40
-│           └── api/
+│   │   ├── CurrentUser.java
+│   │   └── jwt/                       # JwtService, JwtAuthFilter
+│   ├── controller/
+│   │   ├── AuthController.java
+│   │   └── SessionController.java
+│   ├── dto/
+│   │   ├── auth/                      # AuthRequest, RegisterRequest, AuthResponse
+│   │   └── schedule/                  # MeetingUrlRequest, SessionResponse
+│   ├── entity/
+│   │   ├── User.java
+│   │   ├── Session.java
+│   │   ├── LearningSchedule.java
+│   │   ├── SessionGenerationLock.java
+│   │   └── enums/                     # SessionStatus, LearningScheduleStatus,
+│   │                                  # SchedulePattern, TimeSlot
+│   ├── repository/
+│   │   ├── UserRepository.java
+│   │   ├── SessionRepository.java
+│   │   ├── LearningScheduleRepository.java
+│   │   └── SessionGenerationLockRepository.java
+│   └── service/
+│       ├── AuthService.java
+│       ├── UserDetailsServiceImpl.java
+│       ├── SessionQueryService.java
+│       ├── LearningScheduleService.java
+│       ├── SessionGenerator.java
+│       ├── DefaultSessionGenerator.java
+│       ├── SessionGenerationSpec.java
+│       ├── SessionDateCalculator.java
+│       ├── SessionLifecycleService.java
+│       ├── SessionLifecycleJob.java
+│       ├── ClassLifecycle.java
+│       └── ClassTeachingCompletedEvent.java
 ├── src/main/resources/
 │   ├── application.yml
 │   ├── application-dev.yml
 │   └── db/migration/
 │       ├── V1__init_users.sql
-│       ├── V2__courses_and_classes.sql
-│       ├── V3__enrollments_payments.sql
-│       ├── V4__sessions_assignments.sql
-│       └── V5__attendance_payroll.sql
+│       └── V2__create_session_schedule.sql
 └── src/test/java/com/viettritutor/
-    ├── modules/assignment/ConflictValidationServiceTest.java
-    ├── modules/catalog/PricingServiceTest.java
-    └── modules/enrollment/EnrollmentServiceTest.java
+    ├── ApplicationContextTest.java
+    ├── controller/ApiCompatibilityTest.java
+    ├── repository/SessionRepositoryTest.java
+    └── service/                       # Kiểm thử sinh lịch, truy vấn và vòng đời
 ```
 
-Tên entity lớp: dùng `CourseClass` (hoặc `ClassGroup`) — **không** đặt `Class` vì trùng keyword Java.
+Quy tắc tổ chức:
+
+- `controller`: khai báo endpoint, nhận/validate request và gọi service; không truy cập repository trực tiếp.
+- `service`: xử lý nghiệp vụ, ownership và transaction. Job lịch học và các hợp đồng tích hợp nghiệp vụ nằm ở tầng này.
+- `repository`: khai báo truy vấn và khóa dữ liệu qua Spring Data JPA.
+- `entity`: JPA entity; các enum nghiệp vụ đặt trong `entity.enums`.
+- `dto`: nhóm theo chức năng (`auth`, `schedule`, sau này có thể thêm `catalog`, `enrollment`...) để giữ tên và hợp đồng API rõ ràng.
+- `common`: response và exception dùng chung; `security` và `config` chứa xác thực và cấu hình kỹ thuật.
+- Test đặt trong package tương ứng với tầng được kiểm thử.
+
+Các chức năng `catalog`, `enrollment`, `assignment`, `attendance`, `payroll` bên dưới là kế hoạch phát triển. Khi triển khai, thêm class vào các tầng trên, ví dụ `controller.AdminCourseController`, `service.PricingService`, `entity.Course`, `repository.CourseRepository`, `dto.catalog.*`.
+
+Việc chuyển package giữ nguyên HTTP method, URL, request/response, phân quyền, nghiệp vụ và schema database. Các endpoint hiện có:
+
+| Method | URL |
+| :--- | :--- |
+| POST | `/api/v1/auth/register` |
+| POST | `/api/v1/auth/login` |
+| GET | `/api/v1/me/sessions` |
+| GET | `/api/v1/admin/sessions` |
+| GET | `/api/v1/sessions/{sessionId}` |
+| PUT | `/api/v1/admin/sessions/{sessionId}/meeting-url` |
+
+Chạy `mvn clean verify` trong thư mục `backend` để kiểm tra source sau khi chuyển package và đóng gói ứng dụng. `ApiCompatibilityTest` kiểm tra các endpoint trên qua MockMvc, Spring Security, service và JPA. Test dùng H2; migration và khóa đặc thù PostgreSQL cần được kiểm tra riêng trên PostgreSQL.
+
+Tên entity lớp: dùng `CourseClass` hoặc `ClassGroup` để tránh nhầm với `java.lang.Class`.
 
 ### 3.1. Quan hệ dữ liệu cốt lõi
 
@@ -339,4 +332,4 @@ Không commit mật khẩu / JWT secret.
 | Phụ huynh = `ROLE_STUDENT` | Tách tài khoản phụ huynh–con |
 | Điểm danh QR hoặc nút check-in | Hardware kiosk |
 
-Cấu trúc thư mục trên đã chừa chỗ cho giai đoạn 2 (ví dụ `modules/videocall/`) mà không cần đổi package cốt lõi.
+Giai đoạn 2 tiếp tục thêm chức năng vào các tầng hiện có, ví dụ `controller.VideoCallController`, `service.VideoCallService` và `dto.videocall`, mà không cần đổi package gốc.
