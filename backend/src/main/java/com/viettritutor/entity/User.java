@@ -1,4 +1,4 @@
-package com.viettritutor.modules.user.domain;
+package com.viettritutor.entity;
 
 import jakarta.persistence.*;
 import lombok.*;

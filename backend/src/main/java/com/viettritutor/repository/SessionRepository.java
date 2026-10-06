@@ -1,7 +1,7 @@
-package com.viettritutor.modules.schedule.repository;
+package com.viettritutor.repository;
 
-import com.viettritutor.modules.schedule.domain.Session;
-import com.viettritutor.modules.schedule.domain.SessionStatus;
+import com.viettritutor.entity.Session;
+import com.viettritutor.entity.enums.SessionStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -42,7 +42,7 @@ public interface SessionRepository extends JpaRepository<Session, Long>, JpaSpec
                         select ls.id from LearningSchedule ls
                         where ls.studentId = :userId
                           and ls.classGroupId = s.classGroupId
-                          and ls.status = com.viettritutor.modules.schedule.domain.LearningScheduleStatus.ACTIVE
+                          and ls.status = com.viettritutor.entity.enums.LearningScheduleStatus.ACTIVE
                           and s.sessionDate between ls.startDate and ls.endDate
                     ))
               )

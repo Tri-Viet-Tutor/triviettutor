@@ -1,6 +1,6 @@
 package com.viettritutor.modules.user.service;
 
-import com.viettritutor.modules.user.repository.UserRepository;
+import com.viettritutor.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

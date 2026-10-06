@@ -1,12 +1,12 @@
 package com.viettritutor.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.viettritutor.modules.schedule.domain.Session;
-import com.viettritutor.modules.schedule.domain.SessionStatus;
-import com.viettritutor.modules.schedule.repository.SessionRepository;
+import com.viettritutor.entity.Session;
+import com.viettritutor.entity.enums.SessionStatus;
+import com.viettritutor.repository.SessionRepository;
 import com.viettritutor.modules.schedule.service.SessionLifecycleJob;
-import com.viettritutor.modules.user.domain.User;
-import com.viettritutor.modules.user.repository.UserRepository;
+import com.viettritutor.entity.User;
+import com.viettritutor.repository.UserRepository;
 import com.viettritutor.security.jwt.JwtService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

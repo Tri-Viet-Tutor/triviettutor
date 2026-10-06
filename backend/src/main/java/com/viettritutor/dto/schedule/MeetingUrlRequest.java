@@ -1,4 +1,4 @@
-package com.viettritutor.modules.schedule.dto;
+package com.viettritutor.dto.schedule;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

@@ -1,8 +1,8 @@
 package com.viettritutor.modules.schedule.service;
 
-import com.viettritutor.modules.schedule.domain.LearningSchedule;
-import com.viettritutor.modules.schedule.domain.LearningScheduleStatus;
-import com.viettritutor.modules.schedule.repository.LearningScheduleRepository;
+import com.viettritutor.entity.LearningSchedule;
+import com.viettritutor.entity.enums.LearningScheduleStatus;
+import com.viettritutor.repository.LearningScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

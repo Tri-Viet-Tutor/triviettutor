@@ -1,4 +1,6 @@
-package com.viettritutor.modules.schedule.domain;
+package com.viettritutor.entity;
+
+import com.viettritutor.entity.enums.SessionStatus;
 
 import jakarta.persistence.*;
 import lombok.*;

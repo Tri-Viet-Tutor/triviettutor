@@ -1,6 +1,6 @@
-package com.viettritutor.modules.schedule.repository;
+package com.viettritutor.repository;
 
-import com.viettritutor.modules.schedule.domain.SessionGenerationLock;
+import com.viettritutor.entity.SessionGenerationLock;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;

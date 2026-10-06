@@ -1,6 +1,6 @@
 package com.viettritutor.modules.schedule.service;
 
-import com.viettritutor.modules.schedule.domain.SchedulePattern;
+import com.viettritutor.entity.enums.SchedulePattern;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;

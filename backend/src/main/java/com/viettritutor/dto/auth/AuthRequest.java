@@ -1,4 +1,4 @@
-package com.viettritutor.modules.auth.dto;
+package com.viettritutor.dto.auth;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

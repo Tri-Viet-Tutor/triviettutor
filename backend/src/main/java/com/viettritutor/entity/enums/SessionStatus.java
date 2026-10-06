@@ -1,4 +1,4 @@
-package com.viettritutor.modules.schedule.domain;
+package com.viettritutor.entity.enums;
 
 public enum SessionStatus {
     SCHEDULED,

@@ -2,11 +2,11 @@ package com.viettritutor.modules.auth.service;
 
 import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.common.exception.ErrorCode;
-import com.viettritutor.modules.auth.dto.AuthRequest;
-import com.viettritutor.modules.auth.dto.AuthResponse;
-import com.viettritutor.modules.auth.dto.RegisterRequest;
-import com.viettritutor.modules.user.domain.User;
-import com.viettritutor.modules.user.repository.UserRepository;
+import com.viettritutor.dto.auth.AuthRequest;
+import com.viettritutor.dto.auth.AuthResponse;
+import com.viettritutor.dto.auth.RegisterRequest;
+import com.viettritutor.entity.User;
+import com.viettritutor.repository.UserRepository;
 import com.viettritutor.security.jwt.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;

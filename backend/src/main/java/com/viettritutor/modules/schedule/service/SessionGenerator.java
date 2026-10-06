@@ -1,6 +1,6 @@
 package com.viettritutor.modules.schedule.service;
 
-import com.viettritutor.modules.schedule.domain.Session;
+import com.viettritutor.entity.Session;
 
 import java.util.List;
 

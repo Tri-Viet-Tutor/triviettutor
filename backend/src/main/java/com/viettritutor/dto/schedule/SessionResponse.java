@@ -1,7 +1,7 @@
-package com.viettritutor.modules.schedule.dto;
+package com.viettritutor.dto.schedule;
 
-import com.viettritutor.modules.schedule.domain.Session;
-import com.viettritutor.modules.schedule.domain.SessionStatus;
+import com.viettritutor.entity.Session;
+import com.viettritutor.entity.enums.SessionStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;

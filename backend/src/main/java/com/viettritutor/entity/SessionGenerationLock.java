@@ -1,4 +1,4 @@
-package com.viettritutor.modules.schedule.domain;
+package com.viettritutor.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

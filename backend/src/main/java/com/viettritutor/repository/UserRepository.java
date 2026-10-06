@@ -1,6 +1,6 @@
-package com.viettritutor.modules.user.repository;
+package com.viettritutor.repository;
 
-import com.viettritutor.modules.user.domain.User;
+import com.viettritutor.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

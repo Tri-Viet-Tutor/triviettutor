@@ -1,6 +1,6 @@
 package com.viettritutor.security;
 
-import com.viettritutor.modules.user.domain.User;
+import com.viettritutor.entity.User;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.lang.annotation.*;

@@ -1,9 +1,9 @@
 package com.viettritutor.modules.auth.api;
 
 import com.viettritutor.common.api.ApiResponse;
-import com.viettritutor.modules.auth.dto.AuthRequest;
-import com.viettritutor.modules.auth.dto.AuthResponse;
-import com.viettritutor.modules.auth.dto.RegisterRequest;
+import com.viettritutor.dto.auth.AuthRequest;
+import com.viettritutor.dto.auth.AuthResponse;
+import com.viettritutor.dto.auth.RegisterRequest;
 import com.viettritutor.modules.auth.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

@@ -1,7 +1,7 @@
 package com.viettritutor.modules.schedule.service;
 
-import com.viettritutor.modules.schedule.domain.SchedulePattern;
-import com.viettritutor.modules.schedule.domain.TimeSlot;
+import com.viettritutor.entity.enums.SchedulePattern;
+import com.viettritutor.entity.enums.TimeSlot;
 
 import java.time.LocalDate;
 

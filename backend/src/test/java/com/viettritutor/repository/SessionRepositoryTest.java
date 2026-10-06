@@ -1,8 +1,9 @@
-package com.viettritutor.modules.schedule.repository;
+package com.viettritutor.repository;
 
-import com.viettritutor.modules.schedule.domain.*;
-import com.viettritutor.modules.user.domain.User;
-import com.viettritutor.modules.user.repository.UserRepository;
+import com.viettritutor.entity.*;
+import com.viettritutor.entity.enums.*;
+import com.viettritutor.entity.User;
+import com.viettritutor.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;

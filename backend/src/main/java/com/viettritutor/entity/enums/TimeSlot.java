@@ -1,4 +1,4 @@
-package com.viettritutor.modules.schedule.domain;
+package com.viettritutor.entity.enums;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

@@ -1,8 +1,8 @@
 package com.viettritutor.modules.schedule.service;
 
-import com.viettritutor.modules.schedule.domain.Session;
-import com.viettritutor.modules.schedule.domain.SessionStatus;
-import com.viettritutor.modules.schedule.repository.SessionRepository;
+import com.viettritutor.entity.Session;
+import com.viettritutor.entity.enums.SessionStatus;
+import com.viettritutor.repository.SessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;

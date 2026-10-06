@@ -2,11 +2,11 @@ package com.viettritutor.modules.schedule.api;
 
 import com.viettritutor.common.api.ApiResponse;
 import com.viettritutor.common.api.PageResponse;
-import com.viettritutor.modules.schedule.domain.SessionStatus;
-import com.viettritutor.modules.schedule.dto.MeetingUrlRequest;
-import com.viettritutor.modules.schedule.dto.SessionResponse;
+import com.viettritutor.entity.enums.SessionStatus;
+import com.viettritutor.dto.schedule.MeetingUrlRequest;
+import com.viettritutor.dto.schedule.SessionResponse;
 import com.viettritutor.modules.schedule.service.SessionQueryService;
-import com.viettritutor.modules.user.domain.User;
+import com.viettritutor.entity.User;
 import com.viettritutor.security.CurrentUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

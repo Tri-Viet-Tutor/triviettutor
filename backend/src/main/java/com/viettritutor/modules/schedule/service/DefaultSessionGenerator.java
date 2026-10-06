@@ -2,10 +2,10 @@ package com.viettritutor.modules.schedule.service;
 
 import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.common.exception.ErrorCode;
-import com.viettritutor.modules.schedule.domain.Session;
-import com.viettritutor.modules.schedule.domain.SessionStatus;
-import com.viettritutor.modules.schedule.repository.SessionGenerationLockRepository;
-import com.viettritutor.modules.schedule.repository.SessionRepository;
+import com.viettritutor.entity.Session;
+import com.viettritutor.entity.enums.SessionStatus;
+import com.viettritutor.repository.SessionGenerationLockRepository;
+import com.viettritutor.repository.SessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

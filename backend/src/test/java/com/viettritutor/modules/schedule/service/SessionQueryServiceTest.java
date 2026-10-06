@@ -2,12 +2,12 @@ package com.viettritutor.modules.schedule.service;
 
 import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.common.exception.ErrorCode;
-import com.viettritutor.modules.schedule.domain.LearningScheduleStatus;
-import com.viettritutor.modules.schedule.domain.Session;
-import com.viettritutor.modules.schedule.domain.SessionStatus;
-import com.viettritutor.modules.schedule.repository.LearningScheduleRepository;
-import com.viettritutor.modules.schedule.repository.SessionRepository;
-import com.viettritutor.modules.user.domain.User;
+import com.viettritutor.entity.enums.LearningScheduleStatus;
+import com.viettritutor.entity.Session;
+import com.viettritutor.entity.enums.SessionStatus;
+import com.viettritutor.repository.LearningScheduleRepository;
+import com.viettritutor.repository.SessionRepository;
+import com.viettritutor.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

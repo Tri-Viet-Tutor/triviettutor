@@ -1,4 +1,4 @@
-package com.viettritutor.modules.auth.dto;
+package com.viettritutor.dto.auth;
 
 import lombok.Builder;
 import lombok.Data;
