@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettritutor.entity.Session;
 import com.viettritutor.entity.enums.SessionStatus;
 import com.viettritutor.repository.SessionRepository;
-import com.viettritutor.modules.schedule.service.SessionLifecycleJob;
+import com.viettritutor.service.SessionLifecycleJob;
 import com.viettritutor.entity.User;
 import com.viettritutor.repository.UserRepository;
 import com.viettritutor.security.jwt.JwtService;

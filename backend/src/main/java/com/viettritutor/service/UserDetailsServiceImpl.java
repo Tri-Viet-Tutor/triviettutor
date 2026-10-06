@@ -1,4 +1,4 @@
-package com.viettritutor.modules.user.service;
+package com.viettritutor.service;
 
 import com.viettritutor.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

@@ -1,10 +1,10 @@
-package com.viettritutor.modules.auth.api;
+package com.viettritutor.controller;
 
 import com.viettritutor.common.api.ApiResponse;
 import com.viettritutor.dto.auth.AuthRequest;
 import com.viettritutor.dto.auth.AuthResponse;
 import com.viettritutor.dto.auth.RegisterRequest;
-import com.viettritutor.modules.auth.service.AuthService;
+import com.viettritutor.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

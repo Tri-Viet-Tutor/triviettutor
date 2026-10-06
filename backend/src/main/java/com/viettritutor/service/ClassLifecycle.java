@@ -1,4 +1,4 @@
-package com.viettritutor.modules.schedule.service;
+package com.viettritutor.service;
 
 /**
  * Integration contract implemented by the catalog/class module. Implementations

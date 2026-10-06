@@ -7,7 +7,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * VietTriTutor Spring Boot Application entry point.
  *
  * Architecture overview:
- *  - Modules are organized by business domain under com.viettritutor.modules.*
+ *  - REST endpoints live under com.viettritutor.controller.*
+ *  - Business logic lives under com.viettritutor.service.*
+ *  - Persistence lives under com.viettritutor.repository.* and entity.*
+ *  - Request/response DTOs are grouped by feature under com.viettritutor.dto.*
  *  - Shared utilities live under com.viettritutor.common.*
  *  - Security (JWT) lives under com.viettritutor.security.*
  *  - Configuration beans live under com.viettritutor.config.*

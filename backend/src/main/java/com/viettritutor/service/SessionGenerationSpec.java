@@ -1,4 +1,4 @@
-package com.viettritutor.modules.schedule.service;
+package com.viettritutor.service;
 
 import com.viettritutor.entity.enums.SchedulePattern;
 import com.viettritutor.entity.enums.TimeSlot;

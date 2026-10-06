@@ -1,4 +1,4 @@
-package com.viettritutor.modules.auth.service;
+package com.viettritutor.service;
 
 import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.common.exception.ErrorCode;

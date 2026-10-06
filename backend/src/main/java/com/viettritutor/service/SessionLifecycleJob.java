@@ -1,4 +1,4 @@
-package com.viettritutor.modules.schedule.service;
+package com.viettritutor.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;

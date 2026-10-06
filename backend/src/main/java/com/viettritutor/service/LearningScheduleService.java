@@ -1,4 +1,4 @@
-package com.viettritutor.modules.schedule.service;
+package com.viettritutor.service;
 
 import com.viettritutor.entity.LearningSchedule;
 import com.viettritutor.entity.enums.LearningScheduleStatus;
