@@ -29,6 +29,17 @@ public enum ErrorCode {
     CLASS_NOT_FOUND           (HttpStatus.NOT_FOUND,      "Class not found"),
     SESSION_NOT_FOUND         (HttpStatus.NOT_FOUND,      "Session not found"),
     ENROLLMENT_NOT_FOUND      (HttpStatus.NOT_FOUND,      "Enrollment not found"),
+    LEAVE_REQUEST_NOT_FOUND   (HttpStatus.NOT_FOUND, "Leave request not found"),
+    LEAVE_REQUEST_ALREADY_PENDING (HttpStatus.CONFLICT, "You already have a pending leave request for this session"),
+    LEAVE_REQUEST_ALREADY_RESOLVED (HttpStatus.CONFLICT, "This leave request has already been resolved"),
+    LEAVE_REQUEST_SESSION_MISMATCH (HttpStatus.UNPROCESSABLE_ENTITY, "The leave request belongs to another session"),
+    LEAVE_RESOLUTION_NOT_ALLOWED (HttpStatus.UNPROCESSABLE_ENTITY, "This resolution is not allowed for the leave request"),
+    SESSION_NOT_EDITABLE      (HttpStatus.UNPROCESSABLE_ENTITY, "This session cannot be changed"),
+    SESSION_ALREADY_CANCELLED (HttpStatus.CONFLICT, "This session has already been cancelled"),
+    MAKEUP_ALREADY_EXISTS     (HttpStatus.CONFLICT, "This session already has a makeup session"),
+    INVALID_MAKEUP_TIME       (HttpStatus.BAD_REQUEST, "Makeup must start in the future and end after its start time"),
+    PAYROLL_FINALIZED         (HttpStatus.UNPROCESSABLE_ENTITY, "This session belongs to finalized payroll"),
+    SESSION_STATE_CHANGED     (HttpStatus.CONFLICT, "The session changed concurrently; retry the operation"),
 
     // ── Schedule / Assignment (BR-03) ──────────────────────────────────────────
     SCHEDULE_CONFLICT         (HttpStatus.CONFLICT,       "This tutor has an overlapping session in another class"),
