@@ -22,6 +22,10 @@ public class Session {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    @Column(nullable = false)
+    private long version;
+
     @Column(name = "class_group_id", nullable = false)
     private Long classGroupId;
 
