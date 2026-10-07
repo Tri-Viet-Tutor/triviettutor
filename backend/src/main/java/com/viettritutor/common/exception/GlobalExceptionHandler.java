@@ -3,6 +3,7 @@ package com.viettritutor.common.exception;
 import com.viettritutor.common.api.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
@@ -31,6 +32,13 @@ import java.util.Map;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handleConcurrentSessionChange(OptimisticLockingFailureException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(ErrorCode.SESSION_STATE_CHANGED.getDefaultMessage(),
+                        ErrorCode.SESSION_STATE_CHANGED.name()));
+    }
 
     @ExceptionHandler(ScheduleConflictException.class)
     public ResponseEntity<ApiResponse<List<ScheduleConflictResponse>>> handleScheduleConflict(ScheduleConflictException ex) {
