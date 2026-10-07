@@ -1,12 +1,12 @@
 # Danh sách API của Quang
 
-Tất cả đường dẫn dưới đây có tiền tố `/api/v1`. Đây là **danh sách phân công**, không phải danh sách API đã hoàn thành. `Admin` là quản trị viên, `Student` là học viên, `Tutor` là gia sư. Chỉ **2 API đăng nhập/đăng ký** đã có controller trong source; các API khác là đặc tả hoặc đề xuất cần triển khai.
+Tất cả đường dẫn dưới đây có tiền tố `/api/v1`. Đây là **danh sách phân công**, không phải danh sách API đã hoàn thành. `Admin` là quản trị viên, `Student` là học viên, `Tutor` là gia sư. **2 API đăng nhập/đăng ký và GET /me** đã có controller trong source; các API khác bên dưới là đặc tả hoặc đề xuất cần triển khai.
 
 ## 1. Tài khoản và hồ sơ
 
 - `POST /auth/login` — Đăng nhập, nhận JWT. **Công khai; đã có code, cần rà soát/test.**
 - `POST /auth/register` — Đăng ký tài khoản học viên. **Công khai; đã có code, cần rà soát/test.**
-- `GET /me` — Xem hồ sơ của mình. **Người đã đăng nhập.**
+- `GET /me` — Xem hồ sơ của mình. **Người đã đăng nhập; đã có code.**
 - `PUT /me` — Cập nhật hồ sơ của mình. **Người đã đăng nhập.**
 - `GET /admin/users` — Admin xem, tìm và lọc danh sách người dùng. **Admin.**
 - `POST /admin/users/tutors` — Admin tạo tài khoản gia sư. **Admin.**

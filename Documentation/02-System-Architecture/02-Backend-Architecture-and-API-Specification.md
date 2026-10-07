@@ -549,6 +549,18 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 |:---|:---|
 | **Role** | Authenticated (any role) |
 
+Đã triển khai tại `GET /api/v1/me`. Gửi header `Authorization: Bearer <accessToken>`
+(token từ login/register), không cần body hay user ID. Danh tính được lấy từ JWT đã xác thực.
+
+- `ROLE_TUTOR`: `profile` gồm `baseSalary`, `sessionRate`, `bio` của chính gia sư.
+- `ROLE_STUDENT`: `profile` gồm `phone`, `address`.
+- `ROLE_ADMIN` hoặc tài khoản chưa có bản ghi profile: `profile: null`.
+- Không trả password, authorities hay entity liên kết. GET không tạo bản ghi profile.
+- Thiếu token, token sai/hết hạn hoặc user không còn tồn tại: HTTP `401`,
+  `{"success":false,"message":"Authentication is required","errorCode":"UNAUTHORIZED"}`.
+
+Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:8080/api/v1/me`.
+
 **Response (200):**
 ```json
 {

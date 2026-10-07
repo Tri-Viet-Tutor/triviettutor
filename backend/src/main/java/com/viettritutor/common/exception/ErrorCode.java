@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
 
     // ── Auth ─────────────────────────────────────────────────────────────────
+    UNAUTHORIZED              (HttpStatus.UNAUTHORIZED,   "Authentication is required"),
     INVALID_CREDENTIALS       (HttpStatus.UNAUTHORIZED,   "Invalid email or password"),
     EMAIL_ALREADY_EXISTS      (HttpStatus.CONFLICT,       "An account with this email already exists"),
 
