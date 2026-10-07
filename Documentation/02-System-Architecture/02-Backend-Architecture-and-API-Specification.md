@@ -649,6 +649,8 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `PUT /admin/users/{userId}/tutor-profile` — Cập nhật hồ sơ gia sư
 
+Đã triển khai tại `PUT /api/v1/admin/users/{userId}/tutor-profile`. Chỉ Admin được gọi. `baseSalary` và `sessionRate` bắt buộc, là số nguyên không âm tối đa 15 chữ số; `bio` tùy chọn (không gửi sẽ giữ nguyên, chuỗi rỗng sẽ xóa). Chỉ cập nhật tài khoản có `ROLE_TUTOR`; nếu chưa có bản ghi tutor_profiles thì tạo trong cùng transaction. User không tồn tại trả 404 `USER_NOT_FOUND`, user không phải Tutor trả 422 `USER_NOT_TUTOR`, body không hợp lệ hoặc chứa trường ngoài contract trả 400. Thành công trả 200 với user và TutorProfile, không chứa mật khẩu.
+
 | | |
 |:---|:---|
 | **Role** | `ROLE_ADMIN` |

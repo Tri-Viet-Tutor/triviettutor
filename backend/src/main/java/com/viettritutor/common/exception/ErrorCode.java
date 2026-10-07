@@ -29,6 +29,7 @@ public enum ErrorCode {
 
     // ── Resource not found ────────────────────────────────────────────────────
     USER_NOT_FOUND            (HttpStatus.NOT_FOUND,      "User not found"),
+    USER_NOT_TUTOR            (HttpStatus.UNPROCESSABLE_ENTITY, "This user is not a tutor"),
     COURSE_NOT_FOUND          (HttpStatus.NOT_FOUND,      "Course not found"),
     CLASS_NOT_FOUND           (HttpStatus.NOT_FOUND,      "Class not found"),
     SESSION_NOT_FOUND         (HttpStatus.NOT_FOUND,      "Session not found"),
