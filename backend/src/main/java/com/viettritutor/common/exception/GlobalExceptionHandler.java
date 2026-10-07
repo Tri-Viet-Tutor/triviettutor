@@ -3,6 +3,7 @@ package com.viettritutor.common.exception;
 import com.viettritutor.common.api.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
@@ -49,6 +50,12 @@ public class GlobalExceptionHandler {
                         .message("Validation failed")
                         .errorCode("VALIDATION_ERROR")
                         .build());
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnreadableRequest() {
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.error("Invalid request body or unsupported field", "INVALID_REQUEST_BODY"));
     }
 
     /** Handle Spring Security access denied */

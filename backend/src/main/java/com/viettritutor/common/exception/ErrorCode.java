@@ -23,6 +23,7 @@ public enum ErrorCode {
 
     // ── Authorization ─────────────────────────────────────────────────────────
     ACCESS_DENIED             (HttpStatus.FORBIDDEN,      "You do not have permission to perform this action"),
+    INVALID_PROFILE_FIELD     (HttpStatus.BAD_REQUEST,    "This field cannot be changed for your role"),
 
     // ── Resource not found ────────────────────────────────────────────────────
     USER_NOT_FOUND            (HttpStatus.NOT_FOUND,      "User not found"),

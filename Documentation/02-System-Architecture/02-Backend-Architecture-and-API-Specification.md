@@ -666,6 +666,8 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 |:---|:---|
 | **Role** | Authenticated |
 
+Đã triển khai tại `PUT /api/v1/me`, yêu cầu JWT. `fullName` bắt buộc (không rỗng, tối đa 100 ký tự). Student được gửi thêm `phone` (tối đa 20 ký tự) và `address`; Tutor được gửi thêm `bio`; Admin chỉ được sửa `fullName`. Trường tùy chọn không gửi sẽ giữ giá trị cũ; gửi chuỗi rỗng để xóa nội dung. Nếu profile Student/Tutor chưa có, API tạo bản ghi profile. Không nhận `email`, `role`, `password`, `baseSalary`, `sessionRate` hoặc trường không hỗ trợ. Trường ngoài vai trò, body sai hoặc thiếu `fullName` trả HTTP 400. Thành công trả HTTP 200 với cùng dạng `data` của `GET /me`.
+
 **Request Body:**
 ```json
 {
