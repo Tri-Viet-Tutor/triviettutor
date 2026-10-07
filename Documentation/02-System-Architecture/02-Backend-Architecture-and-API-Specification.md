@@ -624,6 +624,8 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `POST /admin/users/tutors` — Admin tạo tài khoản gia sư
 
+Đã triển khai tại `POST /api/v1/admin/users/tutors`. Chỉ Admin được gọi. Request yêu cầu email hợp lệ, mật khẩu 6–128 ký tự, fullName 2–100 ký tự, baseSalary và sessionRate là số nguyên không âm tối đa 15 chữ số; bio tùy chọn. Email được chuẩn hóa về chữ thường; vai trò luôn là `ROLE_TUTOR` do server gán. User và tutor_profiles được tạo trong cùng transaction; mật khẩu được mã hóa và không xuất hiện trong response. Email trùng (không phân biệt chữ hoa/thường) trả HTTP 409 `EMAIL_ALREADY_EXISTS`; body không hợp lệ trả HTTP 400. Thành công trả HTTP 201 với thông tin tài khoản và profile như `GET /me`.
+
 | | |
 |:---|:---|
 | **Role** | `ROLE_ADMIN` |

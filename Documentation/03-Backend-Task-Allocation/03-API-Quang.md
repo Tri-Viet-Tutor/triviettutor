@@ -9,7 +9,7 @@ Tất cả đường dẫn dưới đây có tiền tố `/api/v1`. Đây là **
 - `GET /me` — Xem hồ sơ của mình. **Người đã đăng nhập; đã có code.**
 - `PUT /me` — Cập nhật hồ sơ của mình. **Người đã đăng nhập; đã có code.**
 - `GET /admin/users` — Admin xem, tìm và lọc danh sách người dùng. **Admin; đã có code.**
-- `POST /admin/users/tutors` — Admin tạo tài khoản gia sư. **Admin.**
+- `POST /admin/users/tutors` — Admin tạo tài khoản gia sư. **Admin; đã có code.**
 - `PUT /admin/users/{userId}/tutor-profile` — Admin cập nhật hồ sơ, lương cứng và đơn giá buổi của gia sư. **Admin.**
 
 ## 2. Môn học, khóa học và lớp học
