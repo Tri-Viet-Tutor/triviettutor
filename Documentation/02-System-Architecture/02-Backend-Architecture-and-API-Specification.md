@@ -584,6 +584,8 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `GET /admin/users` — Danh sách users (phân trang)
 
+Đã triển khai tại `GET /api/v1/admin/users`. Chỉ JWT của `ROLE_ADMIN` được phép gọi. `search` tìm trong email và fullName, không phân biệt chữ hoa/thường; chuỗi rỗng tương đương không lọc. `role` phải là một trong ba vai trò ở bảng dưới. Kết quả sắp xếp theo `id` tăng dần để phân trang ổn định. `page` phải ≥ 0, `size` từ 1 đến 100; tham số không hợp lệ trả HTTP 400. Response chỉ chứa các trường công khai như ví dụ, không chứa mật khẩu hoặc profile.
+
 | | |
 |:---|:---|
 | **Role** | `ROLE_ADMIN` |
