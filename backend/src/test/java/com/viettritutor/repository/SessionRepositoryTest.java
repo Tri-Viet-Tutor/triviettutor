@@ -1,7 +1,7 @@
 package com.viettritutor.repository;
 
 import com.viettritutor.entity.*;
-import com.viettritutor.entity.enums.*;
+import com.viettritutor.enums.*;
 import com.viettritutor.entity.User;
 import com.viettritutor.repository.UserRepository;
 import org.junit.jupiter.api.Test;

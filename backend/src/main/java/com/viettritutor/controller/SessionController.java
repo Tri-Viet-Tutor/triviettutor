@@ -2,7 +2,7 @@ package com.viettritutor.controller;
 
 import com.viettritutor.common.api.ApiResponse;
 import com.viettritutor.common.api.PageResponse;
-import com.viettritutor.entity.enums.SessionStatus;
+import com.viettritutor.enums.SessionStatus;
 import com.viettritutor.dto.schedule.MeetingUrlRequest;
 import com.viettritutor.dto.schedule.SessionResponse;
 import com.viettritutor.service.SessionQueryService;

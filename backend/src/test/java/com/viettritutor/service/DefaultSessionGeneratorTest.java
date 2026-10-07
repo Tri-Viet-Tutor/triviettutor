@@ -2,11 +2,11 @@ package com.viettritutor.service;
 
 import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.common.exception.ErrorCode;
-import com.viettritutor.entity.enums.SchedulePattern;
+import com.viettritutor.enums.SchedulePattern;
 import com.viettritutor.entity.Session;
 import com.viettritutor.entity.SessionGenerationLock;
-import com.viettritutor.entity.enums.SessionStatus;
-import com.viettritutor.entity.enums.TimeSlot;
+import com.viettritutor.enums.SessionStatus;
+import com.viettritutor.enums.TimeSlot;
 import com.viettritutor.repository.SessionRepository;
 import com.viettritutor.repository.SessionGenerationLockRepository;
 import org.junit.jupiter.api.BeforeEach;

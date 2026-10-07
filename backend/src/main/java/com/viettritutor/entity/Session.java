@@ -1,6 +1,6 @@
 package com.viettritutor.entity;
 
-import com.viettritutor.entity.enums.SessionStatus;
+import com.viettritutor.enums.SessionStatus;
 
 import jakarta.persistence.*;
 import lombok.*;

@@ -1,6 +1,6 @@
 package com.viettritutor.entity;
 
-import com.viettritutor.entity.enums.LearningScheduleStatus;
+import com.viettritutor.enums.LearningScheduleStatus;
 
 import jakarta.persistence.*;
 import lombok.*;

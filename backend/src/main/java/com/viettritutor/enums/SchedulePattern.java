@@ -1,4 +1,4 @@
-package com.viettritutor.entity.enums;
+package com.viettritutor.enums;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

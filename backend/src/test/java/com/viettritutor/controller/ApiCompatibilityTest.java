@@ -2,7 +2,7 @@ package com.viettritutor.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettritutor.entity.Session;
-import com.viettritutor.entity.enums.SessionStatus;
+import com.viettritutor.enums.SessionStatus;
 import com.viettritutor.repository.SessionRepository;
 import com.viettritutor.service.SessionLifecycleJob;
 import com.viettritutor.entity.User;

@@ -1,4 +1,4 @@
-package com.viettritutor.entity.enums;
+package com.viettritutor.enums;
 
 public enum SessionStatus {
     SCHEDULED,

@@ -1,7 +1,7 @@
 package com.viettritutor.service;
 
 import com.viettritutor.entity.Session;
-import com.viettritutor.entity.enums.SessionStatus;
+import com.viettritutor.enums.SessionStatus;
 import com.viettritutor.repository.SessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;

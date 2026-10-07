@@ -3,7 +3,7 @@ package com.viettritutor.service;
 import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.common.exception.ErrorCode;
 import com.viettritutor.entity.Session;
-import com.viettritutor.entity.enums.SessionStatus;
+import com.viettritutor.enums.SessionStatus;
 import com.viettritutor.repository.SessionGenerationLockRepository;
 import com.viettritutor.repository.SessionRepository;
 import lombok.RequiredArgsConstructor;

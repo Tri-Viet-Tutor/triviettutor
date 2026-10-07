@@ -1,7 +1,7 @@
 package com.viettritutor.service;
 
 import com.viettritutor.entity.LearningSchedule;
-import com.viettritutor.entity.enums.LearningScheduleStatus;
+import com.viettritutor.enums.LearningScheduleStatus;
 import com.viettritutor.repository.LearningScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

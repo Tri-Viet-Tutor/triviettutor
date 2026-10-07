@@ -1,7 +1,7 @@
 package com.viettritutor.repository;
 
 import com.viettritutor.entity.LearningSchedule;
-import com.viettritutor.entity.enums.LearningScheduleStatus;
+import com.viettritutor.enums.LearningScheduleStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
