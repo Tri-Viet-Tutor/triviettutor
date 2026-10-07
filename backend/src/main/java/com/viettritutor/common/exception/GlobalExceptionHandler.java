@@ -7,6 +7,12 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import jakarta.validation.ConstraintViolationException;
+import com.viettritutor.dto.assignment.ScheduleConflictResponse;
+import java.util.List;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -25,6 +31,20 @@ import java.util.Map;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(ScheduleConflictException.class)
+    public ResponseEntity<ApiResponse<List<ScheduleConflictResponse>>> handleScheduleConflict(ScheduleConflictException ex) {
+        return ResponseEntity.status(ex.getErrorCode().getHttpStatus())
+                .body(ApiResponse.<List<ScheduleConflictResponse>>builder()
+                        .success(false).message(ex.getMessage()).errorCode(ex.getErrorCode().name())
+                        .data(ex.getConflicts()).build());
+    }
+
+    @ExceptionHandler({ConstraintViolationException.class, HandlerMethodValidationException.class,
+            MethodArgumentTypeMismatchException.class, HttpMessageNotReadableException.class})
+    public ResponseEntity<ApiResponse<Void>> handleInvalidRequest(Exception ex) {
+        return ResponseEntity.badRequest().body(ApiResponse.error("Invalid request", "VALIDATION_ERROR"));
+    }
 
     /** Handle business rule violations */
     @ExceptionHandler(BusinessException.class)

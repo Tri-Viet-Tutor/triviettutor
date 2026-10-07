@@ -18,6 +18,20 @@ import java.util.Optional;
 public interface SessionRepository extends JpaRepository<Session, Long>, JpaSpecificationExecutor<Session> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from Session s where s.classGroupId = :classGroupId order by s.id")
+    List<Session> findClassSessionsForUpdate(@Param("classGroupId") Long classGroupId);
+
+    @Query("""
+            select s from Session s
+            where s.status <> com.viettritutor.enums.SessionStatus.CANCELLED
+              and coalesce(s.actualTutorId, s.scheduledTutorId) = :tutorId
+              and s.sessionDate between :from and :to
+            order by s.sessionDate, s.startTime, s.id
+            """)
+    List<Session> findTutorCommitments(@Param("tutorId") Long tutorId,
+                                     @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Session s where s.classGroupId = :classGroupId and s.originalSession is null order by s.sessionNumber")
     List<Session> findOriginalSessionsForUpdate(@Param("classGroupId") Long classGroupId);
 
