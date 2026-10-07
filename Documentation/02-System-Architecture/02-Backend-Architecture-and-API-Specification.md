@@ -76,148 +76,90 @@ graph TB
 
 ## 2. Kiến trúc phân lớp
 
-Mỗi module nghiệp vụ đều tuân theo kiến trúc **4 lớp** dọc:
+Backend tổ chức theo **package by layer**: controller, service và repository nằm trực tiếp dưới `com.viettritutor`. Entity, enum và DTO có package riêng; các chức năng chạy trong cùng một ứng dụng Spring Boot.
 
 ```mermaid
 graph LR
-    A["api/<br/>Controller<br/><i>@RestController</i>"] --> B["service/<br/>Service<br/><i>@Service</i>"]
-    B --> C["repository/<br/>Repository<br/><i>JpaRepository</i>"]
-    B --> D["domain/<br/>Entity + Enum<br/><i>@Entity</i>"]
-    A --> E["dto/<br/>Request / Response<br/><i>@Data</i>"]
+    A["controller/<br/>REST Controller"] --> B["service/<br/>Business Logic"]
+    B --> C["repository/<br/>Spring Data JPA"]
+    B --> D["entity/<br/>JPA Entity"]
+    A --> E["dto/<br/>Request / Response"]
+    A --> F["enums/<br/>Business Enums"]
+    B --> F
+    D --> F
+    E --> F
 ```
 
-| Lớp | Trách nhiệm | Quy tắc |
+| Package | Trách nhiệm | Quy tắc |
 |:---|:---|:---|
-| **api (Controller)** | Nhận HTTP request, validate input (`@Valid`), gọi service, trả `ApiResponse<T>` | Không chứa logic nghiệp vụ. Dùng `@PreAuthorize` hoặc `hasRole()` cho phân quyền cấp method. |
-| **dto** | Data Transfer Object — định hình request/response JSON | Không chứa annotation JPA. Dùng Lombok `@Data`, `@Builder`. Dùng Jakarta Validation (`@NotBlank`, `@Email`, `@Size`...). |
-| **service** | Xử lý nghiệp vụ, enforce business rules (BR-01 → BR-04) | `@Transactional`. Throw `BusinessException(ErrorCode.*)` khi vi phạm. Không phụ thuộc `HttpServletRequest`. |
-| **domain (Entity)** | JPA entity map tới bảng PostgreSQL | `@Entity`, `@Table`. Enum lưu `@Enumerated(EnumType.STRING)`. |
-| **repository** | Truy vấn CSDL | Extends `JpaRepository<T, Long>`. Custom query dùng `@Query` JPQL hoặc native. |
-
-### Cross-cutting concerns (package `common` & `config`)
-
-| Package | Nội dung |
-|:---|:---|
-| `common.api` | `ApiResponse<T>` — wrapper JSON chuẩn cho mọi endpoint |
-| `common.exception` | `BusinessException`, `ErrorCode` enum, `GlobalExceptionHandler` |
-| `common.util` | `TimeOverlap` — utility kiểm tra giao nhau thời gian (BR-03.30) |
-| `config` | `SecurityConfig`, `CorsConfig`, `OpenApiConfig` |
-| `security.jwt` | `JwtService` (generate/validate token), `JwtAuthFilter` (OncePerRequestFilter) |
-| `security` | `CurrentUser` — annotation/utility lấy user hiện tại từ SecurityContext |
+| `controller` | Nhận HTTP request, validate input, gọi service, trả response | Không truy cập repository trực tiếp; giữ phân quyền ở endpoint và ownership ở service. |
+| `service` | Xử lý nghiệp vụ, transaction, sinh lịch và job vòng đời | Dùng `@Transactional` khi cần; hợp đồng tích hợp nghiệp vụ cũng nằm ở tầng này. |
+| `repository` | Truy vấn và khóa dữ liệu | Spring Data JPA, JPQL hoặc native SQL. |
+| `entity` | Ánh xạ bảng PostgreSQL | `@Entity`, `@Table`; enum được lưu bằng `@Enumerated(EnumType.STRING)`. |
+| `enums` | Các kiểu trạng thái, mẫu lịch và khung giờ dùng chung | `SessionStatus`, `LearningScheduleStatus`, `SchedulePattern`, `TimeSlot`; nằm ngang hàng với `entity`. |
+| `dto.auth`, `dto.schedule` | Request/response riêng cho từng thao tác | Dùng class hoặc record và Jakarta Validation; không gom toàn bộ API vào hai class Request/Response chung. |
+| `common.api` | Response envelope và phân trang | `ApiResponse<T>`, `PageResponse<T>`. |
+| `common.exception` | Mã lỗi và xử lý exception | `ErrorCode` là enum thuộc cơ chế xử lý lỗi nên giữ trong package này. |
+| `config` | Cấu hình kỹ thuật | Security, CORS, OpenAPI, Clock và scheduling. |
+| `security`, `security.jwt` | Principal hiện tại và xác thực JWT | `CurrentUser`, `JwtService`, `JwtAuthFilter`. |
 
 ---
 
 ## 3. Cấu trúc package Java
 
+Cấu trúc source hiện có:
+
 ```text
 com.viettritutor/
 ├── VietTriTutorApplication.java
-│
 ├── common/
-│   ├── api/
-│   │   ├── ApiResponse.java              # Wrapper { success, data, message, errorCode }
-│   │   └── PageResponse.java             # Wrapper phân trang { content[], page, size, totalElements, totalPages }
-│   ├── exception/
-│   │   ├── BusinessException.java        # RuntimeException + ErrorCode
-│   │   ├── ErrorCode.java                # Enum: SCHEDULE_CONFLICT, CLASS_FULL, ...
-│   │   └── GlobalExceptionHandler.java   # @RestControllerAdvice
-│   └── util/
-│       └── TimeOverlap.java              # static boolean isOverlapping(start1, end1, start2, end2)
-│
-├── config/
-│   ├── SecurityConfig.java               # SecurityFilterChain, BCrypt, AuthManager
-│   ├── CorsConfig.java                   # CORS cho frontend localhost:5173
-│   └── OpenApiConfig.java                # Swagger metadata
-│
+│   ├── api/                  # ApiResponse, PageResponse
+│   └── exception/            # BusinessException, ErrorCode, GlobalExceptionHandler
+├── config/                   # SecurityConfig, CorsConfig, OpenApiConfig, TimeConfig
 ├── security/
-│   ├── jwt/
-│   │   ├── JwtService.java               # generate, validate, extractClaims
-│   │   └── JwtAuthFilter.java            # OncePerRequestFilter — parse Bearer token
-│   └── CurrentUser.java                  # Lấy User từ SecurityContext
-│
-└── modules/
-    ├── auth/                              # [DONE] Sprint 1
-    │   ├── api/AuthController.java
-    │   ├── dto/AuthRequest.java
-    │   ├── dto/AuthResponse.java
-    │   ├── dto/RegisterRequest.java
-    │   └── service/AuthService.java
-    │
-    ├── user/                              # [DONE] Sprint 1
-    │   ├── domain/User.java               # implements UserDetails
-    │   ├── domain/TutorProfile.java       # (TODO) baseSalary, sessionRate, bio
-    │   ├── domain/StudentProfile.java     # (TODO) phone, address
-    │   ├── api/UserController.java        # (TODO) GET /me, Admin CRUD tutors
-    │   ├── service/UserDetailsServiceImpl.java
-    │   └── repository/UserRepository.java
-    │
-    ├── catalog/                           # (TODO) Sprint 2
-    │   ├── domain/
-    │   │   ├── Course.java
-    │   │   ├── ClassGroup.java
-    │   │   └── enums/
-    │   │       ├── ClassType.java         # ONE_ON_ONE, GROUP
-    │   │       ├── ClassStatus.java       # DRAFT → PUBLISHED → ENROLLING → ...
-    │   │       ├── DeliveryMode.java      # ONLINE, OFFLINE
-    │   │       ├── SchedulePattern.java   # MON_WED_FRI, TUE_THU_SAT, SAT_SUN
-    │   │       └── TimeSlot.java          # SLOT_MORNING, SLOT_AFTERNOON, SLOT_EVENING_1, SLOT_EVENING_2
-    │   ├── api/
-    │   │   ├── AdminCourseController.java
-    │   │   └── CatalogController.java
-    │   ├── service/
-    │   │   ├── CourseService.java
-    │   │   ├── ClassGroupService.java
-    │   │   └── PricingService.java        # Bảng chiết khấu BR-02
-    │   ├── dto/
-    │   └── repository/
-    │
-    ├── enrollment/                        # (TODO) Sprint 4
-    │   ├── domain/
-    │   │   ├── Enrollment.java
-    │   │   └── Payment.java
-    │   ├── api/EnrollmentController.java
-    │   ├── service/
-    │   │   ├── EnrollmentService.java
-    │   │   └── StudentConflictService.java
-    │   ├── dto/
-    │   └── repository/
-    │
-    ├── schedule/                          # (TODO) Sprint 3
-    │   ├── domain/
-    │   │   ├── Session.java
-    │   │   └── LeaveRequest.java
-    │   ├── api/SessionController.java
-    │   ├── service/
-    │   │   ├── SessionGenerator.java      # Sinh buổi từ pattern
-    │   │   └── RescheduleService.java
-    │   ├── dto/
-    │   └── repository/
-    │
-    ├── assignment/                        # (TODO) Sprint 5
-    │   ├── domain/Assignment.java
-    │   ├── api/AdminAssignmentController.java
-    │   ├── service/
-    │   │   ├── AssignmentService.java
-    │   │   └── ConflictValidationService.java
-    │   ├── dto/
-    │   └── repository/
-    │
-    ├── attendance/                        # (TODO) Sprint 6
-    │   ├── domain/AttendanceRecord.java
-    │   ├── api/AttendanceController.java
-    │   ├── service/AttendanceService.java
-    │   ├── dto/
-    │   └── repository/
-    │
-    └── payroll/                           # (TODO) Sprint 7
-        ├── domain/
-        │   ├── PayrollPeriod.java
-        │   └── PayrollLine.java
-        ├── api/PayrollController.java
-        ├── service/PayrollService.java    # BR-02.40
-        ├── dto/
-        └── repository/
+│   ├── CurrentUser.java
+│   └── jwt/                  # JwtService, JwtAuthFilter
+├── controller/
+│   ├── AuthController.java
+│   └── SessionController.java
+├── dto/
+│   ├── auth/                 # AuthRequest, RegisterRequest, AuthResponse
+│   └── schedule/             # MeetingUrlRequest, SessionResponse
+├── entity/
+│   ├── User.java
+│   ├── Session.java
+│   ├── LearningSchedule.java
+│   └── SessionGenerationLock.java
+├── enums/
+│   ├── SessionStatus.java
+│   ├── LearningScheduleStatus.java
+│   ├── SchedulePattern.java
+│   └── TimeSlot.java
+├── repository/
+│   ├── UserRepository.java
+│   ├── SessionRepository.java
+│   ├── LearningScheduleRepository.java
+│   └── SessionGenerationLockRepository.java
+└── service/
+    ├── AuthService.java
+    ├── UserDetailsServiceImpl.java
+    ├── SessionQueryService.java
+    ├── LearningScheduleService.java
+    ├── SessionGenerator.java
+    ├── DefaultSessionGenerator.java
+    ├── SessionGenerationSpec.java
+    ├── SessionDateCalculator.java
+    ├── SessionLifecycleService.java
+    ├── SessionLifecycleJob.java
+    ├── ClassLifecycle.java
+    └── ClassTeachingCompletedEvent.java
 ```
+
+`auth`, `catalog`, `enrollment`, `schedule`, `assignment`, `attendance`, `payroll` trong các phần đặc tả bên dưới là nhóm nghiệp vụ, không phải các package `modules.*`. Những chức năng chưa có trong cây source trên vẫn là kế hoạch phát triển.
+
+Khi bổ sung chức năng, đặt class vào tầng tương ứng, ví dụ `controller.AdminCourseController`, `service.PricingService`, `entity.Course`, `repository.CourseRepository` và `dto.catalog.*`.
+
+Thay đổi package không thay đổi URL, HTTP method, JSON, phân quyền hay schema database. Khi đổi tên package enum, cần cập nhật cả import trong source/test và tên đầy đủ trong JPQL của `SessionRepository`. Chạy `mvn clean verify` trong thư mục `backend` để kiểm tra các API hiện có và đóng gói ứng dụng; bộ test hiện dùng H2.
 
 ---
 

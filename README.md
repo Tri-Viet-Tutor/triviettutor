@@ -37,7 +37,7 @@ triviettutor/
 ```
 
 The backend uses a layered package structure under `com.viettritutor`:
-`controller` → `service` → `repository`, with JPA models in `entity`,
+`controller` → `service` → `repository`, with JPA models in `entity`, shared business enums in `enums`,
 feature-specific request/response classes in `dto/auth` and `dto/schedule`,
 and shared `common`, `config`, and `security` packages.
 See the [project structure guide](Documentation/02-System-Architecture/01-Project-Structure-React-SpringBoot.md#3-backend--spring-boot)

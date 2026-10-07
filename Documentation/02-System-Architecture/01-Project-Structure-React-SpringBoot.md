@@ -164,8 +164,8 @@ backend/
 │   │   ├── User.java
 │   │   ├── Session.java
 │   │   ├── LearningSchedule.java
-│   │   ├── SessionGenerationLock.java
-│   │   └── enums/                     # SessionStatus, LearningScheduleStatus,
+│   │   └── SessionGenerationLock.java
+│   ├── enums/                         # SessionStatus, LearningScheduleStatus,
 │   │                                  # SchedulePattern, TimeSlot
 │   ├── repository/
 │   │   ├── UserRepository.java
@@ -203,7 +203,8 @@ Quy tắc tổ chức:
 - `controller`: khai báo endpoint, nhận/validate request và gọi service; không truy cập repository trực tiếp.
 - `service`: xử lý nghiệp vụ, ownership và transaction. Job lịch học và các hợp đồng tích hợp nghiệp vụ nằm ở tầng này.
 - `repository`: khai báo truy vấn và khóa dữ liệu qua Spring Data JPA.
-- `entity`: JPA entity; các enum nghiệp vụ đặt trong `entity.enums`.
+- `entity`: JPA entity ánh xạ bảng dữ liệu.
+- `enums`: enum nghiệp vụ dùng chung giữa controller, DTO, service và entity. `ErrorCode` tiếp tục ở `common.exception` vì gắn với cơ chế xử lý lỗi.
 - `dto`: nhóm theo chức năng (`auth`, `schedule`, sau này có thể thêm `catalog`, `enrollment`...) để giữ tên và hợp đồng API rõ ràng.
 - `common`: response và exception dùng chung; `security` và `config` chứa xác thực và cấu hình kỹ thuật.
 - Test đặt trong package tương ứng với tầng được kiểm thử.
