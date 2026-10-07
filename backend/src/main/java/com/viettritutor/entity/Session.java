@@ -47,6 +47,10 @@ public class Session {
     @Column(name = "actual_tutor_id")
     private Long actualTutorId;
 
+    @Builder.Default
+    @Column(name = "actual_tutor_overridden", nullable = false)
+    private boolean actualTutorOverridden = false;
+
     @Column(name = "meeting_url", length = 2048)
     private String meetingUrl;
 
