@@ -32,6 +32,13 @@ public enum ErrorCode {
 
     // ── Schedule / Assignment (BR-03) ──────────────────────────────────────────
     SCHEDULE_CONFLICT         (HttpStatus.CONFLICT,       "This tutor has an overlapping session in another class"),
+    INVALID_AVAILABILITY      (HttpStatus.BAD_REQUEST,    "Availability slots are invalid"),
+    INVALID_TUTOR             (HttpStatus.UNPROCESSABLE_ENTITY, "The selected user is not a tutor"),
+    CLASS_NOT_ASSIGNABLE      (HttpStatus.UNPROCESSABLE_ENTITY, "This class is not ready for tutor assignment"),
+    CLASS_ALREADY_ASSIGNED    (HttpStatus.CONFLICT, "This class already has a primary tutor"),
+    ASSIGNMENT_NOT_FOUND       (HttpStatus.NOT_FOUND, "This class has no active tutor assignment"),
+    TUTOR_ALREADY_ASSIGNED    (HttpStatus.CONFLICT, "The selected tutor is already assigned to this class"),
+    NO_ASSIGNABLE_SESSIONS    (HttpStatus.UNPROCESSABLE_ENTITY, "This class has no future sessions eligible for assignment"),
     STUDENT_SCHEDULE_CONFLICT (HttpStatus.CONFLICT,       "You are already enrolled in a class at this time"),
     SESSION_CONFIG_MISMATCH   (HttpStatus.CONFLICT,       "Existing sessions do not match the class schedule configuration"),
     INVALID_DATE_RANGE        (HttpStatus.BAD_REQUEST,    "The 'from' date must not be after the 'to' date"),
