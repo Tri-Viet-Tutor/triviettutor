@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 @Service
@@ -22,30 +23,43 @@ public class ConflictValidationService {
     private final SessionRepository sessionRepository;
 
     public List<ScheduleConflictResponse> checkTutor(Long tutorId, List<Session> requested) {
+        return checkTutor(tutorId, requested, Set.of());
+    }
+
+    public List<ScheduleConflictResponse> checkTutor(Long tutorId, List<Session> requested, Set<Long> excludedSessionIds) {
         if (requested.isEmpty()) {
             return List.of();
         }
         LocalDate from = requested.stream().map(Session::getSessionDate).min(LocalDate::compareTo).orElseThrow();
         LocalDate to = requested.stream().map(Session::getSessionDate).max(LocalDate::compareTo).orElseThrow();
-        List<Session> commitments = sessionRepository.findTutorCommitments(tutorId, from, to);
+        List<Session> commitments = sessionRepository.findTutorCommitments(tutorId, from, to).stream()
+                .filter(session -> !excludedSessionIds.contains(session.getId())).toList();
         return findConflicts(requested, Stream.concat(commitments.stream(), requested.stream()).distinct().toList());
     }
 
     public void assertTutorAvailable(Long tutorId, List<Session> requested) {
-        var conflicts = checkTutor(tutorId, requested);
+        assertTutorAvailable(tutorId, requested, Set.of());
+    }
+
+    public void assertTutorAvailable(Long tutorId, List<Session> requested, Set<Long> excludedSessionIds) {
+        var conflicts = checkTutor(tutorId, requested, excludedSessionIds);
         if (!conflicts.isEmpty()) {
             throw new ScheduleConflictException(ErrorCode.SCHEDULE_CONFLICT, conflicts);
         }
     }
 
     public List<ScheduleConflictResponse> checkStudent(Long studentId, List<Session> requested) {
+        return checkStudent(studentId, requested, Set.of());
+    }
+
+    public List<ScheduleConflictResponse> checkStudent(Long studentId, List<Session> requested, Set<Long> excludedSessionIds) {
         if (requested.isEmpty()) {
             return List.of();
         }
         LocalDate from = requested.stream().map(Session::getSessionDate).min(LocalDate::compareTo).orElseThrow();
         LocalDate to = requested.stream().map(Session::getSessionDate).max(LocalDate::compareTo).orElseThrow();
-        return findConflicts(requested, sessionRepository.findVisibleSessions(
-                studentId, "ROLE_STUDENT", from, to, null, null));
+        return findConflicts(requested, sessionRepository.findStudentCommitments(studentId, from, to).stream()
+                .filter(session -> !excludedSessionIds.contains(session.getId())).toList());
     }
 
     private List<ScheduleConflictResponse> findConflicts(List<Session> requested, List<Session> existing) {

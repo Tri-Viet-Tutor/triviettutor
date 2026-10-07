@@ -29,8 +29,8 @@ public class TutorAssignmentService {
     @Transactional
     public AssignmentResponse assign(Long classId, Long tutorId, User admin) {
         requireAdmin(admin);
-        User tutor = lockTutor(tutorId);
         ClassGroup classGroup = lockClass(classId);
+        User tutor = lockTutor(tutorId);
         if (assignmentRepository.findByClassGroupIdAndStatus(classId, AssignmentStatus.ACTIVE).isPresent()) {
             throw new BusinessException(ErrorCode.CLASS_ALREADY_ASSIGNED);
         }
@@ -46,8 +46,8 @@ public class TutorAssignmentService {
     @Transactional
     public AssignmentResponse reassign(Long classId, Long tutorId, String reason, User admin) {
         requireAdmin(admin);
-        User tutor = lockTutor(tutorId);
         ClassGroup classGroup = lockClass(classId);
+        User tutor = lockTutor(tutorId);
         if (classGroup.getStatus() != ClassStatus.ASSIGNED && classGroup.getStatus() != ClassStatus.IN_PROGRESS) {
             throw new BusinessException(ErrorCode.CLASS_NOT_ASSIGNABLE);
         }
@@ -105,7 +105,7 @@ public class TutorAssignmentService {
     }
 
     private User lockTutor(Long tutorId) {
-        // All assignment writers lock the target tutor before the class and its sessions.
+        // Schedule writers lock the class, people by ID, then sessions.
         User tutor = userRepository.findForUpdate(tutorId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         if (!"ROLE_TUTOR".equals(tutor.getRole())) {
