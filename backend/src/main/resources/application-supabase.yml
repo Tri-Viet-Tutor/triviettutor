@@ -13,10 +13,32 @@ spring:
       data-source-properties:
         sslmode: ${DB_SSL_MODE:require}
         ApplicationName: viettritutor-backend
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - openid
+              - profile
+              - email
   jpa:
     hibernate:
       ddl-auto: validate
     show-sql: false
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${APP_GG_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
   flyway:
     # Apply shared migrations explicitly with scripts/migrate-database.ps1.
     enabled: false

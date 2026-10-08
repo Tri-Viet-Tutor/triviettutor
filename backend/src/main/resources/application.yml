@@ -5,7 +5,7 @@ spring:
   application:
     name: viettritutor-backend
   profiles:
-    active: ${APP_PROFILE:dev}
+    active: supabase #${APP_PROFILE:dev}
   jpa:
     open-in-view: false
     properties:

@@ -70,6 +70,37 @@ public class AuthService {
     }
 
     /**
+     * Register a new user with Google OAuth. If the email already exists, return the existing user.
+     * @param email
+     * @param fullName
+     * @param googleId
+     * @return
+     */
+    @Transactional
+    public User registerWithGoogle(
+            String email,
+            String fullName,
+            String googleId
+    ) {
+        User existing = userRepository.findByEmail(email).orElse(null);
+
+        if (existing != null) {
+            return existing;
+        }
+
+        User user = User.builder()
+                .email(email)
+                .googleId(googleId)
+                .password(null)
+                .fullName(fullName)
+                .role("ROLE_STUDENT")
+                .enabled(true)
+                .build();
+
+        return userRepository.save(user);
+    }
+
+    /**
      * Register a new student account, create verification OTP, and send email.
      * User account is created with enabled = false until verified.
      */
