@@ -47,6 +47,17 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(errors -> errors
+                        .authenticationEntryPoint((request, response, exception) -> {
+                            response.setStatus(401);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"success\":false,\"message\":\"Authentication required\",\"errorCode\":\"UNAUTHORIZED\"}");
+                        })
+                        .accessDeniedHandler((request, response, exception) -> {
+                            response.setStatus(403);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"success\":false,\"message\":\"Access denied\",\"errorCode\":\"ACCESS_DENIED\"}");
+                        }))
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers("/api/v1/auth/**").permitAll()
@@ -56,6 +67,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/tutor/**").hasRole("TUTOR")
                         .requestMatchers("/api/v1/enrollments/**").hasRole("STUDENT")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/sessions/*/leave").hasAnyRole("TUTOR", "STUDENT")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/me/leave-requests").hasAnyRole("TUTOR", "STUDENT")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/sessions/*/attendance").hasAnyRole("ADMIN", "TUTOR")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/sessions/*/attendance").hasAnyRole("ADMIN", "TUTOR", "STUDENT")
                         // Catalog accessible to all authenticated users
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalog/**").authenticated()
                         // Everything else requires authentication

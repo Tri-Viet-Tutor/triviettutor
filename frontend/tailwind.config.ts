@@ -6,60 +6,60 @@ export default {
     extend: {
   "colors": {
     "brand": {
-      "navy": "#071e3d",
-      "navyDark": "#001230",
-      "navyDeep": "#0a2540",
-      "orange": "#f58220",
-      "orangeHover": "#e06d10",
-      "orangeLight": "#ff7a00",
+      "navy": "#0B3A8C",
+      "navyDark": "#0A2B6B",
+      "navyDeep": "#082A66",
+      "orange": "#F5A00F",
+      "orangeHover": "#DE8B00",
+      "orangeLight": "#F5A00F",
       "orangeSubtle": "#fff7ed"
     },
     "secondary-container": "#82f5c1",
     "on-secondary-fixed": "#002114",
-    "surface-variant": "#dae2fd",
-    "primary-fixed": "#dde1ff",
+    "surface-variant": "#D0E4FB",
+    "primary-fixed": "#DCEAFC",
     "on-secondary": "#ffffff",
-    "inverse-on-surface": "#eef0ff",
+    "inverse-on-surface": "#EEF5FE",
     "outline": "#757684",
-    "primary": "#00288e",
-    "surface-container-highest": "#dae2fd",
+    "primary": "#0B3A8C",
+    "surface-container-highest": "#D0E4FB",
     "on-secondary-fixed-variant": "#005137",
-    "surface-container": "#eaedff",
+    "surface-container": "#E3EFFD",
     "on-tertiary-container": "#ffa85d",
     "on-tertiary-fixed": "#2f1500",
-    "surface-bright": "#faf8ff",
+    "surface-bright": "#F5F9FF",
     "tertiary-fixed-dim": "#ffb77d",
     "error": "#ba1a1a",
     "secondary-fixed-dim": "#68dba9",
-    "on-surface": "#131b2e",
-    "surface-dim": "#d2d9f4",
+    "on-surface": "#14213D",
+    "surface-dim": "#C6DAF4",
     "on-primary": "#ffffff",
     "surface-container-lowest": "#ffffff",
-    "on-background": "#131b2e",
+    "on-background": "#14213D",
     "on-surface-variant": "#444653",
-    "surface-tint": "#3755c3",
-    "on-primary-container": "#a8b8ff",
+    "surface-tint": "#0057C2",
+    "on-primary-container": "#CFE3FB",
     "secondary": "#006c4a",
     "tertiary": "#532a00",
     "tertiary-container": "#743d00",
     "on-tertiary-fixed-variant": "#6e3900",
-    "surface": "#faf8ff",
+    "surface": "#F5F9FF",
     "on-secondary-container": "#00714e",
-    "primary-fixed-dim": "#b8c4ff",
+    "primary-fixed-dim": "#B9D6F8",
     "on-error-container": "#93000a",
     "error-container": "#ffdad6",
-    "surface-container-high": "#e2e7ff",
-    "inverse-primary": "#b8c4ff",
-    "inverse-surface": "#283044",
+    "surface-container-high": "#D9E9FC",
+    "inverse-primary": "#B9D6F8",
+    "inverse-surface": "#082A66",
     "on-error": "#ffffff",
-    "on-primary-fixed": "#001453",
+    "on-primary-fixed": "#082A66",
     "tertiary-fixed": "#ffdcc3",
-    "on-primary-fixed-variant": "#173bab",
-    "background": "#faf8ff",
-    "primary-container": "#1e40af",
+    "on-primary-fixed-variant": "#0B3A8C",
+    "background": "#F5F9FF",
+    "primary-container": "#1560D6",
     "on-tertiary": "#ffffff",
     "outline-variant": "#c4c5d5",
-    "surface-container-low": "#f2f3ff",
+    "surface-container-low": "#EEF5FE",
     "secondary-fixed": "#85f8c4"
   },
   "spacing": {
@@ -198,69 +198,29 @@ export default {
     "full": "9999px"
   },
   "fontFamily": {
-    "sans": [
-      "\"Be Vietnam Pro\"",
-      "Inter",
-      "sans-serif"
-    ],
-    "heading": [
-      "\"Be Vietnam Pro\"",
-      "sans-serif"
-    ],
-    "body-sm": [
-      "Be Vietnam Pro"
-    ],
-    "headline-lg": [
-      "Be Vietnam Pro"
-    ],
-    "label-md": [
-      "Be Vietnam Pro"
-    ],
-    "headline-sm": [
-      "Be Vietnam Pro"
-    ],
-    "label-sm": [
-      "Be Vietnam Pro"
-    ],
-    "body-md": [
-      "Be Vietnam Pro"
-    ],
-    "body-lg": [
-      "Be Vietnam Pro"
-    ],
-    "display-lg-mobile": [
-      "Be Vietnam Pro"
-    ],
-    "label-lg": [
-      "Be Vietnam Pro"
-    ],
-    "headline-md": [
-      "Be Vietnam Pro"
-    ],
-    "headline-xl-mobile": [
-      "Be Vietnam Pro"
-    ],
-    "display-lg": [
-      "Be Vietnam Pro"
-    ],
-    "headline-xl": [
-      "Be Vietnam Pro"
-    ],
-    "display": [
-      "Be Vietnam Pro"
-    ],
-    "display-mobile": [
-      "Be Vietnam Pro"
-    ],
-    "title-sm": [
-      "Be Vietnam Pro"
-    ],
-    "headline-lg-mobile": [
-      "Be Vietnam Pro"
-    ],
-    "title-md": [
-      "Be Vietnam Pro"
-    ]
+    "sans": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "headline": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "body": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "label": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "heading": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "body-sm": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "headline-lg": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "label-md": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "headline-sm": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "label-sm": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "body-md": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "body-lg": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "display-lg-mobile": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "label-lg": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "headline-md": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "headline-xl-mobile": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "display-lg": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "headline-xl": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "display": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "display-mobile": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "title-sm": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "headline-lg-mobile": ["\"Be Vietnam Pro\"", "sans-serif"],
+    "title-md": ["\"Be Vietnam Pro\"", "sans-serif"]
   }
 }
   },
