@@ -3,11 +3,21 @@ package com.viettritutor.repository;
 import com.viettritutor.entity.LearningSchedule;
 import com.viettritutor.enums.LearningScheduleStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.Optional;
 
 public interface LearningScheduleRepository extends JpaRepository<LearningSchedule, Long> {
+    @Query("""
+            select count(distinct ls.studentId) from LearningSchedule ls
+            where ls.classGroupId = :classGroupId
+              and ls.status = com.viettritutor.enums.LearningScheduleStatus.ACTIVE
+              and ls.endDate >= :today
+            """)
+    long countActiveStudents(@Param("classGroupId") Long classGroupId, @Param("today") LocalDate today);
+
     Optional<LearningSchedule> findByEnrollmentId(Long enrollmentId);
 
     boolean existsByStudentIdAndClassGroupIdAndStatus(
