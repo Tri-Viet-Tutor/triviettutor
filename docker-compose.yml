@@ -9,7 +9,7 @@ services:
     environment:
       POSTGRES_DB: viettritutor
       POSTGRES_USER: viettri
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-dev_password_change_me}
+      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:-dev_password_change_me}
     ports:
       - "5432:5432"
     volumes:
