@@ -3,7 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { registerStudent, getRoleHome } from "@/lib/auth";
+import { useAuthStore } from "@/stores/authStore";
 
 const registerSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
@@ -25,12 +26,10 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
  */
 export function RegisterPage() {
   const navigate = useNavigate();
+  const setAuth = useAuthStore((s) => s.setAuth);
 
   const { mutate: register, isPending, error } = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await api.post("/auth/register", data);
-      return response.data;
-    },
+    mutationFn: registerStudent,
   });
 
   const {
@@ -44,7 +43,10 @@ export function RegisterPage() {
   function onSubmit(data: RegisterFormValues) {
     register(
       { email: data.email, password: data.password, fullName: data.fullName },
-      { onSuccess: () => navigate("/student/catalog") }
+      { onSuccess: (response) => {
+        setAuth(response.accessToken, response.user);
+        navigate(getRoleHome(response.user.role), { replace: true });
+      } }
     );
   }
 

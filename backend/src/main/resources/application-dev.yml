@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/viettritutor
-    username: viettri
-    password: ${DB_PASSWORD:dev_password_change_me}
+    url: ${LOCAL_DB_URL:jdbc:postgresql://localhost:5432/viettritutor}
+    username: ${LOCAL_DB_USERNAME:viettri}
+    password: ${LOCAL_DB_PASSWORD:dev_password_change_me}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -11,9 +11,9 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-    baseline-on-migrate: true
+    baseline-on-migrate: false
 
-# Load from .env in development (use Spring Boot dotenv or IDE env vars)
+# scripts/start-backend.ps1 loads the root .env into the process environment.
 app:
   jwt:
     secret: ${JWT_SECRET:dev_secret_at_least_32_chars_long_!!}

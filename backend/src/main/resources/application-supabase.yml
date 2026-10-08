@@ -1,0 +1,35 @@
+spring:
+  datasource:
+    # Copy the exact host/port/user from Supabase Connect. Session mode supports
+    # IPv4; direct connections support IPv6. Keep credentials outside Git.
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+      minimum-idle: ${DB_POOL_MIN_IDLE:1}
+      connection-timeout: 30000
+      data-source-properties:
+        sslmode: ${DB_SSL_MODE:require}
+        ApplicationName: viettritutor-backend
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    # Apply shared migrations explicitly with scripts/migrate-database.ps1.
+    enabled: false
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+    validate-on-migrate: true
+    clean-disabled: true
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+
+logging:
+  level:
+    com.viettritutor: INFO
+    org.springframework.security: INFO
