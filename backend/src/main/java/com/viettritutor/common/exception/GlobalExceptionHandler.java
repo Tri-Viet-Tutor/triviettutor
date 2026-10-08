@@ -49,7 +49,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({ConstraintViolationException.class, HandlerMethodValidationException.class,
-            MethodArgumentTypeMismatchException.class, HttpMessageNotReadableException.class})
+            MethodArgumentTypeMismatchException.class})
     public ResponseEntity<ApiResponse<Void>> handleInvalidRequest(Exception ex) {
         return ResponseEntity.badRequest().body(ApiResponse.error("Invalid request", "VALIDATION_ERROR"));
     }
@@ -77,6 +77,12 @@ public class GlobalExceptionHandler {
                         .message("Validation failed")
                         .errorCode("VALIDATION_ERROR")
                         .build());
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnreadableRequest() {
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.error("Invalid request body or unsupported field", "INVALID_REQUEST_BODY"));
     }
 
     /** Handle Spring Security access denied */
