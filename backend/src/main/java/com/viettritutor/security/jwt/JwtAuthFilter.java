@@ -17,7 +17,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import io.jsonwebtoken.JwtException;
 
 /**
  * JWT authentication filter.
@@ -50,7 +49,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         final String jwt = authHeader.substring(7);
-        final String userEmail = jwtService.extractUsername(jwt);
+        try {
+            final String userEmail = jwtService.extractUsername(jwt);
 
             // Authenticate only if not already in context
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -66,6 +66,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
         } catch (JwtException | IllegalArgumentException | AuthenticationException ex) {
             SecurityContextHolder.clearContext();
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\":false,\"message\":\"Invalid or expired token\",\"errorCode\":\"UNAUTHORIZED\"}");
+            return;
         }
 
         filterChain.doFilter(request, response);
