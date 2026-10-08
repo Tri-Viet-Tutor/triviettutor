@@ -49,6 +49,10 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String role;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean enabled = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -79,5 +83,5 @@ public class User implements UserDetails {
     public boolean isCredentialsNonExpired() { return true; }
 
     @Override
-    public boolean isEnabled() { return true; }
+    public boolean isEnabled() { return enabled; }
 }

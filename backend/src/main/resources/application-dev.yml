@@ -1,17 +1,28 @@
 spring:
   datasource:
-    url: ${LOCAL_DB_URL:jdbc:postgresql://localhost:5432/viettritutor}
-    username: ${LOCAL_DB_USERNAME:viettri}
-    password: ${LOCAL_DB_PASSWORD:dev_password_change_me}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: validate         # Flyway owns the schema; JPA only validates
+      ddl-auto: validate # Flyway owns the schema; JPA only validates
     show-sql: true
   flyway:
     enabled: true
     locations: classpath:db/migration
-    baseline-on-migrate: false
+    baseline-on-migrate: true
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${APP_GG_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 # scripts/start-backend.ps1 loads the root .env into the process environment.
 app:

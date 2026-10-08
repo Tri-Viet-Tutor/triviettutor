@@ -20,6 +20,11 @@ public enum ErrorCode {
     UNAUTHORIZED              (HttpStatus.UNAUTHORIZED,   "Authentication is required"),
     INVALID_CREDENTIALS       (HttpStatus.UNAUTHORIZED,   "Invalid email or password"),
     EMAIL_ALREADY_EXISTS      (HttpStatus.CONFLICT,       "An account with this email already exists"),
+    INVALID_OTP               (HttpStatus.BAD_REQUEST,    "Invalid verification code"),
+    OTP_EXPIRED               (HttpStatus.BAD_REQUEST,    "Verification code has expired"),
+    ACCOUNT_NOT_VERIFIED      (HttpStatus.FORBIDDEN,      "Account has not been verified yet"),
+    ACCOUNT_ALREADY_VERIFIED  (HttpStatus.BAD_REQUEST,    "Account is already verified"),
+    EMAIL_SEND_FAILED         (HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send verification email. Please try again later"),
 
     // ── Authorization ─────────────────────────────────────────────────────────
     ACCESS_DENIED             (HttpStatus.FORBIDDEN,      "You do not have permission to perform this action"),
