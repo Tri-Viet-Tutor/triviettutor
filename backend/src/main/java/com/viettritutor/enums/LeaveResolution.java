@@ -1,5 +1,5 @@
 package com.viettritutor.enums;
 
 public enum LeaveResolution {
-    MAKEUP, SUBSTITUTE, CANCEL
+    MAKEUP, SUBSTITUTE, CANCEL, EXCUSED
 }

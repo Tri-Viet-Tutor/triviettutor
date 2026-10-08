@@ -8,6 +8,7 @@ import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "sessions")
@@ -60,6 +61,30 @@ public class Session {
 
     @Column(name = "topic_id")
     private Long topicId;
+
+    @Column(name = "attendance_roster_captured", nullable = false)
+    private boolean attendanceRosterCaptured;
+
+    @Column(name = "attendance_locked", nullable = false)
+    private boolean attendanceLocked;
+
+    @Column(name = "attendance_auto_processed", nullable = false)
+    private boolean attendanceAutoProcessed;
+
+    @Column(name = "attendance_locked_at")
+    private OffsetDateTime attendanceLockedAt;
+
+    @Column(name = "attendance_needs_review", nullable = false)
+    private boolean attendanceNeedsReview;
+
+    @Column(name = "taught_by_tutor_id")
+    private Long taughtByTutorId;
+
+    @Column(name = "teaching_confirmed_by")
+    private Long teachingConfirmedBy;
+
+    @Column(name = "teaching_confirmed_at")
+    private OffsetDateTime teachingConfirmedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "original_session_id")
