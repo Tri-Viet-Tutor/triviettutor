@@ -44,6 +44,10 @@ frontend/.env.production.local
 .env.local
 backend/.env
 
+# Local Postman collections and environments
+/postman-local/
+*.postman_environment.json
+
 # ─── OS artifacts ────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db

@@ -549,6 +549,18 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 |:---|:---|
 | **Role** | Authenticated (any role) |
 
+Đã triển khai tại `GET /api/v1/me`. Gửi header `Authorization: Bearer <accessToken>`
+(token từ login/register), không cần body hay user ID. Danh tính được lấy từ JWT đã xác thực.
+
+- `ROLE_TUTOR`: `profile` gồm `baseSalary`, `sessionRate`, `bio` của chính gia sư.
+- `ROLE_STUDENT`: `profile` gồm `phone`, `address`.
+- `ROLE_ADMIN` hoặc tài khoản chưa có bản ghi profile: `profile: null`.
+- Không trả password, authorities hay entity liên kết. GET không tạo bản ghi profile.
+- Thiếu token, token sai/hết hạn hoặc user không còn tồn tại: HTTP `401`,
+  `{"success":false,"message":"Authentication is required","errorCode":"UNAUTHORIZED"}`.
+
+Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:8080/api/v1/me`.
+
 **Response (200):**
 ```json
 {
@@ -571,6 +583,8 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 ---
 
 #### `GET /admin/users` — Danh sách users (phân trang)
+
+Đã triển khai tại `GET /api/v1/admin/users`. Chỉ JWT của `ROLE_ADMIN` được phép gọi. `search` tìm trong email và fullName, không phân biệt chữ hoa/thường; chuỗi rỗng tương đương không lọc. `role` phải là một trong ba vai trò ở bảng dưới. Kết quả sắp xếp theo `id` tăng dần để phân trang ổn định. `page` phải ≥ 0, `size` từ 1 đến 100; tham số không hợp lệ trả HTTP 400. Response chỉ chứa các trường công khai như ví dụ, không chứa mật khẩu hoặc profile.
 
 | | |
 |:---|:---|
@@ -610,6 +624,8 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 
 #### `POST /admin/users/tutors` — Admin tạo tài khoản gia sư
 
+Đã triển khai tại `POST /api/v1/admin/users/tutors`. Chỉ Admin được gọi. Request yêu cầu email hợp lệ, mật khẩu 6–128 ký tự, fullName 2–100 ký tự, baseSalary và sessionRate là số nguyên không âm tối đa 15 chữ số; bio tùy chọn. Email được chuẩn hóa về chữ thường; vai trò luôn là `ROLE_TUTOR` do server gán. User và tutor_profiles được tạo trong cùng transaction; mật khẩu được mã hóa và không xuất hiện trong response. Email trùng (không phân biệt chữ hoa/thường) trả HTTP 409 `EMAIL_ALREADY_EXISTS`; body không hợp lệ trả HTTP 400. Thành công trả HTTP 201 với thông tin tài khoản và profile như `GET /me`.
+
 | | |
 |:---|:---|
 | **Role** | `ROLE_ADMIN` |
@@ -633,6 +649,8 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 
 #### `PUT /admin/users/{userId}/tutor-profile` — Cập nhật hồ sơ gia sư
 
+Đã triển khai tại `PUT /api/v1/admin/users/{userId}/tutor-profile`. Chỉ Admin được gọi. `baseSalary` và `sessionRate` bắt buộc, là số nguyên không âm tối đa 15 chữ số; `bio` tùy chọn (không gửi sẽ giữ nguyên, chuỗi rỗng sẽ xóa). Chỉ cập nhật tài khoản có `ROLE_TUTOR`; nếu chưa có bản ghi tutor_profiles thì tạo trong cùng transaction. User không tồn tại trả 404 `USER_NOT_FOUND`, user không phải Tutor trả 422 `USER_NOT_TUTOR`, body không hợp lệ hoặc chứa trường ngoài contract trả 400. Thành công trả 200 với user và TutorProfile, không chứa mật khẩu.
+
 | | |
 |:---|:---|
 | **Role** | `ROLE_ADMIN` |
@@ -653,6 +671,8 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 | | |
 |:---|:---|
 | **Role** | Authenticated |
+
+Đã triển khai tại `PUT /api/v1/me`, yêu cầu JWT. `fullName` bắt buộc (không rỗng, tối đa 100 ký tự). Student được gửi thêm `phone` (tối đa 20 ký tự) và `address`; Tutor được gửi thêm `bio`; Admin chỉ được sửa `fullName`. Trường tùy chọn không gửi sẽ giữ giá trị cũ; gửi chuỗi rỗng để xóa nội dung. Nếu profile Student/Tutor chưa có, API tạo bản ghi profile. Không nhận `email`, `role`, `password`, `baseSalary`, `sessionRate` hoặc trường không hỗ trợ. Trường ngoài vai trò, body sai hoặc thiếu `fullName` trả HTTP 400. Thành công trả HTTP 200 với cùng dạng `data` của `GET /me`.
 
 **Request Body:**
 ```json
