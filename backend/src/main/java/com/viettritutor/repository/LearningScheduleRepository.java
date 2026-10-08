@@ -8,8 +8,21 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.List;
 
 public interface LearningScheduleRepository extends JpaRepository<LearningSchedule, Long> {
+
+    @Query("""
+            select ls from LearningSchedule ls
+            where ls.classGroupId = :classGroupId
+              and ls.status = com.viettritutor.enums.LearningScheduleStatus.ACTIVE
+              and (:originalDate between ls.startDate and ls.endDate
+                   or :replacementDate between ls.startDate and ls.endDate)
+            order by ls.studentId, ls.id
+            """)
+    List<LearningSchedule> findActiveRoster(
+            @Param("classGroupId") Long classGroupId, @Param("originalDate") LocalDate originalDate,
+            @Param("replacementDate") LocalDate replacementDate);
     @Query("""
             select count(distinct ls.studentId) from LearningSchedule ls
             where ls.classGroupId = :classGroupId
