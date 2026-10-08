@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long> {
+    List<LeaveRequest> findBySessionIdAndRequesterIdAndRequesterRoleAndLateNoticeFalseOrderByRequestedAtDescIdDesc(
+            Long sessionId, Long requesterId, String requesterRole);
     @Query("select r.sessionId from LeaveRequest r where r.id = :id")
     Optional<Long> findSessionId(@Param("id") Long id);
 

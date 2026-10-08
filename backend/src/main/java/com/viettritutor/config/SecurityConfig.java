@@ -66,6 +66,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/enrollments/**").hasRole("STUDENT")
                         .requestMatchers(HttpMethod.POST, "/api/v1/sessions/*/leave").hasAnyRole("TUTOR", "STUDENT")
                         .requestMatchers(HttpMethod.GET, "/api/v1/me/leave-requests").hasAnyRole("TUTOR", "STUDENT")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/sessions/*/attendance").hasAnyRole("ADMIN", "TUTOR")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/sessions/*/attendance").hasAnyRole("ADMIN", "TUTOR", "STUDENT")
                         // Catalog accessible to all authenticated users
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalog/**").authenticated()
                         // Everything else requires authentication

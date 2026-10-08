@@ -66,6 +66,13 @@ public enum ErrorCode {
     // ── Attendance (BR-04) ────────────────────────────────────────────────────
     ATTENDANCE_LOCKED         (HttpStatus.UNPROCESSABLE_ENTITY, "Attendance is locked after 24 hours"),
     SESSION_NOT_IN_PROGRESS   (HttpStatus.UNPROCESSABLE_ENTITY, "Attendance can only be submitted for in-progress sessions"),
+    ATTENDANCE_NOT_FOUND      (HttpStatus.NOT_FOUND, "Attendance record not found"),
+    INVALID_ATTENDANCE       (HttpStatus.BAD_REQUEST, "Invalid attendance records or arrival time"),
+    ATTENDANCE_STUDENT_NOT_ENROLLED (HttpStatus.UNPROCESSABLE_ENTITY, "The student is not in this session's eligible roster"),
+    ATTENDANCE_REASON_REQUIRED (HttpStatus.BAD_REQUEST, "An audit reason is required"),
+    ATTENDANCE_NOT_LOCKED     (HttpStatus.UNPROCESSABLE_ENTITY, "Use the attendance submission API while attendance is unlocked"),
+    ATTENDANCE_SESSION_NOT_ENDED (HttpStatus.UNPROCESSABLE_ENTITY, "Attendance cannot be finalized before the session ends"),
+    ATTENDANCE_EXCUSED_NOT_ALLOWED (HttpStatus.UNPROCESSABLE_ENTITY, "Excused attendance requires approved student leave with at least 24 hours notice"),
 
     // ── Class lifecycle ───────────────────────────────────────────────────────
     INVALID_STATUS_TRANSITION (HttpStatus.UNPROCESSABLE_ENTITY, "This status transition is not allowed");
