@@ -4,7 +4,7 @@ import { z } from "zod";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { useMutation } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { login as loginRequest, getRoleHome } from "@/lib/auth";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -24,10 +24,7 @@ export function LoginPage() {
   const setAuth = useAuthStore((s) => s.setAuth);
 
   const { mutate: login, isPending, error } = useMutation({
-    mutationFn: async (data: LoginFormValues) => {
-      const response = await api.post("/auth/login", data);
-      return response.data;
-    },
+    mutationFn: loginRequest,
   });
 
   const {
@@ -40,20 +37,9 @@ export function LoginPage() {
 
   function onSubmit(data: LoginFormValues) {
     login(data, {
-      onSuccess: (response: any) => {
-        setAuth(response.data.token, response.data.user);
-        // Redirect to the correct dashboard based on role
-        switch (response.data.user.role) {
-          case "ROLE_ADMIN":
-            navigate("/admin/courses");
-            break;
-          case "ROLE_TUTOR":
-            navigate("/tutor/sessions");
-            break;
-          case "ROLE_STUDENT":
-            navigate("/student/catalog");
-            break;
-        }
+      onSuccess: (response) => {
+        setAuth(response.accessToken, response.user);
+        navigate(getRoleHome(response.user.role), { replace: true });
       },
     });
   }
