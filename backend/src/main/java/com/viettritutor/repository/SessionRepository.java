@@ -18,6 +18,48 @@ import java.util.Optional;
 public interface SessionRepository extends JpaRepository<Session, Long>, JpaSpecificationExecutor<Session> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from Session s where s.id = :id")
+    Optional<Session> findForUpdate(@Param("id") Long id);
+
+    @Query("select s.id from Session s where s.attendanceAutoProcessed = false and s.sessionDate <= :date and s.id > :afterId order by s.id")
+    List<Long> findAttendanceLockCandidates(@Param("date") LocalDate date,
+                                           @Param("afterId") Long afterId, Pageable pageable);
+
+    List<Session> findBySessionDateBetweenOrderBySessionDateAscStartTimeAscIdAsc(LocalDate from, LocalDate to);
+
+    @Query("select s.classGroupId from Session s where s.id = :id")
+    Optional<Long> findClassGroupId(@Param("id") Long id);
+
+    @Query("""
+            select s from Session s
+            where s.status <> com.viettritutor.enums.SessionStatus.CANCELLED
+              and s.sessionDate between :from and :to
+              and exists (
+                  select ls.id from LearningSchedule ls
+                  where ls.studentId = :studentId and ls.classGroupId = s.classGroupId
+                    and ls.status = com.viettritutor.enums.LearningScheduleStatus.ACTIVE
+                    and s.sessionDate between ls.startDate and ls.endDate
+              )
+            order by s.sessionDate, s.startTime, s.id
+            """)
+    List<Session> findStudentCommitments(@Param("studentId") Long studentId,
+                                       @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from Session s where s.classGroupId = :classGroupId order by s.id")
+    List<Session> findClassSessionsForUpdate(@Param("classGroupId") Long classGroupId);
+
+    @Query("""
+            select s from Session s
+            where s.status <> com.viettritutor.enums.SessionStatus.CANCELLED
+              and coalesce(s.actualTutorId, s.scheduledTutorId) = :tutorId
+              and s.sessionDate between :from and :to
+            order by s.sessionDate, s.startTime, s.id
+            """)
+    List<Session> findTutorCommitments(@Param("tutorId") Long tutorId,
+                                     @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Session s where s.classGroupId = :classGroupId and s.originalSession is null order by s.sessionNumber")
     List<Session> findOriginalSessionsForUpdate(@Param("classGroupId") Long classGroupId);
 

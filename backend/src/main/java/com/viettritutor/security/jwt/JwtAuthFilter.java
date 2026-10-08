@@ -1,6 +1,8 @@
 package com.viettritutor.security.jwt;
 
+import com.viettritutor.security.RestAuthenticationEntryPoint;
 import io.jsonwebtoken.JwtException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -32,6 +34,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final RestAuthenticationEntryPoint authenticationEntryPoint;
 
     @Override
     protected void doFilterInternal(
@@ -66,6 +69,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
         } catch (JwtException | IllegalArgumentException | AuthenticationException ex) {
             SecurityContextHolder.clearContext();
+            authenticationEntryPoint.commence(request, response,
+                    new BadCredentialsException("Invalid or expired token", ex));
+            return;
         }
 
         filterChain.doFilter(request, response);

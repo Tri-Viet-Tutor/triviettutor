@@ -218,6 +218,25 @@ class MeControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void invalidBearerTokenIsRejectedEvenOnPublicEndpoint() throws Exception {
+        mvc.perform(get("/api/v1/auth/login").header("Authorization", "Bearer invalid-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{", "{\"fullName\":\"Changed\",\"role\":\"ROLE_ADMIN\"}"})
+    void invalidRequestBodyUsesDedicatedHandlerWithoutUpdatingProfile(String body) throws Exception {
+        User user = createUser("invalid-body@example.test", "ROLE_STUDENT");
+        mvc.perform(put("/api/v1/me").header("Authorization", bearer(user))
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST_BODY"));
+        org.junit.jupiter.api.Assertions.assertEquals("Test User", users.findById(user.getId()).orElseThrow().getFullName());
+    }
+
     private User createUser(String email, String role) {
         return users.saveAndFlush(User.builder().email(email).password("private-password-hash")
                 .fullName("Test User").role(role).build());

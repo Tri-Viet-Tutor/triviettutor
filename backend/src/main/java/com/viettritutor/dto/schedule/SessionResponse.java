@@ -20,7 +20,9 @@ public record SessionResponse(
         Long actualTutorId,
         String meetingUrl,
         Long topicId,
-        Long originalSessionId) {
+        Long originalSessionId,
+        boolean attendanceLocked,
+        boolean attendanceNeedsReview) {
 
     public static SessionResponse from(Session session) {
         return new SessionResponse(
@@ -35,6 +37,7 @@ public record SessionResponse(
                 session.getActualTutorId(),
                 session.getMeetingUrl(),
                 session.getTopicId(),
-                session.getOriginalSession() == null ? null : session.getOriginalSession().getId());
+                session.getOriginalSession() == null ? null : session.getOriginalSession().getId(),
+                session.isAttendanceLocked(), session.isAttendanceNeedsReview());
     }
 }
