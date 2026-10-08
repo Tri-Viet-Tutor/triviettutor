@@ -8,7 +8,7 @@ import { ASSETS } from "@/constants/assets";
  */
 export function AuthLayout() {
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#0B3A8C] via-[#0B3A8C] to-[#0B3A8C] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Brand header */}
         <div className="text-center mb-6">
@@ -21,7 +21,7 @@ export function AuthLayout() {
               />
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="font-black text-2xl tracking-tight text-bg-[#092E70])">GIA SƯ</span>
+              <span className="font-black text-2xl tracking-tight text-white">GIA SƯ</span>
               <span className="font-bold text-xl text-[#F5A00F]">TRÍ VIỆT</span>
             </div>
             <p className="text-slate-300 mt-1 text-xs">Cùng em vững bước tương lai • TriVietTutor</p>
