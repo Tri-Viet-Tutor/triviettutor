@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { queryClient } from "@/lib/queryClient";
 export interface AuthUser {
   id: number;
   email: string;
@@ -37,14 +38,21 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
 
-      setAuth: (token, user) =>
-        set({ token, user, isAuthenticated: true }),
+      setAuth: (token, user) => {
+        queryClient.clear();
+        set({ token, user, isAuthenticated: Boolean(token && user) });
+      },
 
-      logout: () =>
-        set({ token: null, user: null, isAuthenticated: false }),
+      logout: () => {
+        queryClient.clear();
+        set({ token: null, user: null, isAuthenticated: false });
+      },
     }),
     {
       name: "viettritutor-auth",    // localStorage key
+      onRehydrateStorage: () => (state) => {
+        if (state && (!state.token || !state.user)) state.logout();
+      },
       partialize: (state) => ({     // Only persist token + user, not functions
         token: state.token,
         user: state.user,

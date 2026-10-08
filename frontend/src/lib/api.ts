@@ -9,7 +9,7 @@ import { useAuthStore } from "@/stores/authStore";
  * - Response interceptor handles 401 → auto-logout.
  */
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? "/api/v1",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "/api/v1",
   headers: {
     "Content-Type": "application/json",
   },
@@ -28,7 +28,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && useAuthStore.getState().token &&
+        !error.config?.url?.startsWith("/auth/")) {
       // Token expired or invalid — clear session and redirect to login
       useAuthStore.getState().logout();
       window.location.href = "/login";

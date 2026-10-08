@@ -99,6 +99,13 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ErrorCode.INVALID_CREDENTIALS.getDefaultMessage(), ErrorCode.INVALID_CREDENTIALS.name()));
     }
 
+    /** Handle account disabled / not verified */
+    @ExceptionHandler(org.springframework.security.authentication.DisabledException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDisabledException() {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(ErrorCode.ACCOUNT_NOT_VERIFIED.getDefaultMessage(), ErrorCode.ACCOUNT_NOT_VERIFIED.name()));
+    }
+
     /** Catch-all for unexpected errors */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {

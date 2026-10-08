@@ -1,9 +1,7 @@
 package com.viettritutor.controller;
 
 import com.viettritutor.common.api.ApiResponse;
-import com.viettritutor.dto.auth.AuthRequest;
-import com.viettritutor.dto.auth.AuthResponse;
-import com.viettritutor.dto.auth.RegisterRequest;
+import com.viettritutor.dto.auth.*;
 import com.viettritutor.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@Tag(name = "Authentication", description = "Login and registration endpoints")
+@Tag(name = "Authentication", description = "Login, registration and email verification endpoints")
 public class AuthController {
 
     private final AuthService authService;
@@ -31,10 +29,24 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok(authService.login(request)));
     }
 
-    @Operation(summary = "Register a new student account (BR-01.04)")
+    @Operation(summary = "Register a new student account and send verification OTP email (BR-01.04)")
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<AuthResponse>> register(
+    public ResponseEntity<ApiResponse<RegisterResponse>> register(
             @Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(authService.register(request)));
+    }
+
+    @Operation(summary = "Verify account using OTP code received via email")
+    @PostMapping("/verify-email")
+    public ResponseEntity<ApiResponse<AuthResponse>> verifyEmail(
+            @Valid @RequestBody VerifyEmailRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(authService.verifyEmail(request)));
+    }
+
+    @Operation(summary = "Resend verification OTP email")
+    @PostMapping("/resend-verification")
+    public ResponseEntity<ApiResponse<RegisterResponse>> resendVerification(
+            @Valid @RequestBody ResendVerificationRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(authService.resendVerification(request)));
     }
 }
