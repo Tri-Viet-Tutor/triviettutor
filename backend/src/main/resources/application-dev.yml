@@ -24,7 +24,7 @@ spring:
           starttls:
             enable: true
 
-# Load from .env in development (use Spring Boot dotenv or IDE env vars)
+# scripts/start-backend.ps1 loads the root .env into the process environment.
 app:
   jwt:
     secret: ${JWT_SECRET:dev_secret_at_least_32_chars_long_!!}

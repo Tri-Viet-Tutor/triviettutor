@@ -13,6 +13,8 @@ export function AdminLayout() {
   const navigate = useNavigate();
 
   const navItems = [
+    { to: "/admin", label: "My Profile" },
+    { to: "/admin/sessions", label: "Sessions" },
     { to: "/admin/courses", label: "Courses & Classes" },
     { to: "/admin/assignments", label: "Tutor Assignment" },
     { to: "/admin/reschedules", label: "Reschedules" },
@@ -36,6 +38,7 @@ export function AdminLayout() {
             <NavLink
               key={item.to}
               to={item.to}
+              end
               className={({ isActive }) =>
                 `block px-3 py-2 rounded text-sm font-medium transition-colors ${
                   isActive
