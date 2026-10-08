@@ -1,12 +1,12 @@
 spring:
   datasource:
-    url: ${DB_URL:jdbc:postgresql://aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres}
-    username: ${DB_USERNAME:postgres.fwoxupsupabpepgveqhr}
-    password: ${DB_PASSWORD:7SBkzBZh6?U-rRB}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: validate         # Flyway owns the schema; JPA only validates
+      ddl-auto: validate # Flyway owns the schema; JPA only validates
     show-sql: true
   flyway:
     enabled: true
@@ -15,8 +15,8 @@ spring:
   mail:
     host: ${SPRING_MAIL_HOST:smtp.gmail.com}
     port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:${MAIL_USERNAME:votranngochuu@gmail.com}}
-    password: ${SPRING_MAIL_PASSWORD:${APP_GG_PASSWORD:whfm dsui mjts qkgn}}
+    username: ${MAIL_USERNAME}
+    password: ${APP_GG_PASSWORD}
     properties:
       mail:
         smtp:
