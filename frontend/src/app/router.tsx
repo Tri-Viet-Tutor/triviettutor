@@ -25,6 +25,8 @@ import { RoleRoute } from "@/components/RoleRoute";
 // Error pages
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { ForbiddenPage } from "@/pages/ForbiddenPage";
+import { AccountDashboard } from "@/pages/AccountDashboard";
+import { SessionListPage } from "@/pages/SessionListPage";
 
 /**
  * Application router.
@@ -59,7 +61,8 @@ export function AppRouter() {
         <Route element={<PrivateRoute />}>
           <Route element={<RoleRoute allowedRole="ROLE_ADMIN" />}>
             <Route element={<AdminLayout />}>
-              <Route path="/admin" element={<div className="p-8">Admin Dashboard (To be implemented)</div>} />
+              <Route path="/admin" element={<AccountDashboard />} />
+              <Route path="/admin/sessions" element={<SessionListPage />} />
             </Route>
           </Route>
         </Route>
@@ -68,7 +71,8 @@ export function AppRouter() {
         <Route element={<PrivateRoute />}>
           <Route element={<RoleRoute allowedRole="ROLE_TUTOR" />}>
             <Route element={<TutorLayout />}>
-              <Route path="/tutor" element={<div className="p-8">Tutor Dashboard (To be implemented)</div>} />
+              <Route path="/tutor" element={<AccountDashboard />} />
+              <Route path="/tutor/sessions" element={<SessionListPage />} />
             </Route>
           </Route>
         </Route>
@@ -77,7 +81,8 @@ export function AppRouter() {
         <Route element={<PrivateRoute />}>
           <Route element={<RoleRoute allowedRole="ROLE_STUDENT" />}>
             <Route element={<StudentLayout />}>
-              <Route path="/student" element={<div className="p-8">Student Dashboard (To be implemented)</div>} />
+              <Route path="/student" element={<AccountDashboard />} />
+              <Route path="/student/schedule" element={<SessionListPage />} />
             </Route>
           </Route>
         </Route>
