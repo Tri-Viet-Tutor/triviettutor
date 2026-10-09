@@ -13,6 +13,7 @@ export function TutorLayout() {
   const navigate = useNavigate();
 
   const navItems = [
+    { to: "/tutor", label: "My Profile" },
     { to: "/tutor/sessions", label: "My Sessions" },
     { to: "/tutor/availability", label: "Availability" },
     { to: "/tutor/payroll", label: "My Payroll" },
@@ -35,6 +36,7 @@ export function TutorLayout() {
             <NavLink
               key={item.to}
               to={item.to}
+              end
               className={({ isActive }) =>
                 `block px-3 py-2 rounded text-sm font-medium transition-colors ${
                   isActive

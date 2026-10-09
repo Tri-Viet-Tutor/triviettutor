@@ -13,6 +13,7 @@ export function StudentLayout() {
   const navigate = useNavigate();
 
   const navItems = [
+    { to: "/student", label: "My Profile" },
     { to: "/student/catalog", label: "Browse Classes" },
     { to: "/student/enrollments", label: "My Enrollments" },
     { to: "/student/schedule", label: "My Schedule" },
@@ -35,6 +36,7 @@ export function StudentLayout() {
             <NavLink
               key={item.to}
               to={item.to}
+              end
               className={({ isActive }) =>
                 `block px-3 py-2 rounded text-sm font-medium transition-colors ${
                   isActive

@@ -43,6 +43,13 @@ frontend/.env.production.local
 .env
 .env.local
 backend/.env
+**/.env
+**/.env.*
+!**/.env.example
+
+# Local Postman collections and environments
+/postman-local/
+*.postman_environment.json
 
 # ─── OS artifacts ────────────────────────────────────────────────────────────
 .DS_Store

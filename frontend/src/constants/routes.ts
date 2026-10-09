@@ -1,5 +1,3 @@
-import type { Role } from "@/types/api";
-
 /** Mọi đường dẫn trang của ứng dụng — không viết tay chuỗi đường dẫn ở nơi khác. */
 export const ROUTES = {
   home: "/",
@@ -12,14 +10,10 @@ export const ROUTES = {
   login: "/login",
   register: "/register",
   admin: "/admin",
+  adminSessions: "/admin/sessions",
   tutor: "/tutor",
+  tutorSessions: "/tutor/sessions",
   student: "/student",
+  studentSchedule: "/student/schedule",
   forbidden: "/403",
 } as const;
-
-/** Trang đích của từng vai trò sau khi đăng nhập. */
-export const HOME_BY_ROLE: Record<Role, string> = {
-  ROLE_ADMIN: ROUTES.admin,
-  ROLE_TUTOR: ROUTES.tutor,
-  ROLE_STUDENT: ROUTES.student,
-};

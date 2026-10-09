@@ -17,6 +17,16 @@ import java.util.Optional;
 
 public interface SessionRepository extends JpaRepository<Session, Long>, JpaSpecificationExecutor<Session> {
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from Session s where s.id = :id")
+    Optional<Session> findForUpdate(@Param("id") Long id);
+
+    @Query("select s.id from Session s where s.attendanceAutoProcessed = false and s.sessionDate <= :date and s.id > :afterId order by s.id")
+    List<Long> findAttendanceLockCandidates(@Param("date") LocalDate date,
+                                           @Param("afterId") Long afterId, Pageable pageable);
+
+    List<Session> findBySessionDateBetweenOrderBySessionDateAscStartTimeAscIdAsc(LocalDate from, LocalDate to);
+
     @Query("select s.classGroupId from Session s where s.id = :id")
     Optional<Long> findClassGroupId(@Param("id") Long id);
 

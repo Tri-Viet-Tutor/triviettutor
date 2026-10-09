@@ -49,7 +49,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({ConstraintViolationException.class, HandlerMethodValidationException.class,
-            MethodArgumentTypeMismatchException.class, HttpMessageNotReadableException.class})
+            MethodArgumentTypeMismatchException.class})
     public ResponseEntity<ApiResponse<Void>> handleInvalidRequest(Exception ex) {
         return ResponseEntity.badRequest().body(ApiResponse.error("Invalid request", "VALIDATION_ERROR"));
     }
@@ -79,6 +79,12 @@ public class GlobalExceptionHandler {
                         .build());
     }
 
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnreadableRequest() {
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.error("Invalid request body or unsupported field", "INVALID_REQUEST_BODY"));
+    }
+
     /** Handle Spring Security access denied */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
@@ -91,6 +97,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleBadCredentials() {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error(ErrorCode.INVALID_CREDENTIALS.getDefaultMessage(), ErrorCode.INVALID_CREDENTIALS.name()));
+    }
+
+    /** Handle account disabled / not verified */
+    @ExceptionHandler(org.springframework.security.authentication.DisabledException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDisabledException() {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(ErrorCode.ACCOUNT_NOT_VERIFIED.getDefaultMessage(), ErrorCode.ACCOUNT_NOT_VERIFIED.name()));
     }
 
     /** Catch-all for unexpected errors */

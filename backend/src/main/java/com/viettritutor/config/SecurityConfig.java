@@ -1,6 +1,7 @@
 package com.viettritutor.config;
 
 import com.viettritutor.security.jwt.JwtAuthFilter;
+import com.viettritutor.security.RestAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,18 +39,16 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final RestAuthenticationEntryPoint authenticationEntryPoint;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
+                .cors(cors -> {})
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(errors -> errors
-                        .authenticationEntryPoint((request, response, exception) -> {
-                            response.setStatus(401);
-                            response.setContentType("application/json");
-                            response.getWriter().write("{\"success\":false,\"message\":\"Authentication required\",\"errorCode\":\"UNAUTHORIZED\"}");
-                        })
+                        .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler((request, response, exception) -> {
                             response.setStatus(403);
                             response.setContentType("application/json");
@@ -59,13 +58,20 @@ public class SecurityConfig {
                         // Public endpoints
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         // Swagger / OpenAPI docs (dev-friendly)
-                        .requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
+                        .requestMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/api-docs/**"
+                        ).permitAll()
                         // Role-restricted prefixes
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/tutor/**").hasRole("TUTOR")
                         .requestMatchers("/api/v1/enrollments/**").hasRole("STUDENT")
                         .requestMatchers(HttpMethod.POST, "/api/v1/sessions/*/leave").hasAnyRole("TUTOR", "STUDENT")
                         .requestMatchers(HttpMethod.GET, "/api/v1/me/leave-requests").hasAnyRole("TUTOR", "STUDENT")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/sessions/*/attendance").hasAnyRole("ADMIN", "TUTOR")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/sessions/*/attendance").hasAnyRole("ADMIN", "TUTOR", "STUDENT")
                         // Catalog accessible to all authenticated users
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalog/**").authenticated()
                         // Everything else requires authentication

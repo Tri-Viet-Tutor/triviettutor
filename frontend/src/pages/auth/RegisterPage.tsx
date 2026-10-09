@@ -3,10 +3,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
-import { getApiError } from "@/lib/api";
-import { authService } from "@/services/authService";
+import { registerStudent, getRoleHome } from "@/lib/auth";
 import { useAuthStore } from "@/stores/authStore";
-import { HOME_BY_ROLE, ROUTES } from "@/constants/routes";
+import { getApiError } from "@/lib/api";
+import { ROUTES } from "@/constants/routes";
 
 const registerSchema = z.object({
   // Limits mirror the backend's RegisterRequest: fullName 2–100, password 6–128
@@ -39,7 +39,7 @@ export function RegisterPage() {
   const setAuth = useAuthStore((s) => s.setAuth);
 
   const { mutate: register, isPending, error } = useMutation({
-    mutationFn: authService.register,
+    mutationFn: registerStudent,
   });
 
   const {
@@ -53,13 +53,10 @@ export function RegisterPage() {
   function onSubmit(data: RegisterFormValues) {
     register(
       { email: data.email, password: data.password, fullName: data.fullName },
-      {
-        // The new account is already authenticated — store the session, then go to its dashboard
-        onSuccess: (auth) => {
-          setAuth(auth.accessToken, auth.user);
-          navigate(HOME_BY_ROLE[auth.user.role] ?? ROUTES.home);
-        },
-      }
+      { onSuccess: (response) => {
+        setAuth(response.accessToken, response.user);
+        navigate(getRoleHome(response.user.role), { replace: true });
+      } }
     );
   }
 

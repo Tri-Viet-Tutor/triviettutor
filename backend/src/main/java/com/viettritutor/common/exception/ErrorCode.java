@@ -17,14 +17,24 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
 
     // ── Auth ─────────────────────────────────────────────────────────────────
+    UNAUTHORIZED              (HttpStatus.UNAUTHORIZED,   "Authentication is required"),
     INVALID_CREDENTIALS       (HttpStatus.UNAUTHORIZED,   "Invalid email or password"),
     EMAIL_ALREADY_EXISTS      (HttpStatus.CONFLICT,       "An account with this email already exists"),
+    INVALID_OTP               (HttpStatus.BAD_REQUEST,    "Invalid verification code"),
+    OTP_EXPIRED               (HttpStatus.BAD_REQUEST,    "Verification code has expired"),
+    ACCOUNT_NOT_VERIFIED      (HttpStatus.FORBIDDEN,      "Account has not been verified yet"),
+    ACCOUNT_ALREADY_VERIFIED  (HttpStatus.BAD_REQUEST,    "Account is already verified"),
+    EMAIL_SEND_FAILED         (HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send verification email. Please try again later"),
 
     // ── Authorization ─────────────────────────────────────────────────────────
     ACCESS_DENIED             (HttpStatus.FORBIDDEN,      "You do not have permission to perform this action"),
+    INVALID_PROFILE_FIELD     (HttpStatus.BAD_REQUEST,    "This field cannot be changed for your role"),
+    INVALID_ROLE_FILTER       (HttpStatus.BAD_REQUEST,    "Role must be ROLE_ADMIN, ROLE_TUTOR or ROLE_STUDENT"),
+    INVALID_PAGINATION        (HttpStatus.BAD_REQUEST,    "Page must be non-negative and size must be between 1 and 100"),
 
     // ── Resource not found ────────────────────────────────────────────────────
     USER_NOT_FOUND            (HttpStatus.NOT_FOUND,      "User not found"),
+    USER_NOT_TUTOR            (HttpStatus.UNPROCESSABLE_ENTITY, "This user is not a tutor"),
     COURSE_NOT_FOUND          (HttpStatus.NOT_FOUND,      "Course not found"),
     CLASS_NOT_FOUND           (HttpStatus.NOT_FOUND,      "Class not found"),
     SESSION_NOT_FOUND         (HttpStatus.NOT_FOUND,      "Session not found"),
@@ -66,6 +76,13 @@ public enum ErrorCode {
     // ── Attendance (BR-04) ────────────────────────────────────────────────────
     ATTENDANCE_LOCKED         (HttpStatus.UNPROCESSABLE_ENTITY, "Attendance is locked after 24 hours"),
     SESSION_NOT_IN_PROGRESS   (HttpStatus.UNPROCESSABLE_ENTITY, "Attendance can only be submitted for in-progress sessions"),
+    ATTENDANCE_NOT_FOUND      (HttpStatus.NOT_FOUND, "Attendance record not found"),
+    INVALID_ATTENDANCE       (HttpStatus.BAD_REQUEST, "Invalid attendance records or arrival time"),
+    ATTENDANCE_STUDENT_NOT_ENROLLED (HttpStatus.UNPROCESSABLE_ENTITY, "The student is not in this session's eligible roster"),
+    ATTENDANCE_REASON_REQUIRED (HttpStatus.BAD_REQUEST, "An audit reason is required"),
+    ATTENDANCE_NOT_LOCKED     (HttpStatus.UNPROCESSABLE_ENTITY, "Use the attendance submission API while attendance is unlocked"),
+    ATTENDANCE_SESSION_NOT_ENDED (HttpStatus.UNPROCESSABLE_ENTITY, "Attendance cannot be finalized before the session ends"),
+    ATTENDANCE_EXCUSED_NOT_ALLOWED (HttpStatus.UNPROCESSABLE_ENTITY, "Excused attendance requires approved student leave with at least 24 hours notice"),
 
     // ── Class lifecycle ───────────────────────────────────────────────────────
     INVALID_STATUS_TRANSITION (HttpStatus.UNPROCESSABLE_ENTITY, "This status transition is not allowed");

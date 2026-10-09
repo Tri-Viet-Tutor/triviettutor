@@ -1,10 +1,12 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { AUTH_STORAGE_KEY } from "@/constants/storage";
-import type { UserInfo } from "@/types/api";
-
-/** The `user` object of the backend's AuthResponse (id, email, fullName, role). */
-export type AuthUser = UserInfo;
+import { queryClient } from "@/lib/queryClient";
+export interface AuthUser {
+  id: number;
+  email: string;
+  fullName: string;
+  role: string;
+}
 
 interface AuthState {
   /** JWT access token — null when logged out */
@@ -36,14 +38,21 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
 
-      setAuth: (token, user) =>
-        set({ token, user, isAuthenticated: true }),
+      setAuth: (token, user) => {
+        queryClient.clear();
+        set({ token, user, isAuthenticated: Boolean(token && user) });
+      },
 
-      logout: () =>
-        set({ token: null, user: null, isAuthenticated: false }),
+      logout: () => {
+        queryClient.clear();
+        set({ token: null, user: null, isAuthenticated: false });
+      },
     }),
     {
-      name: AUTH_STORAGE_KEY,
+      name: "viettritutor-auth",    // localStorage key
+      onRehydrateStorage: () => (state) => {
+        if (state && (!state.token || !state.user)) state.logout();
+      },
       partialize: (state) => ({     // Only persist token + user, not functions
         token: state.token,
         user: state.user,

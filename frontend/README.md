@@ -23,10 +23,8 @@ src/
 │  ├─ routing/           PrivateRoute, RoleRoute (chặn theo đăng nhập / vai trò)
 │  └─ ui/                Thành phần giao diện nhỏ (Icon)
 ├─ constants/            Hằng số toàn dự án
-│  ├─ api.ts             Đường dẫn endpoint của backend
 │  ├─ assets.ts          Đường dẫn ảnh trong public/assets (xem "Thư mục ảnh")
-│  ├─ routes.ts          Đường dẫn trang + trang chủ theo vai trò
-│  └─ storage.ts         Khoá localStorage
+│  └─ routes.ts          Đường dẫn trang
 ├─ features/             Mã theo từng tính năng
 │  └─ home/              Trang chủ
 │     ├─ components/     Các khối của trang chủ (HeroSection, CourseDiary, ...)
@@ -35,12 +33,12 @@ src/
 │     └─ styles.ts       Chuỗi lớp Tailwind dùng lại trong trang chủ
 ├─ hooks/                Custom hook dùng chung (useInView)
 ├─ layouts/              Khung trang theo khu vực (Public, Auth, Admin, Tutor, Student)
-├─ lib/                  Cấu hình thư viện (axios, React Query)
+├─ lib/                  axios, React Query, và auth.ts (gọi API đăng nhập / đăng ký, trang đích theo vai trò)
 ├─ pages/                Mỗi file là một trang gắn với một route
+│  ├─ AccountDashboard.tsx, SessionListPage.tsx   Trang hồ sơ và lịch học sau khi đăng nhập
 │  ├─ auth/              LoginPage, RegisterPage
 │  ├─ error/             ForbiddenPage, NotFoundPage
 │  └─ public/            HomePage, SubjectsPage, SearchPage, PricingPage, ContactPage
-├─ services/             Hàm gọi API (authService)
 ├─ stores/               Trạng thái toàn cục bằng zustand (authStore)
 ├─ styles/               CSS toàn cục
 ├─ types/                Kiểu dữ liệu khớp với DTO của backend
@@ -84,7 +82,6 @@ public/assets/
 | Khối lớn của một trang | hậu tố `Section` | `HeroSection.tsx` |
 | Hook | `camelCase`, tiền tố `use` | `useInView.ts` |
 | Store | `camelCase`, hậu tố `Store` | `authStore.ts` → `useAuthStore` |
-| Service | `camelCase`, hậu tố `Service` | `authService.ts` |
 | Dữ liệu, tiện ích, hằng số (file) | `camelCase.ts` | `classPractices.ts`, `routes.ts` |
 | Ảnh | `kebab-case`, chữ thường, không dấu | `logo-sba.png` |
 | Hằng số (giá trị) | `UPPER_SNAKE_CASE` | `ROUTES`, `HERO_SLIDE_MS` |
@@ -95,8 +92,8 @@ public/assets/
 
 - Dùng named export, không dùng default export.
 - Import bằng bí danh `@/` (trỏ tới `src/`), không dùng đường dẫn tương đối dài.
-- Không viết thẳng đường dẫn trang hay endpoint trong component: lấy từ `constants/routes.ts` và `constants/api.ts`.
-- Component không gọi axios trực tiếp: gọi qua `services/`.
+- Không viết thẳng đường dẫn trang trong component: lấy từ `constants/routes.ts`.
+- Đăng nhập, đăng ký và phân quyền theo vai trò dùng `lib/auth.ts`, `stores/authStore.ts` và `components/routing/`.
 - Kiểu dữ liệu trao đổi với backend chỉ khai báo ở `types/api.ts`; khi backend đổi DTO thì sửa ở đó trước.
 - Mã chỉ một tính năng dùng thì đặt trong `features/<tên>/`; khi có nơi thứ hai dùng mới chuyển ra `components/`, `hooks/` hoặc `utils/`.
 - Thêm trang mới: tạo file trong `pages/`, khai báo đường dẫn ở `constants/routes.ts`, rồi thêm route trong `app/AppRouter.tsx`.

@@ -14,7 +14,7 @@ import type { ApiResponse, ErrorCode } from "@/types/api";
  * ({ success, data, message, errorCode }) — see src/types/api.ts.
  */
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? "/api/v1",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "/api/v1",
   headers: {
     "Content-Type": "application/json",
   },
@@ -33,10 +33,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // /auth/login answers 401 INVALID_CREDENTIALS for a wrong password: that is a
-    // form error to show on the page, not an expired session — do not redirect.
-    const isAuthCall = /\/auth\/(login|register)$/.test(error.config?.url ?? "");
-    if (error.response?.status === 401 && !isAuthCall) {
+    if (error.response?.status === 401 && useAuthStore.getState().token &&
+        !error.config?.url?.startsWith("/auth/")) {
       // Token expired or invalid — clear session and redirect to login
       useAuthStore.getState().logout();
       window.location.href = ROUTES.login;
