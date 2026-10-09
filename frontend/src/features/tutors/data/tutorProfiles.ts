@@ -1,4 +1,6 @@
 import { COURSES, type Course } from "@/features/catalog/data/courses";
+import { type Faq } from "@/components/ui/FaqSection";
+import { CLASS_SIZE } from "@/features/catalog/data/classOptions";
 import { normalizeText } from "@/utils/text";
 
 export interface TutorProfile {
@@ -61,3 +63,35 @@ export function filterTutors(subject: string, query: string): TutorProfile[] {
     return normalizeText(`${tutor.name} ${tutor.course.subjectLabel} ${tutor.course.name}`).includes(keyword);
   });
 }
+
+/*
+ * Câu hỏi thường gặp ở trang "Tìm gia sư". Mỗi câu trả lời dựa trên một chức năng backend đã có:
+ * phân công gia sư cho lớp (tutor_assignments), dạy thay / học bù (session_changes),
+ * đường dẫn phòng học từng buổi (sessions.meeting_url), điểm danh (attendance_records), xin nghỉ (leave_requests).
+ */
+export const TUTOR_FAQS: Faq[] = [
+  {
+    question: "Tôi có được chọn gia sư không?",
+    answer: "Bạn chọn khóa học và lớp. Sau khi lớp chốt đăng ký, trung tâm phân công gia sư của khóa đó đứng lớp.",
+  },
+  {
+    question: "Gia sư bận thì lớp có nghỉ không?",
+    answer: "Trung tâm xếp gia sư khác dạy thay hoặc xếp buổi học bù. Thay đổi hiện ngay trên lịch học của bạn.",
+  },
+  {
+    question: "Một lớp có bao nhiêu học viên?",
+    answer: `Mỗi lớp từ ${CLASS_SIZE.min} đến ${CLASS_SIZE.max} học viên, học tại trung tâm hoặc trực tuyến.`,
+  },
+  {
+    question: "Học trực tuyến thì vào lớp bằng cách nào?",
+    answer: "Mỗi buổi học trực tuyến có một đường dẫn phòng học riêng do trung tâm gắn vào buổi đó.",
+  },
+  {
+    question: "Làm sao biết học viên đi học đầy đủ?",
+    answer: "Gia sư điểm danh sau mỗi buổi: có mặt, đi trễ hoặc vắng. Học viên xem lại được trên tài khoản.",
+  },
+  {
+    question: "Muốn nghỉ một buổi thì làm thế nào?",
+    answer: "Gửi đơn xin nghỉ cho buổi đó trên hệ thống, nên báo trước giờ học 24 giờ.",
+  },
+];

@@ -19,7 +19,7 @@ export function TutorFinderSection({ tutors, selectedId, onSelect, subjectLabel,
   const selected = tutors.find((tutor) => tutor.id === selectedId) ?? tutors[0];
 
   return (
-    <section id="tutor-finder" className="scroll-mt-[120px] bg-[#F5F1E9] pb-16 pt-10 lg:pb-24 lg:pt-12">
+    <section id="tutor-finder" className="scroll-mt-[120px] bg-[#F5F1E9] pb-14 pt-10 lg:pb-20 lg:pt-12">
       <div className={CONTAINER}>
         <p aria-live="polite" className="text-[15px] font-semibold text-brand-muted">
           <span className="text-[22px] font-extrabold text-brand-navy">{tutors.length}</span> gia sư

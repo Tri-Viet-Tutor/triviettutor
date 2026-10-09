@@ -21,7 +21,7 @@ src/
 │  ├─ layout/            PublicHeader, PublicFooter
 │  ├─ motion/            Reveal, ReadingProgress, ClickSpark, ScrollToTop
 │  ├─ routing/           PrivateRoute, RoleRoute (chặn theo đăng nhập / vai trò)
-│  └─ ui/                Thành phần giao diện dùng lại (Icon, SectionHeading, FramedSlideshow, ConsultCtaSection)
+│  └─ ui/                Thành phần giao diện dùng lại (Icon, SectionHeading, FramedSlideshow, ConsultCtaSection, FaqSection)
 ├─ constants/            Hằng số toàn dự án
 │  ├─ assets.ts          Đường dẫn ảnh trong public/assets (xem "Thư mục ảnh")
 │  ├─ classNames.ts      Chuỗi lớp Tailwind dùng lại giữa các trang công khai
@@ -38,7 +38,7 @@ src/
 │  │  ├─ data/           Nội dung tĩnh (gia sư, ảnh mở đầu, cách tổ chức lớp)
 │  │  └─ hooks/          Hook chỉ trang chủ dùng (useWhirlwindReveal)
 │  ├─ pricing/           Trang "Bảng học phí"
-│  │  ├─ components/     Thẻ giá, bảng học phí theo khoá, lịch mở đăng ký
+│  │  ├─ components/     Thẻ giá, bảng học phí theo khoá, ảnh hai hình thức học, lịch mở đăng ký
 │  │  └─ data/           Nhãn lịch học, đợt mở đăng ký và trạng thái so với hôm nay
 │  └─ tutors/            Trang "Tìm gia sư"
 │     ├─ components/     Thanh tìm, danh sách gia sư, hồ sơ gia sư

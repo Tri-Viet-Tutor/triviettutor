@@ -3,6 +3,7 @@ import { ClickSpark, ReadingProgress, ScrollToTop } from "@/components/motion";
 import { ConsultCtaSection } from "@/components/ui/ConsultCtaSection";
 import { EnrollmentScheduleSection } from "@/features/pricing/components/EnrollmentScheduleSection";
 import { FeeTableSection } from "@/features/pricing/components/FeeTableSection";
+import { LearningModesSection } from "@/features/pricing/components/LearningModesSection";
 import { PricingHero } from "@/features/pricing/components/PricingHero";
 import { prefersReducedMotion } from "@/utils/motion";
 
@@ -13,7 +14,7 @@ function scrollToFeeTable() {
 }
 
 /**
- * Trang "Bảng học phí": học phí của từng khóa và lịch mở đăng ký.
+ * Trang "Bảng học phí": học phí của từng khóa, ảnh hai hình thức học và lịch mở đăng ký.
  * Học phí từng khóa lấy từ dữ liệu khóa học — xem features/pricing/data/pricing.ts.
  */
 export function PricingPage() {
@@ -28,6 +29,7 @@ export function PricingPage() {
       <ScrollToTop />
       <PricingHero onViewFees={scrollToFeeTable} />
       <FeeTableSection />
+      <LearningModesSection />
       <EnrollmentScheduleSection />
       <ConsultCtaSection
         title="Chưa biết chọn"

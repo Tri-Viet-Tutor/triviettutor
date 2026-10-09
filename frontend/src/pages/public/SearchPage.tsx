@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ClickSpark, ReadingProgress, ScrollToTop } from "@/components/motion";
 import { ConsultCtaSection } from "@/components/ui/ConsultCtaSection";
+import { FaqSection } from "@/components/ui/FaqSection";
 import { COURSES } from "@/features/catalog/data/courses";
 import { TutorFinderSection } from "@/features/tutors/components/TutorFinderSection";
 import { TutorSearchHero } from "@/features/tutors/components/TutorSearchHero";
-import { filterTutors, TUTOR_PROFILES } from "@/features/tutors/data/tutorProfiles";
+import { filterTutors, TUTOR_FAQS, TUTOR_PROFILES } from "@/features/tutors/data/tutorProfiles";
 import { prefersReducedMotion } from "@/utils/motion";
 
 /* Ba gia sư trên xấp ảnh mở đầu: người đầu tiên của ba khóa đầu, mỗi người một môn */
@@ -72,6 +73,7 @@ export function SearchPage() {
         subjectLabel={COURSES.find((course) => course.subject === subject)?.subjectLabel ?? ""}
         onReset={resetFilters}
       />
+      <FaqSection title="Câu Hỏi Thường Gặp" description="Về gia sư và lớp học." faqs={TUTOR_FAQS} />
       <ConsultCtaSection
         title="Chưa biết chọn"
         highlight="gia sư nào?"

@@ -17,7 +17,7 @@ const ROW_GRID = "lg:grid lg:grid-cols-[minmax(0,1.7fr)_minmax(0,0.8fr)_minmax(0
  */
 export function FeeTableSection() {
   return (
-    <section id="fee-table" className="scroll-mt-[120px] bg-[#F5F1E9] pb-16 pt-12 lg:pb-24 lg:pt-16">
+    <section id="fee-table" className="scroll-mt-[120px] bg-[#F5F1E9] pb-16 pt-12 lg:pb-20 lg:pt-16">
       <div className={CONTAINER}>
         <SectionHeading title="Học Phí Theo Khóa" description="Mỗi khóa dạy một môn cho lớp 10 – 12, học tại trung tâm hoặc trực tuyến." />
 

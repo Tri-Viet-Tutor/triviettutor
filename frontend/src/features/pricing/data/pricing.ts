@@ -1,6 +1,8 @@
+import { ASSETS } from "@/constants/assets";
 import {
   CLASS_SIZE,
   ENROLLMENT_DEADLINE_DAYS,
+  GRADE_OPTIONS,
   SCHEDULE_PATTERN_OPTIONS,
   SESSION_MINUTES,
 } from "@/features/catalog/data/classOptions";
@@ -16,6 +18,9 @@ import { addDays, diffDays, formatDayMonth, parseIsoDate } from "@/utils/date";
  * Mức phí từng khóa đọc từ `tuitionFee` trong features/catalog/data/courses.ts (mức tạm do nhóm đặt),
  * khóa nào chưa có thì ghi "Báo khi tư vấn".
  */
+
+/** Ảnh nền mờ ở phần mở đầu */
+export const PRICING_HERO_BACKDROP = ASSETS.public.students.smiling;
 
 /** Hai dòng tiêu đề ở phần mở đầu */
 export const PRICING_TITLE_LINES = ["Bảng Học Phí", "Theo Khóa Học"];
@@ -77,3 +82,38 @@ export function enrollmentStatusLabel(window: EnrollmentWindow, today: Date): st
       return "Đã khai giảng";
   }
 }
+
+export interface LearningPhoto {
+  src: string;
+  alt: string;
+  /** Tên biểu tượng Material Symbols trên nhãn */
+  icon: string;
+  label: string;
+  /** Lớp Tailwind chọn phần ảnh giữ lại khi cắt theo khung vòm */
+  focus: string;
+}
+
+/** Ba ảnh ở phần "Học tại trung tâm hoặc trực tuyến": hai hình thức học và khối lớp đang dạy */
+export const LEARNING_PHOTOS: LearningPhoto[] = [
+  {
+    src: ASSETS.public.classrooms.classroom1,
+    alt: "Thầy giáo hướng dẫn một nhóm học sinh trong phòng học",
+    icon: "apartment",
+    label: "Tại trung tâm",
+    focus: "object-[38%_center]",
+  },
+  {
+    src: ASSETS.public.students.highSchool,
+    alt: "Nhóm học sinh THPT cùng làm bài bên máy tính",
+    icon: "school",
+    label: `Lớp ${GRADE_OPTIONS.map((grade) => grade.label.replace("Lớp ", "")).join(" · ")}`,
+    focus: "object-[30%_center]",
+  },
+  {
+    src: ASSETS.public.classrooms.classroom2,
+    alt: "Học sinh đeo tai nghe học trực tuyến với cô giáo qua máy tính",
+    icon: "videocam",
+    label: "Trực tuyến",
+    focus: "object-[46%_center]",
+  },
+];

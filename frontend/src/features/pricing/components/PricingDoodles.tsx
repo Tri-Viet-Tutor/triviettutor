@@ -81,8 +81,8 @@ const DOODLES: Doodle[] = [
   },
   {
     id: "piggy",
-    left: 80,
-    top: 64,
+    left: 86,
+    top: 72,
     tilt: -6,
     delay: -3.4,
     width: 78,
@@ -128,11 +128,11 @@ const DOODLES: Doodle[] = [
   },
 ];
 
-/* Hàng đồng xu lớn dần, như đang bay từ phần chữ sang thẻ giá */
+/* Hàng đồng xu lớn dần ở phía dưới, như đang lăn về phía thẻ giá (đặt thấp để không che gương mặt trên ảnh nền) */
 const COIN_TRAIL = [
-  { left: 79, top: 45, size: 16, delay: 0 },
-  { left: 86, top: 41, size: 22, delay: -1.2 },
-  { left: 94, top: 38, size: 28, delay: -2.4 },
+  { left: 70, top: 83, size: 16, delay: 0 },
+  { left: 79, top: 87, size: 22, delay: -1.2 },
+  { left: 89, top: 89, size: 28, delay: -2.4 },
 ];
 
 const SPARKLES = [
