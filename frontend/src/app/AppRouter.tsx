@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
+import { ROUTES } from "@/constants/routes";
+
 // Layouts
 import { AuthLayout } from "@/layouts/AuthLayout";
 import { AdminLayout } from "@/layouts/AdminLayout";
@@ -11,7 +13,7 @@ import { PublicLayout } from "@/layouts/PublicLayout";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { RegisterPage } from "@/pages/auth/RegisterPage";
 
-// Public Stitch pages
+// Public pages
 import { HomePage } from "@/pages/public/HomePage";
 import { SubjectsPage } from "@/pages/public/SubjectsPage";
 import { SearchPage } from "@/pages/public/SearchPage";
@@ -19,12 +21,12 @@ import { PricingPage } from "@/pages/public/PricingPage";
 import { ContactPage } from "@/pages/public/ContactPage";
 
 // Guard components
-import { PrivateRoute } from "@/components/PrivateRoute";
-import { RoleRoute } from "@/components/RoleRoute";
+import { PrivateRoute } from "@/components/routing/PrivateRoute";
+import { RoleRoute } from "@/components/routing/RoleRoute";
 
 // Error pages
-import { NotFoundPage } from "@/pages/NotFoundPage";
-import { ForbiddenPage } from "@/pages/ForbiddenPage";
+import { NotFoundPage } from "@/pages/error/NotFoundPage";
+import { ForbiddenPage } from "@/pages/error/ForbiddenPage";
 
 /**
  * Application router.
@@ -42,24 +44,24 @@ export function AppRouter() {
       <Routes>
         {/* ── Public Stitch landing & educational routes ──────────────── */}
         <Route element={<PublicLayout />}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/cap-hoc-mon-hoc" element={<SubjectsPage />} />
-          <Route path="/tim-gia-su" element={<SearchPage />} />
-          <Route path="/bang-hoc-phi" element={<PricingPage />} />
-          <Route path="/lien-he" element={<ContactPage />} />
+          <Route path={ROUTES.home} element={<HomePage />} />
+          <Route path={ROUTES.subjects} element={<SubjectsPage />} />
+          <Route path={ROUTES.tutorSearch} element={<SearchPage />} />
+          <Route path={ROUTES.pricing} element={<PricingPage />} />
+          <Route path={ROUTES.contact} element={<ContactPage />} />
         </Route>
 
         {/* ── Auth routes ─────────────────────────────────────────────── */}
         <Route element={<AuthLayout />}>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          <Route path={ROUTES.login} element={<LoginPage />} />
+          <Route path={ROUTES.register} element={<RegisterPage />} />
         </Route>
 
         {/* ── Admin routes ────────────────────────────────────────────── */}
         <Route element={<PrivateRoute />}>
           <Route element={<RoleRoute allowedRole="ROLE_ADMIN" />}>
             <Route element={<AdminLayout />}>
-              <Route path="/admin" element={<div className="p-8">Admin Dashboard (To be implemented)</div>} />
+              <Route path={ROUTES.admin} element={<div className="p-8">Admin Dashboard (To be implemented)</div>} />
             </Route>
           </Route>
         </Route>
@@ -68,7 +70,7 @@ export function AppRouter() {
         <Route element={<PrivateRoute />}>
           <Route element={<RoleRoute allowedRole="ROLE_TUTOR" />}>
             <Route element={<TutorLayout />}>
-              <Route path="/tutor" element={<div className="p-8">Tutor Dashboard (To be implemented)</div>} />
+              <Route path={ROUTES.tutor} element={<div className="p-8">Tutor Dashboard (To be implemented)</div>} />
             </Route>
           </Route>
         </Route>
@@ -77,13 +79,13 @@ export function AppRouter() {
         <Route element={<PrivateRoute />}>
           <Route element={<RoleRoute allowedRole="ROLE_STUDENT" />}>
             <Route element={<StudentLayout />}>
-              <Route path="/student" element={<div className="p-8">Student Dashboard (To be implemented)</div>} />
+              <Route path={ROUTES.student} element={<div className="p-8">Student Dashboard (To be implemented)</div>} />
             </Route>
           </Route>
         </Route>
 
         {/* ── Error pages ──────────────────────────────────────────────── */}
-        <Route path="/403" element={<ForbiddenPage />} />
+        <Route path={ROUTES.forbidden} element={<ForbiddenPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>

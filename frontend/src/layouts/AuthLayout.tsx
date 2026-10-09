@@ -1,5 +1,6 @@
 import { Outlet, Link } from "react-router-dom";
 import { ASSETS } from "@/constants/assets";
+import { ROUTES } from "@/constants/routes";
 
 /**
  * AuthLayout
@@ -12,10 +13,10 @@ export function AuthLayout() {
       <div className="w-full max-w-md">
         {/* Brand header */}
         <div className="text-center mb-6">
-          <Link to="/" className="inline-flex flex-col items-center group">
+          <Link to={ROUTES.home} className="inline-flex flex-col items-center group">
             <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#F5A00F] shadow-lg mb-3 group-hover:scale-105 transition-transform bg-white">
               <img
-                src={ASSETS.logo}
+                src={ASSETS.common.logo}
                 alt="Logo Gia Sư Trí Việt"
                 className="w-full h-full object-contain"
               />
@@ -34,7 +35,7 @@ export function AuthLayout() {
         </div>
 
         <div className="text-center mt-6 text-xs text-slate-400">
-          <Link to="/" className="hover:text-[#F5A00F] transition-colors flex items-center justify-center gap-1">
+          <Link to={ROUTES.home} className="hover:text-[#F5A00F] transition-colors flex items-center justify-center gap-1">
             <span className="material-symbols-outlined text-[16px]">arrow_back</span>
             Quay lại trang chủ
           </Link>

@@ -1,5 +1,6 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
+import { ROUTES } from "@/constants/routes";
 
 /**
  * AdminLayout
@@ -21,7 +22,7 @@ export function AdminLayout() {
 
   function handleLogout() {
     logout();
-    navigate("/login");
+    navigate(ROUTES.login);
   }
 
   return (

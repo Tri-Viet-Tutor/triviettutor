@@ -1,8 +1,10 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
+import type { Role } from "@/types/api";
+import { ROUTES } from "@/constants/routes";
 
 interface RoleRouteProps {
-  allowedRole: string;
+  allowedRole: Role;
 }
 
 /**
@@ -23,7 +25,7 @@ export function RoleRoute({ allowedRole }: RoleRouteProps) {
   const user = useAuthStore((s) => s.user);
 
   if (!user || user.role !== allowedRole) {
-    return <Navigate to="/403" replace />;
+    return <Navigate to={ROUTES.forbidden} replace />;
   }
 
   return <Outlet />;

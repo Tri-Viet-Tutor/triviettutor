@@ -1,5 +1,6 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
+import { ROUTES } from "@/constants/routes";
 
 /**
  * TutorLayout
@@ -19,7 +20,7 @@ export function TutorLayout() {
 
   function handleLogout() {
     logout();
-    navigate("/login");
+    navigate(ROUTES.login);
   }
 
   return (

@@ -4,7 +4,9 @@ import { z } from "zod";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { useMutation } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { getApiError } from "@/lib/api";
+import { authService } from "@/services/authService";
+import { HOME_BY_ROLE, ROUTES } from "@/constants/routes";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -24,10 +26,7 @@ export function LoginPage() {
   const setAuth = useAuthStore((s) => s.setAuth);
 
   const { mutate: login, isPending, error } = useMutation({
-    mutationFn: async (data: LoginFormValues) => {
-      const response = await api.post("/auth/login", data);
-      return response.data;
-    },
+    mutationFn: authService.login,
   });
 
   const {
@@ -40,20 +39,10 @@ export function LoginPage() {
 
   function onSubmit(data: LoginFormValues) {
     login(data, {
-      onSuccess: (response: any) => {
-        setAuth(response.data.token, response.data.user);
-        // Redirect to the correct dashboard based on role
-        switch (response.data.user.role) {
-          case "ROLE_ADMIN":
-            navigate("/admin/courses");
-            break;
-          case "ROLE_TUTOR":
-            navigate("/tutor/sessions");
-            break;
-          case "ROLE_STUDENT":
-            navigate("/student/catalog");
-            break;
-        }
+      onSuccess: (auth) => {
+        setAuth(auth.accessToken, auth.user);
+        // Redirect to the dashboard of the user's role
+        navigate(HOME_BY_ROLE[auth.user.role] ?? ROUTES.home);
       },
     });
   }
@@ -95,7 +84,7 @@ export function LoginPage() {
 
         {error && (
           <p className="text-sm text-red-600">
-            Invalid email or password. Please try again.
+            {getApiError(error).message ?? "Invalid email or password. Please try again."}
           </p>
         )}
 
@@ -111,7 +100,7 @@ export function LoginPage() {
 
       <p className="mt-4 text-center text-sm text-gray-600">
         New student?{" "}
-        <Link to="/register" className="text-primary-600 hover:underline">
+        <Link to={ROUTES.register} className="text-primary-600 hover:underline">
           Create an account
         </Link>
       </p>

@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
-import { PublicHeader } from "@/components/PublicHeader";
-import { PublicFooter } from "@/components/PublicFooter";
+import { PublicHeader } from "@/components/layout/PublicHeader";
+import { PublicFooter } from "@/components/layout/PublicFooter";
 
 export function PublicLayout() {
   return (

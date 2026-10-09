@@ -1,5 +1,7 @@
-import axios from "axios";
+import axios, { isAxiosError } from "axios";
 import { useAuthStore } from "@/stores/authStore";
+import { ROUTES } from "@/constants/routes";
+import type { ApiResponse, ErrorCode } from "@/types/api";
 
 /**
  * Configured Axios instance for all API calls.
@@ -7,6 +9,9 @@ import { useAuthStore } from "@/stores/authStore";
  * - Base URL is read from VITE_API_BASE_URL env var (defaults to /api/v1 for the Vite proxy).
  * - Request interceptor attaches the JWT Bearer token from auth store.
  * - Response interceptor handles 401 → auto-logout.
+ *
+ * Every endpoint answers with the backend's ApiResponse envelope
+ * ({ success, data, message, errorCode }) — see src/types/api.ts.
  */
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? "/api/v1",
@@ -28,11 +33,36 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // /auth/login answers 401 INVALID_CREDENTIALS for a wrong password: that is a
+    // form error to show on the page, not an expired session — do not redirect.
+    const isAuthCall = /\/auth\/(login|register)$/.test(error.config?.url ?? "");
+    if (error.response?.status === 401 && !isAuthCall) {
       // Token expired or invalid — clear session and redirect to login
       useAuthStore.getState().logout();
-      window.location.href = "/login";
+      window.location.href = ROUTES.login;
     }
     return Promise.reject(error);
   }
 );
+
+// ── Error helpers ────────────────────────────────────────────────────────────
+
+export interface ApiError {
+  /** Human-readable message from the backend envelope */
+  message?: string;
+  /** Machine-readable code — map it to UI text where needed */
+  errorCode?: ErrorCode;
+  /** For VALIDATION_ERROR: field name → message (the envelope's `data`) */
+  fieldErrors?: Record<string, string>;
+}
+
+/** Read the backend's error envelope out of a failed request. */
+export function getApiError(error: unknown): ApiError {
+  if (!isAxiosError<ApiResponse<unknown>>(error) || !error.response?.data) return {};
+  const { message, errorCode, data } = error.response.data;
+  const fieldErrors =
+    errorCode === "VALIDATION_ERROR" && data && typeof data === "object"
+      ? (data as Record<string, string>)
+      : undefined;
+  return { message, errorCode, fieldErrors };
+}

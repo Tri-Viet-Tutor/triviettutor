@@ -3,12 +3,23 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { getApiError } from "@/lib/api";
+import { authService } from "@/services/authService";
+import { useAuthStore } from "@/stores/authStore";
+import { HOME_BY_ROLE, ROUTES } from "@/constants/routes";
 
 const registerSchema = z.object({
-  fullName: z.string().min(2, "Full name must be at least 2 characters"),
+  // Limits mirror the backend's RegisterRequest: fullName 2–100, password 6–128
+  fullName: z
+    .string()
+    .trim()
+    .min(2, "Full name must be at least 2 characters")
+    .max(100, "Full name must be at most 100 characters"),
   email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z
+    .string()
+    .min(6, "Password must be at least 6 characters")
+    .max(128, "Password must be at most 128 characters"),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
@@ -25,12 +36,10 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
  */
 export function RegisterPage() {
   const navigate = useNavigate();
+  const setAuth = useAuthStore((s) => s.setAuth);
 
   const { mutate: register, isPending, error } = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await api.post("/auth/register", data);
-      return response.data;
-    },
+    mutationFn: authService.register,
   });
 
   const {
@@ -44,7 +53,13 @@ export function RegisterPage() {
   function onSubmit(data: RegisterFormValues) {
     register(
       { email: data.email, password: data.password, fullName: data.fullName },
-      { onSuccess: () => navigate("/student/catalog") }
+      {
+        // The new account is already authenticated — store the session, then go to its dashboard
+        onSuccess: (auth) => {
+          setAuth(auth.accessToken, auth.user);
+          navigate(HOME_BY_ROLE[auth.user.role] ?? ROUTES.home);
+        },
+      }
     );
   }
 
@@ -97,7 +112,13 @@ export function RegisterPage() {
           {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>}
         </div>
 
-        {error && <p className="text-sm text-red-600">Registration failed. The email may already be in use.</p>}
+        {error && (
+          <p className="text-sm text-red-600">
+            {getApiError(error).errorCode === "EMAIL_ALREADY_EXISTS"
+              ? "An account with this email already exists."
+              : (getApiError(error).message ?? "Registration failed. Please try again.")}
+          </p>
+        )}
 
         <button
           id="register-submit"
@@ -111,7 +132,7 @@ export function RegisterPage() {
 
       <p className="mt-4 text-center text-sm text-gray-600">
         Already have an account?{" "}
-        <Link to="/login" className="text-primary-600 hover:underline">Sign in</Link>
+        <Link to={ROUTES.login} className="text-primary-600 hover:underline">Sign in</Link>
       </p>
     </div>
   );
