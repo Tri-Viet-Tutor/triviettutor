@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ClickSpark, ReadingProgress, ScrollToTop } from "@/components/motion";
+import { ConsultCtaSection } from "@/components/ui/ConsultCtaSection";
 import { COURSES } from "@/features/catalog/data/courses";
-import { TutorCtaSection } from "@/features/tutors/components/TutorCtaSection";
 import { TutorFinderSection } from "@/features/tutors/components/TutorFinderSection";
 import { TutorSearchHero } from "@/features/tutors/components/TutorSearchHero";
 import { filterTutors, TUTOR_PROFILES } from "@/features/tutors/data/tutorProfiles";
@@ -72,7 +72,11 @@ export function SearchPage() {
         subjectLabel={COURSES.find((course) => course.subject === subject)?.subjectLabel ?? ""}
         onReset={resetFilters}
       />
-      <TutorCtaSection />
+      <ConsultCtaSection
+        title="Chưa biết chọn"
+        highlight="gia sư nào?"
+        description="Để lại thông tin, trung tâm tư vấn khóa học và lớp phù hợp."
+      />
     </main>
   );
 }

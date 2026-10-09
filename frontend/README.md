@@ -21,7 +21,7 @@ src/
 │  ├─ layout/            PublicHeader, PublicFooter
 │  ├─ motion/            Reveal, ReadingProgress, ClickSpark, ScrollToTop
 │  ├─ routing/           PrivateRoute, RoleRoute (chặn theo đăng nhập / vai trò)
-│  └─ ui/                Thành phần giao diện dùng lại (Icon, SectionHeading, FramedSlideshow)
+│  └─ ui/                Thành phần giao diện dùng lại (Icon, SectionHeading, FramedSlideshow, ConsultCtaSection)
 ├─ constants/            Hằng số toàn dự án
 │  ├─ assets.ts          Đường dẫn ảnh trong public/assets (xem "Thư mục ảnh")
 │  ├─ classNames.ts      Chuỗi lớp Tailwind dùng lại giữa các trang công khai
@@ -30,10 +30,16 @@ src/
 │  ├─ catalog/           Trang "Khối lớp / Môn học"
 │  │  ├─ components/     Phiếu chọn lớp, sĩ số và tiện ích lớp học, các bước đăng ký
 │  │  └─ data/           Khoá học theo môn + các lựa chọn khớp enum của backend
+│  ├─ contact/           Trang "Liên hệ"
+│  │  ├─ components/     Các cách liên hệ, lá thư đăng ký tư vấn (mở ứng dụng thư)
+│  │  └─ data/           Kênh liên hệ và hàm tạo thư điền sẵn
 │  ├─ home/              Trang chủ
 │  │  ├─ components/     Các khối của trang chủ (HeroSection, CourseDiary, ...)
 │  │  ├─ data/           Nội dung tĩnh (gia sư, ảnh mở đầu, cách tổ chức lớp)
 │  │  └─ hooks/          Hook chỉ trang chủ dùng (useWhirlwindReveal)
+│  ├─ pricing/           Trang "Bảng học phí"
+│  │  ├─ components/     Thẻ giá, bảng học phí theo khoá, lịch mở đăng ký
+│  │  └─ data/           Nhãn lịch học, đợt mở đăng ký và trạng thái so với hôm nay
 │  └─ tutors/            Trang "Tìm gia sư"
 │     ├─ components/     Thanh tìm, danh sách gia sư, hồ sơ gia sư
 │     └─ data/           Danh sách gia sư gom từ các khoá học + hàm lọc
@@ -48,7 +54,7 @@ src/
 ├─ stores/               Trạng thái toàn cục bằng zustand (authStore)
 ├─ styles/               CSS toàn cục
 ├─ types/                Kiểu dữ liệu khớp với DTO của backend
-└─ utils/                Hàm tiện ích thuần (motion, text)
+└─ utils/                Hàm tiện ích thuần (motion, text, currency, date)
 ```
 
 ## Thư mục ảnh

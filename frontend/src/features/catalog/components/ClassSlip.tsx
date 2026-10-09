@@ -5,6 +5,7 @@ import { ROUTES } from "@/constants/routes";
 import { CLASS_SIZE, type ClassOption, SESSION_MINUTES } from "@/features/catalog/data/classOptions";
 import { type Course } from "@/features/catalog/data/courses";
 import type { DeliveryMode, GradeLevel, SchedulePattern, TimeSlot } from "@/types/api";
+import { formatVnd } from "@/utils/currency";
 
 interface ClassSlipProps {
   course: Course;
@@ -22,6 +23,8 @@ export function ClassSlip({ course, grade, deliveryMode, schedulePattern, timeSl
     { label: "Hình thức", value: deliveryMode.label },
     { label: "Lịch học", value: schedulePattern.label },
     { label: "Ca học", value: `${timeSlot.hint} · ${SESSION_MINUTES} phút mỗi buổi` },
+    // Chỉ thêm dòng học phí khi khóa đã có mức phí
+    ...(course.tuitionFee !== undefined ? [{ label: "Học phí", value: `${formatVnd(course.tuitionFee)} / khóa` }] : []),
   ];
 
   return (
@@ -81,7 +84,8 @@ export function ClassSlip({ course, grade, deliveryMode, schedulePattern, timeSl
           />
         </Link>
         <p className="mt-3 text-[12.5px] leading-relaxed text-brand-muted">
-          Học phí, ngày khai giảng và số chỗ còn lại do trung tâm xác nhận khi tư vấn.
+          {course.tuitionFee === undefined && "Học phí, ngày"}
+          {course.tuitionFee !== undefined && "Ngày"} khai giảng và số chỗ còn lại do trung tâm xác nhận khi tư vấn.
         </p>
       </div>
     </div>

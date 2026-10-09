@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ASSETS } from "@/constants/assets";
 import { ROUTES } from "@/constants/routes";
+import { CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_PHONES } from "@/constants/contact";
 
 /* Các trang công khai, cùng tên với thanh menu */
 const FOOTER_LINKS = [
@@ -62,14 +63,19 @@ export function PublicFooter() {
           <h4 className="text-sm text-white font-bold border-l-2 border-[#F5A00F] pl-2 uppercase">Liên hệ</h4>
           <div className="flex flex-col gap-2.5 text-[13px] text-white/70">
             <p>
-              <strong className="text-white">Hotline:</strong> (028) 3888 9999 – 0988 123 456
+              <strong className="text-white">Hotline:</strong> {CONTACT_PHONES.join(" – ")}
             </p>
             <p>
-              <strong className="text-white">Email:</strong> lienhe@giasutphcm.vn
+              <strong className="text-white">Email:</strong>{" "}
+              <a
+                href={`mailto:${CONTACT_EMAIL}`}
+                className="underline-offset-4 hover:text-white hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                {CONTACT_EMAIL}
+              </a>
             </p>
             <p>
-              <strong className="text-white">Địa chỉ:</strong> Tòa nhà Saigon Tower, 29 Lê Duẩn, Bến
-              Nghé, Quận 1, TP. Hồ Chí Minh
+              <strong className="text-white">Địa chỉ:</strong> {CONTACT_ADDRESS}
             </p>
           </div>
         </div>

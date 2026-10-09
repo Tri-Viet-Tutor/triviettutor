@@ -33,6 +33,18 @@ export interface Course {
   tutors: CourseTutor[];
   /** Các chặng của lộ trình, theo thứ tự học */
   steps: string[];
+  /**
+   * Học phí của khóa (VND). Mức tạm do nhóm đặt trong khi backend chưa có thuộc tính học phí —
+   * khi backend trả học phí thì lấy từ API. Để trống thì trang "Bảng học phí" ghi "Báo khi tư vấn".
+   */
+  tuitionFee?: number;
+  /**
+   * Đợt mở đăng ký sắp tới, ngày viết dạng YYYY-MM-DD: `opensOn` là ngày mở đăng ký, `startsOn` là ngày khai giảng.
+   * Hạn chốt đăng ký tự tính = khai giảng trừ ENROLLMENT_DEADLINE_DAYS ngày.
+   * Ngày tạm do nhóm đặt — backend đã lưu hạn chốt (class_groups.enrollment_deadline) và ngày bắt đầu học
+   * (learning_schedules.start_date) nhưng chưa có API công khai; khi có thì lấy từ API.
+   */
+  enrollment?: { opensOn: string; startsOn: string };
 }
 
 /* Khóa học theo từng môn — hiển thị ở "Nhật ký lộ trình" (trang chủ) và trang "Khối lớp / Môn học".
@@ -67,6 +79,8 @@ export const COURSES: Course[] = [
       "Chiến thuật làm đề trắc nghiệm Toán",
       "Luyện đề Tốt nghiệp THPT & ĐGNL phần Toán",
     ],
+    tuitionFee: 2_000_000,
+    enrollment: { opensOn: "2026-10-01", startsOn: "2026-11-02" },
   },
   {
     id: "anh",
@@ -85,6 +99,8 @@ export const COURSES: Course[] = [
       },
     ],
     steps: ["Tổng ôn ngữ pháp Tiếng Anh THPT", "Luyện đề Tiếng Anh Tốt nghiệp THPT"],
+    tuitionFee: 1_900_000,
+    enrollment: { opensOn: "2026-10-05", startsOn: "2026-11-09" },
   },
   {
     id: "van",
@@ -103,6 +119,8 @@ export const COURSES: Course[] = [
       },
     ],
     steps: ["Nghị luận văn học", "Nghị luận xã hội", "Ôn thi Ngữ Văn Tốt nghiệp THPT"],
+    tuitionFee: 1_500_000,
+    enrollment: { opensOn: "2026-10-15", startsOn: "2026-11-16" },
   },
   {
     id: "hoa",
@@ -121,6 +139,8 @@ export const COURSES: Course[] = [
       },
     ],
     steps: ["Hóa vô cơ lớp 10 – 12", "Hóa hữu cơ lớp 10 – 12", "Ôn thi Hóa học Tốt nghiệp THPT"],
+    tuitionFee: 1_800_000,
+    enrollment: { opensOn: "2026-10-01", startsOn: "2026-10-26" },
   },
   {
     id: "tin",
@@ -139,5 +159,7 @@ export const COURSES: Course[] = [
       },
     ],
     steps: ["Tin học 10 – 12 theo chương trình", "Lập trình Python", "Ôn thi Tin học Tốt nghiệp THPT"],
+    tuitionFee: 2_000_000,
+    enrollment: { opensOn: "2026-10-20", startsOn: "2026-11-23" },
   },
 ];

@@ -13,14 +13,22 @@ const SPARKLES = [
   { left: 88, top: 58, size: 24, delay: 1.7 },
 ];
 
+interface ConsultCtaSectionProps {
+  /** Phần đầu câu hỏi, ví dụ "Chưa biết chọn" */
+  title: string;
+  /** Phần cuối câu hỏi, được gạch chân vẽ tay, ví dụ "gia sư nào?" */
+  highlight: string;
+  description: string;
+}
+
 /**
- * Lời mời cuối trang "Tìm gia sư": chưa chọn được thì để trung tâm tư vấn.
+ * Lời mời đăng ký tư vấn ở cuối các trang công khai.
  * Không đóng khung — chữ nằm giữa nền giấy, sau lưng là một quầng cam mờ.
  */
-export function TutorCtaSection() {
+export function ConsultCtaSection({ title, highlight, description }: ConsultCtaSectionProps) {
   return (
     <section className="relative overflow-hidden bg-[#E8E2D5]">
-      {/* Mép trên hoà vào phần kết quả, quầng cam mờ ở giữa */}
+      {/* Mép trên hoà vào phần phía trên, quầng cam mờ ở giữa */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[#F5F1E9] to-transparent" />
       <div
         aria-hidden="true"
@@ -70,9 +78,9 @@ export function TutorCtaSection() {
 
       <Reveal className={`${CONTAINER} relative flex flex-col items-center py-16 text-center lg:py-24`}>
         <h2 className="text-balance text-[30px] font-extrabold leading-tight tracking-tight text-brand-navy sm:text-[38px] lg:text-[46px]">
-          Chưa biết chọn{" "}
+          {title}{" "}
           <span className="relative inline-block whitespace-nowrap">
-            gia sư nào?
+            {highlight}
             {/* Nét gạch chân vẽ tay */}
             <svg
               aria-hidden="true"
@@ -86,7 +94,7 @@ export function TutorCtaSection() {
           </span>
         </h2>
         <p className="mt-6 max-w-xl text-[16.5px] leading-relaxed text-brand-muted lg:text-[18px]">
-          Để lại thông tin, trung tâm tư vấn khóa học và lớp phù hợp.
+          {description}
         </p>
         <Link
           to={ROUTES.contactForm}

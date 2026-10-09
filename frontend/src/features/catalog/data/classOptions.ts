@@ -76,6 +76,9 @@ export const CLASS_PERKS: ClassPerk[] = [
   { icon: "co_present", title: "Gia sư bận vẫn có lớp", description: "Trung tâm xếp gia sư dạy thay hoặc buổi học bù." },
 ];
 
+/** Hạn chốt đăng ký: trước ngày khai giảng bấy nhiêu ngày (BR-02.20) */
+export const ENROLLMENT_DEADLINE_DAYS = 3;
+
 export interface EnrollmentStep {
   /** Tên biểu tượng Material Symbols */
   icon: string;
@@ -87,7 +90,7 @@ export interface EnrollmentStep {
 export const ENROLLMENT_STEPS: EnrollmentStep[] = [
   { icon: "fact_check", title: "Chọn lớp", description: "Chọn môn, khối lớp, lịch và ca học đang mở đăng ký." },
   { icon: "payments", title: "Đăng ký", description: "Đóng học phí trọn khóa để giữ chỗ trong lớp." },
-  { icon: "event_busy", title: "Chốt đăng ký", description: "Trước khai giảng 3 ngày. Lớp nhóm cần từ 2 học viên." },
+  { icon: "event_busy", title: "Chốt đăng ký", description: `Trước khai giảng ${ENROLLMENT_DEADLINE_DAYS} ngày. Lớp nhóm cần từ 2 học viên.` },
   { icon: "how_to_reg", title: "Phân công gia sư", description: "Trung tâm xếp gia sư không trùng lịch dạy lớp khác." },
   { icon: "school", title: "Khai giảng", description: "Lịch từng buổi hiện trong tài khoản học viên." },
 ];

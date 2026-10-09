@@ -430,3 +430,24 @@
     clip-path: none;
   }
 }
+
+/* Thẻ giá ở trang "Bảng học phí": đung đưa quanh lỗ xỏ dây (features/pricing/components/PriceTag.tsx) */
+@keyframes tag-swing {
+  0%,
+  100% {
+    rotate: 3deg;
+  }
+  50% {
+    rotate: 8deg;
+  }
+}
+.tag-swing {
+  transform-origin: 50% 66px;
+  rotate: 5deg;
+  animation: tag-swing 4.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tag-swing {
+    animation: none;
+  }
+}
