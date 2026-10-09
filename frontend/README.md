@@ -27,6 +27,11 @@ src/
 │  ├─ classNames.ts      Chuỗi lớp Tailwind dùng lại giữa các trang công khai
 │  └─ routes.ts          Đường dẫn trang
 ├─ features/             Mã theo từng tính năng
+│  ├─ auth/              Các trang xác thực (đăng nhập, đăng ký, OTP, quên mật khẩu)
+│  │  ├─ api/            Lời gọi verify-email, resend-verification, quên / đặt lại mật khẩu
+│  │  ├─ components/     Ô nhập, ô mã OTP, hộp báo, nút gửi, tấm giới thiệu
+│  │  ├─ data/           Câu báo lỗi theo mã lỗi backend, email đang chờ xác thực
+│  │  └─ hooks/          useCountdown (đếm ngược hạn mã OTP)
 │  ├─ catalog/           Trang "Khối lớp / Môn học"
 │  │  ├─ components/     Phiếu chọn lớp, sĩ số và tiện ích lớp học, các bước đăng ký
 │  │  └─ data/           Khoá học theo môn + các lựa chọn khớp enum của backend
@@ -48,7 +53,7 @@ src/
 ├─ lib/                  axios, React Query, và auth.ts (gọi API đăng nhập / đăng ký, trang đích theo vai trò)
 ├─ pages/                Mỗi file là một trang gắn với một route
 │  ├─ AccountDashboard.tsx, SessionListPage.tsx   Trang hồ sơ và lịch học sau khi đăng nhập
-│  ├─ auth/              LoginPage, RegisterPage
+│  ├─ auth/              LoginPage, RegisterPage, VerifyEmailPage, ForgotPasswordPage, ResetPasswordPage
 │  ├─ error/             ForbiddenPage, NotFoundPage
 │  └─ public/            HomePage, SubjectsPage, SearchPage, PricingPage, ContactPage
 ├─ stores/               Trạng thái toàn cục bằng zustand (authStore)

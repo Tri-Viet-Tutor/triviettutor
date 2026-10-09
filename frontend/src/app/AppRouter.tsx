@@ -12,6 +12,9 @@ import { PublicLayout } from "@/layouts/PublicLayout";
 // Auth pages
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { RegisterPage } from "@/pages/auth/RegisterPage";
+import { VerifyEmailPage } from "@/pages/auth/VerifyEmailPage";
+import { ForgotPasswordPage } from "@/pages/auth/ForgotPasswordPage";
+import { ResetPasswordPage } from "@/pages/auth/ResetPasswordPage";
 
 // Public pages
 import { HomePage } from "@/pages/public/HomePage";
@@ -37,7 +40,7 @@ import { SessionListPage } from "@/pages/SessionListPage";
  *
  * Route protection strategy (BR-01.10):
  *  - Public marketing/landing pages → PublicLayout (/, /cap-hoc-mon-hoc, /tim-gia-su, /bang-hoc-phi, /lien-he)
- *  - /login, /register             → public (AuthLayout)
+ *  - /login, /register, /verify-email, /forgot-password, /reset-password → public (AuthLayout)
  *  - /admin/**                     → ROLE_ADMIN only
  *  - /tutor/**                     → ROLE_TUTOR only
  *  - /student/**                   → ROLE_STUDENT only
@@ -59,6 +62,9 @@ export function AppRouter() {
         <Route element={<AuthLayout />}>
           <Route path={ROUTES.login} element={<LoginPage />} />
           <Route path={ROUTES.register} element={<RegisterPage />} />
+          <Route path={ROUTES.verifyEmail} element={<VerifyEmailPage />} />
+          <Route path={ROUTES.forgotPassword} element={<ForgotPasswordPage />} />
+          <Route path={ROUTES.resetPassword} element={<ResetPasswordPage />} />
         </Route>
 
         {/* ── Admin routes ────────────────────────────────────────────── */}

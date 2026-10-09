@@ -9,6 +9,10 @@ export const ROUTES = {
   contactForm: "/lien-he#form-lien-he",
   login: "/login",
   register: "/register",
+  /** Nhập mã OTP gửi qua email để kích hoạt tài khoản */
+  verifyEmail: "/verify-email",
+  forgotPassword: "/forgot-password",
+  resetPassword: "/reset-password",
   admin: "/admin",
   adminSessions: "/admin/sessions",
   tutor: "/tutor",
