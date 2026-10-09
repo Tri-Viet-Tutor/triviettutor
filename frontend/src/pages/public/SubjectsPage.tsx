@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ClickSpark, ReadingProgress, ScrollToTop } from "@/components/motion";
 import { CatalogHero } from "@/features/catalog/components/CatalogHero";
 import { ClassBuilderSection } from "@/features/catalog/components/ClassBuilderSection";
@@ -13,12 +14,21 @@ import { prefersReducedMotion } from "@/utils/motion";
  * (xem features/catalog/data/classOptions.ts và phần "Danh mục" trong types/api.ts).
  */
 export function SubjectsPage() {
+  // Môn mở sẵn lấy từ đường dẫn (/cap-hoc-mon-hoc?mon=MATH), ví dụ khi đi từ hồ sơ gia sư sang
+  const [searchParams] = useSearchParams();
+  const [subjectFromUrl] = useState(() => COURSES.find((course) => course.subject === searchParams.get("mon"))?.subject);
+
   // Môn đang chọn dùng chung cho bong bóng ở phần mở đầu và phiếu chọn lớp
-  const [subject, setSubject] = useState(COURSES[0].subject);
+  const [subject, setSubject] = useState(subjectFromUrl ?? COURSES[0].subject);
 
   useEffect(() => {
-    window.scrollTo({ top: 0 });
-  }, []);
+    // Có môn mở sẵn thì đưa thẳng tới phiếu chọn lớp, không thì về đầu trang
+    if (subjectFromUrl) {
+      document.getElementById("class-builder")?.scrollIntoView({ block: "start" });
+    } else {
+      window.scrollTo({ top: 0 });
+    }
+  }, [subjectFromUrl]);
 
   /** Bấm bong bóng môn ở phần mở đầu: chọn môn rồi cuộn xuống phiếu */
   function pickSubjectFromHero(nextSubject: string) {

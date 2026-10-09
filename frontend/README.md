@@ -28,12 +28,15 @@ src/
 │  └─ routes.ts          Đường dẫn trang
 ├─ features/             Mã theo từng tính năng
 │  ├─ catalog/           Trang "Khối lớp / Môn học"
-│  │  ├─ components/     Phiếu chọn lớp, bậc học phí, các bước đăng ký
+│  │  ├─ components/     Phiếu chọn lớp, sĩ số và tiện ích lớp học, các bước đăng ký
 │  │  └─ data/           Khoá học theo môn + các lựa chọn khớp enum của backend
-│  └─ home/              Trang chủ
-│     ├─ components/     Các khối của trang chủ (HeroSection, CourseDiary, ...)
-│     ├─ data/           Nội dung tĩnh (gia sư, ảnh mở đầu, cách tổ chức lớp)
-│     └─ hooks/          Hook chỉ trang chủ dùng (useWhirlwindReveal)
+│  ├─ home/              Trang chủ
+│  │  ├─ components/     Các khối của trang chủ (HeroSection, CourseDiary, ...)
+│  │  ├─ data/           Nội dung tĩnh (gia sư, ảnh mở đầu, cách tổ chức lớp)
+│  │  └─ hooks/          Hook chỉ trang chủ dùng (useWhirlwindReveal)
+│  └─ tutors/            Trang "Tìm gia sư"
+│     ├─ components/     Thanh tìm, danh sách gia sư, hồ sơ gia sư
+│     └─ data/           Danh sách gia sư gom từ các khoá học + hàm lọc
 ├─ hooks/                Custom hook dùng chung (useInView)
 ├─ layouts/              Khung trang theo khu vực (Public, Auth, Admin, Tutor, Student)
 ├─ lib/                  axios, React Query, và auth.ts (gọi API đăng nhập / đăng ký, trang đích theo vai trò)
@@ -45,7 +48,7 @@ src/
 ├─ stores/               Trạng thái toàn cục bằng zustand (authStore)
 ├─ styles/               CSS toàn cục
 ├─ types/                Kiểu dữ liệu khớp với DTO của backend
-└─ utils/                Hàm tiện ích thuần
+└─ utils/                Hàm tiện ích thuần (motion, text)
 ```
 
 ## Thư mục ảnh
