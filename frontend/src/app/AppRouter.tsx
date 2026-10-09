@@ -35,9 +35,26 @@ import { GuestCartScope } from "@/features/checkout/components/GuestCartScope";
 import { NotFoundPage } from "@/pages/error/NotFoundPage";
 import { ForbiddenPage } from "@/pages/error/ForbiddenPage";
 
-// Dashboard pages
-import { AccountDashboard } from "@/pages/AccountDashboard";
-import { SessionListPage } from "@/pages/SessionListPage";
+// Admin pages
+import { AdminHomePage } from "@/pages/admin/AdminHomePage";
+import { AdminUsersPage } from "@/pages/admin/AdminUsersPage";
+import { AdminSessionsPage } from "@/pages/admin/AdminSessionsPage";
+import { AdminLeaveRequestsPage } from "@/pages/admin/AdminLeaveRequestsPage";
+import { AdminAssignmentsPage } from "@/pages/admin/AdminAssignmentsPage";
+
+// Tutor pages
+import { TutorHomePage } from "@/pages/tutor/TutorHomePage";
+import { TutorSchedulePage } from "@/pages/tutor/TutorSchedulePage";
+import { TutorAvailabilityPage } from "@/pages/tutor/TutorAvailabilityPage";
+import { TutorLeavePage } from "@/pages/tutor/TutorLeavePage";
+
+// Student pages
+import { StudentHomePage } from "@/pages/student/StudentHomePage";
+import { StudentSchedulePage } from "@/pages/student/StudentSchedulePage";
+import { StudentCoursesPage } from "@/pages/student/StudentCoursesPage";
+import { StudentCheckoutPage } from "@/pages/student/StudentCheckoutPage";
+import { StudentLeavePage } from "@/pages/student/StudentLeavePage";
+import { ProfilePage } from "@/pages/portal/ProfilePage";
 
 /**
  * Application router.
@@ -78,8 +95,12 @@ export function AppRouter() {
         <Route element={<PrivateRoute />}>
           <Route element={<RoleRoute allowedRole="ROLE_ADMIN" />}>
             <Route element={<AdminLayout />}>
-              <Route path={ROUTES.admin} element={<AccountDashboard />} />
-              <Route path={ROUTES.adminSessions} element={<SessionListPage />} />
+              <Route path={ROUTES.admin} element={<AdminHomePage />} />
+              <Route path={ROUTES.adminUsers} element={<AdminUsersPage />} />
+              <Route path={ROUTES.adminSessions} element={<AdminSessionsPage />} />
+              <Route path={ROUTES.adminLeaveRequests} element={<AdminLeaveRequestsPage />} />
+              <Route path={ROUTES.adminAssignments} element={<AdminAssignmentsPage />} />
+              <Route path={ROUTES.adminProfile} element={<ProfilePage />} />
             </Route>
           </Route>
         </Route>
@@ -88,8 +109,11 @@ export function AppRouter() {
         <Route element={<PrivateRoute />}>
           <Route element={<RoleRoute allowedRole="ROLE_TUTOR" />}>
             <Route element={<TutorLayout />}>
-              <Route path={ROUTES.tutor} element={<AccountDashboard />} />
-              <Route path={ROUTES.tutorSessions} element={<SessionListPage />} />
+              <Route path={ROUTES.tutor} element={<TutorHomePage />} />
+              <Route path={ROUTES.tutorSessions} element={<TutorSchedulePage />} />
+              <Route path={ROUTES.tutorAvailability} element={<TutorAvailabilityPage />} />
+              <Route path={ROUTES.tutorLeave} element={<TutorLeavePage />} />
+              <Route path={ROUTES.tutorProfile} element={<ProfilePage />} />
             </Route>
           </Route>
         </Route>
@@ -98,8 +122,12 @@ export function AppRouter() {
         <Route element={<PrivateRoute />}>
           <Route element={<RoleRoute allowedRole="ROLE_STUDENT" />}>
             <Route element={<StudentLayout />}>
-              <Route path={ROUTES.student} element={<AccountDashboard />} />
-              <Route path={ROUTES.studentSchedule} element={<SessionListPage />} />
+              <Route path={ROUTES.student} element={<StudentHomePage />} />
+              <Route path={ROUTES.studentSchedule} element={<StudentSchedulePage />} />
+              <Route path={ROUTES.studentCourses} element={<StudentCoursesPage />} />
+              <Route path={ROUTES.studentCheckout} element={<StudentCheckoutPage />} />
+              <Route path={ROUTES.studentLeave} element={<StudentLeavePage />} />
+              <Route path={ROUTES.studentProfile} element={<ProfilePage />} />
             </Route>
           </Route>
         </Route>

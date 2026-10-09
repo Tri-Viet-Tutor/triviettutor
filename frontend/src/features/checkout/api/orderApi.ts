@@ -23,8 +23,7 @@ import type { ApiResponse } from "@/types/api";
  *      GET /payments/vnpay/return để máy chủ kiểm tra chữ ký và cho biết đơn đã thanh toán chưa.
  * Frontend không ký, không giữ khóa bí mật và không tự quyết "đã thanh toán".
  *
- * LƯU Ý: backend CHƯA có các endpoint này. Mô tả đầy đủ cho người làm backend nằm ở
- * docs/VNPAY_BACKEND_API.md.
+ * LƯU Ý: backend CHƯA có các endpoint này; tên và dữ liệu gửi / nhận là đề xuất của frontend.
  */
 
 export interface CheckoutRequest {

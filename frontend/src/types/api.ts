@@ -91,7 +91,7 @@ export type ErrorCode =
   | "ATTENDANCE_SESSION_NOT_ENDED"
   | "ATTENDANCE_EXCUSED_NOT_ALLOWED"
   | "INVALID_STATUS_TRANSITION"
-  // (Đề xuất) Đơn hàng & thanh toán VNPay — xem docs/VNPAY_BACKEND_API.md
+  // (Đề xuất) Đơn hàng & thanh toán VNPay — backend chưa có
   | "ORDER_NOT_FOUND"
   | "INVALID_ORDER_ITEMS"
   | "INVALID_PAYMENT_SIGNATURE"
@@ -271,7 +271,10 @@ export interface SessionResponse {
   actualTutorId: number | null;
   meetingUrl: string | null;
   topicId: number | null;
+  /** Khác null nghĩa là buổi học bù của buổi có mã này */
   originalSessionId: number | null;
+  attendanceLocked: boolean;
+  attendanceNeedsReview: boolean;
 }
 
 /** dto.schedule.MeetingUrlRequest — PUT /admin/sessions/{sessionId}/meeting-url (phải là URL https) */
@@ -351,6 +354,143 @@ export interface AssignmentResponse {
   assignedBy: number;
   assignedAt: IsoDateTime;
   reason: string | null;
+}
+
+// ── Điểm danh (dto.attendance) ───────────────────────────────────────────────
+
+/** dto.attendance.AttendanceRecordResponse */
+export interface AttendanceRecordResponse {
+  recordId: number;
+  studentId: number;
+  status: AttendanceStatus;
+  note: string | null;
+  /** Giờ tới lớp (khi đi trễ) */
+  arrivedAt: IsoDateTime | null;
+  recordedBy: number | null;
+  recordedAt: IsoDateTime | null;
+  locked: boolean;
+}
+
+/**
+ * dto.attendance.AttendanceResponse — GET /sessions/{sessionId}/attendance.
+ * Học viên chỉ nhận bản ghi của chính mình: `records` rỗng nghĩa là buổi này chưa điểm danh.
+ */
+export interface AttendanceResponse {
+  sessionId: number;
+  sessionStatus: SessionStatus;
+  locked: boolean;
+  editDeadline: IsoDateTime | null;
+  teachingConfirmed: boolean;
+  taughtByTutorId: number | null;
+  needsAdminReview: boolean;
+  studentIds: number[];
+  missingStudentIds: number[];
+  records: AttendanceRecordResponse[];
+}
+
+/** dto.attendance.AttendanceRecordInput */
+export interface AttendanceRecordInput {
+  studentId: number;
+  status: AttendanceStatus;
+  /** tối đa 1000 ký tự */
+  note?: string;
+  /** Giờ học viên tới lớp (tuỳ chọn); phải nằm trong buổi học và không ở tương lai */
+  arrivedAt?: IsoDateTime;
+}
+
+/**
+ * dto.attendance.AttendanceSubmission — PUT /sessions/{sessionId}/attendance.
+ * Gia sư gửi là tự xác nhận đã dạy. Quản trị muốn xác nhận đã dạy thì gửi teachingConfirmed = true kèm reason.
+ */
+export interface AttendanceSubmission {
+  records: AttendanceRecordInput[];
+  teachingConfirmed?: boolean;
+  reason?: string;
+}
+
+/** dto.attendance.AttendanceLockInput — PATCH /admin/sessions/{sessionId}/attendance/lock */
+export interface AttendanceLockInput {
+  locked: boolean;
+  reason: string;
+}
+
+/** dto.attendance.AttendanceCorrection — PATCH /admin/sessions/{sessionId}/attendance/{recordId} */
+export interface AttendanceCorrection {
+  status: AttendanceStatus;
+  note?: string;
+  arrivedAt?: IsoDateTime;
+  reason: string;
+}
+
+// ── Hồ sơ của tôi (dto.user) ─────────────────────────────────────────────────
+
+/** dto.user.MeResponse.StudentProfileResponse */
+export interface StudentProfileResponse {
+  phone: string | null;
+  address: string | null;
+}
+
+/** dto.user.MeResponse.TutorProfileResponse */
+export interface TutorProfileResponse {
+  /** Lương cơ bản mỗi tháng (VND) */
+  baseSalary: number | null;
+  /** Thù lao mỗi buổi dạy (VND) */
+  sessionRate: number | null;
+  bio: string | null;
+}
+
+/**
+ * dto.user.MeResponse — GET /me, PUT /me.
+ * `profile` theo vai trò: học viên có phone / address, gia sư có baseSalary / sessionRate / bio, quản trị là null.
+ */
+export interface MeResponse extends UserInfo {
+  createdAt: IsoDateTime;
+  profile: Partial<StudentProfileResponse & TutorProfileResponse> | null;
+}
+
+/**
+ * dto.user.UpdateMeRequest — PUT /me. Trường lạ hoặc trường của vai trò khác bị backend từ chối:
+ * học viên chỉ gửi phone / address, gia sư chỉ gửi bio, quản trị chỉ gửi fullName.
+ */
+export interface UpdateMeRequest {
+  /** bắt buộc, tối đa 100 ký tự */
+  fullName: string;
+  /** tối đa 20 ký tự */
+  phone?: string;
+  address?: string;
+  bio?: string;
+}
+
+// ── Quản trị người dùng (dto.user) ───────────────────────────────────────────
+
+/** dto.user.AdminUserResponse — GET /admin/users */
+export interface AdminUserResponse extends UserInfo {
+  createdAt: IsoDateTime;
+}
+
+/** Tham số của GET /admin/users (page từ 0, size 1 – 100) */
+export interface AdminUsersQuery {
+  role?: Role;
+  /** Tìm theo email hoặc họ tên, không phân biệt hoa thường */
+  search?: string;
+  page?: number;
+  size?: number;
+}
+
+/** dto.user.UpdateTutorProfileRequest — PUT /admin/users/{userId}/tutor-profile (tiền là số nguyên không âm) */
+export interface UpdateTutorProfileRequest {
+  baseSalary: number;
+  sessionRate: number;
+  bio?: string;
+}
+
+/** dto.user.CreateTutorRequest — POST /admin/users/tutors */
+export interface CreateTutorRequest extends UpdateTutorProfileRequest {
+  email: string;
+  /** 6 – 128 ký tự */
+  password: string;
+  /** 2 – 100 ký tự */
+  fullName: string;
 }
 
 // ── Xin nghỉ & đổi buổi (dto.leave) ──────────────────────────────────────────

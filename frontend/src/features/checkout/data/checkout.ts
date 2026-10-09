@@ -45,7 +45,7 @@ export interface PaidOrder {
 
 /**
  * true: thanh toán chạy ở chế độ DEMO — mã VNPay được tạo ngay trên trình duyệt, không có giao dịch thật.
- * Mặc định là demo. Khi backend đã có API thanh toán VNPay (docs/VNPAY_BACKEND_API.md), đặt
+ * Mặc định là demo. Khi backend đã có API thanh toán VNPay (xem api/orderApi.ts), đặt
  * VITE_PAYMENT_DEMO=false trong .env.local để chuyển sang thanh toán thật.
  */
 export const PAYMENT_DEMO = import.meta.env.VITE_PAYMENT_DEMO !== "false";

@@ -17,11 +17,25 @@ export const ROUTES = {
   verifyEmail: "/verify-email",
   forgotPassword: "/forgot-password",
   resetPassword: "/reset-password",
+  /** Khu quản trị: tổng quan, người dùng, buổi học, đơn xin nghỉ, phân công gia sư, hồ sơ */
   admin: "/admin",
+  adminUsers: "/admin/users",
   adminSessions: "/admin/sessions",
+  adminLeaveRequests: "/admin/leave-requests",
+  adminAssignments: "/admin/assignments",
+  adminProfile: "/admin/profile",
+  /** Khu gia sư: tổng quan, lịch dạy + điểm danh, lịch rảnh, xin nghỉ, hồ sơ */
   tutor: "/tutor",
   tutorSessions: "/tutor/sessions",
+  tutorAvailability: "/tutor/availability",
+  tutorLeave: "/tutor/leave",
+  tutorProfile: "/tutor/profile",
+  /** Khu học viên: tổng quan, lịch học, mua khóa học + thanh toán, xin nghỉ, hồ sơ */
   student: "/student",
   studentSchedule: "/student/schedule",
+  studentCourses: "/student/courses",
+  studentCheckout: "/student/checkout",
+  studentLeave: "/student/leave",
+  studentProfile: "/student/profile",
   forbidden: "/403",
 } as const;

@@ -8,17 +8,25 @@ import { formatVnd } from "@/utils/currency";
 interface CartBarProps {
   courses: PurchasableCourse[];
   onClear: () => void;
+  /** Trang thanh toán sẽ mở. Mặc định là trang thanh toán công khai */
+  checkoutTo?: string;
+  /** Đang nằm trong khu học viên: né thanh điều hướng bên trái (máy tính) và thanh dưới đáy (điện thoại) */
+  inStudentArea?: boolean;
 }
 
 /**
  * Giỏ hàng dạng thanh cố định ở đáy màn hình, chỉ hiện khi giỏ có khóa:
  * tên các khóa đã chọn, tổng tiền và nút sang trang thanh toán (bỏ từng khóa ở trang đó hoặc ngay trên vé).
  */
-export function CartBar({ courses, onClear }: CartBarProps) {
+export function CartBar({ courses, onClear, checkoutTo = ROUTES.checkout, inStudentArea = false }: CartBarProps) {
   if (courses.length === 0) return null;
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white shadow-[0_-14px_32px_-20px_rgba(8,42,102,0.55)]">
-      <div className={`${CONTAINER} flex items-center justify-between gap-4 py-3`}>
+    <div
+      className={`fixed inset-x-0 z-30 border-t border-slate-200 bg-white shadow-[0_-14px_32px_-20px_rgba(8,42,102,0.55)] ${
+        inStudentArea ? "bottom-[60px] lg:bottom-0 lg:left-[240px]" : "bottom-0"
+      }`}
+    >
+      <div className={`${inStudentArea ? "mx-auto max-w-[1180px] px-4 sm:px-6 lg:px-10" : CONTAINER} flex items-center justify-between gap-4 py-3`}>
         <div aria-live="polite" className="flex min-w-0 items-center gap-3.5">
           <span className="relative hidden h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-tint sm:flex">
             <Icon name="shopping_cart" className="text-[23px] text-brand-navy" />
@@ -43,7 +51,7 @@ export function CartBar({ courses, onClear }: CartBarProps) {
             Bỏ hết
           </button>
           <Link
-            to={ROUTES.checkout}
+            to={checkoutTo}
             className={`inline-flex h-11 items-center justify-center gap-2 rounded-md bg-brand-navy px-6 text-[15px] font-semibold text-white transition-colors hover:bg-brand-navyDeep ${FOCUS_RING}`}
           >
             Thanh toán

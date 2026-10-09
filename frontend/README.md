@@ -36,7 +36,7 @@ src/
 │  │  └─ data/           Khoá học theo môn + các lựa chọn khớp enum của backend
 │  ├─ checkout/          Trang "Thanh toán" (điền thông tin → thanh toán → tạo tài khoản)
 │  │  ├─ api/            Tạo mã thanh toán VNPay và xác nhận (đang chạy demo — backend chưa có)
-│  │  ├─ components/     Dãy bước, form thông tin học viên, form thanh toán, thẻ ATM demo, mã QR VNPay, form tạo tài khoản sau thanh toán, tóm tắt đơn hàng, GuestCartScope (khách rời luồng mua thì xóa giỏ)
+│  │  ├─ components/     CheckoutFlow (cả luồng, trang công khai và khu học viên dùng chung), dãy bước, form thông tin học viên, form thanh toán, thẻ ATM demo, mã QR VNPay, form tạo tài khoản sau thanh toán, tóm tắt đơn hàng, GuestCartScope (khách rời luồng mua thì xóa giỏ)
 │  │  └─ data/           Khóa trong giỏ, tổng tiền, cờ PAYMENT_DEMO, mã thanh toán demo và thẻ thử nghiệm
 │  ├─ contact/           Trang "Liên hệ"
 │  │  ├─ components/     Các cách liên hệ, lá thư đăng ký tư vấn (mở ứng dụng thư)
@@ -48,17 +48,39 @@ src/
 │  ├─ pricing/           Trang "Mua khóa học" (trước là "Bảng học phí")
 │  │  ├─ components/     Thẻ giá, bộ lọc, vé lớp học (CourseTicket), thanh giỏ hàng, ảnh hình thức học, lịch mở đăng ký
 │  │  └─ data/           Nhãn lịch học, đợt mở đăng ký; shopFilters.ts tìm / lọc / sắp xếp khoá
+│  ├─ portal/            Phần dùng chung của ba khu sau đăng nhập (học viên, gia sư, quản trị) — chỉ dùng dữ liệu backend đang có
+│  │  ├─ api/            GET/PUT /me, GET /me/sessions, GET + PUT /sessions/{id}/attendance, GET /me/leave-requests, POST /sessions/{id}/leave
+│  │  ├─ components/     Thanh điều hướng (PortalNav), lời chào, bảng buổi hôm nay (TodayPanel) có linh vật kiến (AntMascot: vác lá, cầm bút, đọc sách), lịch tuần, lịch các buổi (SessionSchedule, SessionRow), điểm danh cả lớp (AttendanceEditor), trung tâm xin nghỉ (LeaveCenter), form hồ sơ, thẻ lọc, phân trang, khung chờ / lỗi / trống
+│  │  ├─ data/           Tính toán trên buổi học (sessions.ts), nhãn trạng thái và vai trò (labels.ts), câu báo lỗi theo mã backend (errors.ts), kiểu dáng chung (ui.ts)
+│  │  └─ hooks/          Hook tải dữ liệu bằng React Query (usePortalData)
+│  ├─ student/           Khu học viên (/student/*); trang mua khóa học và thanh toán trong khu này dùng lại features/pricing và features/checkout
+│  │  ├─ components/     Chi tiết buổi học, tiến độ lớp, điểm danh gần đây, hồ sơ học tập
+│  │  └─ data/           Mục điều hướng
+│  ├─ tutor/             Khu gia sư (/tutor/*)
+│  │  ├─ api/            GET + PUT /tutor/availability
+│  │  ├─ components/     Chi tiết buổi dạy (điểm danh, xin nghỉ dạy), bảng khai lịch rảnh
+│  │  └─ data/           Mục điều hướng
+│  ├─ admin/             Khu quản trị (/admin/*)
+│  │  ├─ api/            /admin/users, /admin/sessions, /admin/leave-requests, /admin/classes/{id}/… (xem adminApi.ts)
+│  │  ├─ components/     Bảng việc cần xử lý, danh sách người dùng, form gia sư, bộ lọc và chi tiết buổi học, điểm danh của quản trị, thẻ xử lý đơn xin nghỉ, chọn lớp và phân công gia sư, form lý do
+│  │  ├─ data/           Mục điều hướng
+│  │  └─ hooks/          Hook tải dữ liệu bằng React Query (useAdminData), tra tên người dùng theo mã
 │  └─ tutors/            Trang "Tìm gia sư"
 │     ├─ components/     Thanh tìm, danh sách gia sư, hồ sơ gia sư
 │     └─ data/           Danh sách gia sư gom từ các khoá học + hàm lọc
-├─ hooks/                Custom hook dùng chung (useInView, useCountdown)
-├─ layouts/              Khung trang theo khu vực (Public, Auth, Admin, Tutor, Student)
+├─ hooks/                Custom hook dùng chung (useInView, useCountdown, useNow, useDebouncedValue)
+├─ layouts/              Khung trang theo khu vực (Public, Auth; PortalLayout là khung chung của Admin, Tutor, Student)
 ├─ lib/                  axios, React Query, qrcode.ts (tạo mã QR), và auth.ts (gọi API đăng nhập / đăng ký, trang đích theo vai trò)
 ├─ pages/                Mỗi file là một trang gắn với một route
-│  ├─ AccountDashboard.tsx, SessionListPage.tsx   Trang hồ sơ và lịch học sau khi đăng nhập
+│  ├─ AccountDashboard.tsx, SessionListPage.tsx   Hai trang tạm ban đầu, không còn gắn route
+│  ├─ admin/             AdminHomePage (Tổng quan), AdminUsersPage (Người dùng), AdminSessionsPage (Buổi học), AdminLeaveRequestsPage (Đơn xin nghỉ), AdminAssignmentsPage (Phân công gia sư)
 │  ├─ auth/              LoginPage, RegisterPage, VerifyEmailPage, ForgotPasswordPage, ResetPasswordPage
 │  ├─ error/             ForbiddenPage, NotFoundPage
-│  └─ public/            HomePage, SubjectsPage, SearchPage, PricingPage, CheckoutPage, ContactPage
+│  ├─ portal/            ProfilePage (Hồ sơ — ba khu dùng chung)
+│  ├─ public/            HomePage, SubjectsPage, SearchPage, PricingPage, CheckoutPage, ContactPage
+│  ├─ student/           StudentHomePage (Tổng quan), StudentSchedulePage (Lịch học), StudentCoursesPage (Mua khóa học), StudentCheckoutPage (Thanh toán), StudentLeavePage (Xin nghỉ)
+│  └─ tutor/             TutorHomePage (Tổng quan), TutorSchedulePage (Lịch dạy), TutorAvailabilityPage (Lịch rảnh), TutorLeavePage (Xin nghỉ)
+├─ preview/              Chế độ xem thử, chỉ có khi `npm run dev`: chưa đăng nhập mà mở `/admin`, `/tutor` thì vào bằng tài khoản và dữ liệu mẫu, không cần backend; đặt `VITE_PREVIEW=false` để tắt; bản build thật không chứa
 ├─ stores/               Trạng thái toàn cục bằng zustand (authStore, cartStore — giỏ lưu theo phiên trình duyệt)
 ├─ styles/               CSS toàn cục
 ├─ types/                Kiểu dữ liệu khớp với DTO của backend

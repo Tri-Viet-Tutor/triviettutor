@@ -1,66 +1,13 @@
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
-import { useAuthStore } from "@/stores/authStore";
 import { ROUTES } from "@/constants/routes";
+import { STUDENT_NAV } from "@/features/student/data/nav";
+import { PortalLayout } from "@/layouts/PortalLayout";
 
 /**
  * StudentLayout
  *
- * Shell layout for all /student/* routes.
- * Students/parents see the class catalog, their enrollments, and their schedule.
+ * Khung của mọi trang /student/* (đã được PrivateRoute + RoleRoute chặn theo vai trò ở AppRouter).
+ * Mua khóa học và thanh toán cũng nằm trong khu này.
  */
 export function StudentLayout() {
-  const logout = useAuthStore((s) => s.logout);
-  const navigate = useNavigate();
-
-  const navItems = [
-    { to: "/student", label: "My Profile" },
-    { to: "/student/catalog", label: "Browse Classes" },
-    { to: "/student/enrollments", label: "My Enrollments" },
-    { to: "/student/schedule", label: "My Schedule" },
-  ];
-
-  function handleLogout() {
-    logout();
-    navigate(ROUTES.login);
-  }
-
-  return (
-    <div className="flex h-screen">
-      {/* Sidebar */}
-      <aside className="w-60 bg-teal-900 text-white flex flex-col">
-        <div className="px-6 py-5 text-lg font-bold border-b border-teal-700">
-          VietTriTutor <span className="text-xs font-normal text-teal-300">Student</span>
-        </div>
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end
-              className={({ isActive }) =>
-                `block px-3 py-2 rounded text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-teal-600 text-white"
-                    : "text-teal-200 hover:bg-teal-700 hover:text-white"
-                }`
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-        <button
-          onClick={handleLogout}
-          className="m-3 px-3 py-2 rounded text-sm text-teal-300 hover:bg-teal-700 hover:text-white text-left"
-        >
-          Log out
-        </button>
-      </aside>
-
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto p-6">
-        <Outlet />
-      </main>
-    </div>
-  );
+  return <PortalLayout areaLabel="Khu học viên" homeTo={ROUTES.student} profileTo={ROUTES.studentProfile} navItems={STUDENT_NAV} />;
 }

@@ -17,18 +17,27 @@ import {
   type ShopFilters,
   type ShopSort,
 } from "@/features/pricing/data/shopFilters";
+import { PORTAL_SURFACE } from "@/features/portal/data/ui";
 import { useCartStore } from "@/stores/cartStore";
 import { startOfToday } from "@/utils/date";
 
 /** Số khóa hiện mỗi lần; còn nữa thì có nút "Xem thêm" */
 const PAGE_SIZE = 6;
 
+interface CourseShopSectionProps {
+  variant?: "public" | "student";
+}
+
 /**
  * Danh sách khóa học để mua, làm cho danh sách dài: ô tìm,
  * bộ lọc (môn học, đợt đăng ký, thứ học trong tuần, học phí), sắp xếp, và mỗi khóa là một tấm "vé lớp học" gọn.
  * Giỏ hàng là thanh cố định ở đáy màn hình.
+ * `variant="student"`: nhúng trong khu học viên — bỏ tiêu đề và các bước mua (trang đã có tiêu đề riêng,
+ * học viên không phải tạo tài khoản), dùng nền và trang thanh toán của khu học viên.
  */
-export function CourseShopSection() {
+export function CourseShopSection({ variant = "public" }: CourseShopSectionProps) {
+  const inStudentArea = variant === "student";
+  const checkoutTo = inStudentArea ? ROUTES.studentCheckout : ROUTES.checkout;
   const navigate = useNavigate();
   const subjects = useCartStore((state) => state.subjects);
   const addCourse = useCartStore((state) => state.add);
@@ -50,14 +59,14 @@ export function CourseShopSection() {
 
   function buyNow(subject: string) {
     addCourse(subject);
-    navigate(ROUTES.checkout);
+    navigate(checkoutTo);
   }
 
   return (
-    <section id="course-shop" className="scroll-mt-[120px] bg-[#F5F1E9] pb-16 pt-12 lg:pb-20 lg:pt-16">
-      <div className={CONTAINER}>
+    <section id="course-shop" className={inStudentArea ? "" : "scroll-mt-[120px] bg-[#F5F1E9] pb-16 pt-12 lg:pb-20 lg:pt-16"}>
+      <div className={inStudentArea ? "" : CONTAINER}>
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
+          <div className={inStudentArea ? "hidden" : ""}>
             <h2 className="text-[28px] font-extrabold leading-tight tracking-tight text-brand-navy lg:text-[36px]">Chọn Khóa Học</h2>
             {/* Ba bước mua */}
             <ol className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[13.5px] text-brand-muted">
@@ -97,8 +106,8 @@ export function CourseShopSection() {
           </label>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 items-start gap-6 lg:grid-cols-[264px_1fr] lg:gap-8">
-          <aside className="lg:sticky lg:top-[150px]">
+        <div className={`grid grid-cols-1 items-start gap-6 lg:grid-cols-[264px_1fr] lg:gap-8 ${inStudentArea ? "mt-6" : "mt-8"}`}>
+          <aside className={`lg:sticky ${inStudentArea ? "lg:top-24" : "lg:top-[150px]"}`}>
             <ShopFilterPanel
               subject={filters.subject}
               enrollment={filters.enrollment}
@@ -144,6 +153,7 @@ export function CourseShopSection() {
                       today={today}
                       onToggleCart={() => toggleCourse(course.subject)}
                       onBuyNow={() => buyNow(course.subject)}
+                      surfaceClassName={inStudentArea ? PORTAL_SURFACE : undefined}
                     />
                   </li>
                 ))}
@@ -178,7 +188,7 @@ export function CourseShopSection() {
         </div>
       </div>
 
-      <CartBar courses={cartCourses(subjects)} onClear={clearCart} />
+      <CartBar courses={cartCourses(subjects)} onClear={clearCart} checkoutTo={checkoutTo} inStudentArea={inStudentArea} />
     </section>
   );
 }

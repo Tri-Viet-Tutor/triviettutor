@@ -28,8 +28,8 @@ const STUB_TONES = [
 const GRADE_NUMBERS = GRADE_OPTIONS.map((grade) => grade.label.replace("Lớp ", ""));
 const GRADE_RANGE = `Lớp ${GRADE_NUMBERS[0]} – ${GRADE_NUMBERS[GRADE_NUMBERS.length - 1]}`;
 
-/* Lỗ khuyết hình bán nguyệt ở hai đầu đường xé, cùng màu nền của phần danh sách */
-const NOTCH = "absolute h-5 w-5 rounded-full border border-slate-200 bg-[#F5F1E9]";
+/* Lỗ khuyết hình bán nguyệt ở hai đầu đường xé, tô cùng màu nền của phần danh sách (`surfaceClassName`) */
+const NOTCH = "absolute h-5 w-5 rounded-full border border-slate-200";
 
 interface CourseTicketProps {
   course: Course;
@@ -39,6 +39,8 @@ interface CourseTicketProps {
   onToggleCart: () => void;
   /** Bấm "Mua ngay": thêm vào giỏ rồi sang trang thanh toán */
   onBuyNow: () => void;
+  /** Lớp màu nền của trang chứa vé, để lỗ khuyết trông như bị bấm thủng. Mặc định là nền giấy của trang công khai */
+  surfaceClassName?: string;
 }
 
 /**
@@ -47,7 +49,7 @@ interface CourseTicketProps {
  * phần xé bên phải là học phí và hai nút "Thêm vào giỏ" / "Mua ngay".
  * Gọn theo chiều dọc để danh sách dài vẫn dễ lướt.
  */
-export function CourseTicket({ course, inCart, today, onToggleCart, onBuyNow }: CourseTicketProps) {
+export function CourseTicket({ course, inCart, today, onToggleCart, onBuyNow, surfaceClassName = "bg-[#F5F1E9]" }: CourseTicketProps) {
   const tone = STUB_TONES[Math.max(COURSES.indexOf(course), 0) % STUB_TONES.length];
   const enrollment = enrollmentWindowOf(course);
   const status = enrollment ? enrollmentStatus(enrollment, today) : null;
@@ -140,9 +142,9 @@ export function CourseTicket({ course, inCart, today, onToggleCart, onBuyNow }: 
       </div>
 
       {/* Phần xé: học phí và nút mua, ngăn với thân vé bằng đường đục lỗ */}
-      <div className="relative flex shrink-0 flex-col justify-center gap-3 border-t-2 border-dashed border-slate-300 px-5 py-5 md:w-[212px] md:border-l-2 md:border-t-0">
-        <span aria-hidden="true" className={`${NOTCH} -left-2.5 -top-2.5 md:-left-2.5 md:-top-2.5`} />
-        <span aria-hidden="true" className={`${NOTCH} -right-2.5 -top-2.5 md:-bottom-2.5 md:-left-2.5 md:right-auto md:top-auto`} />
+      <div className="relative flex shrink-0 flex-col justify-center gap-3 border-t-2 border-dashed border-slate-300 px-5 py-5 md:w-[232px] md:border-l-2 md:border-t-0">
+        <span aria-hidden="true" className={`${NOTCH} ${surfaceClassName} -left-2.5 -top-2.5 md:-left-2.5 md:-top-2.5`} />
+        <span aria-hidden="true" className={`${NOTCH} ${surfaceClassName} -right-2.5 -top-2.5 md:-bottom-2.5 md:-left-2.5 md:right-auto md:top-auto`} />
 
         {course.tuitionFee !== undefined ? (
           <>

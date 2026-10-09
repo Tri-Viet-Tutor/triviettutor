@@ -77,9 +77,7 @@ export function VnpayCodePanel({ payment, isConfirming, onConfirm, onRenew }: Vn
             Thanh toán tại VNPay
             <Icon name="arrow_forward" className="text-[18px]" />
           </a>
-          <p className="mt-3 text-center text-[13.5px] leading-relaxed text-brand-muted">
-            Bạn sẽ sang trang VNPay để quét mã QR hoặc nhập thẻ, xong sẽ tự quay lại đây.
-          </p>
+          
         </div>
       ) : (
         <>
