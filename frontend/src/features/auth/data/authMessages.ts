@@ -23,6 +23,8 @@ const AUTH_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   EMAIL_SEND_FAILED: "Chưa gửi được email. Vui lòng thử lại sau ít phút.",
   USER_NOT_FOUND: "Không tìm thấy tài khoản với email này.",
   VALIDATION_ERROR: "Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.",
+  // (Đề xuất) backend chỉ cho tạo tài khoản khi email đã có đơn thanh toán xong
+  PAYMENT_REQUIRED: "Email này chưa có đơn đã thanh toán. Hãy mua khóa học trước.",
 };
 
 /** Đổi lỗi của một lời gọi API thành câu báo cho người dùng. */

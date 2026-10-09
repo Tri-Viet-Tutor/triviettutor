@@ -49,12 +49,19 @@ export function OtpInput({ value, onChange, length, invalid = false, disabled = 
       commit(next);
       return;
     }
-    // Ô đang có số mà gõ thêm một số: lấy số vừa gõ
-    const fresh = typed.length === 2 && typed[0] === digits[index] ? typed[1] : typed;
+    // Ô đang có số mà gõ thêm một số (bàn phím điện thoại): chữ số mới là chữ số khác với số cũ
+    const previous = digits[index];
+    const fresh = typed.length === 2 && previous && typed.includes(previous) ? (typed[0] === previous ? typed[1] : typed[0]) : typed;
     fillFrom(index, fresh);
   }
 
   function handleKeyDown(index: number, event: KeyboardEvent<HTMLInputElement>) {
+    // Gõ một chữ số: ghi thẳng vào ô rồi sang ô kế — kể cả khi trùng với số đang có trong ô
+    if (/^\d$/.test(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      event.preventDefault();
+      fillFrom(index, event.key);
+      return;
+    }
     if (event.key === "Backspace" && !digits[index] && index > 0) {
       event.preventDefault();
       const next = digits.slice();

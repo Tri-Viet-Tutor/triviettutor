@@ -91,6 +91,11 @@ export type ErrorCode =
   | "ATTENDANCE_SESSION_NOT_ENDED"
   | "ATTENDANCE_EXCUSED_NOT_ALLOWED"
   | "INVALID_STATUS_TRANSITION"
+  // (Đề xuất) Đơn hàng & thanh toán VNPay — xem docs/VNPAY_BACKEND_API.md
+  | "ORDER_NOT_FOUND"
+  | "INVALID_ORDER_ITEMS"
+  | "INVALID_PAYMENT_SIGNATURE"
+  | "PAYMENT_REQUIRED"
   // Không nằm trong enum ErrorCode nhưng backend vẫn trả về:
   | "VALIDATION_ERROR"
   | "INTERNAL_ERROR";

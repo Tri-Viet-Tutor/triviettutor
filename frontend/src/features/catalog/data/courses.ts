@@ -1,4 +1,5 @@
 import { ASSETS } from "@/constants/assets";
+import type { SchedulePattern, TimeSlot } from "@/types/api";
 
 export interface CourseTutor {
   name: string;
@@ -35,7 +36,7 @@ export interface Course {
   steps: string[];
   /**
    * Học phí của khóa (VND). Mức tạm do nhóm đặt trong khi backend chưa có thuộc tính học phí —
-   * khi backend trả học phí thì lấy từ API. Để trống thì trang "Bảng học phí" ghi "Báo khi tư vấn".
+   * khi backend trả học phí thì lấy từ API. Để trống thì trang "Mua khóa học" ghi "Báo khi tư vấn" và khóa đó chưa mua được.
    */
   tuitionFee?: number;
   /**
@@ -45,6 +46,11 @@ export interface Course {
    * (learning_schedules.start_date) nhưng chưa có API công khai; khi có thì lấy từ API.
    */
   enrollment?: { opensOn: string; startsOn: string };
+  /**
+   * Lịch học của lớp sắp mở: các thứ trong tuần và ca học — đúng hai enum SchedulePattern, TimeSlot của backend.
+   * Lịch tạm do nhóm đặt; khi backend trả danh sách lớp thì lấy từ API.
+   */
+  schedule?: { pattern: SchedulePattern; timeSlot: TimeSlot };
 }
 
 /* Khóa học theo từng môn — hiển thị ở "Nhật ký lộ trình" (trang chủ) và trang "Khối lớp / Môn học".
@@ -81,6 +87,7 @@ export const COURSES: Course[] = [
     ],
     tuitionFee: 2_000_000,
     enrollment: { opensOn: "2026-10-01", startsOn: "2026-11-02" },
+    schedule: { pattern: "MON_WED_FRI", timeSlot: "SLOT_EVENING" },
   },
   {
     id: "anh",
@@ -101,6 +108,7 @@ export const COURSES: Course[] = [
     steps: ["Tổng ôn ngữ pháp Tiếng Anh THPT", "Luyện đề Tiếng Anh Tốt nghiệp THPT"],
     tuitionFee: 1_900_000,
     enrollment: { opensOn: "2026-10-05", startsOn: "2026-11-09" },
+    schedule: { pattern: "TUE_THU_SAT", timeSlot: "SLOT_EVENING" },
   },
   {
     id: "van",
@@ -121,6 +129,7 @@ export const COURSES: Course[] = [
     steps: ["Nghị luận văn học", "Nghị luận xã hội", "Ôn thi Ngữ Văn Tốt nghiệp THPT"],
     tuitionFee: 1_500_000,
     enrollment: { opensOn: "2026-10-15", startsOn: "2026-11-16" },
+    schedule: { pattern: "SAT_SUN", timeSlot: "SLOT_MORNING" },
   },
   {
     id: "hoa",
@@ -141,6 +150,7 @@ export const COURSES: Course[] = [
     steps: ["Hóa vô cơ lớp 10 – 12", "Hóa hữu cơ lớp 10 – 12", "Ôn thi Hóa học Tốt nghiệp THPT"],
     tuitionFee: 1_800_000,
     enrollment: { opensOn: "2026-10-01", startsOn: "2026-10-26" },
+    schedule: { pattern: "TUE_THU_SAT", timeSlot: "SLOT_LATE_EVENING" },
   },
   {
     id: "tin",
@@ -161,5 +171,6 @@ export const COURSES: Course[] = [
     steps: ["Tin học 10 – 12 theo chương trình", "Lập trình Python", "Ôn thi Tin học Tốt nghiệp THPT"],
     tuitionFee: 2_000_000,
     enrollment: { opensOn: "2026-10-20", startsOn: "2026-11-23" },
+    schedule: { pattern: "SAT_SUN", timeSlot: "SLOT_AFTERNOON" },
   },
 ];

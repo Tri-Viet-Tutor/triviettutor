@@ -431,7 +431,7 @@
   }
 }
 
-/* Thẻ giá ở trang "Bảng học phí": đung đưa quanh lỗ xỏ dây (features/pricing/components/PriceTag.tsx) */
+/* Thẻ giá ở trang "Mua khóa học": đung đưa quanh lỗ xỏ dây (features/pricing/components/PriceTag.tsx) */
 @keyframes tag-swing {
   0%,
   100% {

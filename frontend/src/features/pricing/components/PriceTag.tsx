@@ -16,7 +16,7 @@ const SPARKLES = [
 ];
 
 /**
- * Thẻ giá treo dây đung đưa — ảnh mở đầu trang "Bảng học phí".
+ * Thẻ giá treo dây đung đưa — ảnh mở đầu trang "Mua khóa học".
  * Trên thẻ ghi một khóa gồm những gì (số buổi, thời lượng, sĩ số) thay cho một con số tiền.
  */
 export function PriceTag() {

@@ -131,7 +131,7 @@ export function CourseDiary() {
               </Link>
               <Link to={ROUTES.pricing} className={`group inline-flex items-center gap-1 text-[15px] font-semibold text-brand-navy ${FOCUS_RING}`}>
                 <span className="underline decoration-brand-orange decoration-wavy decoration-2 underline-offset-[7px] group-hover:decoration-brand-navy">
-                  Xem học phí
+                  Mua khóa học
                 </span>
               </Link>
             </div>

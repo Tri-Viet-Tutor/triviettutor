@@ -33,8 +33,11 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const locationState = location.state as AuthLocationState | null;
   // Câu báo từ trang trước, ví dụ sau khi đặt lại mật khẩu
-  const notice = (location.state as AuthLocationState | null)?.notice;
+  const notice = locationState?.notice;
+  // Đang mua khóa học dở: đăng nhập xong quay lại trang thanh toán
+  const resumeCheckout = locationState?.resumeCheckout === true;
 
   const { mutate: login, isPending, error } = useMutation({
     mutationFn: loginRequest,
@@ -47,14 +50,14 @@ export function LoginPage() {
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: (location.state as AuthLocationState | null)?.email ?? "", password: "" },
+    defaultValues: { email: locationState?.email ?? "", password: "" },
   });
 
   function onSubmit(data: LoginFormValues) {
     login(data, {
       onSuccess: (response) => {
         setAuth(response.accessToken, response.user);
-        navigate(getRoleHome(response.user.role), { replace: true });
+        navigate(resumeCheckout ? ROUTES.checkout : getRoleHome(response.user.role), { replace: true });
       },
     });
   }
@@ -62,8 +65,8 @@ export function LoginPage() {
   /** Tài khoản chưa kích hoạt: sang trang nhập mã OTP với email đang gõ */
   function goToVerification() {
     const email = getValues("email");
-    savePendingEmail(email);
-    navigate(ROUTES.verifyEmail, { state: { email } satisfies AuthLocationState });
+    savePendingEmail(email, false, resumeCheckout);
+    navigate(ROUTES.verifyEmail, { state: { email, resumeCheckout } satisfies AuthLocationState });
   }
 
   const notVerified = Boolean(error) && authErrorCode(error) === "ACCOUNT_NOT_VERIFIED";

@@ -144,7 +144,7 @@ const SPARKLES = [
 ];
 
 /**
- * Nét vẽ tay và đồng xu trôi nhẹ quanh phần chữ mở đầu trang "Bảng học phí", lấp khoảng trống ở nửa trái.
+ * Nét vẽ tay và đồng xu trôi nhẹ quanh phần chữ mở đầu trang "Mua khóa học", lấp khoảng trống ở nửa trái.
  * Chỉ để trang trí nên ẩn với trình đọc màn hình, và chỉ hiện từ màn hình lớn (lg).
  */
 export function PricingDoodles() {

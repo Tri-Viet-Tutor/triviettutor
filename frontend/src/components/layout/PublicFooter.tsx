@@ -7,7 +7,7 @@ import { CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_PHONES } from "@/constants/cont
 const FOOTER_LINKS = [
   { label: "Khối lớp / Môn học", to: ROUTES.subjects },
   { label: "Tìm gia sư", to: ROUTES.tutorSearch },
-  { label: "Bảng học phí", to: ROUTES.pricing },
+  { label: "Mua khóa học", to: ROUTES.pricing },
   { label: "Đăng ký tư vấn", to: ROUTES.contactForm },
 ];
 

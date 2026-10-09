@@ -19,9 +19,9 @@ src/
 │  └─ AppRouter.tsx      Khai báo toàn bộ route
 ├─ components/           Thành phần dùng chung cho nhiều trang
 │  ├─ layout/            PublicHeader, PublicFooter
-│  ├─ motion/            Reveal, ReadingProgress, ClickSpark, ScrollToTop
+│  ├─ motion/            Reveal, ReadingProgress, ClickSpark, ScrollToTop, Fireworks
 │  ├─ routing/           PrivateRoute, RoleRoute (chặn theo đăng nhập / vai trò)
-│  └─ ui/                Thành phần giao diện dùng lại (Icon, SectionHeading, FramedSlideshow, ConsultCtaSection, FaqSection)
+│  └─ ui/                Thành phần giao diện dùng lại (Icon, SectionHeading, FramedSlideshow, ConsultCtaSection, FaqSection, QrCode)
 ├─ constants/            Hằng số toàn dự án
 │  ├─ assets.ts          Đường dẫn ảnh trong public/assets (xem "Thư mục ảnh")
 │  ├─ classNames.ts      Chuỗi lớp Tailwind dùng lại giữa các trang công khai
@@ -29,12 +29,15 @@ src/
 ├─ features/             Mã theo từng tính năng
 │  ├─ auth/              Các trang xác thực (đăng nhập, đăng ký, OTP, quên mật khẩu)
 │  │  ├─ api/            Lời gọi verify-email, resend-verification, quên / đặt lại mật khẩu
-│  │  ├─ components/     Ô nhập, ô mã OTP, hộp báo, nút gửi, tấm giới thiệu
-│  │  ├─ data/           Câu báo lỗi theo mã lỗi backend, email đang chờ xác thực
-│  │  └─ hooks/          useCountdown (đếm ngược hạn mã OTP)
+│  │  ├─ components/     Ô nhập, ô mã OTP, form nhập mã OTP email, hộp báo, nút gửi, tấm giới thiệu
+│  │  └─ data/           Câu báo lỗi theo mã lỗi backend, email đang chờ xác thực
 │  ├─ catalog/           Trang "Khối lớp / Môn học"
 │  │  ├─ components/     Phiếu chọn lớp, sĩ số và tiện ích lớp học, các bước đăng ký
 │  │  └─ data/           Khoá học theo môn + các lựa chọn khớp enum của backend
+│  ├─ checkout/          Trang "Thanh toán" (điền thông tin → thanh toán → tạo tài khoản)
+│  │  ├─ api/            Tạo mã thanh toán VNPay và xác nhận (đang chạy demo — backend chưa có)
+│  │  ├─ components/     Dãy bước, form thông tin học viên, form thanh toán, thẻ ATM demo, mã QR VNPay, form tạo tài khoản sau thanh toán, tóm tắt đơn hàng, GuestCartScope (khách rời luồng mua thì xóa giỏ)
+│  │  └─ data/           Khóa trong giỏ, tổng tiền, cờ PAYMENT_DEMO, mã thanh toán demo và thẻ thử nghiệm
 │  ├─ contact/           Trang "Liên hệ"
 │  │  ├─ components/     Các cách liên hệ, lá thư đăng ký tư vấn (mở ứng dụng thư)
 │  │  └─ data/           Kênh liên hệ và hàm tạo thư điền sẵn
@@ -42,21 +45,21 @@ src/
 │  │  ├─ components/     Các khối của trang chủ (HeroSection, CourseDiary, ...)
 │  │  ├─ data/           Nội dung tĩnh (gia sư, ảnh mở đầu, cách tổ chức lớp)
 │  │  └─ hooks/          Hook chỉ trang chủ dùng (useWhirlwindReveal)
-│  ├─ pricing/           Trang "Bảng học phí"
-│  │  ├─ components/     Thẻ giá, bảng học phí theo khoá, ảnh hai hình thức học, lịch mở đăng ký
-│  │  └─ data/           Nhãn lịch học, đợt mở đăng ký và trạng thái so với hôm nay
+│  ├─ pricing/           Trang "Mua khóa học" (trước là "Bảng học phí")
+│  │  ├─ components/     Thẻ giá, bộ lọc, vé lớp học (CourseTicket), thanh giỏ hàng, ảnh hình thức học, lịch mở đăng ký
+│  │  └─ data/           Nhãn lịch học, đợt mở đăng ký; shopFilters.ts tìm / lọc / sắp xếp khoá
 │  └─ tutors/            Trang "Tìm gia sư"
 │     ├─ components/     Thanh tìm, danh sách gia sư, hồ sơ gia sư
 │     └─ data/           Danh sách gia sư gom từ các khoá học + hàm lọc
-├─ hooks/                Custom hook dùng chung (useInView)
+├─ hooks/                Custom hook dùng chung (useInView, useCountdown)
 ├─ layouts/              Khung trang theo khu vực (Public, Auth, Admin, Tutor, Student)
-├─ lib/                  axios, React Query, và auth.ts (gọi API đăng nhập / đăng ký, trang đích theo vai trò)
+├─ lib/                  axios, React Query, qrcode.ts (tạo mã QR), và auth.ts (gọi API đăng nhập / đăng ký, trang đích theo vai trò)
 ├─ pages/                Mỗi file là một trang gắn với một route
 │  ├─ AccountDashboard.tsx, SessionListPage.tsx   Trang hồ sơ và lịch học sau khi đăng nhập
 │  ├─ auth/              LoginPage, RegisterPage, VerifyEmailPage, ForgotPasswordPage, ResetPasswordPage
 │  ├─ error/             ForbiddenPage, NotFoundPage
-│  └─ public/            HomePage, SubjectsPage, SearchPage, PricingPage, ContactPage
-├─ stores/               Trạng thái toàn cục bằng zustand (authStore)
+│  └─ public/            HomePage, SubjectsPage, SearchPage, PricingPage, CheckoutPage, ContactPage
+├─ stores/               Trạng thái toàn cục bằng zustand (authStore, cartStore — giỏ lưu theo phiên trình duyệt)
 ├─ styles/               CSS toàn cục
 ├─ types/                Kiểu dữ liệu khớp với DTO của backend
 └─ utils/                Hàm tiện ích thuần (motion, text, currency, date)
@@ -104,6 +107,12 @@ public/assets/
 | Hằng số (giá trị) | `UPPER_SNAKE_CASE` | `ROUTES`, `HERO_SLIDE_MS` |
 | Kiểu / interface | `PascalCase`, không tiền tố `I` | `Course`, `AuthResponse` |
 | Props của component | tên component + `Props` | `RevealProps` |
+
+## Thanh toán
+
+Trang `/thanh-toan` mặc định chạy **demo**: mã đơn, thẻ và mã QR tạo ngay trên trình duyệt, không có giao dịch thật.
+Khi backend có API VNPay, đặt `VITE_PAYMENT_DEMO=false` trong `.env.local` để chuyển sang thanh toán thật.
+Các API frontend sẽ gọi được ghi ở `src/features/checkout/api/orderApi.ts`.
 
 ## Nguyên tắc
 

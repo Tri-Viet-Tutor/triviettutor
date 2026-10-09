@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import { ROUTES } from "@/constants/routes";
 
@@ -22,10 +22,14 @@ import { SubjectsPage } from "@/pages/public/SubjectsPage";
 import { SearchPage } from "@/pages/public/SearchPage";
 import { PricingPage } from "@/pages/public/PricingPage";
 import { ContactPage } from "@/pages/public/ContactPage";
+import { CheckoutPage } from "@/pages/public/CheckoutPage";
 
 // Guard components
 import { PrivateRoute } from "@/components/routing/PrivateRoute";
 import { RoleRoute } from "@/components/routing/RoleRoute";
+
+// Giỏ khóa học của khách
+import { GuestCartScope } from "@/features/checkout/components/GuestCartScope";
 
 // Error pages
 import { NotFoundPage } from "@/pages/error/NotFoundPage";
@@ -39,7 +43,7 @@ import { SessionListPage } from "@/pages/SessionListPage";
  * Application router.
  *
  * Route protection strategy (BR-01.10):
- *  - Public marketing/landing pages → PublicLayout (/, /cap-hoc-mon-hoc, /tim-gia-su, /bang-hoc-phi, /lien-he)
+ *  - Public marketing/landing pages → PublicLayout (/, /cap-hoc-mon-hoc, /tim-gia-su, /mua-khoa-hoc, /thanh-toan, /lien-he)
  *  - /login, /register, /verify-email, /forgot-password, /reset-password → public (AuthLayout)
  *  - /admin/**                     → ROLE_ADMIN only
  *  - /tutor/**                     → ROLE_TUTOR only
@@ -48,6 +52,7 @@ import { SessionListPage } from "@/pages/SessionListPage";
 export function AppRouter() {
   return (
     <BrowserRouter>
+      <GuestCartScope />
       <Routes>
         {/* ── Public Stitch landing & educational routes ──────────────── */}
         <Route element={<PublicLayout />}>
@@ -55,6 +60,8 @@ export function AppRouter() {
           <Route path={ROUTES.subjects} element={<SubjectsPage />} />
           <Route path={ROUTES.tutorSearch} element={<SearchPage />} />
           <Route path={ROUTES.pricing} element={<PricingPage />} />
+          <Route path={ROUTES.pricingLegacy} element={<Navigate to={ROUTES.pricing} replace />} />
+          <Route path={ROUTES.checkout} element={<CheckoutPage />} />
           <Route path={ROUTES.contact} element={<ContactPage />} />
         </Route>
 

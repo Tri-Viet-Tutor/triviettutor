@@ -26,7 +26,7 @@ import {
   secondsSinceOtpSent,
   type AuthLocationState,
 } from "@/features/auth/data/pendingEmail";
-import { formatClock, useCountdown } from "@/features/auth/hooks/useCountdown";
+import { formatClock, useCountdown } from "@/hooks/useCountdown";
 
 const resetSchema = z
   .object({

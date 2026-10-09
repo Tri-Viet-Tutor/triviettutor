@@ -13,12 +13,12 @@ function rise(delay: number) {
 }
 
 interface PricingHeroProps {
-  /** Bấm "Xem học phí": cuộn xuống bảng */
+  /** Bấm "Chọn khóa học": cuộn xuống danh sách khóa */
   onViewFees: () => void;
 }
 
 /**
- * Phần mở đầu trang "Bảng học phí": chữ bên trái (có nét vẽ tay chung quanh cho đỡ trống),
+ * Phần mở đầu trang "Mua khóa học": chữ bên trái (có nét vẽ tay chung quanh cho đỡ trống),
  * thẻ giá treo dây bên phải, nền hồng đào nhạt có một tấm ảnh mờ phía sau.
  */
 export function PricingHero({ onViewFees }: PricingHeroProps) {
@@ -67,7 +67,7 @@ export function PricingHero({ onViewFees }: PricingHeroProps) {
             ))}
           </h1>
           <p className="hero-rise mt-5 max-w-lg text-[17px] leading-relaxed text-brand-muted lg:text-[18px]" style={rise(500)}>
-            Học phí tính theo từng khóa, mỗi môn một mức.
+            Chọn khóa, thanh toán và nhận tài khoản học viên để vào học.
           </p>
           <div className="hero-rise mt-8 flex flex-wrap items-center gap-x-6 gap-y-4" style={rise(700)}>
             <button
@@ -75,7 +75,7 @@ export function PricingHero({ onViewFees }: PricingHeroProps) {
               onClick={onViewFees}
               className={`group inline-flex h-12 items-center gap-4 rounded-full bg-brand-orange pl-6 pr-2 text-[15px] font-bold text-brand-navyDeep shadow-[0_16px_26px_-16px_rgba(222,139,0,0.95)] transition-colors hover:bg-[#FFB534] ${FOCUS_RING}`}
             >
-              Xem học phí
+              Chọn khóa học
               <Icon
                 name="arrow_downward"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-navyDeep text-[19px] text-white transition-transform duration-200 group-hover:translate-y-0.5"

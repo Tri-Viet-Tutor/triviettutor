@@ -2,14 +2,20 @@ import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { ASSETS } from "@/constants/assets";
 import { ROUTES } from "@/constants/routes";
+import { getRoleHome } from "@/lib/auth";
+import { useAuthStore } from "@/stores/authStore";
 
 export function PublicHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Đã đăng nhập thì nút "Đăng nhập" đổi thành lối vào tài khoản + nút đăng xuất
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+  const accountLink = user ? getRoleHome(user.role) : ROUTES.login;
   const navItems = [
     { label: "Trang chủ", to: ROUTES.home },
     { label: "Khối lớp / Môn học", to: ROUTES.subjects },
     { label: "Tìm gia sư", to: ROUTES.tutorSearch },
-    { label: "Bảng học phí", to: ROUTES.pricing },
+    { label: "Mua khóa học", to: ROUTES.pricing },
     { label: "Liên hệ", to: ROUTES.contact },
   ];
 
@@ -45,14 +51,23 @@ export function PublicHeader() {
           {/* Action Buttons */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <Link
-              to={ROUTES.login}
+              to={accountLink}
               className="hidden sm:inline-flex items-center gap-2 h-10 pl-4 pr-5 rounded-full border border-[#0B3A8C]/15 text-[#0B3A8C] hover:border-[#0B3A8C]/40 hover:bg-[#F3F7FF] font-semibold text-[14px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0B3A8C]"
             >
               <span aria-hidden="true" className="material-symbols-outlined text-[20px]">
                 account_circle
               </span>
-              Đăng nhập
+              <span className="max-w-[150px] truncate">{user ? user.fullName : "Đăng nhập"}</span>
             </Link>
+            {user && (
+              <button
+                type="button"
+                onClick={logout}
+                className="hidden sm:inline-flex h-10 items-center rounded-full px-2 text-[14px] font-semibold text-slate-500 hover:text-[#0B3A8C] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0B3A8C]"
+              >
+                Đăng xuất
+              </button>
+            )}
             <Link
               to={ROUTES.contactForm}
               className="group hidden sm:inline-flex items-center gap-3 h-10 pl-5 pr-1.5 rounded-full bg-[#F5A00F] hover:bg-[#FFB534] text-[#082A66] font-bold text-[14px] shadow-[0_10px_22px_-10px_rgba(245,160,15,0.9)] transition-colors shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0B3A8C]"
@@ -202,12 +217,24 @@ export function PublicHeader() {
 
           <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
             <Link
-              to={ROUTES.login}
+              to={accountLink}
               onClick={() => setMobileMenuOpen(false)}
               className="w-full py-2.5 text-center text-[13px] font-semibold text-[#0B3A8C] border border-[#0B3A8C]/20 rounded-full hover:bg-[#F3F7FF]"
             >
-              Đăng nhập tài khoản
+              {user ? `Tài khoản: ${user.fullName}` : "Đăng nhập tài khoản"}
             </Link>
+            {user && (
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full py-2.5 text-center text-[13px] font-semibold text-slate-500 border border-slate-200 rounded-full hover:bg-slate-50"
+              >
+                Đăng xuất
+              </button>
+            )}
             <Link
               to={ROUTES.contactForm}
               onClick={() => setMobileMenuOpen(false)}

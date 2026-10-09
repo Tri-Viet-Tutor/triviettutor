@@ -5,12 +5,13 @@ import {
   GRADE_OPTIONS,
   SCHEDULE_PATTERN_OPTIONS,
   SESSION_MINUTES,
+  TIME_SLOT_OPTIONS,
 } from "@/features/catalog/data/classOptions";
 import { COURSES, type Course } from "@/features/catalog/data/courses";
 import { addDays, diffDays, formatDayMonth, parseIsoDate } from "@/utils/date";
 
 /*
- * Nội dung trang "Bảng học phí" — chỉ nêu những gì backend đang có:
+ * Nội dung trang "Mua khóa học" (trước đây là "Bảng học phí") — chỉ nêu những gì backend đang có:
  *   - lịch học: enum SchedulePattern (2 – 3 buổi mỗi tuần) và TimeSlot (mỗi ca 120 phút);
  *   - lớp nhóm: class_groups.class_type = GROUP;
  *   - lịch mở đăng ký: hạn chốt (class_groups.enrollment_deadline) và ngày bắt đầu học (learning_schedules.start_date).
@@ -23,7 +24,7 @@ import { addDays, diffDays, formatDayMonth, parseIsoDate } from "@/utils/date";
 export const PRICING_HERO_BACKDROP = ASSETS.public.students.smiling;
 
 /** Hai dòng tiêu đề ở phần mở đầu */
-export const PRICING_TITLE_LINES = ["Bảng Học Phí", "Theo Khóa Học"];
+export const PRICING_TITLE_LINES = ["Mua Khóa Học", "Trí Việt Tutor"];
 
 /* Số buổi mỗi tuần lấy từ các lịch học đang có ("3 buổi mỗi tuần" → 3) */
 const WEEKLY_SESSIONS = SCHEDULE_PATTERN_OPTIONS.map((pattern) => parseInt(pattern.hint, 10));
@@ -59,6 +60,11 @@ export const ENROLLMENT_WINDOWS: EnrollmentWindow[] = COURSES.flatMap((course) =
   const starts = parseIsoDate(course.enrollment.startsOn);
   return [{ course, opens: parseIsoDate(course.enrollment.opensOn), deadline: addDays(starts, -ENROLLMENT_DEADLINE_DAYS), starts }];
 }).sort((first, second) => first.starts.getTime() - second.starts.getTime());
+
+/** Đợt mở đăng ký của một khóa (không có nếu khóa chưa đặt ngày) */
+export function enrollmentWindowOf(course: Course): EnrollmentWindow | undefined {
+  return ENROLLMENT_WINDOWS.find((window) => window.course.id === course.id);
+}
 
 /** Trạng thái của một đợt đăng ký so với hôm nay */
 export function enrollmentStatus(window: EnrollmentWindow, today: Date): EnrollmentStatus {
@@ -117,3 +123,15 @@ export const LEARNING_PHOTOS: LearningPhoto[] = [
     focus: "object-[46%_center]",
   },
 ];
+
+/** Ba bước mua một khóa học, hiện ở đầu danh sách khóa */
+export const PURCHASE_STEPS = ["Chọn khóa học", "Thanh toán qua VNPay", "Tạo tài khoản vào học"];
+
+/** Lịch học của một khóa ở dạng chữ, ví dụ { days: "Thứ 2 – 4 – 6", time: "18:00 – 20:00" } */
+export function courseSchedule(course: Course): { days: string; time: string } | undefined {
+  if (!course.schedule) return undefined;
+  const { pattern, timeSlot } = course.schedule;
+  const days = SCHEDULE_PATTERN_OPTIONS.find((option) => option.value === pattern)?.label;
+  const time = TIME_SLOT_OPTIONS.find((option) => option.value === timeSlot)?.hint;
+  return days && time ? { days, time } : undefined;
+}

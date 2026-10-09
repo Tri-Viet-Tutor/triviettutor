@@ -4,6 +4,8 @@ interface PendingEmail {
   email: string;
   /** Thời điểm (ms) mã OTP gần nhất được gửi tới email này, nếu biết */
   sentAt?: number;
+  /** Xác thực xong thì quay lại trang thanh toán (đang mua khóa học dở) */
+  resumeCheckout?: boolean;
 }
 
 /*
@@ -25,12 +27,15 @@ function readPending(): PendingEmail | null {
 /**
  * Ghi nhớ email đang chờ mã OTP.
  * @param otpJustSent true khi vừa có một mã được gửi đi (đăng ký xong, bấm gửi lại…)
+ * @param resumeCheckout true khi đang mua khóa học dở; bỏ trống thì giữ giá trị đã ghi cho cùng email
  */
-export function savePendingEmail(email: string, otpJustSent = false): void {
+export function savePendingEmail(email: string, otpJustSent = false, resumeCheckout?: boolean): void {
   const previous = readPending();
-  const sentAt = otpJustSent ? Date.now() : previous?.email === email ? previous.sentAt : undefined;
+  const sameEmail = previous?.email === email;
+  const sentAt = otpJustSent ? Date.now() : sameEmail ? previous.sentAt : undefined;
+  const resume = resumeCheckout ?? (sameEmail ? previous.resumeCheckout : undefined);
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ email, sentAt } satisfies PendingEmail));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ email, sentAt, resumeCheckout: resume } satisfies PendingEmail));
   } catch {
     // Không lưu được thì trang OTP sẽ hỏi lại email
   }
@@ -47,6 +52,11 @@ export function secondsSinceOtpSent(email: string): number | null {
   return Math.max(0, Math.floor((Date.now() - pending.sentAt) / 1000));
 }
 
+/** Email đang chờ xác thực có phải của một lần mua khóa học dở hay không */
+export function pendingResumesCheckout(): boolean {
+  return readPending()?.resumeCheckout === true;
+}
+
 export function clearPendingEmail(): void {
   try {
     sessionStorage.removeItem(STORAGE_KEY);
@@ -61,4 +71,6 @@ export interface AuthLocationState {
   email?: string;
   /** Câu báo thành công hiện ở đầu trang kế tiếp */
   notice?: string;
+  /** Đăng nhập / xác thực xong thì quay lại trang thanh toán thay vì vào trang của vai trò */
+  resumeCheckout?: boolean;
 }
