@@ -2,7 +2,7 @@ import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Reveal } from "@/components/motion";
 import { Icon } from "@/components/ui/Icon";
-import { TEXT_LINK } from "@/features/home/styles";
+import { TEXT_LINK } from "@/constants/classNames";
 
 interface SectionHeadingProps {
   title: string;

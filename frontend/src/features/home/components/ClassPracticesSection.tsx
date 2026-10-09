@@ -3,7 +3,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Whirlwind } from "@/features/home/components/Whirlwind";
 import { CLASS_PRACTICES } from "@/features/home/data/classPractices";
 import { useWhirlwindReveal } from "@/features/home/hooks/useWhirlwindReveal";
-import { CONTAINER } from "@/features/home/styles";
+import { CONTAINER } from "@/constants/classNames";
 
 /**
  * Cách Trí Việt tổ chức lớp học: bảng phấn — khối tối duy nhất của trang.

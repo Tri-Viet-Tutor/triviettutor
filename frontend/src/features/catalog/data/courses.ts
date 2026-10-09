@@ -8,6 +8,15 @@ export interface CourseTutor {
 export interface Course {
   /** Mã khóa, dùng làm id của nhãn mục lục */
   id: string;
+  /**
+   * Mã môn gửi cho backend (thuộc tính `subject` của Course / tham số lọc của GET /catalog/classes).
+   * Đặc tả backend mới nêu ví dụ "MATH"; các mã còn lại đặt theo cùng kiểu, cần đối chiếu khi backend làm xong danh mục.
+   */
+  subject: string;
+  /** Tên biểu tượng Material Symbols */
+  icon: string;
+  /** Tên môn đầy đủ */
+  subjectLabel: string;
   /** Tên ngắn trên nhãn mục lục */
   tab: string;
   name: string;
@@ -17,12 +26,15 @@ export interface Course {
   steps: string[];
 }
 
-/* Khóa học theo từng môn — hiển thị ở "Nhật ký lộ trình".
+/* Khóa học theo từng môn — hiển thị ở "Nhật ký lộ trình" (trang chủ) và trang "Khối lớp / Môn học".
  * Mỗi khóa: tên trên nhãn mục lục (tab), giáo viên, các chặng của lộ trình (steps, theo thứ tự).
  * Mọi khóa đều có lớp tại trung tâm và lớp trực tuyến. Muốn thêm/sửa khóa học thì sửa mảng này. */
 export const COURSES: Course[] = [
   {
     id: "toan",
+    subject: "MATH",
+    icon: "calculate",
+    subjectLabel: "Toán",
     tab: "Toán",
     name: "Toán THPT",
     summary: "Toán lớp 10 – 12, ôn thi Tốt nghiệp THPT và ĐGNL.",
@@ -39,6 +51,9 @@ export const COURSES: Course[] = [
   },
   {
     id: "anh",
+    subject: "ENGLISH",
+    icon: "translate",
+    subjectLabel: "Tiếng Anh",
     tab: "Anh",
     name: "Tiếng Anh THPT",
     summary: "Ngữ pháp và luyện đề Tiếng Anh Tốt nghiệp THPT.",
@@ -47,6 +62,9 @@ export const COURSES: Course[] = [
   },
   {
     id: "van",
+    subject: "LITERATURE",
+    icon: "history_edu",
+    subjectLabel: "Ngữ Văn",
     tab: "Văn",
     name: "Ngữ Văn THPT",
     summary: "Nghị luận và ôn thi Ngữ Văn Tốt nghiệp THPT.",
@@ -55,6 +73,9 @@ export const COURSES: Course[] = [
   },
   {
     id: "hoa",
+    subject: "CHEMISTRY",
+    icon: "science",
+    subjectLabel: "Hóa học",
     tab: "Hóa",
     name: "Hóa học THPT",
     summary: "Hóa lớp 10 – 12 và ôn thi Tốt nghiệp THPT.",
@@ -63,6 +84,9 @@ export const COURSES: Course[] = [
   },
   {
     id: "tin",
+    subject: "INFORMATICS",
+    icon: "terminal",
+    subjectLabel: "Tin học",
     tab: "Tin",
     name: "Tin học THPT",
     summary: "Tin học lớp 10 – 12, lập trình Python.",

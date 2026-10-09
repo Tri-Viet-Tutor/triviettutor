@@ -4,7 +4,7 @@ import { Icon } from "@/components/ui/Icon";
 import { ROUTES } from "@/constants/routes";
 import { TutorCard } from "@/features/home/components/TutorCard";
 import { TUTOR_PROMO_POINTS, TUTORS } from "@/features/home/data/tutors";
-import { CONTAINER, FOCUS_RING } from "@/features/home/styles";
+import { CONTAINER, FOCUS_RING } from "@/constants/classNames";
 
 /** Toạ độ các đỉnh của hình ngôi sao nhiều cánh (nhãn dán nổi bật) */
 function starburstPoints(spikes: number, outer: number, inner: number) {
@@ -95,8 +95,8 @@ export function TutorShowcaseSection() {
                 <polygon points={STARBURST} className="fill-brand-navyDeep" />
               </svg>
               <p className="relative flex h-full flex-col items-center justify-center text-center font-extrabold uppercase leading-none text-white">
-                <span className="text-[9.5px] tracking-[0.06em] sm:text-[10.5px]">Lớp dưới</span>
-                <span className="text-[28px] text-brand-orange sm:text-[34px]">12</span>
+                <span className="text-[9.5px] tracking-[0.06em] sm:text-[10.5px]">Lớp tối đa</span>
+                <span className="text-[28px] text-brand-orange sm:text-[34px]">8</span>
                 <span className="text-[9.5px] tracking-[0.06em] sm:text-[10.5px]">học sinh</span>
               </p>
             </div>

@@ -4,7 +4,7 @@ import { Icon } from "@/components/ui/Icon";
 import { ROUTES } from "@/constants/routes";
 import { CourseDiary } from "@/features/home/components/CourseDiary";
 import { GraduationCap } from "@/features/home/components/GraduationCap";
-import { CONTAINER, TEXT_LINK } from "@/features/home/styles";
+import { CONTAINER, TEXT_LINK } from "@/constants/classNames";
 
 /** Lộ trình học theo từng môn: nón tốt nghiệp bên trái, trang nhật ký khóa học bên phải. */
 export function CourseRoadmapSection() {

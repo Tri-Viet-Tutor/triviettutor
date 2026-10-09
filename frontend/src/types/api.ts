@@ -36,10 +36,20 @@ export interface PageResponse<T> {
 
 /** common.exception.ErrorCode, cộng các mã do GlobalExceptionHandler / SecurityConfig tự đặt */
 export type ErrorCode =
+  | "UNAUTHORIZED"
   | "INVALID_CREDENTIALS"
   | "EMAIL_ALREADY_EXISTS"
+  | "INVALID_OTP"
+  | "OTP_EXPIRED"
+  | "ACCOUNT_NOT_VERIFIED"
+  | "ACCOUNT_ALREADY_VERIFIED"
+  | "EMAIL_SEND_FAILED"
   | "ACCESS_DENIED"
+  | "INVALID_PROFILE_FIELD"
+  | "INVALID_ROLE_FILTER"
+  | "INVALID_PAGINATION"
   | "USER_NOT_FOUND"
+  | "USER_NOT_TUTOR"
   | "COURSE_NOT_FOUND"
   | "CLASS_NOT_FOUND"
   | "SESSION_NOT_FOUND"
@@ -73,10 +83,16 @@ export type ErrorCode =
   | "REFUND_NOT_ALLOWED"
   | "ATTENDANCE_LOCKED"
   | "SESSION_NOT_IN_PROGRESS"
+  | "ATTENDANCE_NOT_FOUND"
+  | "INVALID_ATTENDANCE"
+  | "ATTENDANCE_STUDENT_NOT_ENROLLED"
+  | "ATTENDANCE_REASON_REQUIRED"
+  | "ATTENDANCE_NOT_LOCKED"
+  | "ATTENDANCE_SESSION_NOT_ENDED"
+  | "ATTENDANCE_EXCUSED_NOT_ALLOWED"
   | "INVALID_STATUS_TRANSITION"
   // Không nằm trong enum ErrorCode nhưng backend vẫn trả về:
   | "VALIDATION_ERROR"
-  | "UNAUTHORIZED"
   | "INTERNAL_ERROR";
 
 // ── Người dùng & đăng nhập (dto.auth, entity.User) ───────────────────────────
@@ -90,13 +106,34 @@ export interface AuthRequest {
   password: string;
 }
 
-/** dto.auth.RegisterRequest — POST /auth/register (luôn tạo tài khoản ROLE_STUDENT) */
+/**
+ * dto.auth.RegisterRequest — POST /auth/register (luôn tạo tài khoản ROLE_STUDENT).
+ * Tài khoản mới chưa kích hoạt: backend gửi mã OTP qua email và trả về RegisterResponse;
+ * phải gọi POST /auth/verify-email mới nhận được AuthResponse.
+ */
 export interface RegisterRequest {
   /** 2 – 100 ký tự */
   fullName: string;
   email: string;
   /** 6 – 128 ký tự */
   password: string;
+}
+
+/** dto.auth.RegisterResponse — kết quả của /auth/register và /auth/resend-verification */
+export interface RegisterResponse {
+  email: string;
+  message: string;
+}
+
+/** dto.auth.VerifyEmailRequest — POST /auth/verify-email (mã OTP 6 số, hết hạn sau 5 phút) */
+export interface VerifyEmailRequest {
+  email: string;
+  otp: string;
+}
+
+/** dto.auth.ResendVerificationRequest — POST /auth/resend-verification */
+export interface ResendVerificationRequest {
+  email: string;
 }
 
 /** dto.auth.AuthResponse.UserInfo */
@@ -135,7 +172,9 @@ export type LearningScheduleStatus = "ACTIVE" | "INACTIVE" | "CANCELLED";
 
 export type LeaveRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 
-export type LeaveResolution = "MAKEUP" | "SUBSTITUTE" | "CANCEL";
+export type LeaveResolution = "MAKEUP" | "SUBSTITUTE" | "CANCEL" | "EXCUSED";
+
+export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 
 export type SessionChangeType = "MAKEUP" | "SUBSTITUTE" | "CANCEL" | "REJECT_LEAVE";
 
@@ -144,6 +183,73 @@ export type SchedulePattern = "MON_WED_FRI" | "TUE_THU_SAT" | "SAT_SUN";
 
 /** Ca học: sáng 08:00–10:00, chiều 14:00–16:00, tối 18:00–20:00, tối muộn 19:30–21:30 */
 export type TimeSlot = "SLOT_MORNING" | "SLOT_AFTERNOON" | "SLOT_EVENING" | "SLOT_LATE_EVENING";
+
+// ── Danh mục khóa học & lớp (catalog) ─────────────────────────────────────────
+// Backend CHƯA hiện thực phần này (entity ClassGroup mới có classType, status, enrollmentDeadline).
+// Các kiểu dưới đây lấy theo đặc tả API của nhóm
+// (Documentation/02-System-Architecture/02-Backend-Architecture-and-API-Specification.md, mục 7.3)
+// để giao diện dùng đúng tên thuộc tính ngay từ đầu; đối chiếu lại khi backend làm xong.
+
+/** courses.grade_level — "GRADE_1" … "GRADE_12". Trang web hiện chỉ dùng lớp 10 – 12. */
+export type GradeLevel = `GRADE_${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12}`;
+
+/** class_groups.delivery_mode — OFFLINE là học tại trung tâm (không dạy tại nhà học viên) */
+export type DeliveryMode = "ONLINE" | "OFFLINE";
+
+/** Course — POST/GET /admin/courses */
+export interface CourseResponse {
+  id: number;
+  name: string;
+  /** Mã môn, ví dụ "MATH" */
+  subject: string;
+  gradeLevel: GradeLevel;
+  /** Học phí gốc của lớp 1 kèm 1 cho trọn khóa (đồng) */
+  basePrice1on1: number;
+  totalSessions: number;
+  /** Thời lượng mỗi buổi, mặc định 120 phút */
+  durationMinutes: number;
+  description: string | null;
+  active: boolean;
+  createdAt: IsoDateTime;
+}
+
+/** Một lớp đang mở đăng ký — phần tử của GET /catalog/classes */
+export interface CatalogClassResponse {
+  id: number;
+  /** Ví dụ "MATH-G10-MWF-M-001" */
+  classCode: string;
+  courseName: string;
+  subject: string;
+  gradeLevel: GradeLevel;
+  classType: ClassType;
+  deliveryMode: DeliveryMode;
+  schedulePattern: SchedulePattern;
+  timeSlot: TimeSlot;
+  /** Ví dụ "08:00 – 10:00" */
+  timeSlotLabel: string;
+  startDate: IsoDate;
+  totalSessions: number;
+  basePrice1on1: number;
+  /** Học phí ước tính nếu đăng ký ngay (theo bậc sĩ số sau khi thêm học viên này) */
+  estimatedFee: number;
+  /** Ví dụ 0.35 = giảm 35% */
+  discountRate: number;
+  currentStudents: number;
+  /** 1 với ONE_ON_ONE, 8 với GROUP */
+  maxStudents: number;
+  spotsLeft: number;
+}
+
+/** Tham số lọc của GET /catalog/classes */
+export interface CatalogClassesQuery {
+  subject?: string;
+  gradeLevel?: GradeLevel;
+  deliveryMode?: DeliveryMode;
+  schedulePattern?: SchedulePattern;
+  timeSlot?: TimeSlot;
+  page?: number;
+  size?: number;
+}
 
 // ── Buổi học (dto.schedule) ──────────────────────────────────────────────────
 

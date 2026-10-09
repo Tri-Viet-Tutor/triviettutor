@@ -21,16 +21,19 @@ src/
 │  ├─ layout/            PublicHeader, PublicFooter
 │  ├─ motion/            Reveal, ReadingProgress, ClickSpark, ScrollToTop
 │  ├─ routing/           PrivateRoute, RoleRoute (chặn theo đăng nhập / vai trò)
-│  └─ ui/                Thành phần giao diện nhỏ (Icon)
+│  └─ ui/                Thành phần giao diện dùng lại (Icon, SectionHeading, FramedSlideshow)
 ├─ constants/            Hằng số toàn dự án
 │  ├─ assets.ts          Đường dẫn ảnh trong public/assets (xem "Thư mục ảnh")
+│  ├─ classNames.ts      Chuỗi lớp Tailwind dùng lại giữa các trang công khai
 │  └─ routes.ts          Đường dẫn trang
 ├─ features/             Mã theo từng tính năng
+│  ├─ catalog/           Trang "Khối lớp / Môn học"
+│  │  ├─ components/     Phiếu chọn lớp, bậc học phí, các bước đăng ký
+│  │  └─ data/           Khoá học theo môn + các lựa chọn khớp enum của backend
 │  └─ home/              Trang chủ
 │     ├─ components/     Các khối của trang chủ (HeroSection, CourseDiary, ...)
-│     ├─ data/           Nội dung tĩnh (khoá học, gia sư, ảnh mở đầu)
-│     ├─ hooks/          Hook chỉ trang chủ dùng (useWhirlwindReveal)
-│     └─ styles.ts       Chuỗi lớp Tailwind dùng lại trong trang chủ
+│     ├─ data/           Nội dung tĩnh (gia sư, ảnh mở đầu, cách tổ chức lớp)
+│     └─ hooks/          Hook chỉ trang chủ dùng (useWhirlwindReveal)
 ├─ hooks/                Custom hook dùng chung (useInView)
 ├─ layouts/              Khung trang theo khu vực (Public, Auth, Admin, Tutor, Student)
 ├─ lib/                  axios, React Query, và auth.ts (gọi API đăng nhập / đăng ký, trang đích theo vai trò)

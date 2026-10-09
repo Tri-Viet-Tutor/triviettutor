@@ -1,4 +1,4 @@
-/* Các chuỗi lớp Tailwind dùng chung giữa những phần của trang chủ. */
+/* Các chuỗi lớp Tailwind dùng chung giữa các trang công khai. */
 
 export const CONTAINER = "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8";
 

@@ -14,7 +14,7 @@ export const CLASS_PRACTICES: ClassPractice[] = [
   },
   {
     icon: "groups_3",
-    title: "Lớp Dưới 12 Học Sinh",
+    title: "Lớp Tối Đa 8 Học Sinh",
     description: "Mỗi lớp một môn, giáo viên theo sát từng bạn.",
   },
   {

@@ -1,7 +1,7 @@
 import { Reveal } from "@/components/motion";
 import { ASSETS } from "@/constants/assets";
-import { SectionHeading } from "@/features/home/components/SectionHeading";
-import { CONTAINER, TAPE } from "@/features/home/styles";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+import { CONTAINER, TAPE } from "@/constants/classNames";
 
 /** Không gian học tập: trang dán ảnh và giấy ghi chú. */
 export function StudyMomentsSection() {
@@ -22,7 +22,7 @@ export function StudyMomentsSection() {
                 className="aspect-[16/10] w-full bg-brand-tint object-cover"
               />
               <figcaption className="pt-3 text-center text-[15px] font-semibold italic text-brand-muted">
-                Lớp tại trung tâm, dưới 12 học sinh
+                Lớp tại trung tâm, tối đa 8 học sinh
               </figcaption>
             </div>
           </Reveal>

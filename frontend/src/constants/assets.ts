@@ -31,6 +31,9 @@ export const ASSETS = {
       classroom1: `${PUBLIC}/classrooms/classroom-1.png`,
       classroom2: `${PUBLIC}/classrooms/classroom-2.jpg`,
       classroom3: `${PUBLIC}/classrooms/classroom-3.png`,
+      // Hai banner về giảng viên (chưa trang nào dùng)
+      classroom4: `${PUBLIC}/classrooms/classroom-4.png`,
+      classroom5: `${PUBLIC}/classrooms/classroom-5.png`,
     },
     /** Ảnh giảng viên (tên file: ten-thay-co-mon.png) */
     tutors: {

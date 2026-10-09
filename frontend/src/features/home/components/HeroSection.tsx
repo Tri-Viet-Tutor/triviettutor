@@ -1,9 +1,9 @@
 import { type CSSProperties } from "react";
+import { FramedSlideshow } from "@/components/ui/FramedSlideshow";
 import { ASSETS } from "@/constants/assets";
-import { HeroSlideshow } from "@/features/home/components/HeroSlideshow";
 import { LanyardTag } from "@/features/home/components/LanyardTag";
-import { HERO_TITLE_LINES } from "@/features/home/data/hero";
-import { CONTAINER, FOCUS_RING } from "@/features/home/styles";
+import { HERO_SLIDE_MS, HERO_SLIDES, HERO_TITLE_LINES } from "@/features/home/data/hero";
+import { CONTAINER, FOCUS_RING } from "@/constants/classNames";
 
 /** Độ trễ (ms) cho hiệu ứng nổi lên ở phần mở đầu */
 function rise(delay: number) {
@@ -51,23 +51,7 @@ export function HeroSection() {
           </p>
         </div>
         <div className="hero-rise lg:col-span-5" style={rise(400)}>
-          <div className="relative mx-auto max-w-md lg:max-w-none">
-            {/* Khối xanh đặt lệch phía sau ảnh */}
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 translate-x-4 translate-y-4 rotate-2 rounded-[36px] rounded-tr-[120px] bg-brand-navy"
-            />
-            {/* Vòng cam nằm trong góc bo lớn */}
-            <div
-              aria-hidden="true"
-              className="absolute -right-3 -top-4 h-[84px] w-[84px] rounded-full border-[13px] border-brand-orange"
-            />
-            {/* Mảng chấm bi */}
-            <div
-              aria-hidden="true"
-              className="absolute -bottom-8 -left-8 h-28 w-28 bg-[radial-gradient(theme(colors.brand.navy)_1.6px,transparent_1.6px)] bg-[length:14px_14px] opacity-30"
-            />
-            <HeroSlideshow />
+          <FramedSlideshow slides={HERO_SLIDES} intervalMs={HERO_SLIDE_MS}>
             {/* Nhãn nổi: bấm để cuộn tới phần đội ngũ gia sư */}
             <a
               href="#tutors-showcase"
@@ -92,7 +76,7 @@ export function HeroSection() {
                 <span className="block text-[12px] text-brand-muted">Toán, Văn, Anh, Hóa, Tin</span>
               </span>
             </a>
-          </div>
+          </FramedSlideshow>
         </div>
       </div>
     </section>

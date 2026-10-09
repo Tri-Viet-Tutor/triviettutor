@@ -334,6 +334,16 @@
   animation: ant-say 12s ease-out infinite;
 }
 
+/* Quỹ đạo nét đứt quanh ảnh mở đầu trang "Khối lớp / Môn học": các nét trôi rất chậm */
+@keyframes orbit-dash {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+.orbit-dash {
+  animation: orbit-dash 14s linear infinite;
+}
+
 /* Lật sang trang khóa học khác trong nhật ký */
 @keyframes diary-flip {
   from {
@@ -385,7 +395,8 @@
     animation: none;
   }
   .paper-plane,
-  .twinkle {
+  .twinkle,
+  .orbit-dash {
     animation: none;
   }
   /* Kiến đứng giữa nút, câu nói hiện sẵn */

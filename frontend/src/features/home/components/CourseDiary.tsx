@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ROUTES } from "@/constants/routes";
-import { COURSES } from "@/features/home/data/courses";
-import { FOCUS_RING } from "@/features/home/styles";
+import { COURSES } from "@/features/catalog/data/courses";
+import { FOCUS_RING } from "@/constants/classNames";
 
 /** Trang nhật ký lộ trình: bấm nhãn mục lục (môn học) để lật sang khóa học tương ứng */
 export function CourseDiary() {

@@ -2,7 +2,8 @@ import { Reveal } from "@/components/motion";
 import { Icon } from "@/components/ui/Icon";
 import { CrawlingAnt } from "@/features/home/components/CrawlingAnt";
 import { PaperPlane } from "@/features/home/components/PaperPlane";
-import { CONTAINER, FIELD, FIELD_LABEL, FOCUS_RING } from "@/features/home/styles";
+import { CONTAINER, FIELD, FIELD_LABEL, FOCUS_RING } from "@/constants/classNames";
+import { COURSES } from "@/features/catalog/data/courses";
 
 /** Đăng ký tư vấn: phiếu đăng ký (chưa nối API — nút gửi chưa gửi dữ liệu đi đâu). */
 export function BookingFormSection() {
@@ -68,8 +69,8 @@ export function BookingFormSection() {
                       Hình thức học
                     </label>
                     <select id="booking-mode" className={FIELD}>
-                      <option>Lớp tại trung tâm (dưới 12 học sinh)</option>
-                      <option>Lớp trực tuyến (dưới 12 học sinh)</option>
+                      <option>Lớp tại trung tâm (tối đa 8 học sinh)</option>
+                      <option>Lớp trực tuyến (tối đa 8 học sinh)</option>
                       <option>Combo nhiều môn (Ưu đãi sâu)</option>
                     </select>
                   </div>
@@ -79,7 +80,16 @@ export function BookingFormSection() {
                     <label htmlFor="booking-subject" className={FIELD_LABEL}>
                       Môn học muốn đăng ký
                     </label>
-                    <input id="booking-subject" type="text" placeholder="Toán, Văn, Anh..." className={FIELD} />
+                    <select id="booking-subject" defaultValue="" className={FIELD}>
+                      <option value="" disabled>
+                        Chọn môn học
+                      </option>
+                      {COURSES.map((course) => (
+                        <option key={course.id} value={course.subject}>
+                          {course.subjectLabel}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label htmlFor="booking-area" className={FIELD_LABEL}>
