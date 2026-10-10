@@ -34,7 +34,7 @@ import com.viettritutor.entity.TutorProfile;
 })
 @AutoConfigureMockMvc
 @Transactional
-class AdminUserControllerTest {
+class UserControllerTest {
     @Autowired MockMvc mvc;
     @Autowired UserRepository users;
     @Autowired TutorProfileRepository tutors;
