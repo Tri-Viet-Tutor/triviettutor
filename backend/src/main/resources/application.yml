@@ -6,6 +6,17 @@ spring:
     name: viettritutor-backend
   profiles:
     active: ${APP_PROFILE:dev}
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${APP_GG_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
   jpa:
     open-in-view: false
     properties:
