@@ -111,6 +111,7 @@ export function RegisterPage() {
 
         {error && <AuthNotice tone="error">{authErrorMessage(error, "Đăng ký chưa thành công. Vui lòng thử lại.")}</AuthNotice>}
 
+<<<<<<< Updated upstream
         <AuthSubmitButton id="register-submit" label="Tạo tài khoản" pendingLabel="Đang tạo tài khoản…" isPending={isPending} />
       </form>
 
@@ -119,6 +120,45 @@ export function RegisterPage() {
         <Link to={ROUTES.login} className={TEXT_LINK}>
           Đăng nhập
         </Link>
+=======
+        <div>
+          <label htmlFor="reg-password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <input
+            id="reg-password"
+            type="password"
+            {...formRegister("password")}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
+        </div>
+
+        <div>
+          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
+          <input
+            id="confirmPassword"
+            type="password"
+            {...formRegister("confirmPassword")}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>}
+        </div>
+
+        {error && <p className="text-sm text-red-600">Registration failed. The email may already be in use.</p>}
+
+        <button
+          id="register-submit"
+          type="submit"
+          disabled={isPending}
+          className="w-full py-2 px-4 bg-brand-navy hover:bg-brand-navyDark text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+        >
+          {isPending ? "Creating account…" : "Create account"}
+        </button>
+      </form>
+
+      <p className="mt-4 text-center text-sm text-gray-600">
+        Already have an account?{" "}
+        <Link to="/login" className="text-primary hover:underline">Sign in</Link>
+>>>>>>> Stashed changes
       </p>
     </div>
   );
