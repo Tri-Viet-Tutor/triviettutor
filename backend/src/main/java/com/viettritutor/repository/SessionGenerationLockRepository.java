@@ -16,7 +16,7 @@ public interface SessionGenerationLockRepository extends JpaRepository<SessionGe
     @Query(value = """
             INSERT INTO session_generation_locks (class_group_id)
             VALUES (:classGroupId)
-            ON CONFLICT (class_group_id) DO NOTHING
+            ON CONFLICT DO NOTHING
             """, nativeQuery = true)
     int insertIfAbsent(@Param("classGroupId") Long classGroupId);
 

@@ -11,6 +11,8 @@ import java.util.Optional;
 import java.util.List;
 
 public interface LearningScheduleRepository extends JpaRepository<LearningSchedule, Long> {
+    List<LearningSchedule> findByClassGroupIdAndStatusOrderByStudentIdAscIdAsc(Long classGroupId, LearningScheduleStatus status);
+
 
     @Query("""
             select ls from LearningSchedule ls

@@ -14,4 +14,7 @@ public enum SchedulePattern {
     SAT_SUN(Set.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY));
 
     private final Set<DayOfWeek> days;
+
+    @com.fasterxml.jackson.annotation.JsonCreator
+    public static SchedulePattern fromJson(String value) { return valueOf(value); }
 }

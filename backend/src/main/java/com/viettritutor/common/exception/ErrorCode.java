@@ -85,6 +85,12 @@ public enum ErrorCode {
     ATTENDANCE_EXCUSED_NOT_ALLOWED (HttpStatus.UNPROCESSABLE_ENTITY, "Excused attendance requires approved student leave with at least 24 hours notice"),
 
     // ── Class lifecycle ───────────────────────────────────────────────────────
+    INVALID_CLASS_CONFIGURATION (HttpStatus.BAD_REQUEST, "Invalid class dates, schedule, or course duration"),
+    COURSE_INACTIVE (HttpStatus.UNPROCESSABLE_ENTITY, "The course is inactive"),
+    CLASS_REFUND_REQUIRED (HttpStatus.UNPROCESSABLE_ENTITY, "Refund and deactivate paid enrollments before cancelling this class"),
+    CLASS_CONVERSION_NOT_ALLOWED (HttpStatus.UNPROCESSABLE_ENTITY, "Conversion requires a failed group class with exactly one active student"),
+    CLASS_CONVERSION_CONFLICT (HttpStatus.CONFLICT, "A different conversion request already exists for this class"),
+    INVALID_FEE_RESOLUTION (HttpStatus.BAD_REQUEST, "Invalid paid amount, adjustment, or settlement evidence"),
     INVALID_STATUS_TRANSITION (HttpStatus.UNPROCESSABLE_ENTITY, "This status transition is not allowed");
 
     private final HttpStatus httpStatus;
