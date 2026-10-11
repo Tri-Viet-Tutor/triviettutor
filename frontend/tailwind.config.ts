@@ -12,7 +12,15 @@ export default {
       "orange": "#F5A00F",
       "orangeHover": "#DE8B00",
       "orangeLight": "#F5A00F",
-      "orangeSubtle": "#fff7ed"
+      "orangeSubtle": "#fff7ed",
+      "marker": "#FFD98A",
+      "cream": "#FFF8E8",
+      "paper": "#F5F1E9",
+      "paperDeep": "#E8E2D5",
+      "tint": "#F3F7FF",
+      "line": "#DCE6F5",
+      "ink": "#14213D",
+      "muted": "#52607A"
     },
     "secondary-container": "#82f5c1",
     "on-secondary-fixed": "#002114",
@@ -188,6 +196,9 @@ export default {
         "fontWeight": "600"
       }
     ]
+  },
+  "boxShadow": {
+    "soft": "0 1px 2px rgba(11, 58, 140, 0.05), 0 14px 34px -14px rgba(11, 58, 140, 0.16)"
   },
   "borderRadius": {
     "DEFAULT": "0.25rem",

@@ -1,0 +1,261 @@
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { ROUTES } from "@/constants/routes";
+import { assignSubstitute, cancelSession, createMakeup, rejectLeaveRequest } from "@/features/admin/api/adminApi";
+import { ReasonForm } from "@/features/admin/components/ReasonForm";
+import { useAdminSession, useRefreshAdmin, useUserDirectory } from "@/features/admin/hooks/useAdminData";
+import { AUTH_LABEL } from "@/features/auth/components/AuthField";
+import { AuthNotice } from "@/features/auth/components/AuthNotice";
+import { StatusChip } from "@/features/portal/components/StatusChip";
+import { portalErrorMessage } from "@/features/portal/data/errors";
+import { LEAVE_RESOLUTION, LEAVE_STATUS, SESSION_STATUS } from "@/features/portal/data/labels";
+import { formatLongDate, formatTimeRange, teacherOf } from "@/features/portal/data/sessions";
+import { PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT, PORTAL_TEXT_LINK } from "@/features/portal/data/ui";
+import type { LeaveRequestResponse, Role } from "@/types/api";
+import { formatClockTime, formatDate, parseIsoDate, startOfToday, toIsoDate } from "@/utils/date";
+
+type Action = "makeup" | "substitute" | "cancel" | "reject";
+
+interface AdminLeaveCardProps {
+  request: LeaveRequestResponse;
+}
+
+/**
+ * Một đơn xin nghỉ trong khu quản trị, kèm các cách xử lý khi đơn còn chờ duyệt:
+ *  - đơn của gia sư: xếp buổi học bù, phân gia sư dạy thay, hủy buổi, hoặc từ chối;
+ *  - đơn của học viên (lớp nhóm): từ chối, hoặc duyệt "nghỉ có phép" bằng cách điểm danh ở buổi học đó
+ *    (backend duyệt đơn khi quản trị ghi điểm danh "Nghỉ có phép").
+ */
+export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
+  const refresh = useRefreshAdmin();
+  const { tutors, label } = useUserDirectory();
+  const sessionQuery = useAdminSession(request.sessionId);
+  const session = sessionQuery.data;
+  const [action, setAction] = useState<Action | null>(null);
+  const [makeupDate, setMakeupDate] = useState("");
+  const [startTime, setStartTime] = useState("18:00");
+  const [endTime, setEndTime] = useState("20:00");
+  const [substituteId, setSubstituteId] = useState("");
+
+  const done = () => {
+    setAction(null);
+    void refresh();
+  };
+  const reject = useMutation({ mutationFn: (reason: string) => rejectLeaveRequest(request.leaveRequestId, reason), onSuccess: done });
+  const cancel = useMutation({
+    mutationFn: (reason: string) => cancelSession(request.sessionId, { reason, leaveRequestId: request.leaveRequestId }),
+    onSuccess: done,
+  });
+  const substitute = useMutation({
+    mutationFn: (reason: string) =>
+      assignSubstitute(request.sessionId, { leaveRequestId: request.leaveRequestId, substituteTutorId: Number(substituteId), reason }),
+    onSuccess: done,
+  });
+  const makeup = useMutation({
+    mutationFn: () =>
+      createMakeup(request.sessionId, { leaveRequestId: request.leaveRequestId, makeupDate, startTime: `${startTime}:00`, endTime: `${endTime}:00` }),
+    onSuccess: done,
+  });
+
+  const status = LEAVE_STATUS[request.status];
+  const requestedAt = new Date(request.requestedAt);
+  const fromTutor = request.requesterRole === "ROLE_TUTOR";
+  const pending = request.status === "PENDING";
+  const currentTeacher = session ? teacherOf(session) : null;
+  const substituteOptions = tutors.filter((tutor) => tutor.id !== currentTeacher);
+  const makeupValid = makeupDate !== "" && startTime < endTime;
+
+  function open(next: Action) {
+    reject.reset();
+    cancel.reset();
+    substitute.reset();
+    makeup.reset();
+    setAction(next);
+  }
+
+  return (
+    <li className={`p-4 sm:p-5 ${PORTAL_CARD}`}>
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+        <div className="min-w-0">
+          <p className="text-[16px] font-semibold text-brand-ink">{label(request.requesterRole as Role, request.requesterId)}</p>
+          <p className="text-[14px] text-brand-muted">
+            {session ? (
+              <>
+                Nghỉ buổi {formatLongDate(parseIsoDate(session.date))}, {formatTimeRange(session)} (lớp #{session.classGroupId}, buổi {session.sessionNumber})
+              </>
+            ) : (
+              `Buổi học #${request.sessionId}`
+            )}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {request.isLateNotice && <StatusChip tone="slate">Báo trễ</StatusChip>}
+          {session && session.status !== "SCHEDULED" && <StatusChip tone={SESSION_STATUS[session.status].tone}>Buổi: {SESSION_STATUS[session.status].label.toLowerCase()}</StatusChip>}
+          <StatusChip tone={status.tone} icon={status.icon}>
+            {status.label}
+          </StatusChip>
+        </div>
+      </div>
+
+      <p className="mt-3 whitespace-pre-line break-words text-[14.5px] leading-relaxed text-brand-ink">{request.reason}</p>
+
+      {request.resolution && (
+        <p className="mt-3 text-[14.5px] font-medium text-brand-navy">
+          {LEAVE_RESOLUTION[request.resolution]}.{" "}
+          {request.replacementSessionId !== null && (
+            <Link to={`${ROUTES.adminSessions}?buoi=${request.replacementSessionId}`} className={PORTAL_TEXT_LINK}>
+              Xem buổi thay thế
+            </Link>
+          )}
+        </p>
+      )}
+      {request.resolutionReason && <p className="mt-1 text-[14.5px] text-brand-ink">Ghi chú xử lý: {request.resolutionReason}</p>}
+
+      <p className="mt-3 text-[13px] text-brand-muted">
+        Gửi lúc {formatClockTime(requestedAt)} ngày {formatDate(requestedAt)} ·{" "}
+        <Link to={`${ROUTES.adminSessions}?buoi=${request.sessionId}`} className={PORTAL_TEXT_LINK}>
+          Mở buổi học
+        </Link>
+      </p>
+
+      {pending && (
+        <div className="mt-4 border-t border-slate-200 pt-4">
+          {!fromTutor && (
+            <p className="mb-3 text-[14px] leading-relaxed text-brand-muted">
+              Để duyệt nghỉ có phép: khi buổi học đã bắt đầu, mở buổi học và điểm danh "Nghỉ có phép" cho học viên này. Đơn báo trễ (dưới 24 giờ) không duyệt có phép được.
+            </p>
+          )}
+          {action === null && (
+            <div className="flex flex-wrap gap-2">
+              {fromTutor && (
+                <>
+                  <button type="button" onClick={() => open("substitute")} className={PORTAL_BTN_PRIMARY}>
+                    Phân người dạy thay
+                  </button>
+                  <button type="button" onClick={() => open("makeup")} className={PORTAL_BTN_SECONDARY}>
+                    Xếp buổi học bù
+                  </button>
+                  <button type="button" onClick={() => open("cancel")} className={PORTAL_BTN_SECONDARY}>
+                    Hủy buổi
+                  </button>
+                </>
+              )}
+              <button type="button" onClick={() => open("reject")} className={PORTAL_BTN_SECONDARY}>
+                Từ chối
+              </button>
+            </div>
+          )}
+
+          {action === "reject" && (
+            <ReasonForm
+              id={`reject-${request.leaveRequestId}`}
+              label="Lý do từ chối"
+              submitLabel="Từ chối đơn"
+              danger
+              isPending={reject.isPending}
+              error={reject.error}
+              errorFallback="Chưa từ chối được đơn. Vui lòng thử lại."
+              onSubmit={(reason) => reject.mutate(reason)}
+              onCancel={() => setAction(null)}
+            />
+          )}
+          {action === "cancel" && (
+            <ReasonForm
+              id={`cancel-${request.leaveRequestId}`}
+              label="Lý do hủy buổi"
+              submitLabel="Hủy buổi học"
+              danger
+              isPending={cancel.isPending}
+              error={cancel.error}
+              errorFallback="Chưa hủy được buổi học. Vui lòng thử lại."
+              onSubmit={(reason) => cancel.mutate(reason)}
+              onCancel={() => setAction(null)}
+            />
+          )}
+          {action === "substitute" && (
+            <ReasonForm
+              id={`substitute-${request.leaveRequestId}`}
+              label="Ghi chú phân công"
+              submitLabel="Phân dạy thay"
+              isPending={substitute.isPending}
+              error={substitute.error}
+              errorFallback="Chưa phân được người dạy thay. Vui lòng thử lại."
+              canSubmit={substituteId !== ""}
+              onSubmit={(reason) => substitute.mutate(reason)}
+              onCancel={() => setAction(null)}
+            >
+              <div>
+                <label htmlFor={`substitute-tutor-${request.leaveRequestId}`} className={`mb-1.5 ${AUTH_LABEL}`}>
+                  Gia sư dạy thay
+                </label>
+                <select
+                  id={`substitute-tutor-${request.leaveRequestId}`}
+                  required
+                  value={substituteId}
+                  onChange={(event) => setSubstituteId(event.target.value)}
+                  className={PORTAL_INPUT}
+                >
+                  <option value="">Chọn gia sư</option>
+                  {substituteOptions.map((tutor) => (
+                    <option key={tutor.id} value={tutor.id}>
+                      {tutor.fullName} (#{tutor.id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </ReasonForm>
+          )}
+          {action === "makeup" && (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (makeupValid) makeup.mutate();
+              }}
+              className="space-y-3 rounded-xl border border-slate-200 bg-white p-3.5"
+            >
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div>
+                  <label htmlFor={`makeup-date-${request.leaveRequestId}`} className={`mb-1.5 ${AUTH_LABEL}`}>
+                    Ngày học bù
+                  </label>
+                  <input
+                    id={`makeup-date-${request.leaveRequestId}`}
+                    type="date"
+                    required
+                    min={toIsoDate(startOfToday())}
+                    value={makeupDate}
+                    onChange={(event) => setMakeupDate(event.target.value)}
+                    className={PORTAL_INPUT}
+                  />
+                </div>
+                <div>
+                  <label htmlFor={`makeup-start-${request.leaveRequestId}`} className={`mb-1.5 ${AUTH_LABEL}`}>
+                    Từ
+                  </label>
+                  <input id={`makeup-start-${request.leaveRequestId}`} type="time" required value={startTime} onChange={(event) => setStartTime(event.target.value)} className={PORTAL_INPUT} />
+                </div>
+                <div>
+                  <label htmlFor={`makeup-end-${request.leaveRequestId}`} className={`mb-1.5 ${AUTH_LABEL}`}>
+                    Đến
+                  </label>
+                  <input id={`makeup-end-${request.leaveRequestId}`} type="time" required value={endTime} onChange={(event) => setEndTime(event.target.value)} className={PORTAL_INPUT} />
+                </div>
+              </div>
+              <p className="text-[13.5px] text-brand-muted">Buổi gốc sẽ bị hủy và buổi học bù được tạo cho cả lớp.</p>
+              {makeup.error && <AuthNotice tone="error">{portalErrorMessage(makeup.error, "Chưa xếp được buổi học bù. Vui lòng thử lại.")}</AuthNotice>}
+              <div className="flex flex-wrap gap-2">
+                <button type="submit" disabled={!makeupValid || makeup.isPending} className={PORTAL_BTN_PRIMARY}>
+                  {makeup.isPending ? "Đang xếp…" : "Xếp buổi học bù"}
+                </button>
+                <button type="button" onClick={() => setAction(null)} disabled={makeup.isPending} className={PORTAL_BTN_SECONDARY}>
+                  Thôi
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}

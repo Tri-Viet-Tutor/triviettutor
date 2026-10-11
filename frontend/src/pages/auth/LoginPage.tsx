@@ -1,27 +1,43 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { useMutation } from "@tanstack/react-query";
 import { login as loginRequest, getRoleHome } from "@/lib/auth";
+import { ROUTES } from "@/constants/routes";
+import { AuthField } from "@/features/auth/components/AuthField";
+import { AuthHeading } from "@/features/auth/components/AuthHeading";
+import { AuthNotice } from "@/features/auth/components/AuthNotice";
+import { AuthSubmitButton } from "@/features/auth/components/AuthSubmitButton";
+import { authErrorCode, authErrorMessage } from "@/features/auth/data/authMessages";
+import { savePendingEmail, type AuthLocationState } from "@/features/auth/data/pendingEmail";
 
 const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email("Email chưa đúng"),
+  password: z.string().min(6, "Mật khẩu có ít nhất 6 ký tự"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
+
+const TEXT_LINK = "font-semibold text-brand-navy underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
 
 /**
  * LoginPage
  *
  * Handles user login and redirects to the appropriate dashboard
  * based on the user's role (BR-01).
+ * Tài khoản chưa kích hoạt (ACCOUNT_NOT_VERIFIED) được dẫn sang trang nhập mã OTP.
  */
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const locationState = location.state as AuthLocationState | null;
+  // Câu báo từ trang trước, ví dụ sau khi đặt lại mật khẩu
+  const notice = locationState?.notice;
+  // Đang mua khóa học dở: đăng nhập xong quay lại trang thanh toán
+  const resumeCheckout = locationState?.resumeCheckout === true;
 
   const { mutate: login, isPending, error } = useMutation({
     mutationFn: loginRequest,
@@ -30,77 +46,78 @@ export function LoginPage() {
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
+    defaultValues: { email: locationState?.email ?? "", password: "" },
   });
 
   function onSubmit(data: LoginFormValues) {
     login(data, {
       onSuccess: (response) => {
         setAuth(response.accessToken, response.user);
-        navigate(getRoleHome(response.user.role), { replace: true });
+        navigate(resumeCheckout ? ROUTES.checkout : getRoleHome(response.user.role), { replace: true });
       },
     });
   }
 
+  /** Tài khoản chưa kích hoạt: sang trang nhập mã OTP với email đang gõ */
+  function goToVerification() {
+    const email = getValues("email");
+    savePendingEmail(email, false, resumeCheckout);
+    navigate(ROUTES.verifyEmail, { state: { email, resumeCheckout } satisfies AuthLocationState });
+  }
+
+  const notVerified = Boolean(error) && authErrorCode(error) === "ACCOUNT_NOT_VERIFIED";
+
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-gray-800 mb-6">Sign in</h2>
+      <AuthHeading title="Đăng nhập" description="Xem lịch học và theo dõi lớp của bạn." />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            {...register("email")}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            placeholder="you@example.com"
-          />
-          {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
-        </div>
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+        {notice && !error && <AuthNotice tone="success">{notice}</AuthNotice>}
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            {...register("password")}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            placeholder="••••••••"
-          />
-          {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
-        </div>
+        <AuthField
+          id="email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          placeholder="ban@example.com"
+          error={errors.email?.message}
+          {...register("email")}
+        />
+
+        <AuthField
+          id="password"
+          label="Mật khẩu"
+          type="password"
+          autoComplete="current-password"
+          placeholder="••••••••"
+          error={errors.password?.message}
+          {...register("password")}
+        />
+
+        {/* "Quên mật khẩu?" nằm dưới ô mật khẩu, ngay trên nút đăng nhập */}
+        <p className="!mt-2.5 text-right">
+          <Link to={ROUTES.forgotPassword} className={`text-[13.5px] ${TEXT_LINK}`}>
+            Quên mật khẩu?
+          </Link>
+        </p>
 
         {error && (
-          <p className="text-sm text-red-600">
-            Invalid email or password. Please try again.
-          </p>
+          <AuthNotice tone={notVerified ? "info" : "error"}>
+            {authErrorMessage(error, "Đăng nhập chưa thành công. Vui lòng thử lại.")}
+            {notVerified && (
+              <button type="button" onClick={goToVerification} className={`mt-1.5 block ${TEXT_LINK}`}>
+                Nhập mã xác thực
+              </button>
+            )}
+          </AuthNotice>
         )}
 
-        <button
-          id="login-submit"
-          type="submit"
-          disabled={isPending}
-          className="w-full py-2 px-4 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
-        >
-          {isPending ? "Signing in…" : "Sign in"}
-        </button>
+        <AuthSubmitButton id="login-submit" label="Đăng nhập" pendingLabel="Đang đăng nhập…" isPending={isPending} />
       </form>
-
-      <p className="mt-4 text-center text-sm text-gray-600">
-        New student?{" "}
-        <Link to="/register" className="text-primary-600 hover:underline">
-          Create an account
-        </Link>
-      </p>
     </div>
   );
 }

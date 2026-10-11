@@ -1,25 +1,72 @@
 /**
- * Centralized mapping of UI assets extracted from the stitch designs.
+ * Đường dẫn ảnh trong public/assets, chia theo đúng cây thư mục:
+ *
+ *   common/   dùng chung cho mọi vai trò (logo, linh vật)
+ *   public/   các trang công khai (khách chưa đăng nhập)
+ *   auth/     trang đăng nhập, đăng ký
+ *   admin/    khu vực quản trị viên
+ *   tutor/    khu vực gia sư
+ *   student/  khu vực học viên
+ *
+ * Thêm ảnh: đặt file vào thư mục của khu vực dùng nó, rồi khai báo ở nhóm tương ứng bên dưới.
  */
+const ROOT = "/assets";
+
+const COMMON = `${ROOT}/common`;
+const PUBLIC = `${ROOT}/public`;
+
 export const ASSETS = {
-  logo: "/assets/LogoSBA.png",
-  mascot: "/assets/a_cute_flat_2d_vector_cartoon_chibi_horse_student_mascot_for_an_edtech_learning.png",
-  mascotGamified: "/assets/a_cute_flat_2d_vector_cartoon_chibi_horse_student_mascot_for_a_gamified_edtech.png",
-  mascotPencil: "/assets/a_cute_flat_2d_vector_cartoon_chibi_horse_student_mascot_holding_a_colorful.png",
-  primaryStudents: "/assets/a_clean_high_quality_educational_photo_of_vietnamese_primary_school_students.png",
-  highSchoolStudents: "/assets/a_clean_high_quality_realistic_photo_of_vietnamese_high_school_students_grade.png",
-  middleSchoolStudents: "/assets/vietnamese_middle_school_students_in_a_modern_tutoring_study_room_sitting.png",
-  highSchoolStudying: "/assets/a_vietnamese_high_school_student_studying_hard_for_high_school_graduation_and.png",
-  studentSmiling: "/assets/close_up_of_a_vietnamese_high_school_or_middle_school_student_smiling_with.png",
-  tutoring1on1: "/assets/a_high_quality_realistic_educational_photo_of_private_1_on_1_tutoring_at_home.png",
-  tutoringOnline: "/assets/a_high_quality_realistic_photograph_of_an_online_tutoring_session_in_vietnam._a.png",
-  tutoringInspiring: "/assets/a_modern_warm_high_quality_photograph_of_an_inspiring_educational_tutoring.png",
-  mapMockup: "/assets/a_realistic_clean_screenshot_mockup_of_a_google_maps_location_card_showing_an.png",
-  // Ảnh giảng viên (tên file: TênThầyCô_Môn.png)
-  tutorHoDucThuan: "/assets/HoDucThuan_Toan.png",
-  tutorNguyenCongChinh: "/assets/NguyenCongChinh_Toan.png",
-  tutorTrangAnh: "/assets/TrangAnh_English.png",
-  tutorLuongTaKinhLuan: "/assets/LuongTaKinhLua_NguVan.png",
-  tutorNguyenCongKhanh: "/assets/NguyenCongKhanh_Hoa.png",
-  tutorLeThiHien: "/assets/LeThiHien_TinHoc.png",
-};
+  common: {
+    logo: `${COMMON}/brand/logo-sba.png`,
+    mascots: {
+      default: `${COMMON}/mascots/mascot-default.png`,
+      gamified: `${COMMON}/mascots/mascot-gamified.png`,
+      pencil: `${COMMON}/mascots/mascot-pencil.png`,
+    },
+  },
+
+  public: {
+    /** Ảnh lớp học — tự chuyển ở phần mở đầu trang chủ */
+    classrooms: {
+      classroom1: `${PUBLIC}/classrooms/classroom-1.png`,
+      classroom2: `${PUBLIC}/classrooms/classroom-2.jpg`,
+      classroom3: `${PUBLIC}/classrooms/classroom-3.png`,
+      // Hai banner về giảng viên (chưa trang nào dùng)
+      classroom4: `${PUBLIC}/classrooms/classroom-4.png`,
+      classroom5: `${PUBLIC}/classrooms/classroom-5.png`,
+    },
+    /** Ảnh giảng viên (tên file: ten-thay-co-mon.png) */
+    tutors: {
+      hoDucThuan: `${PUBLIC}/tutors/ho-duc-thuan-toan.png`,
+      nguyenCongChinh: `${PUBLIC}/tutors/nguyen-cong-chinh-toan.png`,
+      trangAnh: `${PUBLIC}/tutors/trang-anh-tieng-anh.png`,
+      luongTaKinhLuan: `${PUBLIC}/tutors/luong-ta-kinh-luan-ngu-van.png`,
+      nguyenCongKhanh: `${PUBLIC}/tutors/nguyen-cong-khanh-hoa.png`,
+      leThiHien: `${PUBLIC}/tutors/le-thi-hien-tin-hoc.png`,
+    },
+    /** Ảnh thành tích học viên */
+    achievements: {
+      achievement1: `${PUBLIC}/achievements/achievement-1.png`,
+    },
+    students: {
+      primary: `${PUBLIC}/students/primary-students.png`,
+      highSchool: `${PUBLIC}/students/high-school-students.png`,
+      highSchoolStudying: `${PUBLIC}/students/high-school-studying.png`,
+      smiling: `${PUBLIC}/students/student-smiling.png`,
+    },
+    tutoring: {
+      oneOnOne: `${PUBLIC}/tutoring/tutoring-one-on-one.png`,
+      online: `${PUBLIC}/tutoring/tutoring-online.png`,
+      inspiring: `${PUBLIC}/tutoring/tutoring-inspiring.png`,
+    },
+    contact: {
+      mapMockup: `${PUBLIC}/contact/map-mockup.png`,
+    },
+  },
+
+  // Chưa có ảnh riêng — thêm vào khi làm giao diện từng khu vực
+  auth: {},
+  admin: {},
+  tutor: {},
+  student: {},
+} as const;

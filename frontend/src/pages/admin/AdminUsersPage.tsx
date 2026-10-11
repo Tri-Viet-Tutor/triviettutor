@@ -1,0 +1,102 @@
+import { useState } from "react";
+import { Icon } from "@/components/ui/Icon";
+import { CreateTutorForm } from "@/features/admin/components/TutorForms";
+import { UserList } from "@/features/admin/components/UserList";
+import { useAdminUsers } from "@/features/admin/hooks/useAdminData";
+import { FilterTabs } from "@/features/portal/components/FilterTabs";
+import { Pager } from "@/features/portal/components/Pager";
+import { PortalPageHeader } from "@/features/portal/components/PortalPageHeader";
+import { PortalEmpty, PortalError, PortalLoading } from "@/features/portal/components/PortalState";
+import { ROLE_NAME } from "@/features/portal/data/labels";
+import { PORTAL_BTN_PRIMARY, PORTAL_INPUT } from "@/features/portal/data/ui";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import type { Role } from "@/types/api";
+
+const PAGE_SIZE = 20;
+
+const ROLE_TABS: { value: Role | ""; label: string }[] = [
+  { value: "", label: "Tất cả" },
+  { value: "ROLE_STUDENT", label: ROLE_NAME.ROLE_STUDENT },
+  { value: "ROLE_TUTOR", label: ROLE_NAME.ROLE_TUTOR },
+  { value: "ROLE_ADMIN", label: ROLE_NAME.ROLE_ADMIN },
+];
+
+/**
+ * Trang Người dùng của quản trị (GET /admin/users): tìm theo họ tên / email, lọc theo vai trò,
+ * thêm tài khoản gia sư (POST /admin/users/tutors) và sửa hồ sơ gia sư (PUT /admin/users/{id}/tutor-profile).
+ * Học viên tự đăng ký khi mua khóa học nên không có nút thêm học viên.
+ */
+export function AdminUsersPage() {
+  const [role, setRole] = useState<Role | "">("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [creating, setCreating] = useState(false);
+  const keyword = useDebouncedValue(search.trim());
+
+  const usersQuery = useAdminUsers({ ...(role ? { role } : {}), ...(keyword ? { search: keyword } : {}), page, size: PAGE_SIZE });
+  const users = usersQuery.data;
+
+  return (
+    <>
+      <PortalPageHeader
+        title="Người dùng"
+        action={
+          !creating && (
+            <button type="button" onClick={() => setCreating(true)} className={`self-start ${PORTAL_BTN_PRIMARY}`}>
+              <Icon name="person_add" className="text-[19px]" />
+              Thêm gia sư
+            </button>
+          )
+        }
+      />
+
+      {creating && (
+        <div className="mb-6">
+          <CreateTutorForm onClose={() => setCreating(false)} />
+        </div>
+      )}
+
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <FilterTabs
+          label="Lọc theo vai trò"
+          tabs={ROLE_TABS}
+          value={role}
+          onChange={(next) => {
+            setRole(next);
+            setPage(0);
+          }}
+        />
+        <div className="relative sm:w-[300px]">
+          <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-slate-400" />
+          <input
+            type="search"
+            aria-label="Tìm theo họ tên hoặc email"
+            placeholder="Tìm họ tên hoặc email"
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(0);
+            }}
+            className={`pl-10 ${PORTAL_INPUT}`}
+          />
+        </div>
+      </div>
+
+      {usersQuery.isPending ? (
+        <PortalLoading label="Đang tải người dùng" rows={5} />
+      ) : usersQuery.isError || !users ? (
+        <PortalError message="Không tải được danh sách người dùng." onRetry={() => void usersQuery.refetch()} />
+      ) : users.content.length === 0 ? (
+        <PortalEmpty icon="group" title="Không tìm thấy người dùng nào" description={keyword ? `Không có ai khớp với "${keyword}".` : undefined} />
+      ) : (
+        <>
+          <p className="mb-2.5 text-[14px] text-brand-muted">
+            <span className="font-semibold tabular-nums text-brand-ink">{users.totalElements}</span> người dùng
+          </p>
+          <UserList users={users.content} />
+          <Pager page={page} totalPages={users.totalPages} onChange={setPage} label="Phân trang người dùng" />
+        </>
+      )}
+    </>
+  );
+}
