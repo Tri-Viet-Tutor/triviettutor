@@ -1,36 +1,24 @@
-import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { ROUTES } from "@/constants/routes";
-import { requestPasswordReset, resetPassword } from "@/features/auth/api/authApi";
-import { AUTH_LABEL, AuthField } from "@/features/auth/components/AuthField";
+import { resetPassword } from "@/features/auth/api/authApi";
+import { AuthField } from "@/features/auth/components/AuthField";
 import { AuthHeading } from "@/features/auth/components/AuthHeading";
 import { AuthNotice } from "@/features/auth/components/AuthNotice";
 import { AuthSubmitButton } from "@/features/auth/components/AuthSubmitButton";
-import { OtpInput } from "@/features/auth/components/OtpInput";
 import {
   authErrorMessage,
-  OTP_LENGTH,
-  OTP_TTL_SECONDS,
   PASSWORD_MAX,
   PASSWORD_MIN,
-  RESEND_COOLDOWN_SECONDS,
 } from "@/features/auth/data/authMessages";
-import {
-  clearPendingEmail,
-  readPendingEmail,
-  savePendingEmail,
-  secondsSinceOtpSent,
-  type AuthLocationState,
-} from "@/features/auth/data/pendingEmail";
-import { formatClock, useCountdown } from "@/hooks/useCountdown";
+import type { AuthLocationState } from "@/features/auth/data/pendingEmail";
+import { Icon } from "@/components/ui/Icon";
 
 const resetSchema = z
   .object({
-    email: z.string().email("Email chưa đúng"),
     newPassword: z
       .string()
       .min(PASSWORD_MIN, `Mật khẩu có ít nhất ${PASSWORD_MIN} ký tự`)
@@ -38,7 +26,7 @@ const resetSchema = z
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Hai mật khẩu chưa khớp",
+    message: "Hai mật khẩu chưa khớp nhau",
     path: ["confirmPassword"],
   });
 
@@ -47,133 +35,88 @@ type ResetFormValues = z.infer<typeof resetSchema>;
 const TEXT_LINK = "font-semibold text-brand-navy underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
 
 /**
- * Trang đặt lại mật khẩu: email, mã OTP gửi qua email và mật khẩu mới.
- * Xong thì về trang đăng nhập kèm câu báo thành công.
- * Backend chưa có endpoint cho việc này — xem ghi chú ở features/auth/api/authApi.ts.
+ * Trang đặt lại mật khẩu: nhận token từ query param ?token=... trong liên kết email,
+ * cho phép người dùng nhập mật khẩu mới và xác nhận để đổi mật khẩu.
  */
 export function ResetPasswordPage() {
   const navigate = useNavigate();
-  const state = useLocation().state as AuthLocationState | null;
-  const [otp, setOtp] = useState("");
-  const [otpError, setOtpError] = useState("");
-  const [resent, setResent] = useState(false);
-  // Đếm ngược từ lúc mã được gửi (nếu biết); tải lại trang vẫn đếm tiếp
-  const [initialEmail] = useState(() => state?.email ?? readPendingEmail());
-  const [sentSecondsAgo] = useState(() => secondsSinceOtpSent(initialEmail));
-  const [timing, setTiming] = useState(sentSecondsAgo !== null);
-  const [expiresIn, restartExpiry] = useCountdown(Math.max(0, OTP_TTL_SECONDS - (sentSecondsAgo ?? OTP_TTL_SECONDS)));
-  const [cooldown, restartCooldown] = useCountdown(Math.max(0, RESEND_COOLDOWN_SECONDS - (sentSecondsAgo ?? RESEND_COOLDOWN_SECONDS)));
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token")?.trim() ?? "";
 
-  const reset = useMutation({ mutationFn: resetPassword });
-  const resend = useMutation({ mutationFn: requestPasswordReset });
+  const resetMutation = useMutation({ mutationFn: resetPassword });
 
   const {
     register,
     handleSubmit,
-    getValues,
-    trigger,
     formState: { errors },
   } = useForm<ResetFormValues>({
     resolver: zodResolver(resetSchema),
-    defaultValues: { email: initialEmail, newPassword: "", confirmPassword: "" },
+    defaultValues: { newPassword: "", confirmPassword: "" },
   });
 
   function onSubmit(data: ResetFormValues) {
-    if (!new RegExp(`^\\d{${OTP_LENGTH}}$`).test(otp)) {
-      setOtpError(`Nhập đủ ${OTP_LENGTH} chữ số của mã xác thực`);
-      return;
-    }
-    setOtpError("");
-    setResent(false);
-    resend.reset();
-    reset.mutate(
-      { email: data.email, otp, newPassword: data.newPassword },
+    if (!token) return;
+
+    resetMutation.mutate(
+      { token, newPassword: data.newPassword },
       {
         onSuccess: () => {
-          clearPendingEmail();
           navigate(ROUTES.login, {
             replace: true,
-            state: { email: data.email, notice: "Đã đặt lại mật khẩu. Hãy đăng nhập bằng mật khẩu mới." } satisfies AuthLocationState,
+            state: {
+              notice: "Đã đặt lại mật khẩu thành công. Hãy đăng nhập bằng mật khẩu mới của bạn.",
+            } satisfies AuthLocationState,
           });
         },
       },
     );
   }
 
-  async function handleResend() {
-    // Email phải hợp lệ mới gửi lại được mã
-    if (!(await trigger("email"))) return;
-    reset.reset();
-    const email = getValues("email");
-    resend.mutate(
-      { email },
-      {
-        onSuccess: () => {
-          savePendingEmail(email, true);
-          setOtp("");
-          setResent(true);
-          setTiming(true);
-          restartExpiry(OTP_TTL_SECONDS);
-          restartCooldown(RESEND_COOLDOWN_SECONDS);
-        },
-      },
+  // Nếu người dùng truy cập trực tiếp mà không có token từ link email
+  if (!token) {
+    return (
+      <div className="text-center">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+          <Icon name="warning" className="text-[28px]" />
+        </div>
+
+        <AuthHeading
+          title="Liên kết không hợp lệ"
+          description="Không tìm thấy mã xác thực token đặt lại mật khẩu trong liên kết của bạn."
+        />
+
+        <p className="mb-6 text-[14px] text-brand-muted">
+          Vui lòng kiểm tra lại email hoặc gửi yêu cầu mới để nhận liên kết hợp lệ.
+        </p>
+
+        <div className="space-y-3">
+          <Link
+            to={ROUTES.forgotPassword}
+            className="inline-block w-full rounded-lg bg-brand-navy py-2.5 text-center text-[14px] font-semibold text-white shadow-sm transition hover:bg-brand-navy/90"
+          >
+            Gửi lại yêu cầu quên mật khẩu
+          </Link>
+
+          <p className="text-[14px] text-brand-muted">
+            <Link to={ROUTES.login} className={TEXT_LINK}>
+              Quay lại đăng nhập
+            </Link>
+          </p>
+        </div>
+      </div>
     );
   }
 
-  const failure = reset.error ?? resend.error;
-  const expired = timing && expiresIn === 0;
-
   return (
     <div>
-      <AuthHeading title="Đặt lại mật khẩu" description="Nhập mã đã gửi tới email của bạn và mật khẩu mới." />
+      <AuthHeading
+        title="Đặt lại mật khẩu"
+        description="Tạo mật khẩu mới cho tài khoản của bạn để hoàn tất việc khôi phục."
+      />
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
         <AuthField
-          id="reset-email"
-          label="Email"
-          type="email"
-          autoComplete="email"
-          placeholder="ban@example.com"
-          error={errors.email?.message}
-          {...register("email")}
-        />
-
-        <div>
-          <p className={`mb-1.5 ${AUTH_LABEL}`}>Mã xác thực</p>
-          <OtpInput
-            value={otp}
-            onChange={(value) => {
-              setOtp(value);
-              setOtpError("");
-            }}
-            length={OTP_LENGTH}
-            invalid={Boolean(otpError)}
-            disabled={reset.isPending}
-          />
-          <p aria-live="polite" className="mt-2 flex items-center justify-between gap-3 text-[14px] text-brand-muted">
-            <span>
-              {otpError && <span className="font-semibold text-red-700">{otpError}</span>}
-              {!otpError && !timing && "Mã có hiệu lực 5 phút kể từ lúc gửi."}
-              {!otpError && timing && !expired && (
-                <>
-                  Mã hết hạn sau <strong className="font-bold tabular-nums text-brand-navy">{formatClock(expiresIn)}</strong>
-                </>
-              )}
-              {!otpError && expired && <span className="font-semibold text-red-700">Mã đã hết hạn.</span>}
-            </span>
-            <button
-              type="button"
-              onClick={handleResend}
-              disabled={resend.isPending || cooldown > 0}
-              className={`shrink-0 disabled:cursor-not-allowed disabled:font-medium disabled:text-brand-muted disabled:no-underline ${TEXT_LINK}`}
-            >
-              {resend.isPending ? "Đang gửi…" : cooldown > 0 ? `Gửi lại sau ${cooldown}s` : "Gửi lại mã"}
-            </button>
-          </p>
-        </div>
-
-        <AuthField
-          id="reset-password"
+          id="reset-new-password"
           label="Mật khẩu mới"
           type="password"
           autoComplete="new-password"
@@ -181,19 +124,35 @@ export function ResetPasswordPage() {
           error={errors.newPassword?.message}
           {...register("newPassword")}
         />
+
         <AuthField
-          id="reset-confirm"
+          id="reset-confirm-password"
           label="Nhập lại mật khẩu mới"
           type="password"
           autoComplete="new-password"
+          placeholder="Nhập lại chính xác mật khẩu mới"
           error={errors.confirmPassword?.message}
           {...register("confirmPassword")}
         />
 
-        {resent && !failure && <AuthNotice tone="success">Đã gửi mã mới. Hãy kiểm tra hộp thư (cả mục thư rác).</AuthNotice>}
-        {failure && <AuthNotice tone="error">{authErrorMessage(failure, "Chưa đặt lại được mật khẩu. Vui lòng thử lại.")}</AuthNotice>}
+        {resetMutation.error && (
+          <div className="space-y-2">
+            <AuthNotice tone="error">
+              {authErrorMessage(resetMutation.error, "Chưa đặt lại được mật khẩu. Vui lòng thử lại.")}
+            </AuthNotice>
+            <p className="text-right text-[13px]">
+              <Link to={ROUTES.forgotPassword} className={TEXT_LINK}>
+                Gửi lại yêu cầu mới?
+              </Link>
+            </p>
+          </div>
+        )}
 
-        <AuthSubmitButton label="Đặt lại mật khẩu" pendingLabel="Đang lưu…" isPending={reset.isPending} />
+        <AuthSubmitButton
+          label="Cập nhật mật khẩu"
+          pendingLabel="Đang lưu…"
+          isPending={resetMutation.isPending}
+        />
       </form>
 
       <p className="mt-6 text-center text-[14px] text-brand-muted">

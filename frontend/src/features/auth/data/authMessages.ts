@@ -20,6 +20,8 @@ const AUTH_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   EMAIL_ALREADY_EXISTS: "Email này đã có tài khoản.",
   INVALID_OTP: "Mã xác thực không đúng.",
   OTP_EXPIRED: "Mã xác thực đã hết hạn. Hãy bấm gửi lại mã.",
+  INVALID_RESET_TOKEN: "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã qua sử dụng. Vui lòng gửi lại yêu cầu.",
+  RESET_TOKEN_EXPIRED: "Liên kết đặt lại mật khẩu đã hết hạn (sau 15 phút). Vui lòng gửi lại yêu cầu.",
   EMAIL_SEND_FAILED: "Chưa gửi được email. Vui lòng thử lại sau ít phút.",
   USER_NOT_FOUND: "Không tìm thấy tài khoản với email này.",
   VALIDATION_ERROR: "Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.",

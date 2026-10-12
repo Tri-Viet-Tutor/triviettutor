@@ -14,3 +14,10 @@ Tất cả các AI Agent và Developer khi làm việc trong repository này b�
   2. Trao đổi, xác nhận (confirm) phương án với người dùng.
   3. **Cập nhật tài liệu trước** (kiến trúc, business rules, API, UI flow).
   4. Sau khi tài liệu đã chuẩn hóa, mới được tiến hành viết code theo tài liệu.
+
+## 3. Cấm Hardcode Cấu Hình & Dữ Liệu (No Hardcoding)
+
+- Tuyệt đối không hardcode URL, domain, port, credentials, secret key trong mã nguồn.
+- Mọi giá trị cấu hình phải đọc từ biến môi trường (`.env`, `@Value`, `import.meta.env`).
+- Tuyệt đối không dùng ký tự wildcard bất hợp lệ (như `*` trong `http://localhost:*`) trong các URL hoặc thuộc tính định tuyến vì sẽ làm hỏng URL routing của trình duyệt.
+- Với các đường dẫn redirect/callback/email link: ưu tiên nhận diện động từ HTTP header `Origin`/`Referer` hoặc trường client gửi lên, kết hợp fallback biến môi trường đã được sanitize.

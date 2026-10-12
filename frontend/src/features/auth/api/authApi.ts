@@ -24,30 +24,30 @@ export async function resendVerification(request: ResendVerificationRequest): Pr
 }
 
 /*
- * ── Quên mật khẩu ──────────────────────────────────────────────────────────────
- * LƯU Ý: backend CHƯA có hai endpoint dưới đây (AuthController mới có login, register,
- * verify-email, resend-verification). Tên và dữ liệu gửi đi là đề xuất, đặt theo đúng kiểu
- * của verify-email để backend dễ làm theo. Khi backend chưa có, trang "Quên mật khẩu"
- * chỉ báo chưa gửi được mã.
+ * ── Quên mật khẩu & Đặt lại mật khẩu ──────────────────────────────────────────
  */
 
 export interface ForgotPasswordRequest {
   email: string;
+  frontendUrl?: string;
 }
 
 export interface ResetPasswordRequest {
-  email: string;
-  otp: string;
+  token: string;
   /** 6 – 128 ký tự, cùng giới hạn với mật khẩu lúc đăng ký */
   newPassword: string;
 }
 
-/** (Đề xuất) POST /auth/forgot-password — gửi mã OTP đặt lại mật khẩu tới email */
+/** POST /auth/forgot-password — gửi liên kết đặt lại mật khẩu tới email */
 export async function requestPasswordReset(request: ForgotPasswordRequest): Promise<void> {
-  await api.post("/auth/forgot-password", request);
+  const payload = {
+    ...request,
+    frontendUrl: request.frontendUrl || (typeof window !== "undefined" ? window.location.origin : undefined),
+  };
+  await api.post("/auth/forgot-password", payload);
 }
 
-/** (Đề xuất) POST /auth/reset-password — đổi mật khẩu bằng mã OTP */
+/** POST /auth/reset-password — đổi mật khẩu bằng token liên kết */
 export async function resetPassword(request: ResetPasswordRequest): Promise<void> {
   await api.post("/auth/reset-password", request);
 }

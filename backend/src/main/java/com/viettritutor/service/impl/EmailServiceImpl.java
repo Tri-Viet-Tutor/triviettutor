@@ -120,4 +120,104 @@ public class EmailServiceImpl implements EmailService {
             </html>
             """.formatted(otpCode);
     }
+
+    @Override
+    public void sendPasswordResetEmail(String toEmail, String resetLink) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(
+                    message,
+                    MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED,
+                    StandardCharsets.UTF_8.name()
+            );
+
+            String from = (senderEmail == null || senderEmail.isBlank()) ? "no-reply@viettritutor.local" : senderEmail;
+            helper.setFrom(from, "VietTriTutor");
+            helper.setTo(toEmail);
+            helper.setSubject("Yêu cầu đặt lại mật khẩu tài khoản VietTriTutor");
+            helper.setText(buildResetPasswordHtmlTemplate(resetLink), true);
+
+            mailSender.send(message);
+            log.info("Sent password reset link email to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send password reset email to {}: {}", toEmail, e.getMessage());
+            throw new BusinessException(ErrorCode.EMAIL_SEND_FAILED);
+        }
+    }
+
+    private String buildResetPasswordHtmlTemplate(String resetLink) {
+        return """
+            <!DOCTYPE html>
+            <html lang="vi">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Đặt lại mật khẩu VietTriTutor</title>
+            </head>
+            <body style="margin: 0; padding: 0; background-color: #f4f6f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #333333;">
+              <table role="presentation" width="100%%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f6f9; padding: 40px 10px;">
+                <tr>
+                  <td align="center">
+                    <table role="presentation" width="100%%" border="0" cellspacing="0" cellpadding="0" style="max-width: 580px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);">
+                      
+                      <!-- Header Gradient -->
+                      <tr>
+                        <td style="background: linear-gradient(135deg, #1e3a8a 0%%, #2563eb 50%%, #3b82f6 100%%); padding: 40px 30px; text-align: center;">
+                          <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">VietTriTutor</h1>
+                          <p style="margin: 8px 0 0; color: #e0e7ff; font-size: 15px; font-weight: 400;">Trung tâm Gia sư & Quản lý Đào tạo Trực tuyến</p>
+                        </td>
+                      </tr>
+
+                      <!-- Body Content -->
+                      <tr>
+                        <td style="padding: 40px 35px 30px;">
+                          <h2 style="margin: 0 0 16px; color: #1e293b; font-size: 20px; font-weight: 700;">Yêu cầu đặt lại mật khẩu</h2>
+                          <p style="margin: 0 0 24px; color: #475569; font-size: 15px; line-height: 1.6;">
+                            Chào bạn,<br>
+                            Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản <strong>VietTriTutor</strong> của bạn. Vui lòng bấm vào nút dưới đây để thiết lập mật khẩu mới:
+                          </p>
+
+                          <!-- Button Box -->
+                          <div style="text-align: center; margin: 32px 0;">
+                            <a href="%s" target="_blank" style="display: inline-block; background-color: #2563eb; color: #ffffff; font-size: 16px; font-weight: 700; text-decoration: none; padding: 14px 32px; border-radius: 8px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);">
+                              Đặt lại mật khẩu
+                            </a>
+                          </div>
+
+                          <p style="margin: 0 0 12px; color: #64748b; font-size: 14px; line-height: 1.5;">
+                            ⏰ Liên kết này có hiệu lực trong vòng <strong>15 phút</strong>.
+                          </p>
+                          <p style="margin: 0 0 24px; color: #64748b; font-size: 14px; line-height: 1.5;">
+                            🛡️ <strong>Lưu ý:</strong> Nếu bạn không yêu cầu đặt lại mật khẩu, xin vui lòng bỏ qua email này hoặc thông báo cho quản trị viên. Mật khẩu hiện tại của bạn vẫn được bảo toàn.
+                          </p>
+
+                          <div style="border-top: 1px solid #e2e8f0; margin: 30px 0 20px;"></div>
+
+                          <p style="margin: 0; color: #94a3b8; font-size: 13px; line-height: 1.5; word-break: break-all;">
+                            Nếu không bấm được nút trên, bạn có thể copy và dán liên kết sau vào trình duyệt:<br>
+                            <a href="%s" style="color: #2563eb; text-decoration: underline;">%s</a>
+                          </p>
+                        </td>
+                      </tr>
+
+                      <!-- Footer -->
+                      <tr>
+                        <td style="background-color: #f8fafc; padding: 24px 35px; text-align: center; border-top: 1px solid #e2e8f0;">
+                          <p style="margin: 0 0 6px; color: #64748b; font-size: 13px;">
+                            © 2026 VietTriTutor. Bản quyền thuộc về Hệ thống Quản trị Gia sư Việt Trì.
+                          </p>
+                          <p style="margin: 0; color: #94a3b8; font-size: 12px;">
+                            Hỗ trợ: support@viettritutor.local
+                          </p>
+                        </td>
+                      </tr>
+
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+            </html>
+            """.formatted(resetLink, resetLink, resetLink);
+    }
 }

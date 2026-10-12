@@ -442,6 +442,8 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 |:---|:---:|:---|:---:|
 | `INVALID_CREDENTIALS` | 401 | Sai email/password | — |
 | `EMAIL_ALREADY_EXISTS` | 409 | Email đã tồn tại | — |
+| `INVALID_RESET_TOKEN` | 400 | Token đặt lại mật khẩu không hợp lệ | — |
+| `RESET_TOKEN_EXPIRED` | 400 | Token đặt lại mật khẩu đã hết hạn | — |
 | `ACCESS_DENIED` | 403 | Không có quyền | BR-01.10 |
 | `USER_NOT_FOUND` | 404 | User không tồn tại | — |
 | `COURSE_NOT_FOUND` | 404 | Khóa học không tồn tại | — |
@@ -538,6 +540,81 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 **Response (200):** Giống login — trả accessToken + user info.
 
 **Error (409):** `EMAIL_ALREADY_EXISTS`
+
+---
+
+#### `POST /auth/forgot-password` — Yêu cầu gửi link đặt lại mật khẩu
+
+| | |
+|:---|:---|
+| **Role** | Public |
+| **BR** | Người dùng gửi email để nhận đường dẫn đặt lại mật khẩu qua email |
+
+**Request Body:**
+```json
+{
+  "email": "student@gmail.com"
+}
+```
+
+**Validation Rules:**
+| Field | Constraint |
+|:---|:---|
+| `email` | `@NotBlank`, `@Email` |
+
+**Business Logic:**
+1. Tìm tài khoản người dùng theo `email`.
+2. Nếu tồn tại, sinh `reset_token` an toàn ngẫu nhiên (UUID hoặc cryptographically secure token), lưu vào bảng `password_reset_tokens` cùng thời hạn hiệu lực (mặc định 15 phút, `used = false`).
+3. Gửi email chứa liên kết dạng nút bấm: `${app.frontend-url}/reset-password?token=${token}`.
+4. Nhằm bảo mật (chống email enumeration), phản hồi luôn trả về HTTP 200 thông báo thành công dù email có tồn tại hay không.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Nếu email tồn tại trong hệ thống, liên kết đặt lại mật khẩu đã được gửi đến hộp thư của bạn."
+}
+```
+
+---
+
+#### `POST /auth/reset-password` — Đặt lại mật khẩu bằng token liên kết
+
+| | |
+|:---|:---|
+| **Role** | Public |
+| **BR** | Đặt lại mật khẩu mới thông qua token hợp lệ nhận từ liên kết email |
+
+**Request Body:**
+```json
+{
+  "token": "d7b0f6c2-4a5e-4c8a-9a99-0e78f4a13291",
+  "newPassword": "NewPassword@123"
+}
+```
+
+**Validation Rules:**
+| Field | Constraint |
+|:---|:---|
+| `token` | `@NotBlank` |
+| `newPassword` | `@NotBlank`, `@Size(min=6, max=128)` |
+
+**Business Logic:**
+1. Tra cứu `token` trong bảng `password_reset_tokens`.
+2. Kiểm tra token: nếu không tồn tại hoặc `used = true`, trả lỗi `400 INVALID_RESET_TOKEN`.
+3. Kiểm tra thời hạn: nếu `expiresAt.isBefore(now)`, trả lỗi `400 RESET_TOKEN_EXPIRED`.
+4. Tìm `user` liên kết với token, mã hóa `newPassword` (BCrypt) và cập nhật mật khẩu mới cho `user`. Đồng thời kích hoạt `enabled = true` nếu tài khoản trước đó chưa kích hoạt.
+5. Đánh dấu token `used = true` và lưu lại.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Đặt lại mật khẩu thành công. Vui lòng đăng nhập với mật khẩu mới."
+}
+```
+
+**Error (400):** `INVALID_RESET_TOKEN` hoặc `RESET_TOKEN_EXPIRED`
 
 ---
 
