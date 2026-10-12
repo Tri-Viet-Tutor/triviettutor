@@ -195,8 +195,8 @@ export type TimeSlot = "SLOT_MORNING" | "SLOT_AFTERNOON" | "SLOT_EVENING" | "SLO
 // (Documentation/02-System-Architecture/02-Backend-Architecture-and-API-Specification.md, mục 7.3)
 // để giao diện dùng đúng tên thuộc tính ngay từ đầu; đối chiếu lại khi backend làm xong.
 
-/** courses.grade_level — "GRADE_1" … "GRADE_12". Trang web hiện chỉ dùng lớp 10 – 12. */
-export type GradeLevel = `GRADE_${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12}`;
+/** courses.grade_level — chỉ phục vụ học sinh THPT: lớp 10, 11, 12. */
+export type GradeLevel = "GRADE_10" | "GRADE_11" | "GRADE_12";
 
 /** class_groups.delivery_mode — OFFLINE là học tại trung tâm (không dạy tại nhà học viên) */
 export type DeliveryMode = "ONLINE" | "OFFLINE";

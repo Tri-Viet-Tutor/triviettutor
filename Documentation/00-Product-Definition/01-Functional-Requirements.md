@@ -2,6 +2,8 @@
 
 Tài liệu này hệ thống hóa toàn bộ các **Yêu cầu Chức năng (Functional Requirements - FR)** của dự án **VietTriTutor**. Mỗi chức năng được đánh mã chuẩn (`FR-XXX`), mô tả chi tiết actor thực hiện, điều kiện tiên quyết (Pre-conditions), luồng thực thi (Flow), và quy tắc nghiệp vụ liên quan (Business Rules).
 
+**Phạm vi phục vụ:** Hệ thống chỉ cung cấp khóa học cho học sinh cấp 3 (THPT), gồm lớp 10, 11 và 12. Không mở khóa học lớp 1–9.
+
 ---
 
 ## 1. Phân nhóm Chức năng (Functional Modules Overview)
@@ -48,7 +50,7 @@ mindmap
 #### `FR-CRS-01`: Quản lý Danh mục Khóa học (Course Catalog)
 - **Actor**: `ROLE_ADMIN`.
 - **Mô tả**: Admin tạo mới, chỉnh sửa, hoặc ẩn các Khóa học.
-- **Thông tin thuộc tính Khóa học**: Mã khóa, Tên khóa học, Cấp học (Cấp 1/2/3), Môn học, Học phí gốc 1-1 ($P_{\text{1on1}}$), Hình thức (Online/Offline), Số buổi học.
+- **Thông tin thuộc tính Khóa học**: Mã khóa, Tên khóa học, Khối lớp THPT (lớp 10, 11, 12), Môn học, Học phí gốc 1-1 ($P_{\text{1on1}}$), Hình thức (Online/Offline), Số buổi học.
 
 #### `FR-CRS-02`: Tạo mới Lớp học (Class Creation)
 - **Actor**: `ROLE_ADMIN`.
@@ -70,7 +72,7 @@ mindmap
 
 #### `FR-SCH-01`: Tra cứu & Xem Danh sách Lớp mở Đăng ký
 - **Actor**: `ROLE_STUDENT`.
-- **Mô tả**: Học viên tìm kiếm, lọc các Lớp học đang ở trạng thái `PUBLISHED` hoặc `ENROLLING` theo môn học, cấp học, mẫu lịch và khung giờ.
+- **Mô tả**: Học viên tìm kiếm, lọc các Lớp học đang ở trạng thái `PUBLISHED` hoặc `ENROLLING` theo môn học, khối lớp THPT (10, 11, 12), mẫu lịch và khung giờ.
 
 #### `FR-SCH-02`: Đăng ký Lớp học & Thanh toán (Enrollment & Payment)
 - **Actor**: `ROLE_STUDENT`.

@@ -211,7 +211,7 @@ erDiagram
         bigserial id PK
         varchar name "NOT NULL"
         varchar subject "NOT NULL"
-        varchar grade_level "NOT NULL (GRADE_1..GRADE_12)"
+        varchar grade_level "NOT NULL (GRADE_10 | GRADE_11 | GRADE_12)"
         numeric base_price_1on1 "NOT NULL — P_1on1"
         int total_sessions "NOT NULL — Tổng số buổi"
         int duration_minutes "NOT NULL DEFAULT 120"
@@ -735,6 +735,8 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 | **Role** | `ROLE_ADMIN` |
 
 **Query Params:** `page`, `size`, `subject`, `gradeLevel`, `active`
+
+`gradeLevel` chỉ nhận `GRADE_10`, `GRADE_11`, `GRADE_12` cho cả tạo, sửa và lọc khóa học/lớp học. Giá trị khác trả HTTP 400.
 
 ---
 

@@ -22,7 +22,7 @@ public class CourseRequest {
     private String subject;
 
     @NotNull
-    @Schema(example = "GRADE_10")
+    @Schema(example = "GRADE_10", description = "High school only: GRADE_10, GRADE_11 or GRADE_12")
     private GradeLevel gradeLevel;
 
     @NotNull

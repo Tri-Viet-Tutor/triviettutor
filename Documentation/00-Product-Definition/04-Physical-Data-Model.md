@@ -15,7 +15,7 @@ CREATE TYPE user_status_enum AS ENUM ('ACTIVE', 'INACTIVE', 'SUSPENDED');
 CREATE TYPE tutor_contract_status_enum AS ENUM ('PROBATION', 'OFFICIAL', 'TERMINATED');
 
 -- 2. Cấp học & Hình thức khóa học
-CREATE TYPE grade_level_enum AS ENUM ('GRADE_1', 'GRADE_2', 'GRADE_3');
+CREATE TYPE grade_level_enum AS ENUM ('GRADE_10', 'GRADE_11', 'GRADE_12');
 CREATE TYPE class_mode_enum AS ENUM ('ONLINE', 'OFFLINE');
 CREATE TYPE course_status_enum AS ENUM ('ACTIVE', 'INACTIVE');
 

@@ -11,7 +11,7 @@ function Import-ProjectEnvironment {
         }
         $key = $Matches[1]
         $value = $Matches[2].Trim()
-        if ($key -notmatch '^(DB_[A-Z0-9_]+|LOCAL_DB_[A-Z0-9_]+|JWT_SECRET|APP_PROFILE|SERVER_PORT|CORS_ALLOWED_ORIGINS)$') {
+        if ($key -notmatch '^(DB_[A-Z0-9_]+|LOCAL_DB_[A-Z0-9_]+|JWT_SECRET|APP_PROFILE|SERVER_PORT|CORS_ALLOWED_ORIGINS|MAIL_USERNAME|APP_GG_PASSWORD|SPRING_MAIL_[A-Z0-9_]+)$') {
             continue
         }
         if ($value.Length -ge 2 -and (

@@ -61,7 +61,7 @@ Các lựa chọn dưới đây là baseline đề xuất để phân công có 
 | ABSENT hay EXCUSED khi nghỉ có phép | Đề xuất EXCUSED khi Admin chấp thuận và báo trước ≥24h theo BR-04.32; cần thống nhất với BR-03 | Hữu |
 | Khóa sau 24h có tự tính lương mọi buổi? | Chỉ COMPLETED nếu có bằng chứng gia sư đã dạy/điểm danh; không biến buổi bị hủy hoặc không dạy thành có lương | Hữu |
 | Dạy thay và buổi bù thiếu dấu vết DB | Có `actual_tutor_id`, lịch sử thay người và `original_session_id` cho buổi bù; không sửa lịch sử buổi đã dạy | Hữu |
-| Grade/cấp học, đơn giá theo hình thức | Chốt cấp 1/2/3 hay lớp 1–12; giá phải phân biệt Online/Offline theo BR-02.03 | Quang |
+| Grade/cấp học, đơn giá theo hình thức | Đã chốt chỉ THPT: lớp 10, 11, 12; giá phải phân biệt Online/Offline theo BR-02.03 | Quang |
 | Chốt lương khác enum giữa tài liệu | Baseline `DRAFT → FINALIZED`; snapshot số tiền và các buổi nguồn | Quang |
 
 MVP dùng mock payment và meeting URL, điểm danh thủ công. Cổng tiền thật, video SDK, điểm danh tự động 70%, notification ngoài hệ thống không nằm trong 76 SP/người. Bài tập MVP dùng nội dung/link, không mặc định có hệ thống upload file.
