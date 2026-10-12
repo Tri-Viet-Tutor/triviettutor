@@ -11,9 +11,9 @@ export interface AuthUser {
 interface AuthState {
   /** JWT access token — null when logged out */
   token: string | null;
-  /** Decoded user info from the login response */
+  /** User info from the login / register response (AuthResponse.user) */
   user: AuthUser | null;
-  /** Store JWT and user info after successful login */
+  /** Store the JWT (AuthResponse.accessToken) and user info after login or registration */
   setAuth: (token: string, user: AuthUser) => void;
   /** Clear session (logout or 401) */
   logout: () => void;
