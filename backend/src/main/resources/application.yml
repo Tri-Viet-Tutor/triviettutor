@@ -42,3 +42,10 @@ app:
     mock-success: ${PAYMENT_MOCK_SUCCESS:true}
   jwt:
     expiration-ms: 86400000 # 24 hours
+  recaptcha:
+    site-key: ${RECAPTCHA_SITE_KEY:}
+    secret-key: ${RECAPTCHA_SECRET_KEY:}
+    bypass-key: ${RECAPTCHA_BYPASS_KEY:}
+    enabled: ${RECAPTCHA_ENABLED:false}
+    verify-url: ${RECAPTCHA_VERIFY_URL:https://www.google.com/recaptcha/api/siteverify}
+

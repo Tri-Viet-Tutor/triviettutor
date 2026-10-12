@@ -51,12 +51,16 @@ class AuthServiceImplTest {
     @Mock
     private EmailService emailService;
 
+    @Mock
+    private CaptchaService captchaService;
+
     @InjectMocks
     private AuthServiceImpl authService;
 
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(authService, "configuredFrontendUrl", "http://localhost:5173");
+        org.mockito.Mockito.lenient().when(captchaService.verifyToken(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
     }
 
     @Test

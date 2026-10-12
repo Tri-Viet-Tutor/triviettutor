@@ -57,20 +57,20 @@ graph TB
     API --> SW
 ```
 
-| Thành phần | Công nghệ | Phiên bản |
-|:---|:---|:---:|
-| Runtime | Java (OpenJDK / Temurin) | 21 |
-| Framework | Spring Boot | 3.3.4 |
-| Web | Spring Web (REST) | — |
-| Security | Spring Security + JJWT | 0.12.6 |
-| ORM | Spring Data JPA / Hibernate | — |
-| Validation | Spring Boot Starter Validation (Jakarta) | — |
-| Database | PostgreSQL | 16 |
-| Migration | Flyway | — |
-| API Docs | springdoc-openapi (Swagger UI) | 2.6.0 |
-| Utilities | Lombok | — |
-| Testing | Spring Boot Test, Spring Security Test, H2 | — |
-| Build | Maven (mvnw) | — |
+| Thành phần | Công nghệ                                  | Phiên bản |
+| :--------- | :----------------------------------------- | :-------: |
+| Runtime    | Java (OpenJDK / Temurin)                   |    21     |
+| Framework  | Spring Boot                                |   3.3.4   |
+| Web        | Spring Web (REST)                          |     —     |
+| Security   | Spring Security + JJWT                     |  0.12.6   |
+| ORM        | Spring Data JPA / Hibernate                |     —     |
+| Validation | Spring Boot Starter Validation (Jakarta)   |     —     |
+| Database   | PostgreSQL                                 |    16     |
+| Migration  | Flyway                                     |     —     |
+| API Docs   | springdoc-openapi (Swagger UI)             |   2.6.0   |
+| Utilities  | Lombok                                     |     —     |
+| Testing    | Spring Boot Test, Spring Security Test, H2 |     —     |
+| Build      | Maven (mvnw)                               |     —     |
 
 ---
 
@@ -90,18 +90,18 @@ graph LR
     E --> F
 ```
 
-| Package | Trách nhiệm | Quy tắc |
-|:---|:---|:---|
-| `controller` | Nhận HTTP request, validate input, gọi service, trả response | Không truy cập repository trực tiếp; giữ phân quyền ở endpoint và ownership ở service. |
-| `service` | Xử lý nghiệp vụ, transaction, sinh lịch và job vòng đời | Dùng `@Transactional` khi cần; hợp đồng tích hợp nghiệp vụ cũng nằm ở tầng này. |
-| `repository` | Truy vấn và khóa dữ liệu | Spring Data JPA, JPQL hoặc native SQL. |
-| `entity` | Ánh xạ bảng PostgreSQL | `@Entity`, `@Table`; enum được lưu bằng `@Enumerated(EnumType.STRING)`. |
-| `enums` | Các kiểu trạng thái, mẫu lịch và khung giờ dùng chung | `SessionStatus`, `LearningScheduleStatus`, `SchedulePattern`, `TimeSlot`; nằm ngang hàng với `entity`. |
-| `dto.auth`, `dto.schedule` | Request/response riêng cho từng thao tác | Dùng class hoặc record và Jakarta Validation; không gom toàn bộ API vào hai class Request/Response chung. |
-| `common.api` | Response envelope và phân trang | `ApiResponse<T>`, `PageResponse<T>`. |
-| `common.exception` | Mã lỗi và xử lý exception | `ErrorCode` là enum thuộc cơ chế xử lý lỗi nên giữ trong package này. |
-| `config` | Cấu hình kỹ thuật | Security, CORS, OpenAPI, Clock và scheduling. |
-| `security`, `security.jwt` | Principal hiện tại và xác thực JWT | `CurrentUser`, `JwtService`, `JwtAuthFilter`. |
+| Package                    | Trách nhiệm                                                  | Quy tắc                                                                                                   |
+| :------------------------- | :----------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------- |
+| `controller`               | Nhận HTTP request, validate input, gọi service, trả response | Không truy cập repository trực tiếp; giữ phân quyền ở endpoint và ownership ở service.                    |
+| `service`                  | Xử lý nghiệp vụ, transaction, sinh lịch và job vòng đời      | Dùng `@Transactional` khi cần; hợp đồng tích hợp nghiệp vụ cũng nằm ở tầng này.                           |
+| `repository`               | Truy vấn và khóa dữ liệu                                     | Spring Data JPA, JPQL hoặc native SQL.                                                                    |
+| `entity`                   | Ánh xạ bảng PostgreSQL                                       | `@Entity`, `@Table`; enum được lưu bằng `@Enumerated(EnumType.STRING)`.                                   |
+| `enums`                    | Các kiểu trạng thái, mẫu lịch và khung giờ dùng chung        | `SessionStatus`, `LearningScheduleStatus`, `SchedulePattern`, `TimeSlot`; nằm ngang hàng với `entity`.    |
+| `dto.auth`, `dto.schedule` | Request/response riêng cho từng thao tác                     | Dùng class hoặc record và Jakarta Validation; không gom toàn bộ API vào hai class Request/Response chung. |
+| `common.api`               | Response envelope và phân trang                              | `ApiResponse<T>`, `PageResponse<T>`.                                                                      |
+| `common.exception`         | Mã lỗi và xử lý exception                                    | `ErrorCode` là enum thuộc cơ chế xử lý lỗi nên giữ trong package này.                                     |
+| `config`                   | Cấu hình kỹ thuật                                            | Security, CORS, OpenAPI, Clock và scheduling.                                                             |
+| `security`, `security.jwt` | Principal hiện tại và xác thực JWT                           | `CurrentUser`, `JwtService`, `JwtAuthFilter`.                                                             |
 
 ---
 
@@ -329,13 +329,13 @@ erDiagram
 
 ### 4.2. Flyway Migration Files
 
-| Version | File | Nội dung |
-|:---:|:---|:---|
-| V1 | `V1__init_users.sql` | ✅ **Đã có** — `users`, `tutor_profiles`, `student_profiles`, seed admin |
-| V2 | `V2__courses_and_classes.sql` | `courses`, `class_groups` |
-| V3 | `V3__enrollments_payments.sql` | `enrollments`, `payments` |
-| V4 | `V4__sessions_assignments.sql` | `sessions`, `assignments`, `leave_requests` |
-| V5 | `V5__attendance_payroll.sql` | `attendance_records`, `payroll_periods`, `payroll_lines` |
+| Version | File                           | Nội dung                                                                 |
+| :-----: | :----------------------------- | :----------------------------------------------------------------------- |
+|   V1    | `V1__init_users.sql`           | ✅ **Đã có** — `users`, `tutor_profiles`, `student_profiles`, seed admin |
+|   V2    | `V2__courses_and_classes.sql`  | `courses`, `class_groups`                                                |
+|   V3    | `V3__enrollments_payments.sql` | `enrollments`, `payments`                                                |
+|   V4    | `V4__sessions_assignments.sql` | `sessions`, `assignments`, `leave_requests`                              |
+|   V5    | `V5__attendance_payroll.sql`   | `attendance_records`, `payroll_periods`, `payroll_lines`                 |
 
 ---
 
@@ -391,12 +391,12 @@ SecurityFilterChain:
 
 URL-based authorization chỉ là lớp đầu tiên. Service phải **kiểm tra ownership**:
 
-| Nghiệp vụ | Kiểm tra |
-|:---|:---|
-| Gia sư điểm danh | `session.actualTutorId == currentUser.id` |
-| Học viên xem enrollment | `enrollment.studentId == currentUser.id` |
-| Gia sư xem lương | `payrollLine.tutorId == currentUser.id` |
-| Gia sư xem lịch | Chỉ trả sessions thuộc assignment của gia sư đó |
+| Nghiệp vụ               | Kiểm tra                                        |
+| :---------------------- | :---------------------------------------------- |
+| Gia sư điểm danh        | `session.actualTutorId == currentUser.id`       |
+| Học viên xem enrollment | `enrollment.studentId == currentUser.id`        |
+| Gia sư xem lương        | `payrollLine.tutorId == currentUser.id`         |
+| Gia sư xem lịch         | Chỉ trả sessions thuộc assignment của gia sư đó |
 
 ---
 
@@ -407,6 +407,7 @@ URL-based authorization chỉ là lớp đầu tiên. Service phải **kiểm tr
 Mọi endpoint đều trả về `ApiResponse<T>`:
 
 **Success:**
+
 ```json
 {
   "success": true,
@@ -415,6 +416,7 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 ```
 
 **Error:**
+
 ```json
 {
   "success": false,
@@ -424,6 +426,7 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 ```
 
 **Validation Error (400):**
+
 ```json
 {
   "success": false,
@@ -438,27 +441,28 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 
 ### 6.2. Error Code Registry
 
-| Error Code | HTTP Status | Mô tả | BR |
-|:---|:---:|:---|:---:|
-| `INVALID_CREDENTIALS` | 401 | Sai email/password | — |
-| `EMAIL_ALREADY_EXISTS` | 409 | Email đã tồn tại | — |
-| `INVALID_RESET_TOKEN` | 400 | Token đặt lại mật khẩu không hợp lệ | — |
-| `RESET_TOKEN_EXPIRED` | 400 | Token đặt lại mật khẩu đã hết hạn | — |
-| `ACCESS_DENIED` | 403 | Không có quyền | BR-01.10 |
-| `USER_NOT_FOUND` | 404 | User không tồn tại | — |
-| `COURSE_NOT_FOUND` | 404 | Khóa học không tồn tại | — |
-| `CLASS_NOT_FOUND` | 404 | Lớp không tồn tại | — |
-| `SESSION_NOT_FOUND` | 404 | Buổi học không tồn tại | — |
-| `ENROLLMENT_NOT_FOUND` | 404 | Enrollment không tồn tại | — |
-| `SCHEDULE_CONFLICT` | 409 | Gia sư trùng lịch khi phân công | BR-03.30 |
-| `STUDENT_SCHEDULE_CONFLICT` | 409 | Học viên trùng lịch khi đăng ký | BR-03.31 |
-| `CLASS_FULL` | 409 | Lớp đầy sĩ số | BR-02.10 |
-| `CLASS_NOT_ENROLLING` | 422 | Lớp không nhận đăng ký | BR-04.01 |
-| `ENROLLMENT_ALREADY_EXISTS` | 409 | Đã đăng ký lớp này rồi | — |
-| `REFUND_NOT_ALLOWED` | 422 | Không được hoàn tiền giai đoạn này | BR-02.32 |
-| `ATTENDANCE_LOCKED` | 422 | Điểm danh đã khóa sau 24h | BR-04.33 |
-| `SESSION_NOT_IN_PROGRESS` | 422 | Buổi chưa/hết IN_SESSION | BR-04.10 |
-| `INVALID_STATUS_TRANSITION` | 422 | Chuyển trạng thái không hợp lệ | BR-04 |
+| Error Code                  | HTTP Status | Mô tả                               |    BR    |
+| :-------------------------- | :---------: | :---------------------------------- | :------: |
+| `INVALID_CREDENTIALS`       |     401     | Sai email/password                  |    —     |
+| `EMAIL_ALREADY_EXISTS`      |     409     | Email đã tồn tại                    |    —     |
+| `INVALID_RESET_TOKEN`       |     400     | Token đặt lại mật khẩu không hợp lệ |    —     |
+| `RESET_TOKEN_EXPIRED`       |     400     | Token đặt lại mật khẩu đã hết hạn   |    —     |
+| `INVALID_CAPTCHA`           |     400     | Xác thực Google reCAPTCHA không thành công | BR-SEC-01 |
+| `ACCESS_DENIED`             |     403     | Không có quyền                      | BR-01.10 |
+| `USER_NOT_FOUND`            |     404     | User không tồn tại                  |    —     |
+| `COURSE_NOT_FOUND`          |     404     | Khóa học không tồn tại              |    —     |
+| `CLASS_NOT_FOUND`           |     404     | Lớp không tồn tại                   |    —     |
+| `SESSION_NOT_FOUND`         |     404     | Buổi học không tồn tại              |    —     |
+| `ENROLLMENT_NOT_FOUND`      |     404     | Enrollment không tồn tại            |    —     |
+| `SCHEDULE_CONFLICT`         |     409     | Gia sư trùng lịch khi phân công     | BR-03.30 |
+| `STUDENT_SCHEDULE_CONFLICT` |     409     | Học viên trùng lịch khi đăng ký     | BR-03.31 |
+| `CLASS_FULL`                |     409     | Lớp đầy sĩ số                       | BR-02.10 |
+| `CLASS_NOT_ENROLLING`       |     422     | Lớp không nhận đăng ký              | BR-04.01 |
+| `ENROLLMENT_ALREADY_EXISTS` |     409     | Đã đăng ký lớp này rồi              |    —     |
+| `REFUND_NOT_ALLOWED`        |     422     | Không được hoàn tiền giai đoạn này  | BR-02.32 |
+| `ATTENDANCE_LOCKED`         |     422     | Điểm danh đã khóa sau 24h           | BR-04.33 |
+| `SESSION_NOT_IN_PROGRESS`   |     422     | Buổi chưa/hết IN_SESSION            | BR-04.10 |
+| `INVALID_STATUS_TRANSITION` |     422     | Chuyển trạng thái không hợp lệ      |  BR-04   |
 
 ---
 
@@ -472,14 +476,20 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 
 ### 7.1. Auth Module
 
+> **Bảo mật CAPTCHA (Google reCAPTCHA v2/v3):**  
+> Các endpoint công khai (`/login`, `/register`, `/forgot-password`) hỗ trợ trường `captchaToken`.  
+> Backend sẽ xác thực qua Google reCAPTCHA Verify API: `https://www.google.com/recaptcha/api/siteverify`.  
+> Trên môi trường phát triển (Dev/Test), có thể cấu hình `RECAPTCHA_ENABLED=false` hoặc sử dụng mã `RECAPTCHA_BYPASS_KEY` để bỏ qua kiểm tra tự động. Nếu token không hợp lệ khi CAPTCHA đang bật, API trả về lỗi `INVALID_CAPTCHA` (HTTP 400).
+
 #### `POST /auth/login` — Đăng nhập
 
-| | |
-|:---|:---|
+|          |        |
+| :------- | :----- |
 | **Role** | Public |
-| **BR** | — |
+| **BR**   | —      |
 
 **Request Body:**
+
 ```json
 {
   "email": "student@gmail.com",
@@ -488,6 +498,7 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 ```
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -504,6 +515,7 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 ```
 
 **Error (401):**
+
 ```json
 {
   "success": false,
@@ -516,12 +528,13 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 
 #### `POST /auth/register` — Đăng ký học viên
 
-| | |
-|:---|:---|
-| **Role** | Public |
-| **BR** | BR-01.04 — Tài khoản mới luôn là `ROLE_STUDENT` |
+|          |                                                 |
+| :------- | :---------------------------------------------- |
+| **Role** | Public                                          |
+| **BR**   | BR-01.04 — Tài khoản mới luôn là `ROLE_STUDENT` |
 
 **Request Body:**
+
 ```json
 {
   "email": "phuhuynha@gmail.com",
@@ -545,12 +558,13 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 
 #### `POST /auth/forgot-password` — Yêu cầu gửi link đặt lại mật khẩu
 
-| | |
-|:---|:---|
-| **Role** | Public |
-| **BR** | Người dùng gửi email để nhận đường dẫn đặt lại mật khẩu qua email |
+|          |                                                                   |
+| :------- | :---------------------------------------------------------------- |
+| **Role** | Public                                                            |
+| **BR**   | Người dùng gửi email để nhận đường dẫn đặt lại mật khẩu qua email |
 
 **Request Body:**
+
 ```json
 {
   "email": "student@gmail.com"
@@ -563,12 +577,14 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 | `email` | `@NotBlank`, `@Email` |
 
 **Business Logic:**
+
 1. Tìm tài khoản người dùng theo `email`.
 2. Nếu tồn tại, sinh `reset_token` an toàn ngẫu nhiên (UUID hoặc cryptographically secure token), lưu vào bảng `password_reset_tokens` cùng thời hạn hiệu lực (mặc định 15 phút, `used = false`).
 3. Gửi email chứa liên kết dạng nút bấm: `${app.frontend-url}/reset-password?token=${token}`.
 4. Nhằm bảo mật (chống email enumeration), phản hồi luôn trả về HTTP 200 thông báo thành công dù email có tồn tại hay không.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -580,12 +596,13 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 
 #### `POST /auth/reset-password` — Đặt lại mật khẩu bằng token liên kết
 
-| | |
-|:---|:---|
-| **Role** | Public |
-| **BR** | Đặt lại mật khẩu mới thông qua token hợp lệ nhận từ liên kết email |
+|          |                                                                    |
+| :------- | :----------------------------------------------------------------- |
+| **Role** | Public                                                             |
+| **BR**   | Đặt lại mật khẩu mới thông qua token hợp lệ nhận từ liên kết email |
 
 **Request Body:**
+
 ```json
 {
   "token": "d7b0f6c2-4a5e-4c8a-9a99-0e78f4a13291",
@@ -600,6 +617,7 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 | `newPassword` | `@NotBlank`, `@Size(min=6, max=128)` |
 
 **Business Logic:**
+
 1. Tra cứu `token` trong bảng `password_reset_tokens`.
 2. Kiểm tra token: nếu không tồn tại hoặc `used = true`, trả lỗi `400 INVALID_RESET_TOKEN`.
 3. Kiểm tra thời hạn: nếu `expiresAt.isBefore(now)`, trả lỗi `400 RESET_TOKEN_EXPIRED`.
@@ -607,6 +625,7 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 5. Đánh dấu token `used = true` và lưu lại.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -622,8 +641,8 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 
 #### `GET /me` — Lấy thông tin user hiện tại
 
-| | |
-|:---|:---|
+|          |                          |
+| :------- | :----------------------- |
 | **Role** | Authenticated (any role) |
 
 Đã triển khai tại `GET /api/v1/me`. Gửi header `Authorization: Bearer <accessToken>`
@@ -639,6 +658,7 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:8080/api/v1/me`.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -663,8 +683,8 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 Đã triển khai tại `GET /api/v1/admin/users`. Chỉ JWT của `ROLE_ADMIN` được phép gọi. `search` tìm trong email và fullName, không phân biệt chữ hoa/thường; chuỗi rỗng tương đương không lọc. `role` phải là một trong ba vai trò ở bảng dưới. Kết quả sắp xếp theo `id` tăng dần để phân trang ổn định. `page` phải ≥ 0, `size` từ 1 đến 100; tham số không hợp lệ trả HTTP 400. Response chỉ chứa các trường công khai như ví dụ, không chứa mật khẩu hoặc profile.
 
-| | |
-|:---|:---|
+|          |              |
+| :------- | :----------- |
 | **Role** | `ROLE_ADMIN` |
 
 **Query Params:**
@@ -676,6 +696,7 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 | `search` | string | — | Tìm theo email hoặc fullName |
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -703,12 +724,13 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 Đã triển khai tại `POST /api/v1/admin/users/tutors`. Chỉ Admin được gọi. Request yêu cầu email hợp lệ, mật khẩu 6–128 ký tự, fullName 2–100 ký tự, baseSalary và sessionRate là số nguyên không âm tối đa 15 chữ số; bio tùy chọn. Email được chuẩn hóa về chữ thường; vai trò luôn là `ROLE_TUTOR` do server gán. User và tutor_profiles được tạo trong cùng transaction; mật khẩu được mã hóa và không xuất hiện trong response. Email trùng (không phân biệt chữ hoa/thường) trả HTTP 409 `EMAIL_ALREADY_EXISTS`; body không hợp lệ trả HTTP 400. Thành công trả HTTP 201 với thông tin tài khoản và profile như `GET /me`.
 
-| | |
-|:---|:---|
-| **Role** | `ROLE_ADMIN` |
-| **BR** | BR-01.01 — Gia sư thuộc Trung tâm, do Admin tạo |
+|          |                                                 |
+| :------- | :---------------------------------------------- |
+| **Role** | `ROLE_ADMIN`                                    |
+| **BR**   | BR-01.01 — Gia sư thuộc Trung tâm, do Admin tạo |
 
 **Request Body:**
+
 ```json
 {
   "email": "tutor.an@viettritutor.local",
@@ -728,11 +750,12 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 Đã triển khai tại `PUT /api/v1/admin/users/{userId}/tutor-profile`. Chỉ Admin được gọi. `baseSalary` và `sessionRate` bắt buộc, là số nguyên không âm tối đa 15 chữ số; `bio` tùy chọn (không gửi sẽ giữ nguyên, chuỗi rỗng sẽ xóa). Chỉ cập nhật tài khoản có `ROLE_TUTOR`; nếu chưa có bản ghi tutor_profiles thì tạo trong cùng transaction. User không tồn tại trả 404 `USER_NOT_FOUND`, user không phải Tutor trả 422 `USER_NOT_TUTOR`, body không hợp lệ hoặc chứa trường ngoài contract trả 400. Thành công trả 200 với user và TutorProfile, không chứa mật khẩu.
 
-| | |
-|:---|:---|
+|          |              |
+| :------- | :----------- |
 | **Role** | `ROLE_ADMIN` |
 
 **Request Body:**
+
 ```json
 {
   "baseSalary": 6000000,
@@ -745,13 +768,14 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `PUT /me` — User cập nhật thông tin cá nhân
 
-| | |
-|:---|:---|
+|          |               |
+| :------- | :------------ |
 | **Role** | Authenticated |
 
 Đã triển khai tại `PUT /api/v1/me`, yêu cầu JWT. `fullName` bắt buộc (không rỗng, tối đa 100 ký tự). Student được gửi thêm `phone` (tối đa 20 ký tự) và `address`; Tutor được gửi thêm `bio`; Admin chỉ được sửa `fullName`. Trường tùy chọn không gửi sẽ giữ giá trị cũ; gửi chuỗi rỗng để xóa nội dung. Nếu profile Student/Tutor chưa có, API tạo bản ghi profile. Không nhận `email`, `role`, `password`, `baseSalary`, `sessionRate` hoặc trường không hỗ trợ. Trường ngoài vai trò, body sai hoặc thiếu `fullName` trả HTTP 400. Thành công trả HTTP 200 với cùng dạng `data` của `GET /me`.
 
 **Request Body:**
+
 ```json
 {
   "fullName": "Trần Thị B (updated)",
@@ -766,12 +790,13 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `POST /admin/courses` — Tạo khóa học
 
-| | |
-|:---|:---|
-| **Role** | `ROLE_ADMIN` |
-| **BR** | BR-02.03 — Admin cấu hình giá gốc 1-1 |
+|          |                                       |
+| :------- | :------------------------------------ |
+| **Role** | `ROLE_ADMIN`                          |
+| **BR**   | BR-02.03 — Admin cấu hình giá gốc 1-1 |
 
 **Request Body:**
+
 ```json
 {
   "name": "Toán lớp 10 — Chương trình nâng cao",
@@ -785,6 +810,7 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 ```
 
 **Response (201):**
+
 ```json
 {
   "success": true,
@@ -807,8 +833,8 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `GET /admin/courses` — Danh sách khóa học (Admin)
 
-| | |
-|:---|:---|
+|          |              |
+| :------- | :----------- |
 | **Role** | `ROLE_ADMIN` |
 
 **Query Params:** `page`, `size`, `subject`, `gradeLevel`, `active`
@@ -819,28 +845,29 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `PUT /admin/courses/{courseId}` — Sửa khóa học
 
-| | |
-|:---|:---|
+|          |              |
+| :------- | :----------- |
 | **Role** | `ROLE_ADMIN` |
 
 ---
 
 #### `PATCH /admin/courses/{courseId}/toggle` — Ẩn/hiện khóa học
 
-| | |
-|:---|:---|
+|          |              |
+| :------- | :----------- |
 | **Role** | `ROLE_ADMIN` |
 
 ---
 
 #### `POST /admin/classes` — Tạo lớp học (ClassGroup)
 
-| | |
-|:---|:---|
-| **Role** | `ROLE_ADMIN` |
-| **BR** | BR-03.01, BR-03.03, BR-04.01 |
+|          |                              |
+| :------- | :--------------------------- |
+| **Role** | `ROLE_ADMIN`                 |
+| **BR**   | BR-03.01, BR-03.03, BR-04.01 |
 
 **Request Body:**
+
 ```json
 {
   "courseId": 1,
@@ -855,6 +882,7 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 ```
 
 **Xử lý bên trong:**
+
 1. Validate `courseId` tồn tại
 2. Set `maxStudents` = 1 nếu `ONE_ON_ONE`, 8 nếu `GROUP`
 3. Set `status` = `DRAFT`
@@ -862,6 +890,7 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 5. **Khi chuyển PUBLISHED → ENROLLING**: gọi `SessionGenerator` sinh danh sách `Session` (BR-03.03)
 
 **Response (201):**
+
 ```json
 {
   "success": true,
@@ -889,12 +918,13 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `PATCH /admin/classes/{classId}/status` — Chuyển trạng thái lớp
 
-| | |
-|:---|:---|
-| **Role** | `ROLE_ADMIN` |
-| **BR** | BR-04 — Vòng đời lớp |
+|          |                      |
+| :------- | :------------------- |
+| **Role** | `ROLE_ADMIN`         |
+| **BR**   | BR-04 — Vòng đời lớp |
 
 **Request Body:**
+
 ```json
 {
   "newStatus": "ENROLLING"
@@ -903,18 +933,18 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 **Bảng chuyển trạng thái hợp lệ:**
 
-| From | To | Điều kiện |
-|:---|:---|:---|
-| `DRAFT` | `PUBLISHED` | — |
-| `PUBLISHED` | `ENROLLING` | Sessions đã được sinh |
-| `ENROLLING` | `ASSIGNED` | Đủ sĩ số + đã phân công gia sư |
-| `ENROLLING` | `FAILED_TO_OPEN` | Hết deadline, sĩ số < 2 (GROUP) |
-| `ENROLLING` | `CANCELLED` | Sĩ số = 0 |
-| `FAILED_TO_OPEN` | `ENROLLING` | Admin dời khai giảng |
-| `FAILED_TO_OPEN` | `CANCELLED` | Admin hoàn 100% |
-| `ASSIGNED` | `IN_PROGRESS` | Đến ngày khai giảng |
-| `ASSIGNED` | `CANCELLED` | Admin hủy, hoàn 100% |
-| `IN_PROGRESS` | `COMPLETED` | Hết buổi |
+| From             | To               | Điều kiện                       |
+| :--------------- | :--------------- | :------------------------------ |
+| `DRAFT`          | `PUBLISHED`      | —                               |
+| `PUBLISHED`      | `ENROLLING`      | Sessions đã được sinh           |
+| `ENROLLING`      | `ASSIGNED`       | Đủ sĩ số + đã phân công gia sư  |
+| `ENROLLING`      | `FAILED_TO_OPEN` | Hết deadline, sĩ số < 2 (GROUP) |
+| `ENROLLING`      | `CANCELLED`      | Sĩ số = 0                       |
+| `FAILED_TO_OPEN` | `ENROLLING`      | Admin dời khai giảng            |
+| `FAILED_TO_OPEN` | `CANCELLED`      | Admin hoàn 100%                 |
+| `ASSIGNED`       | `IN_PROGRESS`    | Đến ngày khai giảng             |
+| `ASSIGNED`       | `CANCELLED`      | Admin hủy, hoàn 100%            |
+| `IN_PROGRESS`    | `COMPLETED`      | Hết buổi                        |
 
 **Error (422):** `INVALID_STATUS_TRANSITION`
 
@@ -922,8 +952,8 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `GET /admin/classes` — Danh sách lớp (Admin)
 
-| | |
-|:---|:---|
+|          |              |
+| :------- | :----------- |
 | **Role** | `ROLE_ADMIN` |
 
 **Query Params:** `page`, `size`, `courseId`, `status`, `classType`, `schedulePattern`
@@ -932,14 +962,15 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `GET /catalog/classes` — Danh sách lớp đang mở (Catalog)
 
-| | |
-|:---|:---|
-| **Role** | Authenticated (all roles) |
-| **BR** | BR-01.12, BR-03.10 — Chỉ hiển thị lớp `ENROLLING` còn chỗ |
+|          |                                                           |
+| :------- | :-------------------------------------------------------- |
+| **Role** | Authenticated (all roles)                                 |
+| **BR**   | BR-01.12, BR-03.10 — Chỉ hiển thị lớp `ENROLLING` còn chỗ |
 
 **Query Params:** `page`, `size`, `subject`, `gradeLevel`, `deliveryMode`, `schedulePattern`, `timeSlot`
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -980,8 +1011,8 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `GET /catalog/classes/{classId}` — Chi tiết lớp + lịch buổi học
 
-| | |
-|:---|:---|
+|          |               |
+| :------- | :------------ |
 | **Role** | Authenticated |
 
 **Response:** Class detail + danh sách sessions (schedule preview)
@@ -992,12 +1023,13 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `POST /enrollments` — Đăng ký lớp (+ tạo thanh toán)
 
-| | |
-|:---|:---|
-| **Role** | `ROLE_STUDENT` |
-| **BR** | BR-02.01, BR-02.02, BR-02.04, BR-02.10, BR-02.11, BR-03.10, BR-03.31 |
+|          |                                                                      |
+| :------- | :------------------------------------------------------------------- |
+| **Role** | `ROLE_STUDENT`                                                       |
+| **BR**   | BR-02.01, BR-02.02, BR-02.04, BR-02.10, BR-02.11, BR-03.10, BR-03.31 |
 
 **Request Body:**
+
 ```json
 {
   "classGroupId": 1
@@ -1005,6 +1037,7 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 ```
 
 **Service Logic (EnrollmentService):**
+
 1. Check lớp đang `ENROLLING` → else `CLASS_NOT_ENROLLING`
 2. Check chưa enrollment lớp này → else `ENROLLMENT_ALREADY_EXISTS`
 3. Check còn chỗ trống → else `CLASS_FULL`
@@ -1016,6 +1049,7 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 9. **ONE_ON_ONE**: auto chuyển sẵn sàng assign
 
 **Response (201):**
+
 ```json
 {
   "success": true,
@@ -1039,12 +1073,13 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `POST /enrollments/{enrollmentId}/pay` — Xác nhận thanh toán (Mock)
 
-| | |
-|:---|:---|
-| **Role** | `ROLE_STUDENT` |
-| **BR** | BR-02.02 — Chỉ khi payment completed mới có enrollment hợp lệ |
+|          |                                                               |
+| :------- | :------------------------------------------------------------ |
+| **Role** | `ROLE_STUDENT`                                                |
+| **BR**   | BR-02.02 — Chỉ khi payment completed mới có enrollment hợp lệ |
 
 **Request Body:**
+
 ```json
 {
   "method": "BANK_TRANSFER",
@@ -1053,6 +1088,7 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 ```
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -1068,21 +1104,22 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `GET /enrollments/my` — Danh sách lớp đã đăng ký (Student)
 
-| | |
-|:---|:---|
-| **Role** | `ROLE_STUDENT` |
-| **BR** | BR-01.12 — Chỉ xem enrollment của mình |
+|          |                                        |
+| :------- | :------------------------------------- |
+| **Role** | `ROLE_STUDENT`                         |
+| **BR**   | BR-01.12 — Chỉ xem enrollment của mình |
 
 ---
 
 #### `DELETE /enrollments/{enrollmentId}` — Hủy đăng ký
 
-| | |
-|:---|:---|
-| **Role** | `ROLE_STUDENT` |
-| **BR** | BR-02.31, BR-02.32 |
+|          |                    |
+| :------- | :----------------- |
+| **Role** | `ROLE_STUDENT`     |
+| **BR**   | BR-02.31, BR-02.32 |
 
 **Service Logic:**
+
 1. Check ownership
 2. Check class status:
    - Lớp chưa `ASSIGNED` & trước `enrollmentDeadline` → hoàn 100% (BR-02.31)
@@ -1094,12 +1131,13 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `POST /admin/enrollments/{enrollmentId}/refund` — Admin duyệt hoàn tiền
 
-| | |
-|:---|:---|
+|          |              |
+| :------- | :----------- |
 | **Role** | `ROLE_ADMIN` |
-| **BR** | BR-02.30 |
+| **BR**   | BR-02.30     |
 
 **Request Body:**
+
 ```json
 {
   "refundPercentage": 100,
@@ -1113,8 +1151,8 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `GET /me/sessions` — Lịch buổi học của tôi
 
-| | |
-|:---|:---|
+|          |                              |
+| :------- | :--------------------------- |
 | **Role** | `ROLE_TUTOR`, `ROLE_STUDENT` |
 
 **Query Params:**
@@ -1126,6 +1164,7 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 | `classGroupId` | long | Filter theo lớp |
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -1152,8 +1191,8 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `GET /admin/sessions` — Admin xem tất cả buổi học
 
-| | |
-|:---|:---|
+|          |              |
+| :------- | :----------- |
 | **Role** | `ROLE_ADMIN` |
 
 **Query Params:** `from`, `to`, `classGroupId`, `tutorId`, `status`, `page`, `size`
@@ -1162,12 +1201,13 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `POST /sessions/{sessionId}/leave` — Xin nghỉ buổi
 
-| | |
-|:---|:---|
+|          |                              |
+| :------- | :--------------------------- |
 | **Role** | `ROLE_TUTOR`, `ROLE_STUDENT` |
-| **BR** | BR-03.40, BR-03.41, BR-03.42 |
+| **BR**   | BR-03.40, BR-03.41, BR-03.42 |
 
 **Request Body:**
+
 ```json
 {
   "reason": "Bị ốm, xin nghỉ buổi ngày 10/10"
@@ -1175,11 +1215,13 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 ```
 
 **Service Logic:**
+
 1. Check ownership (gia sư assigned, hoặc học viên enrolled)
 2. Tính thời gian: ≥ 24h trước → session `PENDING_RESCHEDULE`; < 24h → `ABSENCE_LATE`
 3. Tạo `LeaveRequest` (status=`PENDING`)
 
 **Response (201):**
+
 ```json
 {
   "success": true,
@@ -1197,8 +1239,8 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `GET /admin/leave-requests` — Admin xem danh sách xin nghỉ
 
-| | |
-|:---|:---|
+|          |              |
+| :------- | :----------- |
 | **Role** | `ROLE_ADMIN` |
 
 **Query Params:** `status` (PENDING / APPROVED / REJECTED), `page`, `size`
@@ -1207,12 +1249,13 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `POST /admin/sessions/{sessionId}/makeup` — Xếp buổi bù
 
-| | |
-|:---|:---|
-| **Role** | `ROLE_ADMIN` |
-| **BR** | BR-03.40 (5.2, 5.3) — Buổi bù |
+|          |                               |
+| :------- | :---------------------------- |
+| **Role** | `ROLE_ADMIN`                  |
+| **BR**   | BR-03.40 (5.2, 5.3) — Buổi bù |
 
 **Request Body:**
+
 ```json
 {
   "makeupDate": "2026-10-15",
@@ -1222,6 +1265,7 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 ```
 
 **Service Logic:**
+
 1. Check **tất cả** học viên active + gia sư → không trùng khung giờ mới (conflict check qua `TimeOverlap`)
 2. Tạo session mới với status `MAKEUP`, link tới session gốc
 3. Session gốc → `CANCELLED`
@@ -1231,12 +1275,13 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `POST /admin/sessions/{sessionId}/substitute` — Gán gia sư dạy thay
 
-| | |
-|:---|:---|
-| **Role** | `ROLE_ADMIN` |
-| **BR** | BR-03.40 (5.2), BR-02.43, BR-02.44 |
+|          |                                    |
+| :------- | :--------------------------------- |
+| **Role** | `ROLE_ADMIN`                       |
+| **BR**   | BR-03.40 (5.2), BR-02.43, BR-02.44 |
 
 **Request Body:**
+
 ```json
 {
   "substituteTutorId": 7
@@ -1244,6 +1289,7 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 ```
 
 **Service Logic:**
+
 1. Chặn trùng lịch gia sư thay (ConflictValidationService)
 2. Gán `session.actualTutorId = substituteTutorId` (buổi giữ nguyên thời gian)
 3. Resolve LeaveRequest → `APPROVED`, resolution = `SUBSTITUTE`
@@ -1254,12 +1300,13 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `POST /admin/classes/{classId}/assign` — Phân công gia sư vào lớp
 
-| | |
-|:---|:---|
-| **Role** | `ROLE_ADMIN` |
-| **BR** | BR-03.20, BR-03.21, BR-03.30 |
+|          |                              |
+| :------- | :--------------------------- |
+| **Role** | `ROLE_ADMIN`                 |
+| **BR**   | BR-03.20, BR-03.21, BR-03.30 |
 
 **Request Body:**
+
 ```json
 {
   "tutorId": 5
@@ -1267,18 +1314,20 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 ```
 
 **Service Logic (ConflictValidationService):**
+
 1. Lấy mọi sessions của lớp (status != `CANCELLED`)
 2. Lấy mọi sessions đã assigned của gia sư (từ tất cả lớp khác)
 3. Với mỗi cặp session mới ↔ session cũ: gọi `TimeOverlap.isOverlapping()` (giao nhau ≥ 1 phút)
 4. Nếu trùng → `SCHEDULE_CONFLICT` kèm thông tin chi tiết:
    ```
-   Gia sư Lê Văn Minh đã có ca lớp MATH-G10-MWF-M-001 
-   từ 08:00 đến 10:00 vào Thứ 2, 07/10/2026. 
+   Gia sư Lê Văn Minh đã có ca lớp MATH-G10-MWF-M-001
+   từ 08:00 đến 10:00 vào Thứ 2, 07/10/2026.
    Vui lòng chọn gia sư khác.
    ```
 5. Nếu không trùng → tạo `Assignment`, gán `actualTutorId` cho mọi session, chuyển lớp → `ASSIGNED`
 
 **Response (201):**
+
 ```json
 {
   "success": true,
@@ -1297,12 +1346,13 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `PUT /admin/classes/{classId}/reassign` — Đổi gia sư chính
 
-| | |
-|:---|:---|
+|          |              |
+| :------- | :----------- |
 | **Role** | `ROLE_ADMIN` |
-| **BR** | BR-03.20 |
+| **BR**   | BR-03.20     |
 
 **Request Body:**
+
 ```json
 {
   "newTutorId": 8
@@ -1313,8 +1363,8 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `GET /admin/classes/{classId}/available-tutors` — Gợi ý gia sư khả dụng
 
-| | |
-|:---|:---|
+|          |              |
+| :------- | :----------- |
 | **Role** | `ROLE_ADMIN` |
 
 **Response:** Danh sách gia sư KHÔNG trùng lịch với sessions của lớp, kèm lịch rảnh tham khảo.
@@ -1323,12 +1373,13 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `PUT /tutor/availability` — Gia sư cập nhật lịch rảnh
 
-| | |
-|:---|:---|
-| **Role** | `ROLE_TUTOR` |
-| **BR** | BR-03.21 — Lịch rảnh chỉ là gợi ý cho Admin |
+|          |                                             |
+| :------- | :------------------------------------------ |
+| **Role** | `ROLE_TUTOR`                                |
+| **BR**   | BR-03.21 — Lịch rảnh chỉ là gợi ý cho Admin |
 
 **Request Body:**
+
 ```json
 {
   "availability": [
@@ -1344,8 +1395,8 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `GET /tutor/availability` — Xem lịch rảnh hiện tại
 
-| | |
-|:---|:---|
+|          |              |
+| :------- | :----------- |
 | **Role** | `ROLE_TUTOR` |
 
 ---
@@ -1354,12 +1405,13 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `PUT /sessions/{sessionId}/attendance` — Điểm danh buổi học
 
-| | |
-|:---|:---|
+|          |                                           |
+| :------- | :---------------------------------------- |
 | **Role** | `ROLE_TUTOR` (lớp được gán), `ROLE_ADMIN` |
-| **BR** | BR-04.10, BR-04.30 → BR-04.34 |
+| **BR**   | BR-04.10, BR-04.30 → BR-04.34             |
 
 **Request Body:**
+
 ```json
 {
   "records": [
@@ -1371,6 +1423,7 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 ```
 
 **Service Logic:**
+
 1. Check session status = `IN_SESSION` hoặc vừa kết thúc (chưa quá 24h) → else `SESSION_NOT_IN_PROGRESS`
 2. Check ownership: gia sư chỉ điểm danh lớp mình
 3. Check chưa bị locked (24h sau giờ kết thúc) → else `ATTENDANCE_LOCKED`
@@ -1378,6 +1431,7 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 5. Sau khi điểm danh xong → chuyển session → `COMPLETED`
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -1393,11 +1447,12 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `GET /sessions/{sessionId}/attendance` — Xem điểm danh buổi
 
-| | |
-|:---|:---|
+|          |                                       |
+| :------- | :------------------------------------ |
 | **Role** | `ROLE_TUTOR` (lớp mình), `ROLE_ADMIN` |
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -1406,8 +1461,18 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
     "sessionDate": "2026-10-07",
     "locked": false,
     "records": [
-      { "studentId": 2, "studentName": "Nguyen Van A", "status": "PRESENT", "note": null },
-      { "studentId": 3, "studentName": "Tran Thi C", "status": "LATE", "note": "Vào lớp lúc 08:20" }
+      {
+        "studentId": 2,
+        "studentName": "Nguyen Van A",
+        "status": "PRESENT",
+        "note": null
+      },
+      {
+        "studentId": 3,
+        "studentName": "Tran Thi C",
+        "status": "LATE",
+        "note": "Vào lớp lúc 08:20"
+      }
     ]
   }
 }
@@ -1417,19 +1482,19 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `PATCH /admin/sessions/{sessionId}/attendance/lock` — Admin khóa/mở khóa điểm danh
 
-| | |
-|:---|:---|
+|          |              |
+| :------- | :----------- |
 | **Role** | `ROLE_ADMIN` |
-| **BR** | BR-04.33 |
+| **BR**   | BR-04.33     |
 
 ---
 
 #### `PATCH /admin/sessions/{sessionId}/attendance/{recordId}` — Admin sửa điểm danh (sau khi locked)
 
-| | |
-|:---|:---|
-| **Role** | `ROLE_ADMIN` |
-| **BR** | BR-04.33 — Sau locked chỉ Admin sửa |
+|          |                                     |
+| :------- | :---------------------------------- |
+| **Role** | `ROLE_ADMIN`                        |
+| **BR**   | BR-04.33 — Sau locked chỉ Admin sửa |
 
 ---
 
@@ -1437,12 +1502,13 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `GET /admin/payroll/{year}/{month}` — Xem / Tính lương tháng (preview)
 
-| | |
-|:---|:---|
-| **Role** | `ROLE_ADMIN` |
-| **BR** | BR-02.40 → BR-02.46 |
+|          |                     |
+| :------- | :------------------ |
+| **Role** | `ROLE_ADMIN`        |
+| **BR**   | BR-02.40 → BR-02.46 |
 
 **Service Logic (PayrollService):**
+
 1. Lấy tất cả sessions `COMPLETED` trong tháng/năm
 2. Với mỗi session: xác định `actualTutorId` (có thể là dạy thay)
 3. Đếm `validSessions` cho từng gia sư
@@ -1451,6 +1517,7 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
    - `totalPay = baseSalary + sessionPay`
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -1489,12 +1556,13 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `POST /admin/payroll/{year}/{month}/finalize` — Chốt bảng lương
 
-| | |
-|:---|:---|
+|          |              |
+| :------- | :----------- |
 | **Role** | `ROLE_ADMIN` |
-| **BR** | BR-02.46 |
+| **BR**   | BR-02.46     |
 
 **Service Logic:**
+
 1. Check period chưa finalized
 2. Lock period → `FINALIZED`
 3. Ghi `finalizedAt`, `finalizedBy`
@@ -1503,14 +1571,15 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 
 #### `GET /tutor/payroll` — Gia sư xem lương của mình
 
-| | |
-|:---|:---|
-| **Role** | `ROLE_TUTOR` |
-| **BR** | BR-01.11, BR-02.46 — Chỉ xem lương mình |
+|          |                                         |
+| :------- | :-------------------------------------- |
+| **Role** | `ROLE_TUTOR`                            |
+| **BR**   | BR-01.11, BR-02.46 — Chỉ xem lương mình |
 
 **Query Params:** `year`, `month`
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -1522,8 +1591,16 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
     "sessionRate": 200000,
     "validSessions": 24,
     "sessionBreakdown": [
-      { "classCode": "MATH-G10-MWF-M-001", "sessions": 12, "isSubstitute": false },
-      { "classCode": "ENG-G11-TTS-A-002", "sessions": 12, "isSubstitute": false }
+      {
+        "classCode": "MATH-G10-MWF-M-001",
+        "sessions": 12,
+        "isSubstitute": false
+      },
+      {
+        "classCode": "ENG-G11-TTS-A-002",
+        "sessions": 12,
+        "isSubstitute": false
+      }
     ],
     "sessionPay": 4800000,
     "totalPay": 9800000
@@ -1629,9 +1706,10 @@ flowchart TD
 
 ---
 
-> **Tài liệu tham chiếu:**  
-> - [01-User-Roles-and-Permissions.md](../01-Business-Logic/01-User-Roles-and-Permissions.md) — BR-01  
-> - [02-Pricing-and-Subscription-Rules.md](../01-Business-Logic/02-Pricing-and-Subscription-Rules.md) — BR-02  
-> - [03-Scheduling-and-Conflict-Validation.md](../01-Business-Logic/03-Scheduling-and-Conflict-Validation.md) — BR-03  
-> - [04-Matching-and-Class-Management.md](../01-Business-Logic/04-Matching-and-Class-Management.md) — BR-04  
+> **Tài liệu tham chiếu:**
+>
+> - [01-User-Roles-and-Permissions.md](../01-Business-Logic/01-User-Roles-and-Permissions.md) — BR-01
+> - [02-Pricing-and-Subscription-Rules.md](../01-Business-Logic/02-Pricing-and-Subscription-Rules.md) — BR-02
+> - [03-Scheduling-and-Conflict-Validation.md](../01-Business-Logic/03-Scheduling-and-Conflict-Validation.md) — BR-03
+> - [04-Matching-and-Class-Management.md](../01-Business-Logic/04-Matching-and-Class-Management.md) — BR-04
 > - [01-Project-Structure-React-SpringBoot.md](01-Project-Structure-React-SpringBoot.md) — Cấu trúc tổng thể

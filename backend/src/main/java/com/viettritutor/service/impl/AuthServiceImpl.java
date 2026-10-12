@@ -55,6 +55,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
+    private final com.viettritutor.service.CaptchaService captchaService;
 
     @Value("${app.frontend-url}")
     private String configuredFrontendUrl;
@@ -64,6 +65,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(readOnly = true)
     public AuthResponse login(AuthRequest request) {
+        validateCaptcha(request.getCaptchaToken());
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
@@ -84,6 +86,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
+        validateCaptcha(request.getCaptchaToken());
         if (userRepository.existsByEmail(request.getEmail())) {
             User existing = userRepository.findByEmail(request.getEmail()).orElse(null);
             if (existing != null && !existing.isEnabled()) {
@@ -201,6 +204,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
+        validateCaptcha(request.getCaptchaToken());
         userRepository.findByEmail(request.getEmail().trim()).ifPresent(user -> {
             passwordResetTokenRepository.deleteAllByUserId(user.getId());
 
@@ -273,5 +277,26 @@ public class AuthServiceImpl implements AuthService {
 
         resetToken.setUsed(true);
         passwordResetTokenRepository.save(resetToken);
+    }
+
+    private void validateCaptcha(String token) {
+        String clientIp = null;
+        try {
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attributes != null) {
+                HttpServletRequest request = attributes.getRequest();
+                clientIp = request.getHeader("X-Forwarded-For");
+                if (clientIp == null || clientIp.isBlank()) {
+                    clientIp = request.getRemoteAddr();
+                } else if (clientIp.contains(",")) {
+                    clientIp = clientIp.split(",")[0].trim();
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        if (!captchaService.verifyToken(token, clientIp)) {
+            throw new BusinessException(ErrorCode.INVALID_CAPTCHA);
+        }
     }
 }

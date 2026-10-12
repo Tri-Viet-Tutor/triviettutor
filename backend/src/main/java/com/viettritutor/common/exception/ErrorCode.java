@@ -27,6 +27,7 @@ public enum ErrorCode {
     INVALID_RESET_TOKEN       (HttpStatus.BAD_REQUEST,    "Invalid password reset token"),
     RESET_TOKEN_EXPIRED       (HttpStatus.BAD_REQUEST,    "Password reset token has expired"),
     EMAIL_SEND_FAILED         (HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send verification email. Please try again later"),
+    INVALID_CAPTCHA           (HttpStatus.BAD_REQUEST,    "Google reCAPTCHA verification failed"),
 
     // ── Authorization ─────────────────────────────────────────────────────────
     ACCESS_DENIED             (HttpStatus.FORBIDDEN,      "You do not have permission to perform this action"),
