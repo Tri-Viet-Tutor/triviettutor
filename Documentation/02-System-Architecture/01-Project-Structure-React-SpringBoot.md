@@ -173,18 +173,40 @@ backend/
 │   │   ├── LearningScheduleRepository.java
 │   │   └── SessionGenerationLockRepository.java
 │   └── service/
+│       ├── AdminCourseService.java          # Service interface
+│       ├── AdminUserService.java
+│       ├── AttendanceService.java
 │       ├── AuthService.java
-│       ├── UserDetailsServiceImpl.java
-│       ├── SessionQueryService.java
+│       ├── ConflictValidationService.java
+│       ├── EmailService.java
 │       ├── LearningScheduleService.java
-│       ├── SessionGenerator.java
-│       ├── DefaultSessionGenerator.java
-│       ├── SessionGenerationSpec.java
-│       ├── SessionDateCalculator.java
+│       ├── LeaveRequestService.java
 │       ├── SessionLifecycleService.java
-│       ├── SessionLifecycleJob.java
-│       ├── ClassLifecycle.java
-│       └── ClassTeachingCompletedEvent.java
+│       ├── SessionQueryService.java
+│       ├── SessionReschedulingService.java
+│       ├── TutorAssignmentService.java
+│       ├── TutorAvailabilityService.java
+│       ├── UserProfileService.java
+│       ├── SessionGenerator.java
+│       ├── TeachingQuery.java
+│       └── impl/                            # Triển khai hiện thực (@Service)
+│           ├── AdminCourseServiceImpl.java
+│           ├── AdminUserServiceImpl.java
+│           ├── AttendanceServiceImpl.java
+│           ├── AuthServiceImpl.java
+│           ├── ConflictValidationServiceImpl.java
+│           ├── DefaultSessionGenerator.java
+│           ├── DefaultTeachingQuery.java
+│           ├── EmailServiceImpl.java
+│           ├── LearningScheduleServiceImpl.java
+│           ├── LeaveRequestServiceImpl.java
+│           ├── SessionLifecycleServiceImpl.java
+│           ├── SessionQueryServiceImpl.java
+│           ├── SessionReschedulingServiceImpl.java
+│           ├── TutorAssignmentServiceImpl.java
+│           ├── TutorAvailabilityServiceImpl.java
+│           ├── UserDetailsServiceImpl.java
+│           └── UserProfileServiceImpl.java
 ├── src/main/resources/
 │   ├── application.yml
 │   ├── application-dev.yml
@@ -200,16 +222,19 @@ backend/
 
 Quy tắc tổ chức:
 
-- `controller`: khai báo endpoint, nhận/validate request và gọi service; không truy cập repository trực tiếp.
-- `service`: xử lý nghiệp vụ, ownership và transaction. Job lịch học và các hợp đồng tích hợp nghiệp vụ nằm ở tầng này.
+- `controller`: khai báo endpoint, nhận/validate request và gọi service qua interface; không truy cập repository trực tiếp.
+- `service`: xử lý nghiệp vụ, transaction và phân quyền dữ liệu. Áp dụng chuẩn thiết kế **Interface + Implementation**:
+  - `service/`: chứa các **Interface** đóng vai trò Service Contract, giúp loose coupling, tăng tính mở rộng và hỗ trợ mocking khi viết Unit Test.
+  - `service/impl/`: chứa các lớp hiện thực (implementation) mang annotation `@Service`.
+  - Các job (`AttendanceLockJob`, `SessionLifecycleJob`) và helper component (`SessionDateCalculator`, `SessionOperationSupport`) phục vụ nghiệp vụ nội bộ của tầng service.
 - `repository`: khai báo truy vấn và khóa dữ liệu qua Spring Data JPA.
 - `entity`: JPA entity ánh xạ bảng dữ liệu.
 - `enums`: enum nghiệp vụ dùng chung giữa controller, DTO, service và entity. `ErrorCode` tiếp tục ở `common.exception` vì gắn với cơ chế xử lý lỗi.
-- `dto`: nhóm theo chức năng (`auth`, `schedule`, sau này có thể thêm `catalog`, `enrollment`...) để giữ tên và hợp đồng API rõ ràng.
+- `dto`: nhóm theo chức năng/nghiệp vụ (`auth`, `catalog`, `schedule`, `attendance`, `assignment`, `leave`, `user`...) để phân định ranh giới miền dữ liệu (Domain Boundary) rõ ràng cho đồ án lớn, bên trong phân định rõ các class Request và Response.
 - `common`: response và exception dùng chung; `security` và `config` chứa xác thực và cấu hình kỹ thuật.
 - Test đặt trong package tương ứng với tầng được kiểm thử.
 
-Các chức năng `catalog`, `enrollment`, `assignment`, `attendance`, `payroll` bên dưới là kế hoạch phát triển. Khi triển khai, thêm class vào các tầng trên, ví dụ `controller.AdminCourseController`, `service.PricingService`, `entity.Course`, `repository.CourseRepository`, `dto.catalog.*`.
+Các chức năng `catalog`, `enrollment`, `assignment`, `attendance`, `payroll` bên dưới là kế hoạch phát triển. Khi triển khai, thêm class vào các tầng trên, ví dụ `controller.CourseController`, `service.AdminCourseService` & `service.impl.AdminCourseServiceImpl`, `entity.Course`, `repository.CourseRepository`, `dto.catalog.*`.
 
 Việc chuyển package giữ nguyên HTTP method, URL, request/response, phân quyền, nghiệp vụ và schema database. Các endpoint hiện có:
 

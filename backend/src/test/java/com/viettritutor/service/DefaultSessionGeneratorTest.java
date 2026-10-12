@@ -9,6 +9,7 @@ import com.viettritutor.enums.SessionStatus;
 import com.viettritutor.enums.TimeSlot;
 import com.viettritutor.repository.SessionRepository;
 import com.viettritutor.repository.SessionGenerationLockRepository;
+import com.viettritutor.service.impl.DefaultSessionGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

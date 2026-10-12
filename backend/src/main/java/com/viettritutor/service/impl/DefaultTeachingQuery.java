@@ -1,10 +1,11 @@
-package com.viettritutor.service;
+package com.viettritutor.service.impl;
 
 import com.viettritutor.common.exception.*;
 import com.viettritutor.dto.attendance.*;
 import com.viettritutor.entity.*;
 import com.viettritutor.enums.*;
 import com.viettritutor.repository.*;
+import com.viettritutor.service.TeachingQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
