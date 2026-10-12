@@ -36,5 +36,9 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
   frontend-url: ${FRONTEND_URL}
+  payments:
+    intent-ttl-minutes: ${PAYMENT_INTENT_TTL_MINUTES:15}
+    mock-enabled: ${PAYMENT_MOCK_ENABLED:false}
+    mock-success: ${PAYMENT_MOCK_SUCCESS:true}
   jwt:
     expiration-ms: 86400000 # 24 hours
