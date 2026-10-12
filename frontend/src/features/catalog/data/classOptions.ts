@@ -18,7 +18,7 @@ export interface ClassOption<T extends string> {
 /** Mỗi ca trong enum TimeSlot đều dài 2 giờ */
 export const SESSION_MINUTES = 120;
 
-/** Khối lớp trung tâm đang dạy. Backend nhận GRADE_1 … GRADE_12. */
+/** Trung tâm chỉ phục vụ THPT; frontend và backend cùng nhận lớp 10, 11, 12. */
 export const GRADE_OPTIONS: ClassOption<GradeLevel>[] = [
   { value: "GRADE_10", label: "Lớp 10", hint: "Xây nền tảng THPT" },
   { value: "GRADE_11", label: "Lớp 11", hint: "Bứt phá điểm số" },

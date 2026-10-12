@@ -143,8 +143,11 @@
                 <artifactId>flyway-maven-plugin</artifactId>
                 <version>${flyway.version}</version>
                 <configuration>
+                    <!--suppress UnresolvedMavenProperty -->
                     <url>${env.FLYWAY_URL}</url>
+                    <!--suppress UnresolvedMavenProperty -->
                     <user>${env.FLYWAY_USER}</user>
+                    <!--suppress UnresolvedMavenProperty -->
                     <password>${env.FLYWAY_PASSWORD}</password>
                     <locations>
                         <location>filesystem:${project.basedir}/src/main/resources/db/migration</location>

@@ -222,6 +222,47 @@ class CourseControllerTest {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"GRADE_10", "GRADE_11", "GRADE_12"})
+    void acceptsAllHighSchoolGrades(String grade) throws Exception {
+        var body = valid();
+        body.put("gradeLevel", grade);
+        long id = create(body).get("id").asLong();
+        mvc.perform(put(BASE + "/" + id).header("Authorization", admin)
+                        .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.gradeLevel").value(grade));
+        mvc.perform(get(BASE).header("Authorization", admin).param("gradeLevel", grade))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].gradeLevel").value(grade));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"GRADE_1", "GRADE_2", "GRADE_3", "GRADE_4", "GRADE_5",
+            "GRADE_6", "GRADE_7", "GRADE_8", "GRADE_9"})
+    void rejectsLowerGradesOnCreateUpdateAndFilter(String grade) throws Exception {
+        long id = create(valid()).get("id").asLong();
+        var body = valid(); body.put("gradeLevel", grade);
+        mvc.perform(post(BASE).header("Authorization", admin)
+                        .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body)))
+                .andExpect(status().isBadRequest());
+        mvc.perform(put(BASE + "/" + id).header("Authorization", admin)
+                        .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body)))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get(BASE).header("Authorization", admin).param("gradeLevel", grade))
+                .andExpect(status().isBadRequest());
+        assertEquals(1, courses.count());
+        assertEquals("GRADE_10", courses.findById(id).orElseThrow().getGradeLevel().name());
+    }
+
+    @Test
+    void openApiOnlyAdvertisesHighSchoolGrades() throws Exception {
+        String body = mvc.perform(get("/api-docs")).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode grades = json.readTree(body).path("components").path("schemas")
+                .path("CourseRequest").path("properties").path("gradeLevel").path("enum");
+        assertEquals(json.valueToTree(java.util.List.of("GRADE_10", "GRADE_11", "GRADE_12")), grades);
+    }
+
     private JsonNode create(Map<String, Object> body) throws Exception {
         String response = mvc.perform(post(BASE).header("Authorization", admin)
                         .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body)))
