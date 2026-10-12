@@ -38,3 +38,15 @@ app:
   frontend-url: ${FRONTEND_URL}
   jwt:
     expiration-ms: 86400000 # 24 hours
+  recaptcha:
+    site-key: ${RECAPTCHA_SITE_KEY:}
+    secret-key: ${RECAPTCHA_SECRET_KEY:}
+    bypass-key: ${RECAPTCHA_BYPASS_KEY:}
+    enabled: ${RECAPTCHA_ENABLED:false}
+    verify-url: ${RECAPTCHA_VERIFY_URL:https://www.google.com/recaptcha/api/siteverify}
+  sepay:
+    bank-account-no: ${SEPAY_BANK_ACCOUNT_NO:}
+    bank-bin: ${SEPAY_BANK_BIN:}
+    account-name: ${SEPAY_ACCOUNT_NAME:}
+    webhook-key: ${SEPAY_WEBHOOKS_KEY:}
+    test-amount: ${SEPAY_TEST_AMOUNT:}

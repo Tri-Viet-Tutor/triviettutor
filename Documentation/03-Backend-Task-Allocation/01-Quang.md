@@ -81,14 +81,18 @@ Luồng mới dưới đây thay cặp tạo enrollment/pay trước đây. Quan
 
 | ID | API | Quyền | Input chính → Output | Nguồn |
 |---|---|---|---|---|
-| Q-A22 | POST `/payment-intents` | S | classGroupId + Idempotency-Key → intentId,amount,status,expiresAt | Thay thế POST `/enrollments` |
-| Q-A23 | POST `/payment-intents/{intentId}/confirm-mock` | S sở hữu | Idempotency-Key → payment,ACTIVE enrollment | Thay thế POST `/enrollments/{enrollmentId}/pay` |
+| Q-A22 | POST `/payment-intents` | S | classGroupId → intentId,paymentCode,amount,qrImageUrl,expiresAt | Thay thế POST `/enrollments` |
+| Q-A23 | POST `/payments/sepay-webhook` | Public (Apikey) | SePay IPN webhook payload → xác thực & tạo ACTIVE enrollment | Tích hợp cổng SePay VietQR |
+| Q-A23b| POST `/payments/bypass-sepay/{paymentCode}` | Public/Dev | paymentCode → giả lập thanh toán thành công | Hỗ trợ Dev/Test |
 | Q-A24 | GET `/enrollments/my` | S | status,page,size → enrollment của mình | Spec |
 | Q-A25 | DELETE `/enrollments/{enrollmentId}` | S sở hữu | reason → trạng thái hủy/hoàn | Spec |
 | Q-A26 | POST `/admin/enrollments/{enrollmentId}/refund` | A | reason,refundPercentage + key → refund | Spec; server kiểm tra mức được phép |
 | Q-A27 | GET `/admin/payments` | A | status,from,to,page,size → giao dịch | Mới, bổ sung FR-FIN-01 |
 | Q-A28 | GET `/payments/{paymentId}` | A hoặc S sở hữu | paymentId → payment/status/refund | Mới |
+| Q-A28b| GET `/payment-intents/{intentId}` | A hoặc S sở hữu | intentId → thông tin intent & trạng thái | Mới |
 | Q-A29 | GET `/admin/classes/{classId}/enrollments` | A | status,page,size → học viên ghi danh | Mới |
+
+**Bảo mật reCAPTCHA:** Bổ sung xác thực Google reCAPTCHA v2/v3 cho Auth (`/login`, `/register`, `/forgot-password`) kèm cơ chế Bypass Key cho Dev/Testing.
 
 **Test bắt buộc:** trả tiền thất bại không ghi danh; pay lặp trả cùng kết quả; hai request tranh chỗ cuối chỉ một thành công; một học viên đồng thời trả hai lớp trùng giờ không có hai enrollment xung đột; hủy/refund lặp không giảm sĩ số hai lần; sửa amount phía client không ảnh hưởng giá server; sai chủ sở hữu trả 403/404 theo quy ước chung.
 

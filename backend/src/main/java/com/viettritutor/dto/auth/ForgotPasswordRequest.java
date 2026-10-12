@@ -19,4 +19,7 @@ public class ForgotPasswordRequest {
 
     /** Tùy chọn: URL frontend từ client gửi lên (ví dụ: window.location.origin) */
     private String frontendUrl;
+
+    /** Tùy chọn: mã reCAPTCHA xác thực chống bot */
+    private String captchaToken;
 }

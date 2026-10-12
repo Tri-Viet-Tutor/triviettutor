@@ -265,13 +265,20 @@ erDiagram
 
     payments {
         bigserial id PK
-        bigint enrollment_id FK
-        numeric amount "NOT NULL"
-        varchar method "BANK_TRANSFER | MOCK"
-        varchar status "PENDING | COMPLETED | FAILED | REFUNDED"
-        varchar transaction_ref "Mã giao dịch"
+        varchar payment_code UK "Mã thanh toán duy nhất VTTxxxxxxx"
+        bigint student_id FK "REFERENCES users(id)"
+        bigint class_group_id FK "REFERENCES class_groups(id)"
+        bigint enrollment_id FK "Nullable cho đến khi COMPLETED"
+        numeric amount "NOT NULL — Số tiền thanh toán"
+        varchar status "PENDING | COMPLETED | FAILED | EXPIRED | CANCELLED"
+        varchar qr_image_url "Link VietQR SePay"
+        varchar transfer_content "Nội dung chuyển khoản"
+        varchar sepay_transaction_id "ID giao dịch từ SePay"
+        varchar sepay_reference_code "Reference Code từ SePay"
         timestamp paid_at
+        timestamp expires_at "Hết hạn sau 15 phút"
         timestamp created_at
+        timestamp updated_at
     }
 
     assignments {
@@ -378,13 +385,16 @@ sequenceDiagram
 
 ```text
 SecurityFilterChain:
-  /api/v1/auth/**              → permitAll()
-  /swagger-ui/**, /api-docs/** → permitAll()
-  /api/v1/admin/**             → hasRole('ADMIN')
-  /api/v1/tutor/**             → hasRole('TUTOR')
-  /api/v1/enrollments/**       → hasRole('STUDENT')
-  GET /api/v1/catalog/**       → authenticated()
-  anyRequest()                 → authenticated()
+  /api/v1/auth/**                     → permitAll()
+  /swagger-ui/**, /api-docs/**        → permitAll()
+  /api/v1/payments/sepay-webhook      → permitAll() (xác thực qua Header Apikey của SePay)
+  /api/v1/payments/bypass-sepay/**    → permitAll() (Bypass dùng cho môi trường Dev/Test)
+  /api/v1/payment-intents/**          → hasRole('STUDENT')
+  /api/v1/admin/**                    → hasRole('ADMIN')
+  /api/v1/tutor/**                    → hasRole('TUTOR')
+  /api/v1/enrollments/**              → hasRole('STUDENT')
+  GET /api/v1/catalog/**              → authenticated()
+  anyRequest()                        → authenticated()
 ```
 
 ### 5.3. Ownership Check (Service Layer)
@@ -395,6 +405,7 @@ URL-based authorization chỉ là lớp đầu tiên. Service phải **kiểm tr
 |:---|:---|
 | Gia sư điểm danh | `session.actualTutorId == currentUser.id` |
 | Học viên xem enrollment | `enrollment.studentId == currentUser.id` |
+| Học viên xem payment intent | `payment.studentId == currentUser.id` |
 | Gia sư xem lương | `payrollLine.tutorId == currentUser.id` |
 | Gia sư xem lịch | Chỉ trả sessions thuộc assignment của gia sư đó |
 
@@ -444,12 +455,18 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 | `EMAIL_ALREADY_EXISTS` | 409 | Email đã tồn tại | — |
 | `INVALID_RESET_TOKEN` | 400 | Token đặt lại mật khẩu không hợp lệ | — |
 | `RESET_TOKEN_EXPIRED` | 400 | Token đặt lại mật khẩu đã hết hạn | — |
+| `INVALID_CAPTCHA` | 400 | Xác thực Google reCAPTCHA không thành công | BR-SEC-01 |
 | `ACCESS_DENIED` | 403 | Không có quyền | BR-01.10 |
 | `USER_NOT_FOUND` | 404 | User không tồn tại | — |
 | `COURSE_NOT_FOUND` | 404 | Khóa học không tồn tại | — |
 | `CLASS_NOT_FOUND` | 404 | Lớp không tồn tại | — |
 | `SESSION_NOT_FOUND` | 404 | Buổi học không tồn tại | — |
 | `ENROLLMENT_NOT_FOUND` | 404 | Enrollment không tồn tại | — |
+| `PAYMENT_NOT_FOUND` | 404 | Không tìm thấy yêu cầu thanh toán | BR-FIN-01 |
+| `PAYMENT_EXPIRED` | 422 | Yêu cầu thanh toán đã quá hạn | BR-FIN-02 |
+| `PAYMENT_ALREADY_COMPLETED` | 409 | Giao dịch đã được thanh toán trước đó | BR-FIN-03 |
+| `PAYMENT_AMOUNT_MISMATCH` | 400 | Số tiền chuyển khoản không khớp hóa đơn | BR-FIN-04 |
+| `SEPAY_UNAUTHORIZED` | 401 | Khóa webhook SePay không hợp lệ | BR-FIN-05 |
 | `SCHEDULE_CONFLICT` | 409 | Gia sư trùng lịch khi phân công | BR-03.30 |
 | `STUDENT_SCHEDULE_CONFLICT` | 409 | Học viên trùng lịch khi đăng ký | BR-03.31 |
 | `CLASS_FULL` | 409 | Lớp đầy sĩ số | BR-02.10 |
@@ -472,6 +489,11 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 
 ### 7.1. Auth Module
 
+> **Bảo mật CAPTCHA (Google reCAPTCHA v2/v3):**  
+> Các endpoint công khai (`/login`, `/register`, `/forgot-password`) hỗ trợ trường `captchaToken`.  
+> Backend sẽ xác thực qua Google reCAPTCHA Verify API: `https://www.google.com/recaptcha/api/siteverify`.  
+> Trên môi trường phát triển (Dev/Test), có thể cấu hình `RECAPTCHA_ENABLED=false` hoặc sử dụng mã `RECAPTCHA_BYPASS_KEY` để bỏ qua kiểm tra tự động. Nếu token không hợp lệ khi CAPTCHA đang bật, API trả về lỗi `INVALID_CAPTCHA` (HTTP 400).
+
 #### `POST /auth/login` — Đăng nhập
 
 | | |
@@ -483,7 +505,8 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 ```json
 {
   "email": "student@gmail.com",
-  "password": "Student@123"
+  "password": "Student@123",
+  "captchaToken": "03AFcWeA..." 
 }
 ```
 
@@ -503,7 +526,7 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 }
 ```
 
-**Error (401):**
+**Error (401 / 400):**
 ```json
 {
   "success": false,
@@ -511,6 +534,7 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
   "errorCode": "INVALID_CREDENTIALS"
 }
 ```
+*(Nếu sai captcha: `errorCode`: `INVALID_CAPTCHA`, HTTP 400)*
 
 ---
 
@@ -526,7 +550,8 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 {
   "email": "phuhuynha@gmail.com",
   "password": "Abc@1234",
-  "fullName": "Trần Thị B"
+  "fullName": "Trần Thị B",
+  "captchaToken": "03AFcWeA..."
 }
 ```
 
@@ -536,10 +561,11 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 | `email` | `@NotBlank`, `@Email` |
 | `password` | `@NotBlank`, `@Size(min=6)` |
 | `fullName` | `@NotBlank`, `@Size(min=2, max=100)` |
+| `captchaToken` | Tùy chọn (Bắt buộc khi `RECAPTCHA_ENABLED=true` và không dùng bypass) |
 
 **Response (200):** Giống login — trả accessToken + user info.
 
-**Error (409):** `EMAIL_ALREADY_EXISTS`
+**Error (409 / 400):** `EMAIL_ALREADY_EXISTS` hoặc `INVALID_CAPTCHA`
 
 ---
 
@@ -553,7 +579,8 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 **Request Body:**
 ```json
 {
-  "email": "student@gmail.com"
+  "email": "student@gmail.com",
+  "captchaToken": "03AFcWeA..."
 }
 ```
 
@@ -561,6 +588,7 @@ Mọi endpoint đều trả về `ApiResponse<T>`:
 | Field | Constraint |
 |:---|:---|
 | `email` | `@NotBlank`, `@Email` |
+| `captchaToken` | Tùy chọn (Bảo vệ chống spam gửi mail) |
 
 **Business Logic:**
 1. Tìm tài khoản người dùng theo `email`.
@@ -1015,42 +1043,59 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
 8. Nếu `currentStudents == maxStudents` → chuyển lớp `FULL` (nằm trong ENROLLING nhưng không nhận thêm)
 9. **ONE_ON_ONE**: auto chuyển sẵn sàng assign
 
+### 7.4. Payment & Enrollment Module (Tích hợp SePay VietQR)
+
+#### `POST /payment-intents` — Tạo yêu cầu thanh toán ghi danh lớp (VietQR SePay)
+
+| | |
+|:---|:---|
+| **Role** | `ROLE_STUDENT` |
+| **BR** | BR-02.01, BR-02.02, BR-02.10, BR-02.11, BR-03.31 |
+
+**Request Body:**
+```json
+{
+  "classGroupId": 1
+}
+```
+
+**Service Logic (PaymentService):**
+1. Check lớp đang `ENROLLING` → else `CLASS_NOT_ENROLLING`
+2. Check học viên chưa có Enrollment `ACTIVE` ở lớp này → else `ENROLLMENT_ALREADY_EXISTS`
+3. Check còn chỗ trống (`currentStudents < maxStudents`) → else `CLASS_FULL`
+4. So khớp lịch học viên không trùng với các lớp đã ghi danh active → else `STUDENT_SCHEDULE_CONFLICT`
+5. Tính học phí sau chiết khấu theo `PricingService` (bậc sĩ số tiếp theo `currentStudents + 1`)
+6. Sinh mã thanh toán duy nhất `paymentCode`: tiền tố `VTT` + 7 ký tự ngẫu nhiên (VD: `VTT9A7B3KC`)
+7. Sinh link VietQR SePay động:
+   `https://qr.sepay.vn/img?bank={bankBin}&acc={bankAccountNo}&template=compact&amount={amount}&des={paymentCode}`
+8. Lưu bản ghi `Payment` với trạng thái `PENDING`, thời hạn hiệu lực 15 phút (`expiresAt = now + 15m`).
+9. Trả về thông tin thanh toán gồm mã giao dịch, số tiền và mã QR.
+
 **Response (201):**
 ```json
 {
   "success": true,
   "data": {
-    "enrollmentId": 10,
+    "paymentId": 10,
+    "paymentCode": "VTT9A7B3KC",
     "classGroupId": 1,
     "classCode": "MATH-G10-MWF-M-001",
-    "feeCharged": 5200000,
+    "amount": 5200000,
     "discountRate": 0.35,
-    "payment": {
-      "paymentId": 10,
-      "amount": 5200000,
-      "method": "MOCK",
-      "status": "PENDING"
-    }
+    "qrImageUrl": "https://qr.sepay.vn/img?bank=970422&acc=0123456789&template=compact&amount=5200000&des=VTT9A7B3KC",
+    "status": "PENDING",
+    "expiresAt": "2026-10-12T16:15:00"
   }
 }
 ```
 
 ---
 
-#### `POST /enrollments/{enrollmentId}/pay` — Xác nhận thanh toán (Mock)
+#### `GET /payment-intents/{intentId}` — Tra cứu trạng thái yêu cầu thanh toán
 
 | | |
 |:---|:---|
-| **Role** | `ROLE_STUDENT` |
-| **BR** | BR-02.02 — Chỉ khi payment completed mới có enrollment hợp lệ |
-
-**Request Body:**
-```json
-{
-  "method": "BANK_TRANSFER",
-  "transactionRef": "VCB-20260920-001"
-}
-```
+| **Role** | `ROLE_STUDENT` (sở hữu) hoặc `ROLE_ADMIN` |
 
 **Response (200):**
 ```json
@@ -1058,20 +1103,89 @@ Ví dụ gọi: `curl -H "Authorization: Bearer <accessToken>" http://localhost:
   "success": true,
   "data": {
     "paymentId": 10,
+    "paymentCode": "VTT9A7B3KC",
+    "classGroupId": 1,
+    "amount": 5200000,
     "status": "COMPLETED",
-    "paidAt": "2026-09-20T14:15:00"
+    "paidAt": "2026-10-12T16:05:22"
   }
 }
 ```
 
 ---
 
-#### `GET /enrollments/my` — Danh sách lớp đã đăng ký (Student)
+#### `POST /payments/sepay-webhook` — Tiếp nhận Webhook giao dịch từ SePay
+
+| | |
+|:---|:---|
+| **Role** | Public (Xác thực qua Header `Authorization: Apikey <SEPAY_WEBHOOKS_KEY>`) |
+| **BR** | BR-02.02 (Chỉ tạo Enrollment ACTIVE khi tiền đã vào tài khoản thực tế) |
+
+**Headers:**
+`Authorization: Apikey <SEPAY_WEBHOOKS_KEY>`
+
+**Request Body (Spec chuẩn SePay):**
+```json
+{
+  "id": 1234567,
+  "gateway": "Vietcombank",
+  "transactionDate": "2026-10-12 16:05:00",
+  "accountNumber": "0123456789",
+  "code": null,
+  "content": "VTT9A7B3KC chuyen tien hoc",
+  "transferType": "in",
+  "transferAmount": 5200000,
+  "accumulated": 15000000,
+  "subAccount": null,
+  "referenceCode": "VCB.20261012.987654",
+  "description": "SePay IPN Webhook"
+}
+```
+
+**Service Logic (PaymentService.handleSepayWebhook):**
+1. Kiểm tra xác thực `Authorization` header nếu có cấu hình webhook key.
+2. Bỏ qua nếu `transferType != "in"` (chỉ xử lý tiền vào).
+3. Trích xuất mã `paymentCode` từ nội dung chuyển khoản `content` bằng Regex `VTT[A-Z0-9]+`.
+4. Kiểm tra Idempotency: Nếu `sepayTransactionId` đã tồn tại và đã xử lý, trả về thành công ngay lập tức để tránh xử lý trùng.
+5. Tìm bản ghi `Payment` theo `paymentCode`:
+   - Nếu không tìm thấy: Ghi log warning, trả về `{"success": true}` (tránh SePay retry vô tận).
+   - Nếu `status == COMPLETED`: Bỏ qua, trả về `{"success": true}`.
+   - Nếu `expiresAt < now`: Đánh dấu `EXPIRED`.
+6. Kiểm tra số tiền `transferAmount`:
+   - Phải khớp với `payment.amount` (hoặc bằng cấu hình `SEPAY_TEST_AMOUNT` dùng cho test).
+   - Nếu không đủ: Đánh dấu `FAILED`, ghi log cảnh báo.
+7. Trong một Database Transaction an toàn:
+   - Cập nhật `Payment`: `status = COMPLETED`, `paidAt = now`, lưu `sepayTransactionId`, `sepayReferenceCode`.
+   - Tạo bản ghi `Enrollment` mới: `status = ACTIVE`, `enrolledAt = now`, `paymentId = payment.id`.
+   - Tăng sĩ số `currentStudents` của lớp thêm 1.
+   - Nếu sĩ số đạt tối đa: cập nhật trạng thái lớp sang `FULL` nếu là lớp nhóm.
+8. Luôn trả về HTTP 200 `{"success": true}` theo quy ước webhook SePay.
+
+**Response (200):**
+```json
+{
+  "success": true
+}
+```
+
+---
+
+#### `POST /payments/bypass-sepay/{paymentCode}` — Giả lập thanh toán SePay (Dev & Test Only)
+
+| | |
+|:---|:---|
+| **Role** | Public / Dev Mode |
+
+**Response (200):** Trả về thông tin thanh toán đã được cập nhật thành công và kích hoạt ghi danh.
+
+---
+
+#### `GET /enrollments/my` — Danh sách lớp đã ghi danh của học viên
 
 | | |
 |:---|:---|
 | **Role** | `ROLE_STUDENT` |
-| **BR** | BR-01.12 — Chỉ xem enrollment của mình |
+| **BR** | BR-01.12 — Chỉ xem enrollment của chính mình |
 
 ---
 

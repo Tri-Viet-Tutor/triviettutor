@@ -27,6 +27,7 @@ public enum ErrorCode {
     INVALID_RESET_TOKEN       (HttpStatus.BAD_REQUEST,    "Invalid password reset token"),
     RESET_TOKEN_EXPIRED       (HttpStatus.BAD_REQUEST,    "Password reset token has expired"),
     EMAIL_SEND_FAILED         (HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send verification email. Please try again later"),
+    INVALID_CAPTCHA           (HttpStatus.BAD_REQUEST,    "Google reCAPTCHA verification failed"),
 
     // ── Authorization ─────────────────────────────────────────────────────────
     ACCESS_DENIED             (HttpStatus.FORBIDDEN,      "You do not have permission to perform this action"),
@@ -67,10 +68,16 @@ public enum ErrorCode {
     INVALID_DATE_RANGE        (HttpStatus.BAD_REQUEST,    "The 'from' date must not be after the 'to' date"),
     INVALID_MEETING_URL       (HttpStatus.BAD_REQUEST,    "Meeting URL must be a valid HTTPS URL"),
 
-    // ── Enrollment (BR-02) ────────────────────────────────────────────────────
+    // ── Enrollment & Payment (BR-02, BR-FIN) ──────────────────────────────────
     CLASS_FULL                (HttpStatus.CONFLICT,       "This class has reached maximum capacity"),
     CLASS_NOT_ENROLLING       (HttpStatus.UNPROCESSABLE_ENTITY, "This class is not currently accepting enrollments"),
     ENROLLMENT_ALREADY_EXISTS (HttpStatus.CONFLICT,       "You are already enrolled in this class"),
+    PAYMENT_NOT_FOUND         (HttpStatus.NOT_FOUND,      "Payment intent not found"),
+    PAYMENT_EXPIRED           (HttpStatus.UNPROCESSABLE_ENTITY, "Payment intent has expired"),
+    PAYMENT_ALREADY_COMPLETED (HttpStatus.CONFLICT,       "Payment has already been completed"),
+    PAYMENT_AMOUNT_MISMATCH   (HttpStatus.BAD_REQUEST,    "Payment amount does not match"),
+    SEPAY_UNAUTHORIZED        (HttpStatus.UNAUTHORIZED,   "Invalid SePay webhook authorization"),
+
 
     // ── Refund (BR-02.30–BR-02.32) ────────────────────────────────────────────
     REFUND_NOT_ALLOWED        (HttpStatus.UNPROCESSABLE_ENTITY, "Refund is not allowed at this stage"),
