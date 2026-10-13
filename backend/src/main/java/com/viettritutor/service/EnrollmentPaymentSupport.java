@@ -21,6 +21,7 @@ public class EnrollmentPaymentSupport {
     private final LearningScheduleRepository learning;
     private final ConflictValidationService conflicts;
     private final Clock clock;
+    private final PaymentIntentRepository intents;
 
     public record Admission(Course course, List<Session> sessions, int enrollmentSize, LocalDate start, LocalDate end) {}
 
@@ -48,6 +49,10 @@ public class EnrollmentPaymentSupport {
     }
 
     public Admission admission(ClassGroup classGroup, Long studentId) {
+        return admission(classGroup, studentId, null);
+    }
+
+    public Admission admission(ClassGroup classGroup, Long studentId, Long excludeIntentId) {
         if (classGroup.getStatus() != ClassStatus.ENROLLING
                 || (classGroup.getEnrollmentDeadline() != null && LocalDate.now(clock).isAfter(classGroup.getEnrollmentDeadline()))) {
             throw new BusinessException(ErrorCode.CLASS_NOT_ENROLLING);
@@ -63,7 +68,9 @@ public class EnrollmentPaymentSupport {
         long existing = learning.findByClassGroupIdAndStatusOrderByStudentIdAscIdAsc(classGroup.getId(), LearningScheduleStatus.ACTIVE)
                 .stream().map(LearningSchedule::getStudentId).distinct().count();
         int capacity = classGroup.getClassType() == ClassType.ONE_ON_ONE ? 1 : 8;
-        if (existing >= capacity) throw new BusinessException(ErrorCode.CLASS_FULL);
+        long reserved = intents.reservedClass(classGroup.getId(), OffsetDateTime.now(clock)).stream()
+                .filter(p -> !Objects.equals(p.getId(), excludeIntentId)).map(PaymentIntent::getStudentId).distinct().count();
+        if (existing + reserved >= capacity) throw new BusinessException(ErrorCode.CLASS_FULL);
         List<Session> all = sessions.findByClassGroupIdOrderBySessionNumberAsc(classGroup.getId());
         List<Session> original = all.stream().filter(session -> session.getOriginalSession() == null).toList();
         int expectedSessions = classGroup.getTotalSessions() == null ? course.getTotalSessions() : classGroup.getTotalSessions();
@@ -84,6 +91,16 @@ public class EnrollmentPaymentSupport {
         }
         var overlap = conflicts.checkStudent(studentId, payable);
         if (!overlap.isEmpty()) throw new ScheduleConflictException(ErrorCode.STUDENT_SCHEDULE_CONFLICT, overlap);
+        for (PaymentIntent held : intents.reservedStudent(studentId, OffsetDateTime.now(clock))) {
+            if (Objects.equals(held.getId(), excludeIntentId)) continue;
+            if (held.getClassGroupId().equals(classGroup.getId())) throw new BusinessException(ErrorCode.PAYMENT_RESERVATION_EXISTS);
+            List<Session> heldLessons = sessions.findByClassGroupIdOrderBySessionNumberAsc(held.getClassGroupId());
+            if (payable.stream().anyMatch(a -> heldLessons.stream().anyMatch(b -> b.getStatus() == SessionStatus.SCHEDULED
+                    && a.getSessionDate().equals(b.getSessionDate()) && a.getStartTime().isBefore(b.getEndTime())
+                    && b.getStartTime().isBefore(a.getEndTime())))) {
+                throw new BusinessException(ErrorCode.STUDENT_SCHEDULE_CONFLICT);
+            }
+        }
         LocalDate start = original.stream().map(Session::getSessionDate).min(LocalDate::compareTo).orElseThrow();
         LocalDate end = original.stream().map(Session::getSessionDate).max(LocalDate::compareTo).orElseThrow();
         return new Admission(course, List.copyOf(payable), (int) existing + 1, start, end);

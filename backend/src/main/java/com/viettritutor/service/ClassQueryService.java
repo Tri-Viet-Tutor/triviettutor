@@ -25,6 +25,7 @@ public class ClassQueryService {
     private final SessionRepository sessions;
     private final PricingService pricing;
     private final Clock clock;
+    private final PaymentIntentRepository intents;
 
     public PageResponse<ClassResponse> adminList(Long courseId, ClassStatus status, ClassType type,
                                                  SchedulePattern pattern, int page, int size) {
@@ -47,11 +48,18 @@ public class ClassQueryService {
             count.select(cb.countDistinct(roster.get("studentId"))).where(
                     cb.equal(roster.get("classGroupId"), root.get("id")),
                     cb.equal(roster.get("status"), LearningScheduleStatus.ACTIVE));
+            var heldCount = query.subquery(Long.class);
+            var held = heldCount.from(PaymentIntent.class);
+            heldCount.select(cb.countDistinct(held.get("studentId"))).where(
+                    cb.equal(held.get("classGroupId"), root.get("id")),
+                    cb.equal(held.get("status"), PaymentIntentStatus.PENDING),
+                    cb.isNotNull(held.get("vnpayReference")), cb.isNull(held.get("cancelledAt")),
+                    cb.greaterThan(held.get("expiresAt"), OffsetDateTime.now(clock)));
             List<Predicate> predicates = new ArrayList<>(List.of(
                     cb.isTrue(course.get("active")),
                     cb.equal(root.get("status"), ClassStatus.ENROLLING),
                     cb.greaterThanOrEqualTo(root.get("enrollmentDeadline"), LocalDate.now(clock)),
-                    cb.lessThan(count, root.get("maxStudents").as(Long.class))));
+                    cb.lessThan(cb.sum(count, heldCount), root.get("maxStudents").as(Long.class))));
             if (subject != null && !subject.isBlank()) predicates.add(cb.equal(course.get("subject"), subject.trim().toUpperCase(Locale.ROOT)));
             if (grade != null) predicates.add(cb.equal(course.get("gradeLevel"), grade));
             if (mode != null) predicates.add(cb.equal(root.get("deliveryMode"), mode));
@@ -80,12 +88,15 @@ public class ClassQueryService {
 
     public ClassResponse response(ClassGroup c, boolean admin, boolean includeSessions) {
         long count = students(c.getId());
+        long reserved = intents.reservedClass(c.getId(), OffsetDateTime.now(clock)).stream()
+                .map(PaymentIntent::getStudentId).distinct().count();
         int max = c.getClassType() == ClassType.GROUP ? 8 : 1;
         var builder = ClassResponse.builder().id(c.getId()).classCode(c.getClassCode())
                 .classType(c.getClassType()).deliveryMode(c.getDeliveryMode()).schedulePattern(c.getSchedulePattern())
                 .timeSlot(c.getTimeSlot()).startDate(c.getStartDate()).enrollmentDeadline(c.getEnrollmentDeadline())
-                .status(c.getStatus()).maxStudents(max).currentStudents(count).spotsLeft(Math.max(0, max - count))
-                .full(count >= max).createdAt(c.getCreatedAt()).meetingUrl(admin ? c.getMeetingUrl() : null)
+                .status(c.getStatus()).maxStudents(max).currentStudents(count).reservedStudents(reserved)
+                .spotsLeft(Math.max(0, max - count - reserved))
+                .full(count + reserved >= max).createdAt(c.getCreatedAt()).meetingUrl(admin ? c.getMeetingUrl() : null)
                 .totalSessions(c.getTotalSessions() == null ? 0 : c.getTotalSessions());
         if (c.getTimeSlot() != null) builder.timeSlotLabel(c.getTimeSlot().getStartTime() + " - " + c.getTimeSlot().getEndTime());
         if (c.getCourse() != null) {

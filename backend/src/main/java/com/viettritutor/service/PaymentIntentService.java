@@ -61,6 +61,7 @@ public class PaymentIntentService {
         support.lockPeople(student.getId());
         // Reload after the class lock; another confirmation may have completed while waiting.
         intent = refreshIntent(intent);
+        if (intent.getVnpayReference() != null) throw new BusinessException(ErrorCode.PAYMENT_PROVIDER_CONFLICT);
         String request = intentId.toString();
         var replay = idempotency.replay(student.getId(), PaymentOperationType.CONFIRM_PAYMENT, key, request);
         if (replay.isPresent()) return confirmation(payments.findById(replay.get()).orElseThrow());
