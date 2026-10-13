@@ -29,6 +29,7 @@ public class ClassResponse {
     private int totalSessions;
     private int maxStudents;
     private long currentStudents;
+    private long reservedStudents;
     private long spotsLeft;
     private boolean full;
     private BigDecimal basePrice1on1;

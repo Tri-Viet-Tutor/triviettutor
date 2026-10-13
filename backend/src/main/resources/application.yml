@@ -36,5 +36,18 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
   frontend-url: ${FRONTEND_URL}
+  payments:
+    intent-ttl-minutes: ${PAYMENT_INTENT_TTL_MINUTES:5}
+    mock-enabled: ${PAYMENT_MOCK_ENABLED:false}
+    mock-success: ${PAYMENT_MOCK_SUCCESS:true}
+    vnpay:
+      enabled: ${VNPAY_ENABLED:false}
+      tmn-code: ${VNPAY_TMN_CODE:}
+      hash-secret: ${VNPAY_HASH_SECRET:}
+      payment-url: ${VNPAY_PAYMENT_URL:}
+      api-url: ${VNPAY_API_URL:}
+      return-path: ${VNPAY_RETURN_PATH:/student/checkout}
+      server-ip: ${VNPAY_SERVER_IP:}
+      timeout-seconds: ${VNPAY_TIMEOUT_SECONDS:30}
   jwt:
     expiration-ms: 86400000 # 24 hours

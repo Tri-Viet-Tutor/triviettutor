@@ -77,4 +77,8 @@ public class ClassGroup {
 
     @PreUpdate
     void onUpdate() { updatedAt = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS); }
+
+    public Long getCourseId() {
+        return course == null ? null : course.getId();
+    }
 }
