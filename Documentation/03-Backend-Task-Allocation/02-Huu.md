@@ -115,13 +115,13 @@ Sinh buổi là service nội bộ gọi từ Quang, không cần một API rege
 
 ## 6. H07 — Giao bài, nộp bài và chấm bài (16 SP)
 
-**Mở rộng ERD; quy tắc dưới đây là baseline đề xuất, vì tài liệu BR hiện tại chưa có nghiệp vụ bài tập.**
+**Mở rộng ERD; quy tắc triển khai đã được chốt ở mục H07 bổ sung cuối tài liệu; mục bổ sung được ưu tiên nếu checklist cũ khác biệt.**
 
 **Business Process:** Tutor thực dạy/Admin tạo Homework của Session → publish → Student có enrollment hợp lệ xem và nộp → Tutor xem danh sách/chấm → Student xem điểm/feedback của mình.
 
 - [ ] Homework: sessionId,title,instructions,resourceUrl,dueAt,maxScore,status DRAFT/PUBLISHED/CLOSED,createdBy. Bài DRAFT chỉ A/T có quyền xem.
 - [ ] Submission: homeworkId,studentId,content/resourceUrl,submittedAt,status,score,feedback,gradedBy/At,version. Unique(homework,student); nộp lại cập nhật version/audit thay vì sinh trùng bản hiện hành.
-- [ ] Baseline một bài nộp hiện hành/học viên; cho sửa trước deadline và trước chấm; chưa hỗ trợ nộp muộn. Nếu nhóm muốn late submission/attempts, chốt lại scope/test trước triển khai.
+- [ ] Một bài làm hiện hành/học viên: NOT_STARTED (chưa có bản ghi) → IN_PROGRESS → SUBMITTED → GRADED. Chỉ IN_PROGRESS được lưu nháp; SUBMITTED được cập nhật trước deadline nếu chưa chấm và Homework còn PUBLISHED. Chưa hỗ trợ nộp muộn.
 - [ ] Tutor tạo/chấm theo buổi mình phụ trách; khi đổi gia sư, kiểm tra quyền hiện hành và giữ tác giả/lịch sử. Admin có quyền xử lý ngoại lệ kèm reason.
 - [ ] Điểm 0..maxScore; Student không gửi được score/gradedBy; bài đã chấm phải có revision/audit nếu Admin sửa.
 - [ ] Không giảm maxScore thấp hơn điểm đã chấm; không rút ngắn deadline hồi tố làm bài nộp hợp lệ thành không hợp lệ.
@@ -138,7 +138,9 @@ Sinh buổi là service nội bộ gọi từ Quang, không cần một API rege
 | H-A31 | GET `/homeworks/{homeworkId}/submissions/me` | S ghi danh | JWT → bài nộp,điểm,feedback cá nhân | Mới ERD |
 | H-A32 | GET `/homeworks/{homeworkId}/submissions` | A/T phụ trách | status,page,size → submissions | Mới ERD |
 | H-A33 | PATCH `/submissions/{submissionId}/grade` | A/T phụ trách | score,feedback,version → GRADED submission | Mới ERD |
-| H-A34 | GET `/me/homeworks` | S | status,from,to,page,size → bài của các lớp đang học | Mới ERD |
+| H-A34 | GET `/student/homeworks` | S | status,from,to,page,size → bài của các lớp đang học | Mới ERD |
+| H-A35 | POST `/homeworks/{homeworkId}/submissions/me/start` | S ghi danh | không body → IN_PROGRESS | Đã chốt |
+| H-A36 | PUT `/homeworks/{homeworkId}/submissions/me/draft` | S ghi danh | content,resourceUrl,version → IN_PROGRESS | Đã chốt |
 
 **Nghiệm thu:** Student lớp khác/intent chưa trả tiền không xem hoặc nộp; không nộp hộ người khác; draft không lộ; bài nộp đúng thời hạn được lưu; sau deadline/đã chấm bị chặn sửa; điểm vượt max trả 400/422; optimistic version chặn ghi đè khi chấm đồng thời; Student chỉ xem điểm mình.
 
@@ -154,8 +156,59 @@ H05 nhiều hơn Q05 vì Hữu chủ trì test đồng hồ/job và ma trận tr
 - [ ] Unit test pattern/overlap/biên 24h; inject Clock để kiểm thử thời gian, không phụ thuộc giờ chạy máy.
 - [ ] Integration test quyền đối tượng, assign/makeup/substitute transaction; PostgreSQL test request đồng thời và constraint.
 - [ ] Fixture có hai ca tối trùng, nhóm có một người xin nghỉ, Tutor thay, buổi bù qua tháng, buổi chưa điểm danh, bài tập trước/sau deadline.
-- [ ] OpenAPI cho **34 method/path** trên; có error example 409 conflict và 422 locked/invalid state.
+- [ ] OpenAPI cho **36 method/path** trên; có error example 409 conflict và 422 locked/invalid state.
 - [ ] Dùng service thật của Quang để chạy E2E; không chỉ kết luận từ mock.
 - [ ] Demo phân công → nghỉ/bù/thay → điểm danh → nguồn lương; demo tạo → nộp → chấm bài; gửi kết quả test và hạn chế còn lại.
 
-34 endpoint ít hơn Quang nhưng gồm sinh lịch, xung đột đồng thời, job và nhiều nhánh trạng thái; tổng effort kế hoạch vẫn **76 SP**, không đánh giá công bằng chỉ theo số route.
+36 endpoint ít hơn Quang nhưng gồm sinh lịch, xung đột đồng thời, job và nhiều nhánh trạng thái; tổng effort kế hoạch vẫn **76 SP**, không đánh giá công bằng chỉ theo số route.
+
+### H07 — Quy tắc đã chốt cho đợt triển khai bài tập (12/10/2026)
+
+Phạm vi đợt này: 5 API Homework và luồng bắt đầu → lưu nháp → nộp → chấm. Danh sách cá nhân được bổ sung ở đợt 13/10/2026; upload file chưa triển khai.
+
+**Hai vòng đời độc lập:**
+- Homework: DRAFT → PUBLISHED → CLOSED, cho phép DRAFT → CLOSED. Tutor/Admin chủ động đóng; hết hạn không tự chuyển CLOSED. Bài đóng từ DRAFT chưa từng công bố vẫn bị ẩn với Student.
+- Submission của từng Student: NOT_STARTED (chưa có bản ghi) → IN_PROGRESS (đã bắt đầu, có thể lưu nháp) → SUBMITTED → GRADED. Bắt đầu lại khi đang IN_PROGRESS trả cùng bản ghi; không tạo trùng. Nộp bài không đóng Homework. SUBMITTED được cập nhật trước hạn theo quy tắc bổ sung 13/10/2026 bên dưới.
+- DRAFT sửa toàn bộ. PUBLISHED không đổi title/instructions/resourceUrl, chỉ tăng hoặc giữ nguyên maxScore và gia hạn hoặc giữ nguyên dueAt. CLOSED không sửa và không mở lại.
+- dueAt là timestamp có múi giờ; khi clock >= dueAt thì chặn bắt đầu/lưu nháp/nộp và sửa Homework. Tạo hoặc công bố phải có hạn tương lai. Đóng bài và chấm bài đã nộp vẫn được phép sau hạn hoặc sau CLOSED.
+- Tutor phụ trách = actualTutorId nếu có, nếu không dùng scheduledTutorId. Không lấy tác giả bài hoặc gia sư chính cũ để cấp quyền. Admin được quản lý mọi bài; mọi thay đổi có audit.
+- Student phải có LearningSchedule ACTIVE của đúng classGroupId với khoảng ngày bao gồm sessionDate. Đây là contract hiện có của ghi danh đã kích hoạt sau thanh toán; API bài tập không tự tạo ghi danh.
+- Buổi CANCELLED: không tạo/sửa/công bố hoặc bắt đầu/lưu/nộp mới; vẫn đọc lịch sử theo quyền, đóng bài và chấm bài đã nộp. Homework không tự chuyển sang buổi bù.
+- Điểm từ 0 đến maxScore. Tutor chấm lần đầu; Admin sửa điểm đã chấm phải có reason và audit. Student chỉ xem bài làm/điểm của chính mình. Danh sách cho người chấm chỉ gồm SUBMITTED/GRADED, không lộ nháp cá nhân.
+- Nội dung/link được lưu như dữ liệu; resourceUrl chỉ nhận HTTPS không chứa userinfo. Backend không tải URL và không thực thi nội dung. Title tối đa 200, instructions/content 20000, URL 2048, feedback 5000, reason 1000 ký tự; maxScore dương và điểm tối đa 2 chữ số thập phân, NUMERIC(10,2).
+- Mỗi (homeworkId, studentId) có một bản ghi hiện hành; giữ audit các lần lưu/nộp/chấm. Tác giả/người nộp/người chấm lấy từ JWT.
+- PUT Homework và PATCH status nhận version từ response; lưu nháp/nộp/chấm cũng nhận version. Version cũ trả 409, không ghi đè. Thứ tự khóa: ClassGroup → Session → Homework → Submission, tương thích phân công/hủy buổi.
+- GET danh sách phân trang page=0, size=20, size trong 1..100, sắp xếp id tăng dần. GET Homework của Student ẩn draft, kể cả draft đã đóng, bằng 404. Ngoài quyền đối tượng trả 403; ID không tồn tại trả 404; dữ liệu sai trả 400; trạng thái/hạn không cho phép trả 422.
+
+**Contract request/response:**
+- POST /sessions/{sessionId}/homeworks: title, instructions, resourceUrl (tùy chọn), dueAt, maxScore → 201 DRAFT.
+- PUT /homeworks/{homeworkId}: cùng các trường tạo + version → 200; PUT thay thế toàn bộ trường, bỏ resourceUrl nghĩa là xóa link (chỉ được ở DRAFT).
+- PATCH /homeworks/{homeworkId}/status: status=PUBLISHED/CLOSED, version → 200. Gửi lại cùng trạng thái với version hiện hành không tạo audit trùng.
+- GET /sessions/{sessionId}/homeworks và GET /homeworks/{homeworkId}: trạng thái bài tập, nội dung, deadline, maxScore, version; Student không nhận tác giả và thông tin bài làm của người khác.
+- POST /homeworks/{homeworkId}/submissions/me/start: không body → 200 IN_PROGRESS.
+- PUT /homeworks/{homeworkId}/submissions/me/draft: content, resourceUrl (đều tùy chọn), version → 200 IN_PROGRESS.
+- PUT /homeworks/{homeworkId}/submissions/me: content hoặc resourceUrl không rỗng, version → 200 SUBMITTED; cần bắt đầu trước.
+- GET /homeworks/{homeworkId}/submissions/me: 200 NOT_STARTED nếu chưa bắt đầu, nếu đã có thì trả bài làm hiện hành.
+- GET /homeworks/{homeworkId}/submissions: Admin/Tutor phụ trách, page/size, status tùy chọn SUBMITTED/GRADED.
+- PATCH /submissions/{submissionId}/grade: score, feedback (tùy chọn), version, reason (bắt buộc khi Admin sửa điểm đã chấm) → 200 GRADED.
+
+**Luồng UI để tích hợp sau:** Student xem đề công bố → bấm Bắt đầu → lưu nháp nhiều lần với version mới nhất → Nộp → có thể cập nhật trước hạn nếu chưa chấm → xem điểm/feedback. Staff soạn nháp → công bố → chỉ gia hạn/tăng điểm tối đa trước hạn → chủ động đóng → tiếp tục chấm. Không tự đổi trạng thái Homework khi một Student nộp.
+
+**Migration:** V14 tạo homeworks, homework_submissions, homework_changes và submission_changes; FK RESTRICT, unique bài/học viên, CHECK điểm/trạng thái, bật RLS theo cách các module hiện tại. Không sửa migration cũ. H2 kiểm thử không thay thế xác minh migration PostgreSQL.
+
+### H07 — Danh sách bài tập cá nhân và cập nhật bài nộp (13/10/2026)
+
+Phương án đã được người dùng xác nhận, thay quy tắc khóa bài ngay sau SUBMITTED của đợt trước.
+
+- GET /student/homeworks (prefix /api/v1), chỉ ROLE_STUDENT. Lấy studentId từ JWT, không nhận danh tính từ request. Không tạo alias /me/homeworks.
+- Query: status tùy chọn NOT_STARTED/IN_PROGRESS/SUBMITTED/GRADED là trạng thái bài làm; from/to là timestamp có múi giờ, lọc dueAt trong khoảng đóng [from,to]; cho phép bỏ một hoặc cả hai mốc, from > to trả 400. page=0, size=20 (1..100). Sắp xếp dueAt tăng dần, rồi id tăng dần.
+- Phạm vi lớp đang học dựa trên LearningSchedule ACTIVE, đúng học sinh/classGroupId, startDate <= sessionDate <= endDate, thống nhất với API chi tiết. Không yêu cầu hôm nay nằm trong khoảng ngày buổi học để không ẩn bài giao sớm.
+- Chỉ trả Homework đã từng công bố (publishedAt khác null); gồm bài PUBLISHED và CLOSED, cả bài hết hạn hoặc buổi bị hủy để xem lịch sử. DRAFT và CLOSED chưa từng công bố luôn ẩn. Không có lớp phù hợp trả trang rỗng 200.
+- Response mỗi phần tử: homework (HomeworkResponse không có createdBy), classGroupId, sessionDate, submission (bài làm của chính học sinh, hoặc NOT_STARTED ảo nếu chưa bắt đầu). Không tạo bản ghi khi đọc, không lộ bài/điểm của người khác.
+- PUT /homeworks/{homeworkId}/submissions/me: cần bắt đầu trước. Chấp nhận IN_PROGRESS hoặc SUBMITTED; giữ nguyên submissionId, trạng thái SUBMITTED, cập nhật submittedAt và version, lưu audit SUBMIT/RESUBMIT với trước/sau. Vẫn cần nội dung hoặc HTTPS resourceUrl và version mới nhất. PUT thay thế content/resourceUrl; trường bỏ qua được xóa.
+- Chỉ cập nhật khi Homework PUBLISHED, clock < dueAt, buổi không CANCELLED, ghi danh còn hợp lệ và bài chưa GRADED. SUBMITTED không quay về IN_PROGRESS; endpoint lưu nháp vẫn chỉ nhận IN_PROGRESS. GRADED khóa sửa bài; Admin sửa điểm vẫn cần reason/audit.
+- Hai lần cập nhật cạnh tranh hoặc cập nhật đồng thời chấm điểm dùng chung khóa và version; request cũ trả 409, không ghi đè điểm hoặc nội dung.
+- UI: mở danh sách cá nhân → lọc trạng thái/hạn → đọc đề và bài làm → bắt đầu/lưu nháp/nộp → cập nhật bài đã nộp khi còn được phép → xem điểm/nhận xét. Không đổi trạng thái Homework khi Student nộp hoặc cập nhật.
+- Không thay schema/migration. Kiểm thử quyền ADMIN/TUTOR/STUDENT, sở hữu bài, danh sách/lọc/phân trang, deadline, CLOSED/CANCELLED/GRADED, version/audit và cạnh tranh.
+
+Ghi chú sửa lỗi khởi động 13/10/2026: V12 và V13 đã được nhóm dùng cho password reset và payment/enrollment. Khôi phục đúng các SQL gốc và kiểm tra checksum bằng Flyway; migration bài tập dùng V14. Profile supabase giữ ddl-auto=validate, migration được chạy tường minh bằng scripts/migrate-database.ps1 trước khi khởi động. Không dùng ddl-auto=update hoặc repair để bỏ qua sai lệch lịch sử.
