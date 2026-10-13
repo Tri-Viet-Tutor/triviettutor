@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Paid enrollments")
 public class EnrollmentController {
     private final PaymentReadService reads;
-    private final EnrollmentRefundService refunds;
+    private final TuitionRefundService refunds;
 
     @GetMapping("/enrollments/my")
     @PreAuthorize("hasRole('STUDENT')")
