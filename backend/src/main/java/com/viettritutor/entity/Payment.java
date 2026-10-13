@@ -49,4 +49,10 @@ public class Payment {
 
     @Column(name = "paid_at")
     private OffsetDateTime paidAt;
+
+    @Column(name = "provider_transaction_no", unique = true, length = 100)
+    private String providerTransactionNo;
+
+    @Column(name = "refund_reason", length = 100)
+    private String refundReason;
 }

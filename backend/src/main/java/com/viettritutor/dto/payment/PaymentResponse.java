@@ -10,10 +10,11 @@ import java.util.List;
 public record PaymentResponse(Long paymentId, Long intentId, Long studentId, Long classGroupId, Long enrollmentId,
                               BigDecimal amount, BigDecimal refundedAmount, String method, PaymentStatus status,
                               String transactionRef, OffsetDateTime createdAt, OffsetDateTime paidAt,
-                              List<RefundResponse> refunds) {
+                              List<RefundResponse> refunds, String providerTransactionNo, String refundReason) {
     public static PaymentResponse from(Payment payment, Long enrollmentId, List<RefundResponse> refunds) {
         return new PaymentResponse(payment.getId(), payment.getIntentId(), payment.getStudentId(), payment.getClassGroupId(),
                 enrollmentId, payment.getAmount(), payment.getRefundedAmount(), payment.getMethod(), payment.getStatus(),
-                payment.getTransactionRef(), payment.getCreatedAt(), payment.getPaidAt(), refunds);
+                payment.getTransactionRef(), payment.getCreatedAt(), payment.getPaidAt(), refunds,
+                payment.getProviderTransactionNo(), payment.getRefundReason());
     }
 }

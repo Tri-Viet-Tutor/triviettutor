@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "refunds")
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -17,7 +18,7 @@ public class Refund {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "enrollment_id", nullable = false, unique = true)
+    @Column(name = "enrollment_id", unique = true)
     private Long enrollmentId;
 
     @Column(name = "payment_id", nullable = false)
@@ -43,4 +44,20 @@ public class Refund {
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
+
+    @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
+    private String status = "COMPLETED";
+
+    @Column(name = "provider_transaction_no", length = 100)
+    private String providerTransactionNo;
+
+    @Column(name = "provider_response_code", length = 10)
+    private String providerResponseCode;
+
+    @Column(name = "completed_at")
+    private OffsetDateTime completedAt;
+
+    @Column(name = "request_created_at")
+    private OffsetDateTime requestCreatedAt;
 }

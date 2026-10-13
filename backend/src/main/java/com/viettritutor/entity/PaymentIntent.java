@@ -40,4 +40,16 @@ public class PaymentIntent {
 
     @Column(name = "expires_at", nullable = false)
     private OffsetDateTime expiresAt;
+
+    @Column(name = "vnpay_reference", unique = true, length = 100)
+    private String vnpayReference;
+
+    @Column(name = "vnpay_return_url", length = 1000)
+    private String vnpayReturnUrl;
+
+    @Column(name = "vnpay_created_at")
+    private OffsetDateTime vnpayCreatedAt;
+
+    @Column(name = "cancelled_at")
+    private OffsetDateTime cancelledAt;
 }
