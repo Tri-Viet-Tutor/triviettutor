@@ -125,7 +125,7 @@ export const LEARNING_PHOTOS: LearningPhoto[] = [
 ];
 
 /** Ba bước mua một khóa học, hiện ở đầu danh sách khóa */
-export const PURCHASE_STEPS = ["Chọn khóa học", "Thanh toán qua VNPay", "Tạo tài khoản vào học"];
+export const PURCHASE_STEPS = ["Đăng nhập học viên", "Chọn lớp và lịch học", "Thanh toán qua VNPay Sandbox"];
 
 /** Lịch học của một khóa ở dạng chữ, ví dụ { days: "Thứ 2 – 4 – 6", time: "18:00 – 20:00" } */
 export function courseSchedule(course: Course): { days: string; time: string } | undefined {
