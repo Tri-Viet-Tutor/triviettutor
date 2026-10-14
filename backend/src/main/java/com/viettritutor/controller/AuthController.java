@@ -49,4 +49,20 @@ public class AuthController {
             @Valid @RequestBody ResendVerificationRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(authService.resendVerification(request)));
     }
+
+    @Operation(summary = "Request password reset link via email")
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Nếu email tồn tại trong hệ thống, liên kết đặt lại mật khẩu đã được gửi đến hộp thư của bạn."));
+    }
+
+    @Operation(summary = "Reset password using reset token")
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Đặt lại mật khẩu thành công. Vui lòng đăng nhập với mật khẩu mới."));
+    }
 }

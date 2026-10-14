@@ -46,29 +46,408 @@
   }
 }
 
-@keyframes conveyorRight {
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Trang chủ: nền giấy kẻ ô + hiệu ứng động (xem components/motion.tsx)
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/* Lưới ô vuông mờ trên nền giấy */
+.paper-grid {
+  background-image:
+    linear-gradient(rgba(11, 58, 140, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(11, 58, 140, 0.055) 1px, transparent 1px);
+  background-size: 42px 42px;
+}
+
+/* Hiện dần khi cuộn tới */
+.reveal {
+  opacity: 0;
+  transition:
+    opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) var(--reveal-delay, 0ms),
+    transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) var(--reveal-delay, 0ms);
+}
+.reveal-up {
+  transform: translateY(24px);
+}
+.reveal-left {
+  transform: translateX(-40px);
+}
+.reveal-right {
+  transform: translateX(40px);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Phần mở đầu: các khối lần lượt nổi lên khi tải trang */
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.hero-rise {
+  opacity: 0;
+  animation: hero-rise 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) var(--rise-delay, 0ms) forwards;
+}
+
+/* Tiêu đề viền nét, được tô đầy dần từ trái sang phải */
+@keyframes stroke-wipe {
+  to {
+    clip-path: inset(-15% 0 -15% 0);
+  }
+}
+.stroke-wipe {
+  position: relative;
+  display: block;
+  width: fit-content;
+  white-space: nowrap;
+  color: transparent;
+  -webkit-text-stroke: 1px #0b3a8c;
+}
+@media (min-width: 1024px) {
+  .stroke-wipe {
+    -webkit-text-stroke-width: 1.5px;
+  }
+}
+.stroke-wipe::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  color: #0b3a8c;
+  clip-path: inset(-15% 100% -15% 0);
+  animation: stroke-wipe 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) var(--wipe-delay, 0ms) forwards;
+}
+
+/* Trang nhật ký ở phần "Lộ trình học": giấy ô ly, lề cam, hàng lỗ gáy bên trái */
+.diary-page {
+  --diary-hole: 18px;
+  --diary-margin: 42px;
+  background-color: #fffdf7;
+  background-image:
+    radial-gradient(
+      circle at var(--diary-hole) 20px,
+      #f5f1e9 0,
+      #f5f1e9 6px,
+      rgba(11, 58, 140, 0.24) 6px,
+      rgba(11, 58, 140, 0.24) 7px,
+      transparent 7.5px
+    ),
+    linear-gradient(
+      90deg,
+      transparent var(--diary-margin),
+      rgba(245, 160, 15, 0.6) var(--diary-margin),
+      rgba(245, 160, 15, 0.6) calc(var(--diary-margin) + 2px),
+      transparent calc(var(--diary-margin) + 2px)
+    ),
+    linear-gradient(rgba(11, 58, 140, 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(11, 58, 140, 0.065) 1px, transparent 1px);
+  background-size:
+    100% 40px,
+    100% 100%,
+    20px 20px,
+    20px 20px;
+}
+@media (min-width: 640px) {
+  .diary-page {
+    --diary-hole: 28px;
+    --diary-margin: 66px;
+  }
+}
+
+/* Lốc xoáy trên bảng phấn (features/home/hooks/useWhirlwindReveal.ts điều khiển vị trí) */
+.whirlwind {
+  opacity: 0;
+  filter: drop-shadow(0 0 7px rgba(255, 255, 255, 0.35));
+  transition:
+    transform 0.6s cubic-bezier(0.55, 0, 0.3, 1),
+    opacity 0.35s ease;
+  will-change: transform;
+}
+/* Mỗi vòng lắc ngang lệch pha nhau nên thân phễu uốn lượn */
+@keyframes whirlwind-wobble {
+  0%,
+  100% {
+    transform: translateX(-5px);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+}
+.whirlwind-ring {
+  animation: whirlwind-wobble 0.85s ease-in-out infinite;
+  animation-delay: var(--ring-delay, 0ms);
+}
+/* Nét đứt chạy quanh elip tạo cảm giác vòng đang xoay */
+@keyframes whirlwind-spin {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+.whirlwind-spin {
+  animation: whirlwind-spin 0.42s linear infinite;
+}
+
+/* Mục trên bảng: ẩn cho tới khi lốc xoáy tới, rồi xoáy tròn hiện ra */
+@keyframes vortex-in {
   0% {
-    transform: translateX(-50%);
+    opacity: 0;
+    transform: rotate(-300deg) scale(0.1);
+    filter: blur(4px);
+  }
+  55% {
+    opacity: 1;
+    transform: rotate(14deg) scale(1.07);
+    filter: blur(0);
+  }
+  78% {
+    transform: rotate(-4deg) scale(0.98);
   }
   100% {
-    transform: translateX(0%);
+    opacity: 1;
+    transform: none;
+  }
+}
+.vortex-item {
+  opacity: 0;
+}
+.vortex-item.is-revealed {
+  animation: vortex-in 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Máy bay giấy ở phần đăng ký tư vấn: bay hết một vòng số 8 trong 16 giây */
+@keyframes paper-plane-fly {
+  from {
+    offset-distance: 0%;
+  }
+  to {
+    offset-distance: 100%;
+  }
+}
+.paper-plane {
+  offset-rotate: auto;
+  offset-distance: 14%;
+  animation: paper-plane-fly 16s linear infinite;
+}
+
+/* Ngôi sao quanh máy bay giấy: nhấp nháy lệch pha nhau */
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.65) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(45deg);
+  }
+}
+.twinkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: twinkle 2.6s ease-in-out infinite;
+  animation-delay: var(--twinkle-delay, 0s);
+}
+
+/* Con kiến ở phiếu đăng ký (features/home/components/CrawlingAnt.tsx).
+ * Bò hết một lượt đi về trong 14 giây; quay đầu ở hai mép. */
+@keyframes ant-walk {
+  0% {
+    left: 0;
+  }
+  48%,
+  50% {
+    left: 100%;
+  }
+  98%,
+  100% {
+    left: 0;
+  }
+}
+@keyframes ant-turn {
+  0%,
+  48.9% {
+    transform: scaleX(1);
+  }
+  49%,
+  98.9% {
+    transform: scaleX(-1);
+  }
+  99%,
+  100% {
+    transform: scaleX(1);
+  }
+}
+@keyframes ant-legs {
+  from {
+    transform: rotate(-13deg);
+  }
+  to {
+    transform: rotate(13deg);
+  }
+}
+/* Câu nói: im 7 giây đầu, hiện gần 5 giây rồi tắt (chu kỳ 12 giây) */
+@keyframes ant-say {
+  0%,
+  58.3% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.8);
+  }
+  61%,
+  96% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.8);
+  }
+}
+.ant-walker {
+  left: 0;
+}
+.ant-bubble {
+  opacity: 0;
+  transform-origin: 50% 100%;
+}
+.ant-legs-a,
+.ant-legs-b {
+  transform-origin: 15.5px 12px;
+}
+.ant-lane.is-active .ant-walker {
+  animation: ant-walk 14s linear infinite;
+}
+.ant-lane.is-active .ant-body {
+  animation: ant-turn 14s linear infinite;
+}
+.ant-lane.is-active .ant-legs-a {
+  animation: ant-legs 0.26s ease-in-out infinite alternate;
+}
+.ant-lane.is-active .ant-legs-b {
+  animation: ant-legs 0.26s ease-in-out infinite alternate-reverse;
+}
+.ant-lane.is-active .ant-bubble {
+  animation: ant-say 12s ease-out infinite;
+}
+
+/* Quỹ đạo nét đứt quanh ảnh mở đầu trang "Khối lớp / Môn học": các nét trôi rất chậm */
+@keyframes orbit-dash {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+.orbit-dash {
+  animation: orbit-dash 14s linear infinite;
+}
+
+/* Lật sang trang khóa học khác trong nhật ký */
+@keyframes diary-flip {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.diary-flip {
+  animation: diary-flip 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Dây tua của nón tốt nghiệp đung đưa nhẹ */
+@keyframes tassel-sway {
+  0%,
+  100% {
+    rotate: -8deg;
+  }
+  50% {
+    rotate: 8deg;
+  }
+}
+.tassel-sway {
+  transform-origin: 54px 27.5px;
+  animation: tassel-sway 3.4s ease-in-out infinite;
+}
+
+/* Nhãn nổi bên ảnh mở đầu: trôi lên xuống rất nhẹ */
+@keyframes float-soft {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -7px;
+  }
+}
+.float-soft {
+  animation: float-soft 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float-soft,
+  .tassel-sway,
+  .diary-flip {
+    animation: none;
+  }
+  .paper-plane,
+  .twinkle,
+  .orbit-dash {
+    animation: none;
+  }
+  /* Kiến đứng giữa nút, câu nói hiện sẵn */
+  .ant-lane.is-active .ant-walker,
+  .ant-lane.is-active .ant-body,
+  .ant-lane.is-active .ant-legs-a,
+  .ant-lane.is-active .ant-legs-b,
+  .ant-lane.is-active .ant-bubble {
+    animation: none;
+  }
+  .ant-walker {
+    left: 50%;
+  }
+  .ant-bubble {
+    opacity: 1;
+  }
+  .vortex-item,
+  .vortex-item.is-revealed {
+    opacity: 1;
+    animation: none;
+  }
+  .reveal,
+  .hero-rise {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    animation: none;
+  }
+  .stroke-wipe::after {
+    animation: none;
+    clip-path: none;
   }
 }
 
-.tutor-track {
-  display: flex;
-  width: max-content;
-  animation: conveyorRight 35s linear infinite;
+/* Thẻ giá ở trang "Mua khóa học": đung đưa quanh lỗ xỏ dây (features/pricing/components/PriceTag.tsx) */
+@keyframes tag-swing {
+  0%,
+  100% {
+    rotate: 3deg;
+  }
+  50% {
+    rotate: 8deg;
+  }
 }
-
-.tutor-track:hover {
-  animation-play-state: paused;
+.tag-swing {
+  transform-origin: 50% 66px;
+  rotate: 5deg;
+  animation: tag-swing 4.6s ease-in-out infinite;
 }
-
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+@media (prefers-reduced-motion: reduce) {
+  .tag-swing {
+    animation: none;
+  }
 }

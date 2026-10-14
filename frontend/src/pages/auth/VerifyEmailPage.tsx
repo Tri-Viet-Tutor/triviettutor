@@ -1,0 +1,94 @@
+import { useState, type FormEvent } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ROUTES } from "@/constants/routes";
+import { AUTH_INPUT, AUTH_LABEL } from "@/features/auth/components/AuthField";
+import { AuthHeading } from "@/features/auth/components/AuthHeading";
+import { AuthSubmitButton } from "@/features/auth/components/AuthSubmitButton";
+import { EmailOtpForm } from "@/features/auth/components/EmailOtpForm";
+import {
+  pendingResumesCheckout,
+  readPendingEmail,
+  savePendingEmail,
+  type AuthLocationState,
+} from "@/features/auth/data/pendingEmail";
+import { getRoleHome } from "@/lib/auth";
+
+const TEXT_LINK = "font-semibold text-brand-navy underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+
+/**
+ * Trang nhập mã OTP kích hoạt tài khoản (POST /auth/verify-email).
+ * Tới từ trang đăng ký (mã vừa gửi) hoặc từ trang đăng nhập khi tài khoản chưa kích hoạt.
+ * Mã đúng thì backend trả luôn phiên đăng nhập, nên vào thẳng trang của vai trò
+ * (hoặc quay lại trang thanh toán nếu đang mua khóa học dở).
+ */
+export function VerifyEmailPage() {
+  const navigate = useNavigate();
+  const state = useLocation().state as AuthLocationState | null;
+
+  const [email, setEmail] = useState(() => state?.email ?? readPendingEmail());
+  // Chưa biết email (mở thẳng trang này) thì hỏi email trước
+  const [emailLocked, setEmailLocked] = useState(() => Boolean(state?.email ?? readPendingEmail()));
+  // Đang mua khóa học dở: xác thực xong quay lại trang thanh toán
+  const [resumeCheckout] = useState(() => state?.resumeCheckout ?? pendingResumesCheckout());
+
+  function handleEmailSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!email.trim()) return;
+    savePendingEmail(email.trim());
+    setEmail(email.trim());
+    setEmailLocked(true);
+  }
+
+  const backToLogin = (
+    <p className="mt-6 text-center text-[14px] text-brand-muted">
+      <Link to={ROUTES.login} className={TEXT_LINK}>
+        Quay lại đăng nhập
+      </Link>
+    </p>
+  );
+
+  if (!emailLocked) {
+    return (
+      <div>
+        <AuthHeading title="Xác thực email" description="Nhập email bạn đã dùng để đăng ký." />
+        <form onSubmit={handleEmailSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="verify-email" className={`mb-1.5 ${AUTH_LABEL}`}>
+              Email
+            </label>
+            <input
+              id="verify-email"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="ban@example.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              className={AUTH_INPUT}
+            />
+          </div>
+          <AuthSubmitButton label="Tiếp tục" pendingLabel="Tiếp tục" isPending={false} />
+        </form>
+        {backToLogin}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <AuthHeading title="Nhập mã xác thực" />
+      <div className="-mt-5">
+        <EmailOtpForm
+          key={email}
+          email={email}
+          onChangeEmail={() => setEmailLocked(false)}
+          onVerified={(response) =>
+            navigate(resumeCheckout ? ROUTES.checkout : getRoleHome(response.user.role), { replace: true })
+          }
+          loginState={{ resumeCheckout }}
+        />
+      </div>
+      {backToLogin}
+    </div>
+  );
+}

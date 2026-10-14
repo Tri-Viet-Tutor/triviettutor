@@ -15,6 +15,8 @@ Quang phụ trách tài khoản, danh mục/lớp, giao dịch học phí và b�
 | ID | API | Quyền | Input chính → Output | Nguồn |
 |---|---|---|---|---|
 | Q-A01 | POST `/auth/login` | Public | email,password → accessToken,user | Có code |
+| Q-A01a | POST `/auth/forgot-password` | Public | email → gửi link reset mật khẩu qua email | Mới |
+| Q-A01b | POST `/auth/reset-password` | Public | token,newPassword → đổi mật khẩu mới | Mới |
 | Q-A02 | POST `/auth/register` | Public | email,password,fullName → accessToken,user | Có code |
 | Q-A03 | GET `/me` | U | JWT → hồ sơ của mình | Spec |
 | Q-A04 | PUT `/me` | U | fullName,phone,address/bio theo role → hồ sơ | Spec |

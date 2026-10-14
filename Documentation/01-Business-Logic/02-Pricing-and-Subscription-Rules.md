@@ -10,7 +10,7 @@ Tài liệu này chốt **cách tính tiền** cho học viên và **cách tính
 | :--- | :--- |
 | **BR-02.01** | Học phí thu **theo trọn gói khóa/lớp**, không thu theo buổi lẻ khi đăng ký. |
 | **BR-02.02** | Học viên phải thanh toán **100%** học phí tại thời điểm đăng ký. Chỉ khi thanh toán thành công mới tạo `Enrollment`. |
-| **BR-02.03** | Admin cấu hình **học phí gốc 1-1** \(P_{\text{1on1}}\) theo môn, cấp học (Cấp 1 / 2 / 3) và hình thức (Online / Offline). |
+| **BR-02.03** | Admin cấu hình **học phí gốc 1-1** \(P_{\text{1on1}}\) theo môn, khối lớp THPT (lớp 10 / 11 / 12) và hình thức (Online / Offline). |
 | **BR-02.04** | Giá học viên phải trả được **chốt lúc đăng ký**. Lớp lớn thêm sau đó **không** tính lại tiền đã đóng. |
 | **BR-02.05** | Không có gói tháng/năm cho gia sư. Mọi doanh thu là học phí học viên. |
 

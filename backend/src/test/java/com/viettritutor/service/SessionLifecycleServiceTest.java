@@ -3,6 +3,7 @@ package com.viettritutor.service;
 import com.viettritutor.entity.Session;
 import com.viettritutor.enums.SessionStatus;
 import com.viettritutor.repository.SessionRepository;
+import com.viettritutor.service.impl.SessionLifecycleServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,7 +35,7 @@ class SessionLifecycleServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new SessionLifecycleService(
+        service = new SessionLifecycleServiceImpl(
                 repository, CLOCK, Optional.of(classLifecycle), eventPublisher);
     }
 

@@ -8,6 +8,7 @@ import com.viettritutor.enums.SessionStatus;
 import com.viettritutor.repository.LearningScheduleRepository;
 import com.viettritutor.repository.SessionRepository;
 import com.viettritutor.entity.User;
+import com.viettritutor.service.impl.SessionQueryServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,7 +36,7 @@ class SessionQueryServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new SessionQueryService(sessionRepository, learningScheduleRepository);
+        service = new SessionQueryServiceImpl(sessionRepository, learningScheduleRepository);
     }
 
     @Test

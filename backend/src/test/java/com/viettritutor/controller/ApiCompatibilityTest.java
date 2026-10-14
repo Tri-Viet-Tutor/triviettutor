@@ -7,6 +7,8 @@ import com.viettritutor.repository.SessionRepository;
 import com.viettritutor.service.SessionLifecycleJob;
 import com.viettritutor.entity.User;
 import com.viettritutor.repository.UserRepository;
+import com.viettritutor.repository.EmailVerificationRepository;
+import com.viettritutor.service.EmailService;
 import com.viettritutor.security.jwt.JwtService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,23 +51,42 @@ class ApiCompatibilityTest {
     @Autowired private SessionRepository sessions;
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private JwtService jwtService;
+    @Autowired private EmailVerificationRepository verifications;
+    @MockBean private EmailService emailService;
 
     // Keep the real HTTP/service stack while preventing background state changes.
     @MockBean private SessionLifecycleJob lifecycleJob;
 
     @Test
-    void registrationAndLoginKeepTheirPayloadsAndIssueUsableBearerTokens() throws Exception {
-        String registration = mvc.perform(post("/api/v1/auth/register")
+    void registrationRequiresEmailVerificationBeforeLoginAndIssuesUsableTokens() throws Exception {
+        mvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email":"student@example.com","password":"password123","fullName":"Test Student"}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.email").value("student@example.com"))
+                .andExpect(jsonPath("$.data.accessToken").doesNotExist());
+
+        mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"student@example.com","password":"password123"}
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("ACCOUNT_NOT_VERIFIED"));
+
+        String otp = verifications.findTopByEmailAndVerifiedFalseOrderByCreatedAtDesc("student@example.com")
+                .orElseThrow().getOtpCode();
+        org.mockito.Mockito.verify(emailService).sendOtpEmail("student@example.com", otp);
+        String verification = mvc.perform(post("/api/v1/auth/verify-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("email", "student@example.com", "otp", otp))))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.accessToken").isString())
                 .andExpect(jsonPath("$.data.user.id").isNumber())
-                .andExpect(jsonPath("$.data.user.email").value("student@example.com"))
                 .andExpect(jsonPath("$.data.user.fullName").value("Test Student"))
+                .andExpect(jsonPath("$.data.user.email").value("student@example.com"))
                 .andExpect(jsonPath("$.data.user.role").value("ROLE_STUDENT"))
                 .andExpect(jsonPath("$.data.user.password").doesNotExist())
                 .andReturn().getResponse().getContentAsString();
@@ -81,7 +102,7 @@ class ApiCompatibilityTest {
                 .andExpect(jsonPath("$.data.accessToken").isString())
                 .andReturn().getResponse().getContentAsString();
 
-        for (String response : new String[]{registration, login}) {
+        for (String response : new String[]{verification, login}) {
             String token = objectMapper.readTree(response).at("/data/accessToken").asText();
             mvc.perform(get("/api/v1/me/sessions").header("Authorization", "Bearer " + token))
                     .andExpect(status().isOk())
@@ -202,7 +223,7 @@ class ApiCompatibilityTest {
 
     private User user(String email, String role) {
         return users.save(User.builder().email(email).fullName("Test User")
-                .password(passwordEncoder.encode("password123")).role(role).build());
+                .password(passwordEncoder.encode("password123")).role(role).enabled(true).build());
     }
 
     private Session session(User tutor, Long classGroupId, LocalDate date) {

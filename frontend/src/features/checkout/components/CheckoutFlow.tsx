@@ -1,0 +1,204 @@
+import { useEffect, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ROUTES } from "@/constants/routes";
+import { AuthNotice } from "@/features/auth/components/AuthNotice";
+import { GRADE_OPTIONS, DELIVERY_MODE_OPTIONS, SCHEDULE_PATTERN_OPTIONS } from "@/features/catalog/data/classOptions";
+import { cancelIntent, getIntent, getTuitionClass, listTuitionClasses, quoteTuition, startVnpay, verifyVnpayReturn,
+  type VnpayRedirect } from "@/features/checkout/api/tuitionPaymentApi";
+import { PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT } from "@/features/portal/data/ui";
+import { portalKeys } from "@/features/portal/hooks/usePortalData";
+import { formatClock, useCountdown } from "@/hooks/useCountdown";
+import { getApiError } from "@/lib/api";
+import { useAuthStore } from "@/stores/authStore";
+import { useCartStore } from "@/stores/cartStore";
+import type { DeliveryMode, GradeLevel } from "@/types/api";
+import { formatVnd } from "@/utils/currency";
+
+const PAYMENT_ERRORS: Record<string, string> = {
+  PAYMENT_GATEWAY_DISABLED: "VNPay Sandbox chưa được cấu hình. Vui lòng liên hệ trung tâm.",
+  CLASS_FULL: "Lớp đã hết chỗ. Vui lòng chọn lớp khác.",
+  CLASS_NOT_ENROLLING: "Lớp đã ngừng nhận đăng ký.",
+  CLASS_PAYMENT_NOT_READY: "Lớp chưa có lịch học đầy đủ để đăng ký.",
+  STUDENT_SCHEDULE_CONFLICT: "Lịch lớp này trùng với lớp bạn đã đăng ký hoặc đang giữ chỗ.",
+  PAYMENT_RESERVATION_EXISTS: "Bạn đang giữ chỗ ở lớp này. Hãy tiếp tục yêu cầu thanh toán trước.",
+  ENROLLMENT_ALREADY_EXISTS: "Bạn đã ghi danh vào lớp này.",
+  PAYMENT_INTENT_EXPIRED: "Yêu cầu đã hết hạn. Vui lòng tạo thanh toán mới.",
+  PAYMENT_PRICE_CHANGED: "Học phí đã thay đổi. Vui lòng tạo thanh toán mới.",
+  INVALID_PAYMENT_SIGNATURE: "Không xác minh được kết quả VNPay. Hãy kiểm tra lại trạng thái yêu cầu.",
+};
+function errorMessage(error: unknown): string {
+  return PAYMENT_ERRORS[getApiError(error).errorCode ?? ""] ?? "Chưa xử lý được yêu cầu. Vui lòng thử lại.";
+}
+function storedIntent(userId: number): number | null {
+  try {
+    const value = Number(sessionStorage.getItem(`tuition-intent-${userId}`));
+    return Number.isSafeInteger(value) && value > 0 ? value : null;
+  } catch { return null; }
+}
+function SeatHold({ expiresAt }: { expiresAt: string }) {
+  const [left] = useCountdown(Math.max(0, Math.floor((Date.parse(expiresAt) - Date.now()) / 1000)));
+  return <p className="text-sm font-semibold text-brand-navy" role="timer">
+    {left > 0 ? `Yêu cầu còn hiệu lực trong ${formatClock(left)}` : "Đã hết thời gian giữ chỗ"}
+  </p>;
+}
+
+export function CheckoutFlow({ shopTo = ROUTES.pricing }: { shopTo?: string; stickyTopClassName?: string }) {
+  const user = useAuthStore((state) => state.user);
+  return user?.role === "ROLE_STUDENT" ? <StudentPayment key={user.id} userId={user.id} shopTo={shopTo} /> : (
+    <section className={`${PORTAL_CARD} space-y-4 p-6`}>
+      <h1 className="text-2xl font-bold text-brand-navy">Đăng ký lớp học</h1>
+      <p>Đăng nhập tài khoản học viên đã xác thực để chọn lớp và thanh toán qua VNPay Sandbox.</p>
+      {!user ? <div className="flex gap-3">
+        <Link to={ROUTES.login} state={{ resumeCheckout: true }} className={PORTAL_BTN_PRIMARY}>Đăng nhập</Link>
+        <Link to={ROUTES.register} state={{ resumeCheckout: true }} className={PORTAL_BTN_SECONDARY}>Tạo tài khoản</Link>
+      </div> : <AuthNotice tone="info">Chỉ tài khoản học viên được đăng ký lớp.</AuthNotice>}
+    </section>
+  );
+}
+
+function StudentPayment({ userId, shopTo }: { userId: number; shopTo: string }) {
+  const cache = useQueryClient();
+  const navigate = useNavigate();
+  const { search } = useLocation();
+  const subjects = useCartStore((state) => state.subjects);
+  const [subject, setSubject] = useState(subjects[0] ?? "");
+  const [grade, setGrade] = useState<GradeLevel | "">("");
+  const [mode, setMode] = useState<DeliveryMode | "">("");
+  const [page, setPage] = useState(0);
+  const [classId, setClassId] = useState<number | null>(null);
+  const [activeId, setActiveId] = useState(() => storedIntent(userId));
+  const [redirect, setRedirect] = useState<VnpayRedirect | null>(null);
+  const attempt = useRef<{ classId: number; key: string; intentId?: number } | null>(null);
+  const params = new URLSearchParams(search);
+  const returning = params.has("vnp_TxnRef") || params.has("vnp_SecureHash");
+  const returned = useQuery({ queryKey: ["tuition-return", userId, search], queryFn: () => verifyVnpayReturn(search),
+    enabled: returning, retry: false });
+  const intentId = returning ? returned.data?.intent.intentId : activeId;
+  const detail = useQuery({ queryKey: ["tuition-intent", userId, intentId], queryFn: () => getIntent(intentId!),
+    enabled: Boolean(intentId), retry: false,
+    refetchInterval: (query) => query.state.data?.intent.status === "PENDING" ? 3000 : false });
+  const state = detail.data ?? returned.data;
+  const enrollmentStatus = state?.enrollment?.status;
+  useEffect(() => {
+    if (enrollmentStatus) void cache.invalidateQueries({ queryKey: portalKeys.sessions(userId) });
+  }, [enrollmentStatus, cache, userId]);
+  const pending = state?.intent.status === "PENDING";
+  const catalog = useQuery({ queryKey: ["tuition-classes", userId, subject, grade, mode, page],
+    queryFn: () => listTuitionClasses({ subject: subject.trim() || undefined, gradeLevel: grade || undefined,
+      deliveryMode: mode || undefined, page, size: 10 }), enabled: !pending && !returning });
+  const selected = useQuery({ queryKey: ["tuition-class", userId, classId], queryFn: () => getTuitionClass(classId!),
+    enabled: classId !== null });
+
+  function saveIntent(id: number | null) {
+    setActiveId(id);
+    try {
+      if (id === null) sessionStorage.removeItem(`tuition-intent-${userId}`);
+      else sessionStorage.setItem(`tuition-intent-${userId}`, String(id));
+    } catch { /* Recovery still works through the signed return URL. */ }
+  }
+  const start = useMutation({ mutationFn: async () => {
+    if (classId === null) throw new Error("Select a class");
+    if (!attempt.current || attempt.current.classId !== classId) attempt.current = { classId, key: crypto.randomUUID() };
+    if (!attempt.current.intentId) {
+      const quote = await quoteTuition(classId, attempt.current.key);
+      attempt.current.intentId = quote.intentId;
+      saveIntent(quote.intentId);
+    }
+    return startVnpay(attempt.current.intentId);
+  }, onSuccess: (value) => {
+    setRedirect(value);
+    void cache.invalidateQueries({ queryKey: ["tuition-intent"] });
+    void cache.invalidateQueries({ queryKey: ["tuition-classes"] });
+  } });
+  const cancel = useMutation({ mutationFn: () => cancelIntent(intentId!), onSuccess: (value) => {
+    setRedirect(null); attempt.current = null;
+    cache.setQueryData(["tuition-intent", userId, intentId], value);
+    void cache.invalidateQueries({ queryKey: ["tuition-classes"] });
+  } });
+  const resume = useMutation({ mutationFn: () => startVnpay(intentId!), onSuccess: (value) => {
+    setRedirect(value);
+    void cache.invalidateQueries({ queryKey: ["tuition-classes"] });
+  } });
+
+  function reset() {
+    saveIntent(null); setRedirect(null); setClassId(null); attempt.current = null;
+    start.reset(); resume.reset(); cancel.reset();
+    navigate(ROUTES.studentCheckout, { replace: true });
+    void cache.invalidateQueries({ queryKey: ["tuition-classes"] });
+  }
+  const paymentError = start.error ?? resume.error ?? cancel.error ?? returned.error ?? detail.error;
+  const paid = state?.payment;
+  const outcome = paid?.status === "REQUIRES_REFUND" ? "VNPay đã ghi nhận thanh toán. Yêu cầu cần hoàn tiền; trung tâm sẽ xử lý."
+    : paid?.status === "FAILED" ? "Thanh toán không thành công. Bạn có thể tạo yêu cầu mới."
+    : paid?.status === "REFUNDED" ? "Học phí đã được hoàn lại."
+    : paid?.status === "PARTIALLY_REFUNDED" ? "Học phí đã được hoàn lại một phần."
+    : state?.enrollment?.status === "ACTIVE" ? "Thanh toán thành công. Bạn đã được ghi danh vào lớp."
+    : state?.intent.status === "EXPIRED" ? "Yêu cầu đã hết hạn hoặc được hủy; chỗ giữ đã được giải phóng." : null;
+
+  return <div className="space-y-6">
+    <Link to={shopTo} className="text-sm font-semibold text-brand-navy">← Chọn khóa học</Link>
+    <h1 className="text-3xl font-bold text-brand-navy">Đăng ký lớp · VNPay Sandbox</h1>
+    <p className="text-brand-muted">Môi trường thử nghiệm, không thanh toán tiền thật. Mỗi yêu cầu dành cho một lớp.</p>
+    {paymentError && <AuthNotice tone="error">{errorMessage(paymentError)}</AuthNotice>}
+    {(intentId || returning) && <section className={`${PORTAL_CARD} space-y-4 p-6`} aria-live="polite">
+      {(returned.isFetching || detail.isFetching) && <p>Đang kiểm tra kết quả thanh toán…</p>}
+      {state && <p>Lớp #{state.intent.classGroupId} · Học phí {formatVnd(state.intent.amount)}</p>}
+      {outcome && <AuthNotice tone={state?.enrollment?.status === "ACTIVE" ? "success" : "info"}>{outcome}</AuthNotice>}
+      {state?.enrollment?.status === "ACTIVE" && <Link to={ROUTES.studentSchedule} className={PORTAL_BTN_PRIMARY}>Xem lịch học</Link>}
+      {pending && <>
+        <SeatHold key={state.intent.intentId} expiresAt={state.intent.expiresAt} />
+        <p className="text-sm text-brand-muted">Kết quả sẽ được cập nhật sau khi VNPay xác nhận.</p>
+        <div className="flex flex-wrap gap-3">
+          {redirect && Date.parse(redirect.expiresAt) > Date.now()
+            ? <a href={redirect.paymentUrl} className={PORTAL_BTN_PRIMARY}>Thanh toán tại VNPay Sandbox</a>
+            : <button onClick={() => resume.mutate()} disabled={resume.isPending} className={PORTAL_BTN_PRIMARY}>Tiếp tục thanh toán</button>}
+          <button onClick={() => cancel.mutate()} disabled={cancel.isPending || resume.isPending} className={PORTAL_BTN_SECONDARY}>Hủy yêu cầu</button>
+        </div>
+      </>}
+      {intentId && <button onClick={() => void detail.refetch()} className={PORTAL_BTN_SECONDARY}>Kiểm tra trạng thái</button>}
+      {(!pending || detail.isError || returned.isError) && <button onClick={reset} className={PORTAL_BTN_SECONDARY}>Chọn lớp khác</button>}
+    </section>}
+    {!pending && !returning && <>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="text-sm">Mã môn<input className={PORTAL_INPUT} value={subject}
+          onChange={(event) => { setSubject(event.target.value); setPage(0); setClassId(null); }} placeholder="Ví dụ: MATH" /></label>
+        <label className="text-sm">Khối lớp<select className={PORTAL_INPUT} value={grade}
+          onChange={(event) => { setGrade(event.target.value as GradeLevel | ""); setPage(0); setClassId(null); }}>
+          <option value="">Tất cả</option>{GRADE_OPTIONS.map((value) => <option key={value.value} value={value.value}>{value.label}</option>)}
+        </select></label>
+        <label className="text-sm">Hình thức<select className={PORTAL_INPUT} value={mode}
+          onChange={(event) => { setMode(event.target.value as DeliveryMode | ""); setPage(0); setClassId(null); }}>
+          <option value="">Tất cả</option>{DELIVERY_MODE_OPTIONS.map((value) => <option key={value.value} value={value.value}>{value.label}</option>)}
+        </select></label>
+      </div>
+      {catalog.isError && <AuthNotice tone="error">Không tải được danh sách lớp. <button onClick={() => void catalog.refetch()}>Thử lại</button></AuthNotice>}
+      {catalog.isPending && <p>Đang tải lớp học…</p>}
+      {catalog.data?.content.length === 0 && <p>Chưa có lớp phù hợp đang mở đăng ký.</p>}
+      <div className="grid gap-4 md:grid-cols-2">{catalog.data?.content.map((group) => <button key={group.id}
+        aria-pressed={classId === group.id} onClick={() => { setClassId(group.id); attempt.current = null; start.reset(); }}
+        className={`${PORTAL_CARD} space-y-2 p-5 text-left ${classId === group.id ? "ring-2 ring-brand-navy" : "hover:border-brand-navy"}`}>
+        <strong className="block text-brand-navy">{group.courseName} · {group.classCode}</strong>
+        <span className="block text-sm">{SCHEDULE_PATTERN_OPTIONS.find((value) => value.value === group.schedulePattern)?.label} · {group.timeSlotLabel}</span>
+        <span className="block text-sm">Khai giảng {group.startDate} · Còn {group.spotsLeft} chỗ</span>
+        <span className="block font-semibold">Học phí {formatVnd(group.basePrice1on1)}</span>
+      </button>)}</div>
+      {catalog.data && catalog.data.totalPages > 1 && <div className="flex items-center gap-3">
+        <button disabled={page === 0} onClick={() => setPage(page - 1)} className={PORTAL_BTN_SECONDARY}>Trang trước</button>
+        <span>Trang {page + 1}/{catalog.data.totalPages}</span>
+        <button disabled={page + 1 >= catalog.data.totalPages} onClick={() => setPage(page + 1)} className={PORTAL_BTN_SECONDARY}>Trang sau</button>
+      </div>}
+      {selected.isError && <AuthNotice tone="error">Không tải được lịch của lớp đã chọn.</AuthNotice>}
+      {selected.data && <section className={`${PORTAL_CARD} space-y-3 p-5`}>
+        <h2 className="font-bold text-brand-navy">Lịch học · {selected.data.classCode}</h2>
+        <ul className="max-h-52 overflow-y-auto text-sm">{selected.data.sessions?.map((session) => <li key={session.id}>
+          {session.date} · {session.startTime.slice(0, 5)} – {session.endTime.slice(0, 5)}
+        </li>)}</ul>
+        <button disabled={start.isPending || Boolean(activeId && !state) || selected.data.status !== "ENROLLING" || selected.data.spotsLeft < 1}
+          onClick={() => start.mutate()} className={PORTAL_BTN_PRIMARY}>
+          {start.isPending ? "Đang tạo thanh toán…" : "Giữ chỗ và thanh toán"}
+        </button>
+      </section>}
+    </>}
+  </div>;
+}
