@@ -22,20 +22,20 @@ echo.
 echo [2/4] Starting Backend (Spring Boot) ...
 echo Starting Backend on port 8080 ...
 if exist "backend\mvnw.cmd" (
-    start "VietTriTutor - Backend (8080)" /D "backend" cmd /c "mvnw.cmd spring-boot:run"
+    start "VietTriTutor - Backend (8080)" /D "backend" cmd /k "mvnw.cmd spring-boot:run || (echo. && echo [ERROR] Backend gap su co! Xem nguyen nhan o tren. && pause)"
 ) else (
-    start "VietTriTutor - Backend (8080)" /D "backend" cmd /c "mvn spring-boot:run"
+    start "VietTriTutor - Backend (8080)" /D "backend" cmd /k "mvn spring-boot:run || (echo. && echo [ERROR] Backend gap su co! Xem nguyen nhan o tren. && pause)"
 )
 
 echo.
 echo [3/4] Starting Frontend Web (React + Vite) ...
 echo Starting Frontend on port 5173 ...
-start "VietTriTutor - Frontend (5173)" /D "frontend" cmd /c "npm run dev"
+start "VietTriTutor - Frontend (5173)" /D "frontend" cmd /k "npm run dev"
 
 echo.
 echo [4/4] Starting Mobile App (Expo / React Native) ...
 echo Starting Mobile Dev Server on port 8081 ...
-start "VietTriTutor - Mobile (8081)" /D "mobile" cmd /c "npm start"
+start "VietTriTutor - Mobile (8081)" /D "mobile" cmd /k "npm start"
 
 echo.
 echo ===================================================
