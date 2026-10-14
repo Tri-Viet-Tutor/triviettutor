@@ -1,10 +1,11 @@
 import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/components/useColorScheme';
+import { AuthProvider } from '@/services/authContext';
+import { BrandColors } from '@/constants/Colors';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -12,7 +13,7 @@ export {
 } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
+  // Ensure that reloading keeps initial route set
   initialRouteName: '(tabs)',
 };
 
@@ -30,27 +31,63 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
+    if (loaded || error) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [loaded, error]);
 
-  if (!loaded) {
+  if (!loaded && !error) {
     return null;
   }
 
-  return <RootLayoutNav />;
+  return (
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
+  );
 }
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
+    <Stack
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: BrandColors.navy,
+        },
+        headerTintColor: '#FFFFFF',
+        headerTitleStyle: {
+          fontWeight: '700',
+        },
+      }}>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="course/[id]"
+        options={{
+          title: 'Chi tiết Lớp học',
+          headerBackTitle: 'Quay lại',
+        }}
+      />
+      <Stack.Screen
+        name="auth/login"
+        options={{
+          title: 'Đăng nhập',
+          headerBackTitle: 'Trang chủ',
+        }}
+      />
+      <Stack.Screen
+        name="auth/register"
+        options={{
+          title: 'Đăng ký Tài khoản',
+          headerBackTitle: 'Đăng nhập',
+        }}
+      />
+      <Stack.Screen
+        name="modal"
+        options={{
+          presentation: 'modal',
+          title: 'Thông tin Trung tâm VietTriTutor',
+        }}
+      />
+    </Stack>
   );
 }
