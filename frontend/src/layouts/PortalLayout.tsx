@@ -45,7 +45,6 @@ export function PortalLayout({ areaLabel, homeTo, profileTo, navItems }: PortalL
                 Tri Viet <span className="text-brand-orange">Tutor</span>
               </span>
             </Link>
-            <span className="hidden rounded-full bg-brand-tint px-3 py-1 text-[13px] font-semibold text-brand-navy md:block">{areaLabel}</span>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
@@ -57,7 +56,10 @@ export function PortalLayout({ areaLabel, homeTo, profileTo, navItems }: PortalL
               <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-navy text-[14px] font-bold text-white">
                 {nameInitial(user?.fullName ?? "")}
               </span>
-              <span className="hidden max-w-[180px] truncate text-[14px] font-semibold text-brand-ink sm:block">{user?.fullName}</span>
+              <span className="hidden sm:block">
+                <span className="block max-w-[180px] truncate text-[14px] font-semibold text-brand-ink">{user?.fullName}</span>
+                <span className="block text-[11px] font-medium text-brand-muted">{areaLabel}</span>
+              </span>
             </Link>
             <button
               type="button"

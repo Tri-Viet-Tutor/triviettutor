@@ -1,6 +1,13 @@
 import { AdminTodoPanel, type TodoTile } from "@/features/admin/components/AdminTodoPanel";
 import { PendingLeaveList } from "@/features/admin/components/PendingLeaveList";
-import { useAdminLeaveRequests, useAdminSessions, useUserCounts } from "@/features/admin/hooks/useAdminData";
+import { SystemActivityChart } from "@/features/admin/components/SystemActivityChart";
+import { RecentActivityFeed } from "@/features/admin/components/RecentActivityFeed";
+import {
+  useAdminLeaveRequests,
+  useAdminSessions,
+  useUserCounts,
+  useUserDirectory,
+} from "@/features/admin/hooks/useAdminData";
 import { ROUTES } from "@/constants/routes";
 import { PortalGreeting } from "@/features/portal/components/PortalGreeting";
 import { SummaryCard, type SummaryRow } from "@/features/portal/components/SummaryCard";
@@ -32,6 +39,7 @@ export function AdminHomePage() {
   const todaySessions = useAdminSessions({ from: todayIso, to: todayIso, page: 0, size: 1 });
   const upcoming = useAdminSessions({ from: todayIso, page: 0, size: UPCOMING_PREVIEW });
   const counts = useUserCounts();
+  const directory = useUserDirectory();
 
   const fullName = user?.fullName ?? "bạn";
   const tiles: TodoTile[] = [
@@ -61,8 +69,10 @@ export function AdminHomePage() {
     <>
       <PortalGreeting fullName={fullName} name={givenName(fullName)} description={formatLongDate(today)} />
 
-      <div className="grid grid-cols-1 items-start gap-x-8 gap-y-7 lg:grid-cols-12">
-        <div className="space-y-7 lg:col-span-8">
+      {/* Cột trái: Việc cần xử lý → Buổi học → Biểu đồ
+          Cột phải: Người dùng → Đơn nghỉ → Hoạt động gần đây */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
+        <div className="space-y-4 lg:col-span-7">
           <AdminTodoPanel name={givenName(fullName)} tiles={tiles} />
           <UpcomingList
             title="Buổi học từ hôm nay"
@@ -71,11 +81,16 @@ export function AdminHomePage() {
             scheduleTo={ROUTES.adminSessions}
             emptyText={upcoming.isError ? "Không tải được buổi học." : upcoming.isPending ? "Đang tải…" : "Chưa có buổi học nào được xếp từ hôm nay."}
           />
+          <SystemActivityChart />
         </div>
-
-        <div className="space-y-7 lg:col-span-4">
+        <div className="space-y-4 lg:col-span-5">
           <SummaryCard id="user-summary-title" title="Người dùng" linkLabel="Xem danh sách" linkTo={ROUTES.adminUsers} rows={rows} />
           <PendingLeaveList requests={pendingLeave.data?.content} isError={pendingLeave.isError} />
+          <RecentActivityFeed
+            leaves={pendingLeave.data?.content ?? []}
+            sessions={upcoming.data?.content ?? []}
+            nameOf={directory.nameOf}
+          />
         </div>
       </div>
     </>
