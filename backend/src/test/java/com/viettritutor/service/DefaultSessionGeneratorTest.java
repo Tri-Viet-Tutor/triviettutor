@@ -38,7 +38,7 @@ class DefaultSessionGeneratorTest {
 
     @BeforeEach
     void setUp() {
-        generator = new DefaultSessionGenerator(repository, generationLockRepository, new SessionDateCalculator());
+        generator = new DefaultSessionGenerator(repository, generationLockRepository, new SessionDateCalculator(), java.util.Optional.empty());
         lenient().when(generationLockRepository.findForUpdate(11L))
                 .thenReturn(java.util.Optional.of(new SessionGenerationLock(11L)));
         lenient().when(repository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));

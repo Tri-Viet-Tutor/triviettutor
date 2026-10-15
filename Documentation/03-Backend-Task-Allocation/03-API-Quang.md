@@ -72,3 +72,5 @@ Theo logical model mới, `CartItem` lưu **môn** (`subject_id`) còn `OrderIte
 - Hữu cần danh sách học viên đã ghi danh hợp lệ và thông tin lớp từ Quang.
 
 **Tổng: 42 API.** Chi tiết input/output, quy tắc và test nằm trong [tài liệu giao việc Quang](01-Quang.md); các điểm schema chưa chốt nằm trong [tổng quan phân công](00-Tong-quan-phan-cong.md).
+
+Contract bảng lương ngày 14/10/2026 nằm tại mục Q04 bổ sung trong 01-Quang.md: mức hiện tại cho cả tháng, chỉ chốt kỳ đã kết thúc và đối soát đủ; Tutor đọc danh sách kỳ FINALIZED của mình. POST finalize nhận Idempotency-Key, không body.

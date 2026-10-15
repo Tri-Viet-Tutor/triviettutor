@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.math.BigDecimal;
 import com.viettritutor.entity.TutorProfile;
 
+@org.springframework.test.context.ActiveProfiles("test")
 @SpringBootTest(properties = {
         "spring.datasource.url=jdbc:h2:mem:admin-users-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
         "spring.datasource.driver-class-name=org.h2.Driver",

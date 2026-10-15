@@ -22,6 +22,7 @@ public class ClassScheduleService {
     private final SessionOperationSupport operations;
     private final ClassAuditService audit;
     private final Clock clock;
+    private final Optional<PayrollGuard> payrollGuard;
 
     public LocalDate validateDates(LocalDate start, LocalDate deadline) {
         LocalDate today = LocalDate.now(clock);
@@ -75,6 +76,7 @@ public class ClassScheduleService {
         for (int i = 0; i < saved.size(); i++) {
             Session s = saved.get(i);
             if (s.getSessionNumber() != i + 1) throw new BusinessException(ErrorCode.SESSION_CONFIG_MISMATCH);
+            payrollGuard.ifPresent(guard -> guard.assertSessionEditable(s.getId()));
             changes.add(Map.of("sessionId", s.getId(), "previousDate", s.getSessionDate(), "newDate", dates.get(i)));
             s.setSessionDate(dates.get(i));
             s.setStatus(SessionStatus.SCHEDULED);

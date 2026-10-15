@@ -2,6 +2,9 @@ function Import-ProjectEnvironment {
     param([Parameter(Mandatory)][string]$ProjectRoot)
 
     $envPath = Join-Path $ProjectRoot '.env'
+    if (-not (Test-Path -LiteralPath $envPath)) {
+        $envPath = Join-Path $ProjectRoot 'backend/.env'
+    }
     if (-not (Test-Path -LiteralPath $envPath)) { return }
 
     foreach ($line in Get-Content -LiteralPath $envPath -Encoding UTF8) {

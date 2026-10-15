@@ -25,6 +25,7 @@ public class DefaultSessionGenerator implements SessionGenerator {
     private final SessionRepository sessionRepository;
     private final SessionGenerationLockRepository generationLockRepository;
     private final SessionDateCalculator dateCalculator;
+    private final Optional<com.viettritutor.service.PayrollGuard> payrollGuard;
 
     @Override
     @Transactional
@@ -32,6 +33,7 @@ public class DefaultSessionGenerator implements SessionGenerator {
         lockClassGeneration(spec.classGroupId());
         List<LocalDate> expectedDates = dateCalculator.calculate(
                 spec.startDate(), spec.pattern(), spec.totalSessions());
+        payrollGuard.ifPresent(guard -> guard.prepareSessionGeneration(expectedDates));
         List<Session> existing = sessionRepository.findOriginalSessionsForUpdate(spec.classGroupId());
 
         Map<Integer, Session> byNumber = existing.stream().collect(Collectors.toMap(
@@ -56,6 +58,7 @@ public class DefaultSessionGenerator implements SessionGenerator {
                 verifyMatches(saved, expectedDate, spec);
                 continue;
             }
+            payrollGuard.ifPresent(guard -> guard.assertDateEditable(expectedDate));
             missing.add(Session.builder()
                     .classGroupId(spec.classGroupId())
                     .sessionNumber(sessionNumber)
