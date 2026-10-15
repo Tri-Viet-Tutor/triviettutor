@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
 import { ROUTES } from "@/constants/routes";
-import { SessionSchedule } from "@/features/portal/components/SessionSchedule";
-import { SessionDetail } from "@/features/student/components/SessionDetail";
+import { SessionSchedule } from "@/components/dashboard/SessionSchedule";
+import { SessionDetail } from "@/components/student/SessionDetail";
 import { useNow } from "@/hooks/useNow";
 
+/** Liên kết dạng nút chính */
 const PRIMARY_LINK =
   "inline-flex h-11 items-center justify-center rounded-md bg-brand-navy px-6 text-[15px] font-semibold text-white transition-colors hover:bg-brand-navyDeep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
 
@@ -20,7 +21,7 @@ export function StudentSchedulePage() {
       emptyTitle="Bạn chưa có buổi học nào"
       emptyDescription="Lịch học sẽ hiện ở đây sau khi trung tâm xếp bạn vào lớp."
       emptyAction={
-        <Link to={ROUTES.studentCourses} className={PRIMARY_LINK}>
+        <Link to={ROUTES.studentCatalog} className={PRIMARY_LINK}>
           Xem các khóa học
         </Link>
       }

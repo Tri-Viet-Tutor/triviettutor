@@ -1,11 +1,11 @@
-import axios, { AxiosError, type AxiosAdapter, type AxiosResponse } from "axios";
+import axios, { type AxiosAdapter, AxiosError, type AxiosResponse } from "axios";
 import { ROUTES } from "@/constants/routes";
-import { api } from "@/lib/api";
+import { api } from "@/services/api";
 import { enterPreviewArea, PREVIEW_TOKEN } from "@/preview/previewAuth";
 import { createPreviewState } from "@/preview/previewData";
 import { handlePreviewRequest } from "@/preview/previewRoutes";
 import { useAuthStore } from "@/stores/authStore";
-import type { Role } from "@/types/api";
+import type { Role } from "@/interfaces/api";
 
 /** Độ trễ giả của mỗi lời gọi, để vẫn thấy trạng thái đang tải */
 const LATENCY_MS = 150;
@@ -16,16 +16,7 @@ const AREA_ROLES: [prefix: string, role: Exclude<Role, "ROLE_STUDENT">][] = [
   [ROUTES.tutor, "ROLE_TUTOR"],
 ];
 
-/**
- * Chế độ xem thử — chỉ có khi chạy `npm run dev` (gọi một lần trước khi vẽ ứng dụng, xem main.tsx):
- *  - chưa đăng nhập mà mở /admin hoặc /tutor thì vào thẳng bằng tài khoản mẫu của khu đó,
- *    để xem và chỉnh giao diện khi chưa có tài khoản thật;
- *  - khi đang dùng tài khoản mẫu, các API của hai khu này được trả lời bằng dữ liệu mẫu ngay trong trình duyệt;
- *    đổi khu bằng cách mở đường dẫn của khu kia; đăng xuất hoặc mở trang khác (đăng nhập, khu học viên…) là thoát;
- *  - đăng nhập bằng tài khoản thật thì mọi thứ chạy với backend như thường.
- * Không sửa lib/api.ts, authStore hay các route chặn quyền: chỉ gắn thêm một adapter cho axios lúc chạy.
- * Bản build thật không chứa phần này; đặt VITE_PREVIEW=false để tắt cả khi chạy dev.
- */
+
 export function installPreview() {
   const state = createPreviewState();
   const realAdapter = axios.getAdapter(api.defaults.adapter);

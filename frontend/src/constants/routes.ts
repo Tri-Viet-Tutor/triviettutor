@@ -17,11 +17,14 @@ export const ROUTES = {
   verifyEmail: "/verify-email",
   forgotPassword: "/forgot-password",
   resetPassword: "/reset-password",
-  /** Khu quản trị: tổng quan, người dùng, buổi học, đơn xin nghỉ, phân công gia sư, hồ sơ */
+  /** Khu quản trị: tổng quan, người dùng, buổi học, duyệt nghỉ / xếp bù, phân công gia sư, hồ sơ */
   admin: "/admin",
   adminUsers: "/admin/users",
   adminSessions: "/admin/sessions",
-  adminLeaveRequests: "/admin/leave-requests",
+  /** Duyệt đơn xin nghỉ, xếp buổi học bù / dạy thay */
+  adminReschedules: "/admin/reschedules",
+  /** Đường dẫn cũ của trang duyệt nghỉ — tự chuyển sang adminReschedules */
+  adminRescheduleLegacy: "/admin/leave-requests",
   adminAssignments: "/admin/assignments",
   adminProfile: "/admin/profile",
   /** Khu gia sư: tổng quan, lịch dạy + điểm danh, lịch rảnh, xin nghỉ, hồ sơ */
@@ -33,7 +36,10 @@ export const ROUTES = {
   /** Khu học viên: tổng quan, lịch học, mua khóa học + thanh toán, xin nghỉ, hồ sơ */
   student: "/student",
   studentSchedule: "/student/schedule",
-  studentCourses: "/student/courses",
+  /** Danh sách lớp / khóa đang mở đăng ký để mua */
+  studentCatalog: "/student/catalog",
+  /** Đường dẫn cũ của trang mua khóa học — tự chuyển sang studentCatalog */
+  studentCatalogLegacy: "/student/courses",
   studentCheckout: "/student/checkout",
   studentLeave: "/student/leave",
   studentProfile: "/student/profile",

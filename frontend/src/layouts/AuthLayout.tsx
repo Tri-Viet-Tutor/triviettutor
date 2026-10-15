@@ -1,12 +1,10 @@
 import { Link, Outlet } from "react-router-dom";
 import { ASSETS } from "@/constants/assets";
 import { ROUTES } from "@/constants/routes";
-import { AuthBrandPanel } from "@/features/auth/components/AuthBrandPanel";
-import { BackHomeLink } from "@/features/auth/components/BackHomeLink";
+import { AuthBrandPanel } from "@/components/auth/AuthBrandPanel";
+import { BackHomeLink } from "@/components/auth/BackHomeLink";
 
 /**
- * AuthLayout
- *
  * Khung chung của các trang xác thực (/login, /register, /verify-email, /forgot-password, /reset-password).
  * Chia đôi màn hình: bên trái là tấm ảnh phủ xanh (từ màn hình lớn), bên phải là form
  * trong một khung trắng bo góc, đầu khung có logo trung tâm.

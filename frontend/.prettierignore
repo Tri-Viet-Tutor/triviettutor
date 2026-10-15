@@ -1,0 +1,6 @@
+dist
+node_modules
+_to_delete
+_backup
+package-lock.json
+public

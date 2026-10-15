@@ -1,18 +1,6 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { prefersReducedMotion } from "@/utils/motion";
-
-export interface Slide {
-  src: string;
-  alt: string;
-}
-
-interface FramedSlideshowProps {
-  slides: Slide[];
-  /** Thời gian hiển thị mỗi ảnh (mili giây) */
-  intervalMs?: number;
-  /** Nội dung nổi đặt chồng lên khung, ví dụ một nhãn ở góc */
-  children?: ReactNode;
-}
+import type { FramedSlideshowProps } from "@/interfaces/ui";
 
 /**
  * Khung ảnh tự chuyển ở phần mở đầu trang chủ: ảnh mờ dần và thu phóng chậm,
@@ -27,6 +15,7 @@ export function FramedSlideshow({ slides, intervalMs = 5000, children }: FramedS
     if (paused || slides.length < 2 || prefersReducedMotion()) return;
     const timer = window.setInterval(() => setActive((index) => (index + 1) % slides.length), intervalMs);
     return () => window.clearInterval(timer);
+    // `active` nằm trong deps để bấm chấm chuyển ảnh thì đếm lại từ đầu
   }, [paused, active, slides.length, intervalMs]);
 
   return (
@@ -37,10 +26,7 @@ export function FramedSlideshow({ slides, intervalMs = 5000, children }: FramedS
         className="absolute inset-0 translate-x-4 translate-y-4 rotate-2 rounded-[36px] rounded-tr-[120px] bg-brand-navy"
       />
       {/* Vòng cam nằm trong góc bo lớn */}
-      <div
-        aria-hidden="true"
-        className="absolute -right-3 -top-4 h-[84px] w-[84px] rounded-full border-[13px] border-brand-orange"
-      />
+      <div aria-hidden="true" className="absolute -right-3 -top-4 h-[84px] w-[84px] rounded-full border-[13px] border-brand-orange" />
       {/* Mảng chấm bi */}
       <div
         aria-hidden="true"

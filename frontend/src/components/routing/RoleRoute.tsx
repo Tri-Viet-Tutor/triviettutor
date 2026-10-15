@@ -1,22 +1,16 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
-import type { Role } from "@/types/api";
 import { ROUTES } from "@/constants/routes";
-
-interface RoleRouteProps {
-  allowedRole: Role;
-}
+import type { RoleRouteProps } from "@/interfaces/app";
 
 /**
- * RoleRoute
+ * Chặn theo vai trò: người dùng không đúng vai trò thì chuyển sang /403.
+ * Phải đặt bên trong <PrivateRoute /> để chắc chắn đã đăng nhập.
  *
- * Redirects to /403 if the authenticated user does not have the required role.
- * Must be nested inside <PrivateRoute /> so user is guaranteed to be logged in.
+ * Thực hiện quy tắc BR-01.10 ở tầng điều hướng.
+ * Lưu ý: backend vẫn tự kiểm tra vai trò — ở frontend chỉ để trải nghiệm tốt hơn.
  *
- * This enforces BR-01.10 at the routing layer.
- * Note: the backend also enforces roles — frontend is a UX guard only.
- *
- * Usage:
+ * Cách dùng:
  *   <Route element={<RoleRoute allowedRole="ROLE_ADMIN" />}>
  *     <Route element={<AdminLayout />}>...</Route>
  *   </Route>

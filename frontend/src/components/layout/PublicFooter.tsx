@@ -11,19 +11,16 @@ const FOOTER_LINKS = [
   { label: "Đăng ký tư vấn", to: ROUTES.contactForm },
 ];
 
+/** Chân trang của các trang công khai: thương hiệu, liên kết nhanh, thông tin liên hệ. */
 export function PublicFooter() {
   return (
     <footer className="w-full bg-[#082A66] text-white pt-14 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-12 gap-8 mb-10">
-        {/* Brand information */}
+        {/* Thương hiệu */}
         <div className="lg:col-span-5 flex flex-col gap-4">
           <Link to={ROUTES.home} className="flex items-center gap-3 shrink-0 group w-fit">
             <div className="w-11 h-11 rounded-full p-0.5 shadow-sm ring-2 ring-white/20 flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform bg-white">
-              <img
-                src={ASSETS.common.logo}
-                alt="Logo Gia Sư Trí Việt"
-                className="w-full h-full rounded-full object-contain"
-              />
+              <img src={ASSETS.common.logo} alt="Logo Gia Sư Trí Việt" className="w-full h-full rounded-full object-contain" />
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1">
@@ -34,9 +31,7 @@ export function PublicFooter() {
                   Tutor
                 </span>
               </div>
-              <span className="text-[11px] text-white/70 font-medium leading-none mt-0.5">
-                Cùng em vững bước tương lai
-              </span>
+              <span className="text-[11px] text-white/70 font-medium leading-none mt-0.5">Cùng em vững bước tương lai</span>
             </div>
           </Link>
           <p className="text-[13px] text-white/70 leading-relaxed">
@@ -44,7 +39,7 @@ export function PublicFooter() {
           </p>
         </div>
 
-        {/* Column: Site links */}
+        {/* Cột: liên kết trang */}
         <div className="lg:col-span-3 flex flex-col gap-3">
           <h4 className="text-sm text-white font-bold border-l-2 border-[#F5A00F] pl-2 uppercase">Khám phá</h4>
           <ul className="flex flex-col gap-2.5 text-[13px] text-white/70">
@@ -58,7 +53,7 @@ export function PublicFooter() {
           </ul>
         </div>
 
-        {/* Column: Contact */}
+        {/* Cột: liên hệ */}
         <div className="lg:col-span-4 flex flex-col gap-3">
           <h4 className="text-sm text-white font-bold border-l-2 border-[#F5A00F] pl-2 uppercase">Liên hệ</h4>
           <div className="flex flex-col gap-2.5 text-[13px] text-white/70">
@@ -81,7 +76,7 @@ export function PublicFooter() {
         </div>
       </div>
 
-      {/* Copyright Bar */}
+      {/* Dòng bản quyền */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 border-t border-white/15 text-center sm:text-left text-[13px] text-white/60">
         © 2026 Tri Viet Tutor
       </div>

@@ -5,29 +5,20 @@ import { useForm } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { ROUTES } from "@/constants/routes";
-import { requestPasswordReset, resetPassword } from "@/features/auth/api/authApi";
-import { AUTH_LABEL, AuthField } from "@/features/auth/components/AuthField";
-import { AuthHeading } from "@/features/auth/components/AuthHeading";
-import { AuthNotice } from "@/features/auth/components/AuthNotice";
-import { AuthSubmitButton } from "@/features/auth/components/AuthSubmitButton";
-import { OtpInput } from "@/features/auth/components/OtpInput";
-import {
-  authErrorMessage,
-  OTP_LENGTH,
-  OTP_TTL_SECONDS,
-  PASSWORD_MAX,
-  PASSWORD_MIN,
-  RESEND_COOLDOWN_SECONDS,
-} from "@/features/auth/data/authMessages";
-import {
-  clearPendingEmail,
-  readPendingEmail,
-  savePendingEmail,
-  secondsSinceOtpSent,
-  type AuthLocationState,
-} from "@/features/auth/data/pendingEmail";
+import { requestPasswordReset, resetPassword } from "@/services/authService";
+import { AUTH_LABEL, AUTH_TEXT_LINK } from "@/constants/classNames";
+import { AuthField } from "@/components/auth/AuthField";
+import { AuthHeading } from "@/components/auth/AuthHeading";
+import { AuthNotice } from "@/components/auth/AuthNotice";
+import { AuthSubmitButton } from "@/components/auth/AuthSubmitButton";
+import { OtpInput } from "@/components/auth/OtpInput";
+import { authErrorMessage } from "@/utils/errors";
+import { OTP_LENGTH, OTP_TTL_SECONDS, PASSWORD_MAX, PASSWORD_MIN, RESEND_COOLDOWN_SECONDS } from "@/constants/auth";
+import { clearPendingEmail, readPendingEmail, savePendingEmail, secondsSinceOtpSent } from "@/utils/pendingEmail";
+import type { AuthLocationState, ResetFormValues } from "@/interfaces/auth";
 import { formatClock, useCountdown } from "@/hooks/useCountdown";
 
+/** Kiểm tra form đặt lại mật khẩu (mã OTP kiểm tra riêng vì không qua react-hook-form) */
 const resetSchema = z
   .object({
     email: z.string().email("Email chưa đúng"),
@@ -42,20 +33,17 @@ const resetSchema = z
     path: ["confirmPassword"],
   });
 
-type ResetFormValues = z.infer<typeof resetSchema>;
-
-const TEXT_LINK = "font-semibold text-brand-navy underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
-
 /**
  * Trang đặt lại mật khẩu: email, mã OTP gửi qua email và mật khẩu mới.
  * Xong thì về trang đăng nhập kèm câu báo thành công.
- * Backend chưa có endpoint cho việc này — xem ghi chú ở features/auth/api/authApi.ts.
+ * Backend chưa có endpoint cho việc này — xem ghi chú ở services/authService.ts.
  */
 export function ResetPasswordPage() {
   const navigate = useNavigate();
   const state = useLocation().state as AuthLocationState | null;
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState("");
+  // Vừa gửi lại mã thành công — để hiện thông báo
   const [resent, setResent] = useState(false);
   // Đếm ngược từ lúc mã được gửi (nếu biết); tải lại trang vẫn đếm tiếp
   const [initialEmail] = useState(() => state?.email ?? readPendingEmail());
@@ -78,6 +66,7 @@ export function ResetPasswordPage() {
     defaultValues: { email: initialEmail, newPassword: "", confirmPassword: "" },
   });
 
+  /** Kiểm tra mã OTP đủ số rồi gửi; thành công thì về trang đăng nhập kèm câu báo */
   function onSubmit(data: ResetFormValues) {
     if (!new RegExp(`^\\d{${OTP_LENGTH}}$`).test(otp)) {
       setOtpError(`Nhập đủ ${OTP_LENGTH} chữ số của mã xác thực`);
@@ -100,6 +89,7 @@ export function ResetPasswordPage() {
     );
   }
 
+  /** Gửi lại mã tới email đang nhập, đếm lại hạn mã và thời gian chờ */
   async function handleResend() {
     // Email phải hợp lệ mới gửi lại được mã
     if (!(await trigger("email"))) return;
@@ -120,6 +110,7 @@ export function ResetPasswordPage() {
     );
   }
 
+  // Lỗi gần nhất của một trong hai thao tác
   const failure = reset.error ?? resend.error;
   const expired = timing && expiresIn === 0;
 
@@ -153,7 +144,7 @@ export function ResetPasswordPage() {
           <p aria-live="polite" className="mt-2 flex items-center justify-between gap-3 text-[14px] text-brand-muted">
             <span>
               {otpError && <span className="font-semibold text-red-700">{otpError}</span>}
-              {!otpError && !timing && "Mã có hiệu lực 5 phút kể từ lúc gửi."}
+              {!otpError && !timing && `Mã có hiệu lực ${OTP_TTL_SECONDS / 60} phút kể từ lúc gửi.`}
               {!otpError && timing && !expired && (
                 <>
                   Mã hết hạn sau <strong className="font-bold tabular-nums text-brand-navy">{formatClock(expiresIn)}</strong>
@@ -165,7 +156,7 @@ export function ResetPasswordPage() {
               type="button"
               onClick={handleResend}
               disabled={resend.isPending || cooldown > 0}
-              className={`shrink-0 disabled:cursor-not-allowed disabled:font-medium disabled:text-brand-muted disabled:no-underline ${TEXT_LINK}`}
+              className={`shrink-0 disabled:cursor-not-allowed disabled:font-medium disabled:text-brand-muted disabled:no-underline ${AUTH_TEXT_LINK}`}
             >
               {resend.isPending ? "Đang gửi…" : cooldown > 0 ? `Gửi lại sau ${cooldown}s` : "Gửi lại mã"}
             </button>
@@ -197,7 +188,7 @@ export function ResetPasswordPage() {
       </form>
 
       <p className="mt-6 text-center text-[14px] text-brand-muted">
-        <Link to={ROUTES.login} className={TEXT_LINK}>
+        <Link to={ROUTES.login} className={AUTH_TEXT_LINK}>
           Quay lại đăng nhập
         </Link>
       </p>

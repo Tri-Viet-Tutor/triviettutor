@@ -1,4 +1,9 @@
+/* Các hàm xử lý ngày giờ theo giờ máy người xem, hiển thị kiểu Việt Nam. */
+
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Thêm số 0 phía trước cho đủ 2 chữ số: 5 → "05". */
+const pad = (value: number) => String(value).padStart(2, "0");
 
 /** Đổi chuỗi "YYYY-MM-DD" thành ngày theo giờ máy người xem (0 giờ sáng). */
 export function parseIsoDate(iso: string): Date {
@@ -12,6 +17,7 @@ export function startOfToday(): Date {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
+/** Cộng (hoặc trừ, nếu âm) số ngày, giữ mốc 0 giờ. */
 export function addDays(date: Date, days: number): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 }
@@ -23,10 +29,8 @@ export function diffDays(from: Date, to: Date): number {
 
 /** Ngày/tháng kiểu Việt Nam: 01/10. */
 export function formatDayMonth(date: Date): string {
-  return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}`;
 }
-
-const pad = (value: number) => String(value).padStart(2, "0");
 
 /** Ngày/tháng/năm kiểu Việt Nam: 01/10/2026. */
 export function formatDate(date: Date): string {

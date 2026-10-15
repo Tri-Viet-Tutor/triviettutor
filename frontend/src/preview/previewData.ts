@@ -1,45 +1,16 @@
 import type {
-  AdminUserResponse,
   AttendanceRecordResponse,
   AttendanceStatus,
   AvailabilityResponse,
   LeaveRequestResponse,
-  MeResponse,
   Role,
   SessionResponse,
   UserInfo,
-} from "@/types/api";
+} from "@/interfaces/api";
 import { addDays, startOfToday, toIsoDate } from "@/utils/date";
+import type { PreviewAttendance, PreviewClass, PreviewState, PreviewUser } from "@/interfaces/preview";
 
 /* Dữ liệu mẫu của chế độ xem thử — cùng hình dạng với DTO của backend, ngày giờ tính theo hôm nay. */
-
-export interface PreviewUser extends AdminUserResponse {
-  profile: MeResponse["profile"];
-}
-
-export interface PreviewClass {
-  classId: number;
-  studentIds: number[];
-}
-
-export interface PreviewAttendance {
-  locked: boolean;
-  teachingConfirmed: boolean;
-  records: AttendanceRecordResponse[];
-}
-
-export interface PreviewState {
-  users: PreviewUser[];
-  classes: PreviewClass[];
-  sessions: SessionResponse[];
-  leaves: LeaveRequestResponse[];
-  /** Điểm danh theo mã buổi học */
-  attendance: Map<number, PreviewAttendance>;
-  /** Lịch rảnh theo mã gia sư */
-  availability: Map<number, AvailabilityResponse[]>;
-  /** Mã kế tiếp cho bản ghi mới (buổi học, đơn, người dùng…) */
-  nextId: number;
-}
 
 /** Tài khoản mẫu: quản trị và gia sư dùng để vào khu của mình, học viên chỉ là một người trong dữ liệu mẫu */
 export const PREVIEW_ACCOUNTS: Record<Role, UserInfo> = {
@@ -48,11 +19,13 @@ export const PREVIEW_ACCOUNTS: Record<Role, UserInfo> = {
   ROLE_STUDENT: { id: 9, email: "minhanh@example.com", fullName: "Nguyễn Minh Anh", role: "ROLE_STUDENT" },
 };
 
+/** Gia sư mẫu khác ngoài tài khoản gia sư dùng để đăng nhập: [mã, email, họ tên] */
 const TUTORS: [number, string, string][] = [
   [7, "minh.tran@example.com", "Trần Quang Minh"],
   [8, "hoa.le@example.com", "Lê Thị Hoa"],
 ];
 
+/** Tên học viên mẫu (mã 10, 11, 12…) */
 const STUDENT_NAMES = [
   "Trần Gia Bảo",
   "Lê Thu Hà",
@@ -73,10 +46,15 @@ const ATTENDANCE_PATTERN: AttendanceStatus[] = ["PRESENT", "PRESENT", "LATE", "P
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
+/** Ghép ngày "YYYY-MM-DD" và giờ "HH:mm:ss" thành một thời điểm */
 function at(date: string, time: string): Date {
   return new Date(`${date}T${time}`);
 }
 
+/**
+ * Dựng dữ liệu mẫu tính theo `now`: 4 lớp với các buổi đã qua / sắp tới,
+ * điểm danh cho buổi đã xong, vài đơn xin nghỉ ở đủ trạng thái và lịch rảnh của gia sư.
+ */
 export function createPreviewState(now: Date = new Date()): PreviewState {
   const today = startOfToday();
   const daysAgo = (days: number) => `${toIsoDate(addDays(today, -days))}T09:00:00`;
@@ -96,7 +74,11 @@ export function createPreviewState(now: Date = new Date()): PreviewState {
       createdAt: daysAgo(80 - index * 12),
       profile: { baseSalary: 4_500_000, sessionRate: 220_000, bio: null },
     })),
-    { ...PREVIEW_ACCOUNTS.ROLE_STUDENT, createdAt: daysAgo(45), profile: { phone: "0901 234 567", address: "12 Lê Lợi, Quận 1, TP. Hồ Chí Minh" } },
+    {
+      ...PREVIEW_ACCOUNTS.ROLE_STUDENT,
+      createdAt: daysAgo(45),
+      profile: { phone: "0901 234 567", address: "12 Lê Lợi, Quận 1, TP. Hồ Chí Minh" },
+    },
     ...STUDENT_NAMES.map((fullName, index): PreviewUser => ({
       id: 10 + index,
       email: `hocvien${index + 1}@example.com`,
@@ -116,7 +98,16 @@ export function createPreviewState(now: Date = new Date()): PreviewState {
 
   const sessions: SessionResponse[] = [];
   let nextId = 100;
-  function addSession(classGroupId: number, tutorId: number | null, date: Date, startTime: string, endTime: string, sessionNumber: number, meetingUrl: string | null) {
+  /** Thêm một buổi; trạng thái tự suy ra từ giờ học so với `now` */
+  function addSession(
+    classGroupId: number,
+    tutorId: number | null,
+    date: Date,
+    startTime: string,
+    endTime: string,
+    sessionNumber: number,
+    meetingUrl: string | null,
+  ) {
     const isoDate = toIsoDate(date);
     const ended = at(isoDate, endTime) <= now;
     const started = at(isoDate, startTime) <= now;
@@ -138,7 +129,16 @@ export function createPreviewState(now: Date = new Date()): PreviewState {
     });
   }
   /** Lớp học theo thứ trong tuần: `count` buổi kể từ `fromOffset` ngày so với hôm nay */
-  function weekly(classGroupId: number, tutorId: number | null, weekdays: number[], startTime: string, endTime: string, fromOffset: number, count: number, meetingUrl: string | null) {
+  function weekly(
+    classGroupId: number,
+    tutorId: number | null,
+    weekdays: number[],
+    startTime: string,
+    endTime: string,
+    fromOffset: number,
+    count: number,
+    meetingUrl: string | null,
+  ) {
     let offset = fromOffset;
     for (let number = 1; number <= count; offset += 1) {
       const date = addDays(today, offset);
@@ -151,7 +151,15 @@ export function createPreviewState(now: Date = new Date()): PreviewState {
   // Lớp 21 luôn có một buổi đang diễn ra lúc mở trang, để xem được điểm danh và nút vào lớp
   const hour = Math.min(Math.max(now.getHours(), 1), 22);
   [-4, -2, 0, 2, 4, 6].forEach((offset, index) =>
-    addSession(21, 3, addDays(today, offset), `${pad(hour - 1)}:00:00`, `${pad(hour + 1)}:00:00`, index + 1, "https://meet.example.com/lop-21"),
+    addSession(
+      21,
+      3,
+      addDays(today, offset),
+      `${pad(hour - 1)}:00:00`,
+      `${pad(hour + 1)}:00:00`,
+      index + 1,
+      "https://meet.example.com/lop-21",
+    ),
   );
   sessions.sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`) || a.sessionId - b.sessionId);
 
@@ -179,9 +187,17 @@ export function createPreviewState(now: Date = new Date()): PreviewState {
   }
 
   const upcoming = (classId: number) => sessions.filter((session) => session.classGroupId === classId && session.status === "SCHEDULED");
-  const past = (classId: number) => sessions.filter((session) => session.classGroupId === classId && session.status === "COMPLETED").reverse();
+  const past = (classId: number) =>
+    sessions.filter((session) => session.classGroupId === classId && session.status === "COMPLETED").reverse();
   const hoursAgo = (hours: number) => new Date(now.getTime() - hours * 3_600_000).toISOString();
-  const leave = (leaveRequestId: number, session: SessionResponse, requester: UserInfo | PreviewUser, reason: string, requestedAt: string, extra: Partial<LeaveRequestResponse> = {}): LeaveRequestResponse => ({
+  const leave = (
+    leaveRequestId: number,
+    session: SessionResponse,
+    requester: UserInfo | PreviewUser,
+    reason: string,
+    requestedAt: string,
+    extra: Partial<LeaveRequestResponse> = {},
+  ): LeaveRequestResponse => ({
     leaveRequestId,
     sessionId: session.sessionId,
     requesterId: requester.id,
@@ -199,6 +215,7 @@ export function createPreviewState(now: Date = new Date()): PreviewState {
     ...extra,
   });
 
+  // Vài tình huống đặc biệt để xem giao diện: buổi chờ xếp lại lịch, buổi đã có người dạy thay
   upcoming(15)[3].status = "PENDING_RESCHEDULE";
   const substituted = past(12)[2];
   substituted.actualTutorId = 7;
@@ -223,10 +240,7 @@ export function createPreviewState(now: Date = new Date()): PreviewState {
   ];
 
   const availability = new Map<number, AvailabilityResponse[]>([
-    [
-      3,
-      [2, 4, 9].map((offset) => ({ availableDate: toIsoDate(addDays(today, offset)), startTime: "18:00:00", endTime: "21:00:00" })),
-    ],
+    [3, [2, 4, 9].map((offset) => ({ availableDate: toIsoDate(addDays(today, offset)), startTime: "18:00:00", endTime: "21:00:00" }))],
     [8, upcoming(18).map((session) => ({ availableDate: session.date, startTime: "18:00:00", endTime: "21:30:00" }))],
   ]);
 

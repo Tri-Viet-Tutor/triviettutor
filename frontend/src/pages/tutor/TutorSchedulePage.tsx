@@ -1,8 +1,8 @@
-import { SessionSchedule } from "@/features/portal/components/SessionSchedule";
-import { StatusChip } from "@/features/portal/components/StatusChip";
-import { needsAttendance, teacherOf } from "@/features/portal/data/sessions";
-import { useUserId } from "@/features/portal/hooks/usePortalData";
-import { TutorSessionDetail } from "@/features/tutor/components/TutorSessionDetail";
+import { SessionSchedule } from "@/components/dashboard/SessionSchedule";
+import { StatusChip } from "@/components/dashboard/StatusChip";
+import { needsAttendance, teacherOf } from "@/utils/sessions";
+import { useUserId } from "@/hooks/usePortalData";
+import { TutorSessionDetail } from "@/components/tutor/TutorSessionDetail";
 import { useNow } from "@/hooks/useNow";
 
 /**
@@ -18,6 +18,7 @@ export function TutorSchedulePage() {
       now={now}
       emptyTitle="Bạn chưa có buổi dạy nào"
       emptyDescription="Lịch dạy sẽ hiện ở đây sau khi trung tâm phân công lớp cho bạn."
+      // Nhãn phụ: cần điểm danh, hoặc buổi đã có người dạy thay
       renderBadge={(session) =>
         needsAttendance(session, tutorId, now) ? (
           <StatusChip tone="amber" icon="fact_check">

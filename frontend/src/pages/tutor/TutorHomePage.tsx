@@ -1,15 +1,17 @@
 import { Link } from "react-router-dom";
 import { Icon } from "@/components/ui/Icon";
 import { ROUTES } from "@/constants/routes";
-import { LeavePreview } from "@/features/portal/components/LeavePreview";
-import { PortalGreeting } from "@/features/portal/components/PortalGreeting";
-import { PortalError, PortalLoading } from "@/features/portal/components/PortalState";
-import { SummaryCard, type SummaryRow } from "@/features/portal/components/SummaryCard";
-import { TodayPanel } from "@/features/portal/components/TodayPanel";
-import { UpcomingList } from "@/features/portal/components/UpcomingList";
-import { WeekStrip } from "@/features/portal/components/WeekStrip";
+import { LeavePreview } from "@/components/dashboard/LeavePreview";
+import { PortalGreeting } from "@/components/dashboard/PortalGreeting";
+import { PortalError, PortalLoading } from "@/components/dashboard/PortalState";
+import { SummaryCard } from "@/components/dashboard/SummaryCard";
+import type { SummaryRow } from "@/interfaces/ui";
+import { TodayPanel } from "@/components/dashboard/TodayPanel";
+import { UpcomingList } from "@/components/dashboard/UpcomingList";
+import { WeekStrip } from "@/components/dashboard/WeekStrip";
 import {
   completedHours,
+  formatHours,
   formatLongDate,
   formatTimeRange,
   givenName,
@@ -18,9 +20,9 @@ import {
   pendingLeaveOf,
   splitSessions,
   teacherOf,
-} from "@/features/portal/data/sessions";
-import { PORTAL_CARD } from "@/features/portal/data/ui";
-import { useMyLeaveRequests, useMySessions } from "@/features/portal/hooks/usePortalData";
+} from "@/utils/sessions";
+import { PORTAL_CARD } from "@/constants/classNames";
+import { useMyLeaveRequests, useMySessions } from "@/hooks/usePortalData";
 import { useNow } from "@/hooks/useNow";
 import { useAuthStore } from "@/stores/authStore";
 import { formatDayMonth, parseIsoDate, startOfToday, weekdayName } from "@/utils/date";
@@ -40,11 +42,13 @@ export function TutorHomePage() {
   const sessionsQuery = useMySessions();
   const leaveQuery = useMyLeaveRequests({ page: 0, size: 20 });
 
+  // Chỉ tính những buổi mình thật sự dạy
   const teaching = (sessionsQuery.data ?? []).filter((session) => teacherOf(session) === user?.id);
   const leaveRequests = leaveQuery.data?.content ?? [];
   const { upcoming } = splitSessions(teaching, now);
   const next = nextSession(upcoming);
   const laterSessions = upcoming.filter((session) => session.sessionId !== next?.sessionId).slice(0, UPCOMING_PREVIEW);
+  // Buổi đã bắt đầu, chưa khóa, chưa quá hạn mà mình cần điểm danh
   const toRecord = teaching.filter((session) => needsAttendance(session, user?.id, now));
   const fullName = user?.fullName ?? "bạn";
   const name = givenName(fullName);
@@ -52,12 +56,43 @@ export function TutorHomePage() {
   const completed = teaching.filter((session) => session.status === "COMPLETED").length;
   const upcomingCount = upcoming.filter((session) => session.status !== "CANCELLED").length;
   const activeClasses = new Set(upcoming.filter((session) => session.status !== "CANCELLED").map((session) => session.classGroupId)).size;
+  // Các dòng của thẻ "Tổng kết giảng dạy"
   const rows: SummaryRow[] = [
-    { icon: "timer", iconClassName: "text-[#1F63D8]", label: "Tổng thời lượng đã dạy", value: `${String(completedHours(teaching)).replace(".", ",")} giờ`, valueClassName: "text-[#1F63D8]" },
-    { icon: "co_present", iconClassName: "text-emerald-600", label: "Số buổi đã dạy", value: String(completed), valueClassName: "text-emerald-600" },
-    { icon: "event_upcoming", iconClassName: "text-brand-orange", label: "Số buổi sắp dạy", value: String(upcomingCount), valueClassName: "text-brand-orangeHover" },
-    { icon: "groups", iconClassName: "text-brand-navy", label: "Lớp đang dạy", value: String(activeClasses), valueClassName: "text-brand-navy" },
-    { icon: "event_busy", iconClassName: "text-red-500", label: "Đơn xin nghỉ đã gửi", value: leaveQuery.data ? String(leaveQuery.data.totalElements) : "…", valueClassName: "text-red-600" },
+    {
+      icon: "timer",
+      iconClassName: "text-[#1F63D8]",
+      label: "Tổng thời lượng đã dạy",
+      value: formatHours(completedHours(teaching)),
+      valueClassName: "text-[#1F63D8]",
+    },
+    {
+      icon: "co_present",
+      iconClassName: "text-emerald-600",
+      label: "Số buổi đã dạy",
+      value: String(completed),
+      valueClassName: "text-emerald-600",
+    },
+    {
+      icon: "event_upcoming",
+      iconClassName: "text-brand-orange",
+      label: "Số buổi sắp dạy",
+      value: String(upcomingCount),
+      valueClassName: "text-brand-orangeHover",
+    },
+    {
+      icon: "groups",
+      iconClassName: "text-brand-navy",
+      label: "Lớp đang dạy",
+      value: String(activeClasses),
+      valueClassName: "text-brand-navy",
+    },
+    {
+      icon: "event_busy",
+      iconClassName: "text-red-500",
+      label: "Đơn xin nghỉ đã gửi",
+      value: leaveQuery.data ? String(leaveQuery.data.totalElements) : "…",
+      valueClassName: "text-red-600",
+    },
   ];
 
   return (
@@ -132,7 +167,13 @@ export function TutorHomePage() {
           </div>
 
           <div className="space-y-7 lg:col-span-4">
-            <SummaryCard id="teaching-summary-title" title="Tổng kết giảng dạy" linkLabel="Xem lịch dạy" linkTo={ROUTES.tutorSessions} rows={rows} />
+            <SummaryCard
+              id="teaching-summary-title"
+              title="Tổng kết giảng dạy"
+              linkLabel="Xem lịch dạy"
+              linkTo={ROUTES.tutorSessions}
+              rows={rows}
+            />
             <LeavePreview
               requests={leaveQuery.data?.content}
               isError={leaveQuery.isError}

@@ -1,33 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { prefersReducedMotion } from "@/utils/motion";
+import type { FireworkParticle, FireworkRocket, FireworksProps } from "@/interfaces/motion";
 
+/** Bảng màu pháo hoa */
 const COLORS = ["#F5A00F", "#FFD98A", "#0B3A8C", "#2F74E8", "#E5484D", "#12A594", "#8E4EC6"];
+/** Gia tốc rơi của các tia (px / khung hình²) */
 const GRAVITY = 0.06;
-
-interface Rocket {
-  x: number;
-  y: number;
-  /** Độ cao sẽ nổ */
-  targetY: number;
-  speed: number;
-  color: string;
-}
-
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  /** 1 → 0, mờ dần */
-  life: number;
-  decay: number;
-  color: string;
-}
-
-interface FireworksProps {
-  /** Bắn trong bao lâu (ms); sau đó các tia còn lại tắt dần rồi hiệu ứng tự gỡ */
-  durationMs?: number;
-}
+/** Khoảng cách giữa hai lượt bắn (ms) */
+const LAUNCH_INTERVAL_MS = 330;
 
 /**
  * Pháo hoa phủ toàn màn hình: từng quả bay lên từ mép dưới rồi nổ thành chùm tia rơi chậm.
@@ -55,12 +35,13 @@ export function Fireworks({ durationMs = 5200 }: FireworksProps) {
     resize();
     window.addEventListener("resize", resize);
 
-    let rockets: Rocket[] = [];
-    let particles: Particle[] = [];
+    let rockets: FireworkRocket[] = [];
+    let particles: FireworkParticle[] = [];
     const startedAt = performance.now();
     let lastLaunch = 0;
     let frame = 0;
 
+    /** Bắn một quả pháo từ mép dưới, nổ ở khoảng 14% – 48% chiều cao màn hình */
     const launch = () => {
       rockets.push({
         x: width * (0.12 + Math.random() * 0.76),
@@ -71,7 +52,8 @@ export function Fireworks({ durationMs = 5200 }: FireworksProps) {
       });
     };
 
-    const explode = (rocket: Rocket) => {
+    /** Nổ thành 64 – 91 tia toả đều theo vòng tròn */
+    const explode = (rocket: FireworkRocket) => {
       const count = 64 + Math.floor(Math.random() * 28);
       for (let i = 0; i < count; i++) {
         const angle = (Math.PI * 2 * i) / count + Math.random() * 0.2;
@@ -93,7 +75,8 @@ export function Fireworks({ durationMs = 5200 }: FireworksProps) {
       const elapsed = now - startedAt;
       ctx.clearRect(0, 0, width, height);
 
-      if (elapsed < durationMs && now - lastLaunch > 330) {
+      // Còn trong thời gian bắn: mỗi lượt bắn 1 quả, đôi khi 2 quả
+      if (elapsed < durationMs && now - lastLaunch > LAUNCH_INTERVAL_MS) {
         launch();
         if (Math.random() < 0.4) launch();
         lastLaunch = now;
@@ -132,6 +115,7 @@ export function Fireworks({ durationMs = 5200 }: FireworksProps) {
       });
       ctx.globalAlpha = 1;
 
+      // Hết giờ và không còn tia nào trên màn hình thì gỡ canvas
       if (elapsed >= durationMs && rockets.length === 0 && particles.length === 0) {
         setFinished(true);
         return;

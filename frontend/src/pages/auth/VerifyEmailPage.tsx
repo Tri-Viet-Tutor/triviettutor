@@ -1,19 +1,13 @@
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ROUTES } from "@/constants/routes";
-import { AUTH_INPUT, AUTH_LABEL } from "@/features/auth/components/AuthField";
-import { AuthHeading } from "@/features/auth/components/AuthHeading";
-import { AuthSubmitButton } from "@/features/auth/components/AuthSubmitButton";
-import { EmailOtpForm } from "@/features/auth/components/EmailOtpForm";
-import {
-  pendingResumesCheckout,
-  readPendingEmail,
-  savePendingEmail,
-  type AuthLocationState,
-} from "@/features/auth/data/pendingEmail";
-import { getRoleHome } from "@/lib/auth";
-
-const TEXT_LINK = "font-semibold text-brand-navy underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+import { AUTH_INPUT, AUTH_LABEL, AUTH_TEXT_LINK } from "@/constants/classNames";
+import { AuthHeading } from "@/components/auth/AuthHeading";
+import { AuthSubmitButton } from "@/components/auth/AuthSubmitButton";
+import { EmailOtpForm } from "@/components/auth/EmailOtpForm";
+import { pendingResumesCheckout, readPendingEmail, savePendingEmail } from "@/utils/pendingEmail";
+import type { AuthLocationState } from "@/interfaces/auth";
+import { getRoleHome } from "@/services/authService";
 
 /**
  * Trang nhập mã OTP kích hoạt tài khoản (POST /auth/verify-email).
@@ -31,6 +25,7 @@ export function VerifyEmailPage() {
   // Đang mua khóa học dở: xác thực xong quay lại trang thanh toán
   const [resumeCheckout] = useState(() => state?.resumeCheckout ?? pendingResumesCheckout());
 
+  /** Chốt email rồi chuyển sang bước nhập mã */
   function handleEmailSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!email.trim()) return;
@@ -39,9 +34,10 @@ export function VerifyEmailPage() {
     setEmailLocked(true);
   }
 
+  // Liên kết quay lại đăng nhập, dùng ở cả hai bước
   const backToLogin = (
     <p className="mt-6 text-center text-[14px] text-brand-muted">
-      <Link to={ROUTES.login} className={TEXT_LINK}>
+      <Link to={ROUTES.login} className={AUTH_TEXT_LINK}>
         Quay lại đăng nhập
       </Link>
     </p>
@@ -82,9 +78,7 @@ export function VerifyEmailPage() {
           key={email}
           email={email}
           onChangeEmail={() => setEmailLocked(false)}
-          onVerified={(response) =>
-            navigate(resumeCheckout ? ROUTES.checkout : getRoleHome(response.user.role), { replace: true })
-          }
+          onVerified={(response) => navigate(resumeCheckout ? ROUTES.checkout : getRoleHome(response.user.role), { replace: true })}
           loginState={{ resumeCheckout }}
         />
       </div>

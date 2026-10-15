@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { PortalPageHeader } from "@/features/portal/components/PortalPageHeader";
-import { PortalError, PortalLoading } from "@/features/portal/components/PortalState";
-import { useUserId } from "@/features/portal/hooks/usePortalData";
-import { fetchAvailability } from "@/features/tutor/api/tutorApi";
-import { AvailabilityEditor } from "@/features/tutor/components/AvailabilityEditor";
+import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
+import { PortalError, PortalLoading } from "@/components/dashboard/PortalState";
+import { useUserId } from "@/hooks/usePortalData";
+import { fetchAvailability } from "@/services/tutorService";
+import { AvailabilityEditor } from "@/components/tutor/AvailabilityEditor";
 
 /** Trang Lịch rảnh của gia sư: khai các khung giờ dạy được (GET / PUT /tutor/availability). */
 export function TutorAvailabilityPage() {
   const userId = useUserId();
+  // Khóa cache gắn với mã gia sư để đổi tài khoản không thấy lịch của người trước
   const queryKey = ["tutor", userId, "availability"] as const;
   const query = useQuery({ queryKey, queryFn: fetchAvailability });
 
