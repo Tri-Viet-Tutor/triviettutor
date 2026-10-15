@@ -1,6 +1,6 @@
 import { PREVIEW_ACCOUNTS } from "@/preview/previewData";
 import { useAuthStore } from "@/stores/authStore";
-import type { Role } from "@/types/api";
+import type { Role } from "@/interfaces/api";
 
 /** "Mã đăng nhập" giả của chế độ xem thử — chỉ để các trang coi như đã đăng nhập */
 export const PREVIEW_TOKEN = "preview";

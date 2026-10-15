@@ -3,21 +3,21 @@ import { useSearchParams } from "react-router-dom";
 import { ClickSpark, ReadingProgress, ScrollToTop } from "@/components/motion";
 import { ConsultCtaSection } from "@/components/ui/ConsultCtaSection";
 import { FaqSection } from "@/components/ui/FaqSection";
-import { COURSES } from "@/features/catalog/data/courses";
-import { TutorFinderSection } from "@/features/tutors/components/TutorFinderSection";
-import { TutorSearchHero } from "@/features/tutors/components/TutorSearchHero";
-import { filterTutors, TUTOR_FAQS, TUTOR_PROFILES } from "@/features/tutors/data/tutorProfiles";
-import { prefersReducedMotion } from "@/utils/motion";
+import { COURSES } from "@/constants/courses";
+import { TutorFinderSection } from "@/components/tutors/TutorFinderSection";
+import { TutorSearchHero } from "@/components/tutors/TutorSearchHero";
+import { filterTutors } from "@/utils/tutors";
+import { TUTOR_FAQS, TUTOR_PROFILES } from "@/constants/tutors";
+import { scrollToId } from "@/utils/motion";
 
-/* Ba gia sư trên xấp ảnh mở đầu: người đầu tiên của ba khóa đầu, mỗi người một môn */
+/** Ba gia sư trên xấp ảnh mở đầu: người đầu tiên của ba khóa đầu, mỗi người một môn */
 const FEATURED_TUTORS = COURSES.slice(0, 3).flatMap((course) =>
   TUTOR_PROFILES.filter((tutor) => tutor.course.id === course.id).slice(0, 1),
 );
 
+/** Cuộn xuống phần kết quả tìm gia sư */
 function scrollToFinder() {
-  document
-    .getElementById("tutor-finder")
-    ?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+  scrollToId("tutor-finder");
 }
 
 /**
@@ -26,15 +26,18 @@ function scrollToFinder() {
  */
 export function SearchPage() {
   const [searchParams] = useSearchParams();
+  // Ô tìm và môn lọc nhận giá trị ban đầu từ ?q= và ?mon= (mã môn lạ thì bỏ qua)
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [subject, setSubject] = useState(() => {
     const fromUrl = searchParams.get("mon") ?? "";
     return COURSES.some((course) => course.subject === fromUrl) ? fromUrl : "";
   });
+  // Gia sư đang xem hồ sơ
   const [selectedId, setSelectedId] = useState(TUTOR_PROFILES[0]?.id ?? "");
 
   const tutors = useMemo(() => filterTutors(subject, query), [subject, query]);
 
+  // Mở trang thì về đầu trang
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, []);
@@ -47,6 +50,7 @@ export function SearchPage() {
     scrollToFinder();
   }
 
+  /** Xóa ô tìm và bộ lọc môn */
   function resetFilters() {
     setQuery("");
     setSubject("");

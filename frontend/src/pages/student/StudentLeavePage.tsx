@@ -1,5 +1,5 @@
 import { ROUTES } from "@/constants/routes";
-import { LeaveCenter } from "@/features/portal/components/LeaveCenter";
+import { LeaveCenter } from "@/components/dashboard/LeaveCenter";
 
 /** Trang Xin nghỉ của học viên. */
 export function StudentLeavePage() {

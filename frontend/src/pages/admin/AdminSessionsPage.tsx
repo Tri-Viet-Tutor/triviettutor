@@ -1,23 +1,25 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ROUTES } from "@/constants/routes";
-import { AdminSessionDetail } from "@/features/admin/components/AdminSessionDetail";
-import { SessionFilters, type SessionFilterValues } from "@/features/admin/components/SessionFilters";
-import { useAdminSession, useAdminSessions, useUserDirectory } from "@/features/admin/hooks/useAdminData";
-import { Pager } from "@/features/portal/components/Pager";
-import { PortalPageHeader } from "@/features/portal/components/PortalPageHeader";
-import { PortalEmpty, PortalError, PortalLoading } from "@/features/portal/components/PortalState";
-import { SessionRow } from "@/features/portal/components/SessionRow";
-import { StatusChip } from "@/features/portal/components/StatusChip";
-import { SESSION_STATUS } from "@/features/portal/data/labels";
-import { PORTAL_TEXT_LINK } from "@/features/portal/data/ui";
+import { AdminSessionDetail } from "@/components/admin/AdminSessionDetail";
+import { SessionFilters } from "@/components/admin/SessionFilters";
+import type { SessionFilterValues } from "@/interfaces/admin";
+import { useAdminSession, useAdminSessions, useUserDirectory } from "@/hooks/useAdminData";
+import { Pager } from "@/components/dashboard/Pager";
+import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
+import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/PortalState";
+import { SessionRow } from "@/components/dashboard/SessionRow";
+import { StatusChip } from "@/components/dashboard/StatusChip";
+import { SESSION_STATUS } from "@/constants/labels";
+import { PORTAL_TEXT_LINK } from "@/constants/classNames";
 import { useNow } from "@/hooks/useNow";
-import type { SessionResponse, SessionStatus } from "@/types/api";
+import type { SessionResponse, SessionStatus } from "@/interfaces/api";
 import { startOfToday, toIsoDate } from "@/utils/date";
 
+/** Số buổi mỗi trang */
 const PAGE_SIZE = 20;
 
-/* Tên tham số trên thanh địa chỉ — để các trang khác dẫn thẳng tới một bộ lọc hoặc một buổi */
+/** Tên tham số trên thanh địa chỉ — để các trang khác dẫn thẳng tới một bộ lọc hoặc một buổi */
 const PARAM = { from: "tu", to: "den", status: "trangthai", classId: "lop", tutorId: "giasu", page: "trang", session: "buoi" } as const;
 
 /** Nhãn phụ của một buổi trong khu quản trị: chưa có gia sư, điểm danh cần xem lại */
@@ -43,8 +45,10 @@ export function AdminSessionsPage() {
   const now = useNow();
   const { tutors } = useUserDirectory();
   const [params, setParams] = useSearchParams();
+  // Buổi đang mở chi tiết
   const [openId, setOpenId] = useState<number | null>(null);
 
+  // Đọc bộ lọc từ thanh địa chỉ (trạng thái lạ thì bỏ qua)
   const status = params.get(PARAM.status) ?? "";
   const filters: SessionFilterValues = {
     // Chưa có tham số "tu" thì xem từ hôm nay; "tu=" (rỗng) là xem cả các buổi đã qua
@@ -74,11 +78,13 @@ export function AdminSessionsPage() {
     if (linkedId) setOpenId(linkedId);
   }, [linkedId]);
 
+  /** Ghi một tham số; giá trị rỗng thì xóa (trừ khi `keepEmpty`) */
   function setParam(next: URLSearchParams, key: string, value: string, keepEmpty = false) {
     if (value || keepEmpty) next.set(key, value);
     else next.delete(key);
   }
 
+  /** Đổi bộ lọc: viết lại thanh địa chỉ, về trang đầu, đóng buổi đang mở */
   function changeFilters(patch: Partial<SessionFilterValues>) {
     const merged = { ...filters, ...patch };
     const next = new URLSearchParams();
@@ -91,6 +97,7 @@ export function AdminSessionsPage() {
     setOpenId(null);
   }
 
+  /** Sang trang khác: bỏ buổi đang dẫn tới, cuộn lên đầu */
   function changePage(nextPage: number) {
     const next = new URLSearchParams(params);
     next.delete(PARAM.session);
@@ -100,11 +107,20 @@ export function AdminSessionsPage() {
     window.scrollTo({ top: 0 });
   }
 
+  /** Mở / đóng chi tiết một buổi */
   const toggle = (sessionId: number) => setOpenId((current) => (current === sessionId ? null : sessionId));
+  /** Một dòng buổi học kèm phần chi tiết của quản trị */
   const renderRow = (session: SessionResponse) => {
     const open = openId === session.sessionId;
     return (
-      <SessionRow key={session.sessionId} session={session} open={open} onToggle={() => toggle(session.sessionId)} hasPendingLeave={false} badge={sessionBadge(session)}>
+      <SessionRow
+        key={session.sessionId}
+        session={session}
+        open={open}
+        onToggle={() => toggle(session.sessionId)}
+        hasPendingLeave={false}
+        badge={sessionBadge(session)}
+      >
         {open && <AdminSessionDetail session={session} now={now} />}
       </SessionRow>
     );
@@ -132,7 +148,12 @@ export function AdminSessionsPage() {
         </section>
       )}
 
-      <SessionFilters values={filters} tutors={tutors} onChange={changeFilters} onReset={() => changeFilters({ from: toIsoDate(startOfToday()), to: "", status: "", classId: "", tutorId: "" })} />
+      <SessionFilters
+        values={filters}
+        tutors={tutors}
+        onChange={changeFilters}
+        onReset={() => changeFilters({ from: toIsoDate(startOfToday()), to: "", status: "", classId: "", tutorId: "" })}
+      />
 
       <div className="mt-5">
         {listQuery.isPending ? (
@@ -140,7 +161,11 @@ export function AdminSessionsPage() {
         ) : listQuery.isError || !list ? (
           <PortalError message="Không tải được danh sách buổi học." onRetry={() => void listQuery.refetch()} />
         ) : list.content.length === 0 ? (
-          <PortalEmpty icon="calendar_month" title="Không có buổi học nào khớp bộ lọc" description="Thử nới khoảng ngày hoặc bỏ bớt điều kiện lọc." />
+          <PortalEmpty
+            icon="calendar_month"
+            title="Không có buổi học nào khớp bộ lọc"
+            description="Thử nới khoảng ngày hoặc bỏ bớt điều kiện lọc."
+          />
         ) : (
           <>
             <p className="mb-2.5 text-[14px] text-brand-muted">

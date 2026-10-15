@@ -1,18 +1,22 @@
-import { AdminTodoPanel, type TodoTile } from "@/features/admin/components/AdminTodoPanel";
-import { PendingLeaveList } from "@/features/admin/components/PendingLeaveList";
-import { useAdminLeaveRequests, useAdminSessions, useUserCounts } from "@/features/admin/hooks/useAdminData";
 import { ROUTES } from "@/constants/routes";
-import { PortalGreeting } from "@/features/portal/components/PortalGreeting";
-import { SummaryCard, type SummaryRow } from "@/features/portal/components/SummaryCard";
-import { UpcomingList } from "@/features/portal/components/UpcomingList";
-import { formatLongDate, givenName } from "@/features/portal/data/sessions";
+import { AdminTodoPanel } from "@/components/admin/AdminTodoPanel";
+import type { TodoTile } from "@/interfaces/admin";
+import { PendingLeaveList } from "@/components/admin/PendingLeaveList";
+import { useAdminLeaveRequests, useAdminSessions, useUserCounts } from "@/hooks/useAdminData";
+import { PortalGreeting } from "@/components/dashboard/PortalGreeting";
+import { SummaryCard } from "@/components/dashboard/SummaryCard";
+import type { SummaryRow } from "@/interfaces/ui";
+import { UpcomingList } from "@/components/dashboard/UpcomingList";
+import { formatLongDate, givenName } from "@/utils/sessions";
 import { useAuthStore } from "@/stores/authStore";
 import { startOfToday, toIsoDate } from "@/utils/date";
 
-/** Số buổi học và số đơn chờ duyệt hiện ở trang Tổng quan */
+/** Số buổi học hiện ở trang Tổng quan */
 const UPCOMING_PREVIEW = 6;
+/** Số đơn chờ duyệt hiện ở trang Tổng quan */
 const PENDING_PREVIEW = 4;
 
+/** Số đếm dạng chữ; "…" khi chưa tải xong */
 function countText(count: number | undefined): string {
   return count === undefined ? "…" : String(count);
 }
@@ -27,6 +31,7 @@ export function AdminHomePage() {
   const today = startOfToday();
   const todayIso = toIsoDate(today);
 
+  // Chỉ cần totalElements nên các truy vấn đếm lấy size nhỏ
   const pendingLeave = useAdminLeaveRequests({ status: "PENDING", page: 0, size: PENDING_PREVIEW });
   const toReschedule = useAdminSessions({ status: "PENDING_RESCHEDULE", page: 0, size: 1 });
   const todaySessions = useAdminSessions({ from: todayIso, to: todayIso, page: 0, size: 1 });
@@ -34,8 +39,15 @@ export function AdminHomePage() {
   const counts = useUserCounts();
 
   const fullName = user?.fullName ?? "bạn";
+  // Ba ô "Việc cần xử lý"; "tu=" rỗng nghĩa là xem cả các buổi đã qua
   const tiles: TodoTile[] = [
-    { to: ROUTES.adminLeaveRequests, icon: "event_busy", label: "Đơn xin nghỉ chờ duyệt", count: pendingLeave.data?.totalElements, actionable: true },
+    {
+      to: ROUTES.adminReschedules,
+      icon: "event_busy",
+      label: "Đơn xin nghỉ chờ duyệt",
+      count: pendingLeave.data?.totalElements,
+      actionable: true,
+    },
     {
       to: `${ROUTES.adminSessions}?trangthai=PENDING_RESCHEDULE&tu=`,
       icon: "pending",
@@ -51,10 +63,29 @@ export function AdminHomePage() {
       actionable: false,
     },
   ];
+  // Số người dùng theo vai trò
   const rows: SummaryRow[] = [
-    { icon: "school", iconClassName: "text-[#1F63D8]", label: "Học viên", value: countText(counts.ROLE_STUDENT), valueClassName: "text-[#1F63D8]" },
-    { icon: "co_present", iconClassName: "text-emerald-600", label: "Gia sư", value: countText(counts.ROLE_TUTOR), valueClassName: "text-emerald-600" },
-    { icon: "shield_person", iconClassName: "text-brand-orange", label: "Quản trị viên", value: countText(counts.ROLE_ADMIN), valueClassName: "text-brand-orangeHover" },
+    {
+      icon: "school",
+      iconClassName: "text-[#1F63D8]",
+      label: "Học viên",
+      value: countText(counts.ROLE_STUDENT),
+      valueClassName: "text-[#1F63D8]",
+    },
+    {
+      icon: "co_present",
+      iconClassName: "text-emerald-600",
+      label: "Gia sư",
+      value: countText(counts.ROLE_TUTOR),
+      valueClassName: "text-emerald-600",
+    },
+    {
+      icon: "shield_person",
+      iconClassName: "text-brand-orange",
+      label: "Quản trị viên",
+      value: countText(counts.ROLE_ADMIN),
+      valueClassName: "text-brand-orangeHover",
+    },
   ];
 
   return (
@@ -69,7 +100,9 @@ export function AdminHomePage() {
             sessions={upcoming.data?.content ?? []}
             today={today}
             scheduleTo={ROUTES.adminSessions}
-            emptyText={upcoming.isError ? "Không tải được buổi học." : upcoming.isPending ? "Đang tải…" : "Chưa có buổi học nào được xếp từ hôm nay."}
+            emptyText={
+              upcoming.isError ? "Không tải được buổi học." : upcoming.isPending ? "Đang tải…" : "Chưa có buổi học nào được xếp từ hôm nay."
+            }
           />
         </div>
 

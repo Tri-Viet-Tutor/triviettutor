@@ -1,7 +1,6 @@
-import { LATE_NOTICE_HOURS, sessionEnd, sessionStart, teacherOf } from "@/features/portal/data/sessions";
-import type { PreviewAttendance, PreviewState, PreviewUser } from "@/preview/previewData";
+import { LATE_NOTICE_HOURS } from "@/constants/rules";
+import { sessionEnd, sessionStart, teacherOf } from "@/utils/sessions";
 import type {
-  ApiResponse,
   AssignmentResponse,
   AssignTutorRequest,
   AttendanceCorrection,
@@ -27,28 +26,24 @@ import type {
   UpdateMeRequest,
   UpdateTutorProfileRequest,
   UserInfo,
-} from "@/types/api";
+} from "@/interfaces/api";
 import { startOfToday, toIsoDate } from "@/utils/date";
+import type {
+  PreviewAttendance,
+  PreviewContext,
+  PreviewHandler,
+  PreviewReply,
+  PreviewRequest,
+  PreviewState,
+  PreviewUser,
+} from "@/interfaces/preview";
 
 /*
  * "Backend" của chế độ xem thử: trả lời các API mà khu quản trị và khu gia sư gọi, trên dữ liệu mẫu trong bộ nhớ.
  * Các quy tắc ở đây chỉ mô phỏng gần đúng backend thật (đủ để bấm thử giao diện), tải lại trang là dữ liệu về như cũ.
  */
 
-export interface PreviewRequest {
-  method: string;
-  /** Đường dẫn sau /api/v1, ví dụ "/me/sessions" */
-  path: string;
-  params: Record<string, unknown>;
-  body: unknown;
-  user: UserInfo;
-}
-
-export interface PreviewReply {
-  status: number;
-  body: ApiResponse<unknown>;
-}
-
+/** Lỗi nghiệp vụ giả lập — được đổi thành response lỗi có mã HTTP + errorCode */
 class PreviewError extends Error {
   constructor(
     readonly status: number,
@@ -58,27 +53,26 @@ class PreviewError extends Error {
   }
 }
 
+/** Ném lỗi nghiệp vụ; kiểu `never` nên dùng được sau `??` */
 function fail(status: number, errorCode: ErrorCode): never {
   throw new PreviewError(status, errorCode);
 }
-
-interface Context extends PreviewRequest {
-  state: PreviewState;
-  now: Date;
-  /** Các nhóm bắt được trong đường dẫn, đã đổi sang số */
-  ids: number[];
-}
-
-type Handler = (context: Context) => unknown;
 
 const HOUR_MS = 3_600_000;
 
 // ── Hàm dùng chung ───────────────────────────────────────────────────────────
 
+/** Cắt trang theo `page` / `size` (mặc định 0 / 20) như PageResponse của backend */
 function paginate<T>(items: T[], params: Record<string, unknown>): PageResponse<T> {
   const page = Number(params.page ?? 0);
   const size = Number(params.size ?? 20);
-  return { content: items.slice(page * size, (page + 1) * size), page, size, totalElements: items.length, totalPages: Math.ceil(items.length / size) };
+  return {
+    content: items.slice(page * size, (page + 1) * size),
+    page,
+    size,
+    totalElements: items.length,
+    totalPages: Math.ceil(items.length / size),
+  };
 }
 
 function findSession(state: PreviewState, sessionId: number): SessionResponse {
@@ -98,14 +92,17 @@ function studentsOf(state: PreviewState, classId: number): number[] {
   return state.classes.find((item) => item.classId === classId)?.studentIds ?? [];
 }
 
+/** Chặn nếu người gọi không thuộc các vai trò cho phép */
 function requireRole(user: UserInfo, ...roles: Role[]) {
   if (!roles.includes(user.role)) fail(403, "ACCESS_DENIED");
 }
 
+/** Sắp xếp buổi theo ngày, giờ bắt đầu rồi tới mã buổi */
 function sortSessions(sessions: SessionResponse[]): SessionResponse[] {
   return [...sessions].sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`) || a.sessionId - b.sessionId);
 }
 
+/** Lọc buổi theo khoảng ngày, trạng thái, lớp, gia sư (các tham số query của API) */
 function filterSessions(sessions: SessionResponse[], params: Record<string, unknown>): SessionResponse[] {
   const { from, to, status, classGroupId, tutorId } = params;
   return sortSessions(
@@ -125,6 +122,7 @@ function sessionsOf(state: PreviewState, tutor: UserInfo): SessionResponse[] {
   return state.sessions.filter((session) => session.scheduledTutorId === tutor.id || session.actualTutorId === tutor.id);
 }
 
+/** Hai buổi có trùng giờ trong cùng một ngày không */
 function overlaps(a: SessionResponse, b: SessionResponse): boolean {
   return a.date === b.date && a.startTime < b.endTime && b.startTime < a.endTime;
 }
@@ -148,13 +146,17 @@ function conflictsOf(state: PreviewState, tutorId: number, wanted: SessionRespon
 
 /** Các buổi chưa diễn ra của một lớp — phân công gia sư chỉ áp dụng cho những buổi này */
 function assignableSessions(state: PreviewState, classId: number, now: Date): SessionResponse[] {
-  return state.sessions.filter((session) => session.classGroupId === classId && session.status === "SCHEDULED" && sessionStart(session) > now);
+  return state.sessions.filter(
+    (session) => session.classGroupId === classId && session.status === "SCHEDULED" && sessionStart(session) > now,
+  );
 }
 
+/** Đổi người dùng mẫu sang dạng MeResponse */
 function toMe(user: PreviewUser): MeResponse {
   return { id: user.id, email: user.email, fullName: user.fullName, role: user.role, createdAt: user.createdAt, profile: user.profile };
 }
 
+/** Lấy điểm danh của buổi; chưa có thì tạo bản trống */
 function attendanceOf(state: PreviewState, sessionId: number): PreviewAttendance {
   let attendance = state.attendance.get(sessionId);
   if (!attendance) {
@@ -164,6 +166,7 @@ function attendanceOf(state: PreviewState, sessionId: number): PreviewAttendance
   return attendance;
 }
 
+/** Dựng AttendanceResponse: hạn sửa = 24 giờ sau khi buổi kết thúc */
 function attendanceView(state: PreviewState, session: SessionResponse): AttendanceResponse {
   const attendance = attendanceOf(state, session.sessionId);
   const studentIds = studentsOf(state, session.classGroupId);
@@ -187,6 +190,7 @@ function resolveLeave(leave: LeaveRequestResponse, adminId: number, patch: Parti
   Object.assign(leave, { status: "APPROVED", resolvedBy: adminId, resolvedAt: new Date().toISOString(), ...patch });
 }
 
+/** Lấy đơn xin nghỉ, bắt buộc thuộc đúng buổi và còn đang chờ duyệt */
 function requirePendingLeave(state: PreviewState, leaveRequestId: number, sessionId: number): LeaveRequestResponse {
   const leave = findLeave(state, leaveRequestId);
   if (leave.sessionId !== sessionId) fail(400, "LEAVE_REQUEST_SESSION_MISMATCH");
@@ -196,7 +200,8 @@ function requirePendingLeave(state: PreviewState, leaveRequestId: number, sessio
 
 // ── Các API ──────────────────────────────────────────────────────────────────
 
-const ROUTES: [method: string, pattern: RegExp, handler: Handler][] = [
+/** Bảng API: [phương thức, mẫu đường dẫn, hàm xử lý]. Các nhóm (\d+) trong mẫu được đưa vào `ids`. */
+const ROUTES: [method: string, pattern: RegExp, handler: PreviewHandler][] = [
   // Hồ sơ của tôi
   ["GET", /^\/me$/, ({ state, user }) => toMe(state.users.find((item) => item.id === user.id) ?? fail(404, "USER_NOT_FOUND"))],
   [
@@ -246,7 +251,9 @@ const ROUTES: [method: string, pattern: RegExp, handler: Handler][] = [
       requireRole(user, "ROLE_TUTOR");
       const session = findSession(state, ids[0]);
       if (session.status === "CANCELLED" || sessionStart(session) <= now) fail(409, "SESSION_NOT_EDITABLE");
-      if (state.leaves.some((leave) => leave.sessionId === session.sessionId && leave.requesterId === user.id && leave.status === "PENDING")) {
+      if (
+        state.leaves.some((leave) => leave.sessionId === session.sessionId && leave.requesterId === user.id && leave.status === "PENDING")
+      ) {
         fail(409, "LEAVE_REQUEST_ALREADY_PENDING");
       }
       const leave: LeaveRequestResponse = {
@@ -272,7 +279,11 @@ const ROUTES: [method: string, pattern: RegExp, handler: Handler][] = [
   [
     "GET",
     /^\/me\/leave-requests$/,
-    ({ state, user, params }) => paginate(state.leaves.filter((leave) => leave.requesterId === user.id && (!params.status || leave.status === params.status)), params),
+    ({ state, user, params }) =>
+      paginate(
+        state.leaves.filter((leave) => leave.requesterId === user.id && (!params.status || leave.status === params.status)),
+        params,
+      ),
   ],
   [
     "GET",
@@ -282,7 +293,10 @@ const ROUTES: [method: string, pattern: RegExp, handler: Handler][] = [
       const { status, requesterId, sessionId } = params;
       return paginate(
         state.leaves.filter(
-          (leave) => (!status || leave.status === status) && (!requesterId || leave.requesterId === Number(requesterId)) && (!sessionId || leave.sessionId === Number(sessionId)),
+          (leave) =>
+            (!status || leave.status === status) &&
+            (!requesterId || leave.requesterId === Number(requesterId)) &&
+            (!sessionId || leave.sessionId === Number(sessionId)),
         ),
         params,
       );
@@ -295,7 +309,12 @@ const ROUTES: [method: string, pattern: RegExp, handler: Handler][] = [
       requireRole(user, "ROLE_ADMIN");
       const leave = findLeave(state, ids[0]);
       if (leave.status !== "PENDING") fail(409, "LEAVE_REQUEST_ALREADY_RESOLVED");
-      return Object.assign(leave, { status: "REJECTED", resolvedBy: user.id, resolvedAt: new Date().toISOString(), resolutionReason: (body as LeaveRequestInput).reason });
+      return Object.assign(leave, {
+        status: "REJECTED",
+        resolvedBy: user.id,
+        resolvedAt: new Date().toISOString(),
+        resolutionReason: (body as LeaveRequestInput).reason,
+      });
     },
   ],
   [
@@ -375,7 +394,8 @@ const ROUTES: [method: string, pattern: RegExp, handler: Handler][] = [
       const { records, teachingConfirmed, reason } = body as AttendanceSubmission;
       const isAdmin = user.role === "ROLE_ADMIN";
       if (!isAdmin && teacherOf(session) !== user.id) fail(403, "ACCESS_DENIED");
-      if (sessionStart(session) > now || session.status === "CANCELLED" || session.status === "PENDING_RESCHEDULE") fail(409, "SESSION_NOT_IN_PROGRESS");
+      if (sessionStart(session) > now || session.status === "CANCELLED" || session.status === "PENDING_RESCHEDULE")
+        fail(409, "SESSION_NOT_IN_PROGRESS");
       if (attendance.locked) fail(409, "ATTENDANCE_LOCKED");
       if (isAdmin && teachingConfirmed && !reason) fail(400, "ATTENDANCE_REASON_REQUIRED");
       const roster = studentsOf(state, session.classGroupId);
@@ -390,7 +410,13 @@ const ROUTES: [method: string, pattern: RegExp, handler: Handler][] = [
         resolveLeave(pendingEarly, user.id, { resolution: "EXCUSED" });
       }
       for (const input of records) {
-        const patch = { status: input.status, note: input.note ?? null, arrivedAt: input.arrivedAt ?? null, recordedBy: user.id, recordedAt: now.toISOString() };
+        const patch = {
+          status: input.status,
+          note: input.note ?? null,
+          arrivedAt: input.arrivedAt ?? null,
+          recordedBy: user.id,
+          recordedAt: now.toISOString(),
+        };
         const existing = attendance.records.find((record) => record.studentId === input.studentId);
         if (existing) Object.assign(existing, patch);
         else attendance.records.push({ recordId: state.nextId++, studentId: input.studentId, locked: false, ...patch });
@@ -423,7 +449,13 @@ const ROUTES: [method: string, pattern: RegExp, handler: Handler][] = [
       if (!attendance.locked) fail(409, "ATTENDANCE_NOT_LOCKED");
       const record = attendance.records.find((item) => item.recordId === ids[1]) ?? fail(404, "ATTENDANCE_NOT_FOUND");
       const { status, note, arrivedAt } = body as AttendanceCorrection;
-      return Object.assign(record, { status, note: note ?? null, arrivedAt: arrivedAt ?? null, recordedBy: user.id, recordedAt: now.toISOString() });
+      return Object.assign(record, {
+        status,
+        note: note ?? null,
+        arrivedAt: arrivedAt ?? null,
+        recordedBy: user.id,
+        recordedAt: now.toISOString(),
+      });
     },
   ],
 
@@ -456,10 +488,14 @@ const ROUTES: [method: string, pattern: RegExp, handler: Handler][] = [
       requireRole(user, "ROLE_ADMIN");
       const keyword = String(params.search ?? "").toLowerCase();
       const matches = state.users.filter(
-        (item) => (!params.role || item.role === params.role) && (!keyword || item.fullName.toLowerCase().includes(keyword) || item.email.toLowerCase().includes(keyword)),
+        (item) =>
+          (!params.role || item.role === params.role) &&
+          (!keyword || item.fullName.toLowerCase().includes(keyword) || item.email.toLowerCase().includes(keyword)),
       );
       return paginate(
-        [...matches].sort((a, b) => a.id - b.id).map(({ id, email, fullName, role, createdAt }) => ({ id, email, fullName, role, createdAt })),
+        [...matches]
+          .sort((a, b) => a.id - b.id)
+          .map(({ id, email, fullName, role, createdAt }) => ({ id, email, fullName, role, createdAt })),
         params,
       );
     },
@@ -471,7 +507,14 @@ const ROUTES: [method: string, pattern: RegExp, handler: Handler][] = [
       requireRole(user, "ROLE_ADMIN");
       const { email, fullName, baseSalary, sessionRate, bio } = body as CreateTutorRequest;
       if (state.users.some((item) => item.email.toLowerCase() === email.toLowerCase())) fail(409, "EMAIL_ALREADY_EXISTS");
-      const tutor: PreviewUser = { id: state.nextId++, email, fullName, role: "ROLE_TUTOR", createdAt: now.toISOString(), profile: { baseSalary, sessionRate, bio: bio ?? null } };
+      const tutor: PreviewUser = {
+        id: state.nextId++,
+        email,
+        fullName,
+        role: "ROLE_TUTOR",
+        createdAt: now.toISOString(),
+        profile: { baseSalary, sessionRate, bio: bio ?? null },
+      };
       state.users.push(tutor);
       return toMe(tutor);
     },
@@ -501,8 +544,21 @@ const ROUTES: [method: string, pattern: RegExp, handler: Handler][] = [
         .map((tutor) => {
           const availability = state.availability.get(tutor.id) ?? [];
           const conflicts = conflictsOf(state, tutor.id, wanted);
-          const covered = wanted.length > 0 && wanted.every((session) => availability.some((slot) => slot.availableDate === session.date && slot.startTime <= session.startTime && slot.endTime >= session.endTime));
-          return { tutorId: tutor.id, tutorName: tutor.fullName, available: conflicts.length === 0, declaredAvailabilityCovered: covered, availability, conflicts };
+          const covered =
+            wanted.length > 0 &&
+            wanted.every((session) =>
+              availability.some(
+                (slot) => slot.availableDate === session.date && slot.startTime <= session.startTime && slot.endTime >= session.endTime,
+              ),
+            );
+          return {
+            tutorId: tutor.id,
+            tutorName: tutor.fullName,
+            available: conflicts.length === 0,
+            declaredAvailabilityCovered: covered,
+            availability,
+            conflicts,
+          };
         })
         .sort((a, b) => Number(b.available) - Number(a.available) || a.tutorId - b.tutorId);
     },
@@ -529,7 +585,12 @@ const ROUTES: [method: string, pattern: RegExp, handler: Handler][] = [
 ];
 
 /** Xếp `tutorId` làm gia sư chính cho các buổi chưa diễn ra của lớp */
-function assignClass({ state, user, ids, now }: Context, sessions: SessionResponse[], tutorId: number, reason: string | null): AssignmentResponse {
+function assignClass(
+  { state, user, ids, now }: PreviewContext,
+  sessions: SessionResponse[],
+  tutorId: number,
+  reason: string | null,
+): AssignmentResponse {
   requireRole(user, "ROLE_ADMIN");
   if (!state.classes.some((item) => item.classId === ids[0])) fail(404, "CLASS_NOT_FOUND");
   if (sessions.length === 0) fail(409, "NO_ASSIGNABLE_SESSIONS");
@@ -561,7 +622,8 @@ export function handlePreviewRequest(state: PreviewState, request: PreviewReques
       const data = handler({ ...request, state, now: new Date(), ids: match.slice(1).map(Number) });
       return { status: 200, body: { success: true, data } };
     } catch (error) {
-      if (error instanceof PreviewError) return { status: error.status, body: { success: false, errorCode: error.errorCode, message: error.errorCode } };
+      if (error instanceof PreviewError)
+        return { status: error.status, body: { success: false, errorCode: error.errorCode, message: error.errorCode } };
       throw error;
     }
   }
