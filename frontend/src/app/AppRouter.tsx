@@ -41,6 +41,7 @@ import { AdminUsersPage } from "@/pages/admin/AdminUsersPage";
 import { AdminSessionsPage } from "@/pages/admin/AdminSessionsPage";
 import { AdminLeaveRequestsPage } from "@/pages/admin/AdminLeaveRequestsPage";
 import { AdminAssignmentsPage } from "@/pages/admin/AdminAssignmentsPage";
+import { AdminProfilesPage } from "@/pages/admin/AdminProfilesPage";
 
 // Tutor pages
 import { TutorHomePage } from "@/pages/tutor/TutorHomePage";
@@ -100,7 +101,7 @@ export function AppRouter() {
               <Route path={ROUTES.adminSessions} element={<AdminSessionsPage />} />
               <Route path={ROUTES.adminLeaveRequests} element={<AdminLeaveRequestsPage />} />
               <Route path={ROUTES.adminAssignments} element={<AdminAssignmentsPage />} />
-              <Route path={ROUTES.adminProfile} element={<ProfilePage />} />
+              <Route path={ROUTES.adminProfile} element={<AdminProfilesPage />} />
             </Route>
           </Route>
         </Route>

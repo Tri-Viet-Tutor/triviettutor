@@ -465,6 +465,18 @@ const ROUTES: [method: string, pattern: RegExp, handler: Handler][] = [
     },
   ],
   [
+    "GET",
+    /^\/admin\/profiles$/,
+    ({ state, user, params }) => {
+      requireRole(user, "ROLE_ADMIN");
+      const keyword = String(params.search ?? "").toLowerCase();
+      const matches = state.users.filter(
+        (item) => item.role === params.role && (!keyword || item.fullName.toLowerCase().includes(keyword) || item.email.toLowerCase().includes(keyword)),
+      );
+      return paginate([...matches].sort((a, b) => a.id - b.id).map(toMe), params);
+    },
+  ],
+  [
     "POST",
     /^\/admin\/users\/tutors$/,
     ({ state, user, body, now }) => {
