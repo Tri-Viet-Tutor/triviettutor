@@ -15,4 +15,7 @@ public enum TimeSlot {
 
     private final LocalTime startTime;
     private final LocalTime endTime;
+
+    @com.fasterxml.jackson.annotation.JsonCreator
+    public static TimeSlot fromJson(String value) { return valueOf(value); }
 }

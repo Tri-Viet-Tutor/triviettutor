@@ -20,7 +20,7 @@ const letterSchema = z.object({
     .trim()
     .regex(/^(?:\+84|0)(?:[\s.]?\d){9,10}$/, "Số điện thoại chưa đúng"),
   email: z.union([z.literal(""), z.string().trim().email("Email chưa đúng")]),
-  gradeLevel: z.string(),
+  gradeLevel: z.enum(["GRADE_10", "GRADE_11", "GRADE_12"]),
   subject: z.string(),
   deliveryMode: z.string(),
   note: z.string().trim().max(1000, "Ghi chú tối đa 1000 ký tự"),

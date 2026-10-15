@@ -119,9 +119,8 @@ export interface RegisterFormValues {
   confirmPassword: string;
 }
 
-/** Giá trị form trong ResetPasswordPage — kiểm tra bằng `resetSchema` */
+/** Giá trị form trong ResetPasswordPage — kiểm tra bằng `resetSchema` (token lấy từ liên kết trong email) */
 export interface ResetFormValues {
-  email: string;
   newPassword: string;
   confirmPassword: string;
 }

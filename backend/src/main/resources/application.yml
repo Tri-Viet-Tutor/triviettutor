@@ -6,6 +6,17 @@ spring:
     name: viettritutor-backend
   profiles:
     active: ${APP_PROFILE:dev}
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${APP_GG_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
   jpa:
     open-in-view: false
     properties:
@@ -23,6 +34,20 @@ springdoc:
 # App-level settings
 app:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+  frontend-url: ${FRONTEND_URL}
+  payments:
+    intent-ttl-minutes: ${PAYMENT_INTENT_TTL_MINUTES:5}
+    mock-enabled: ${PAYMENT_MOCK_ENABLED:false}
+    mock-success: ${PAYMENT_MOCK_SUCCESS:true}
+    vnpay:
+      enabled: ${VNPAY_ENABLED:false}
+      tmn-code: ${VNPAY_TMN_CODE:}
+      hash-secret: ${VNPAY_HASH_SECRET:}
+      payment-url: ${VNPAY_PAYMENT_URL:}
+      api-url: ${VNPAY_API_URL:}
+      return-path: ${VNPAY_RETURN_PATH:/student/checkout}
+      server-ip: ${VNPAY_SERVER_IP:}
+      timeout-seconds: ${VNPAY_TIMEOUT_SECONDS:30}
   jwt:
-    expiration-ms: 86400000  # 24 hours
+    expiration-ms: 86400000 # 24 hours

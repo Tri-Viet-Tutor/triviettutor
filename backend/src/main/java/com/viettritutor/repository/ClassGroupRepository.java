@@ -7,7 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
-public interface ClassGroupRepository extends JpaRepository<ClassGroup, Long> {
+public interface ClassGroupRepository extends JpaRepository<ClassGroup, Long>, JpaSpecificationExecutor<ClassGroup> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from ClassGroup c where c.id = :id")
     Optional<ClassGroup> findForUpdate(@Param("id") Long id);

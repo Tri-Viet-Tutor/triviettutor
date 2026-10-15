@@ -42,6 +42,7 @@ import { AdminUsersPage } from "@/pages/admin/AdminUsersPage";
 import { AdminSessionsPage } from "@/pages/admin/AdminSessionsPage";
 import { AdminReschedulesPage } from "@/pages/admin/AdminReschedulesPage";
 import { AdminAssignmentsPage } from "@/pages/admin/AdminAssignmentsPage";
+import { AdminPaymentsPage } from "@/pages/admin/AdminPaymentsPage";
 
 // Trang gia sư
 import { TutorHomePage } from "@/pages/tutor/TutorHomePage";
@@ -97,6 +98,7 @@ export function AppRouter() {
               <Route path={ROUTES.adminReschedules} element={<AdminReschedulesPage />} />
               <Route path={ROUTES.adminRescheduleLegacy} element={<LegacyRedirect to={ROUTES.adminReschedules} />} />
               <Route path={ROUTES.adminAssignments} element={<AdminAssignmentsPage />} />
+              <Route path={ROUTES.adminPayments} element={<AdminPaymentsPage />} />
               <Route path={ROUTES.adminProfile} element={<ProfilePage />} />
             </Route>
           </Route>

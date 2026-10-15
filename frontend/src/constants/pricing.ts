@@ -65,7 +65,7 @@ export const LEARNING_PHOTOS: LearningPhoto[] = [
 ];
 
 /** Ba bước mua một khóa học, hiện ở đầu danh sách khóa */
-export const PURCHASE_STEPS = ["Chọn khóa học", "Thanh toán qua VNPay", "Tạo tài khoản vào học"];
+export const PURCHASE_STEPS = ["Đăng nhập học viên", "Chọn lớp và lịch học", "Thanh toán qua VNPay Sandbox"];
 
 /** Các lựa chọn của bộ lọc đợt đăng ký */
 export const ENROLLMENT_FILTER_OPTIONS: { value: EnrollmentFilter; label: string }[] = [

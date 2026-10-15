@@ -10,6 +10,7 @@ export const ADMIN_NAV: PortalNavItem[] = [
   { to: ROUTES.adminSessions, label: "Buổi học", icon: "calendar_month" },
   { to: ROUTES.adminReschedules, label: "Duyệt nghỉ / xếp bù", shortLabel: "Duyệt nghỉ", icon: "event_busy" },
   { to: ROUTES.adminAssignments, label: "Phân công gia sư", shortLabel: "Phân công", icon: "assignment_ind" },
+  { to: ROUTES.adminPayments, label: "Thanh toán", icon: "payments", desktopOnly: true },
   { to: ROUTES.adminProfile, label: "Hồ sơ", icon: "person", desktopOnly: true },
 ];
 

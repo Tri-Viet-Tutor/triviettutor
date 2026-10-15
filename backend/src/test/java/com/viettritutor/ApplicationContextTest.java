@@ -13,7 +13,9 @@ import org.springframework.test.context.ActiveProfiles;
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.task.scheduling.enabled=false",
         "app.jwt.secret=test_secret_that_is_at_least_32_chars_long",
-        "app.jwt.expiration-ms=86400000"
+        "app.jwt.expiration-ms=86400000",
+        "app.cors.allowed-origins=http://localhost:5173",
+        "app.frontend-url=http://localhost:5173"
 })
 @ActiveProfiles("test")
 class ApplicationContextTest {

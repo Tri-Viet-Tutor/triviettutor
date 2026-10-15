@@ -24,6 +24,8 @@ public enum ErrorCode {
     OTP_EXPIRED               (HttpStatus.BAD_REQUEST,    "Verification code has expired"),
     ACCOUNT_NOT_VERIFIED      (HttpStatus.FORBIDDEN,      "Account has not been verified yet"),
     ACCOUNT_ALREADY_VERIFIED  (HttpStatus.BAD_REQUEST,    "Account is already verified"),
+    INVALID_RESET_TOKEN       (HttpStatus.BAD_REQUEST,    "Invalid password reset token"),
+    RESET_TOKEN_EXPIRED       (HttpStatus.BAD_REQUEST,    "Password reset token has expired"),
     EMAIL_SEND_FAILED         (HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send verification email. Please try again later"),
 
     // ── Authorization ─────────────────────────────────────────────────────────
@@ -69,6 +71,24 @@ public enum ErrorCode {
     CLASS_FULL                (HttpStatus.CONFLICT,       "This class has reached maximum capacity"),
     CLASS_NOT_ENROLLING       (HttpStatus.UNPROCESSABLE_ENTITY, "This class is not currently accepting enrollments"),
     ENROLLMENT_ALREADY_EXISTS (HttpStatus.CONFLICT,       "You are already enrolled in this class"),
+    CLASS_PAYMENT_NOT_READY   (HttpStatus.UNPROCESSABLE_ENTITY, "The class requires an active course and a complete future schedule"),
+    PAYMENT_INTENT_NOT_FOUND  (HttpStatus.NOT_FOUND, "Payment intent not found"),
+    PAYMENT_NOT_FOUND         (HttpStatus.NOT_FOUND, "Payment not found"),
+    PAYMENT_INTENT_EXPIRED    (HttpStatus.UNPROCESSABLE_ENTITY, "Payment intent has expired; create a new intent"),
+    PAYMENT_INTENT_NOT_PENDING (HttpStatus.UNPROCESSABLE_ENTITY, "Payment intent can no longer be confirmed"),
+    PAYMENT_PRICE_CHANGED     (HttpStatus.CONFLICT, "The course price has changed; create a new payment intent"),
+    PAYMENT_MOCK_DISABLED     (HttpStatus.UNPROCESSABLE_ENTITY, "Mock payments are not enabled in this environment"),
+    PAYMENT_GATEWAY_DISABLED  (HttpStatus.SERVICE_UNAVAILABLE, "VNPay Sandbox is not configured"),
+    PAYMENT_GATEWAY_ERROR     (HttpStatus.BAD_GATEWAY, "Could not verify the VNPay response"),
+    INVALID_PAYMENT_SIGNATURE (HttpStatus.BAD_REQUEST, "Invalid VNPay signature or callback parameters"),
+    INVALID_PAYMENT_RETURN_URL (HttpStatus.BAD_REQUEST, "The payment return origin is not allowed"),
+    PAYMENT_PROVIDER_CONFLICT (HttpStatus.CONFLICT, "The payment intent is already bound to another payment method"),
+    PAYMENT_RESERVATION_EXISTS (HttpStatus.CONFLICT, "You already hold a seat in this class"),
+    REFUND_NOT_FOUND          (HttpStatus.NOT_FOUND, "Refund not found"),
+    INVALID_IDEMPOTENCY_KEY    (HttpStatus.BAD_REQUEST, "Idempotency-Key must contain 1 to 100 non-whitespace ASCII characters"),
+    IDEMPOTENCY_CONFLICT       (HttpStatus.CONFLICT, "This idempotency key was already used with different request data"),
+    REFUND_ALREADY_SETTLED     (HttpStatus.CONFLICT, "The enrollment refund has already been settled"),
+    INVALID_REFUND_PERCENTAGE  (HttpStatus.UNPROCESSABLE_ENTITY, "This case requires a full refund or a positive refund amount"),
 
     // ── Refund (BR-02.30–BR-02.32) ────────────────────────────────────────────
     REFUND_NOT_ALLOWED        (HttpStatus.UNPROCESSABLE_ENTITY, "Refund is not allowed at this stage"),
@@ -85,6 +105,12 @@ public enum ErrorCode {
     ATTENDANCE_EXCUSED_NOT_ALLOWED (HttpStatus.UNPROCESSABLE_ENTITY, "Excused attendance requires approved student leave with at least 24 hours notice"),
 
     // ── Class lifecycle ───────────────────────────────────────────────────────
+    INVALID_CLASS_CONFIGURATION (HttpStatus.BAD_REQUEST, "Invalid class dates, schedule, or course duration"),
+    COURSE_INACTIVE (HttpStatus.UNPROCESSABLE_ENTITY, "The course is inactive"),
+    CLASS_REFUND_REQUIRED (HttpStatus.UNPROCESSABLE_ENTITY, "Refund and deactivate paid enrollments before cancelling this class"),
+    CLASS_CONVERSION_NOT_ALLOWED (HttpStatus.UNPROCESSABLE_ENTITY, "Conversion requires a failed group class with exactly one active student"),
+    CLASS_CONVERSION_CONFLICT (HttpStatus.CONFLICT, "A different conversion request already exists for this class"),
+    INVALID_FEE_RESOLUTION (HttpStatus.BAD_REQUEST, "Invalid paid amount, adjustment, or settlement evidence"),
     INVALID_STATUS_TRANSITION (HttpStatus.UNPROCESSABLE_ENTITY, "This status transition is not allowed");
 
     private final HttpStatus httpStatus;

@@ -54,7 +54,7 @@ Mô hình logic chuyển hóa các khái niệm nghiệp vụ từ `Conceptual M
 - `id`: Identifier (PK, Not Null)
 - `code`: String (Not Null, Unique) - Mã định danh khóa học (VD: `MATH-12-STD`).
 - `title`: String (Not Null) - Tên khóa học (VD: "Toán 12 Luyện thi Tốt nghiệp THPT").
-- `grade_level`: Enum (`GRADE_1`, `GRADE_2`, `GRADE_3`) (Not Null) - Cấp 1, Cấp 2, Cấp 3.
+- `grade_level`: Enum (`GRADE_10`, `GRADE_11`, `GRADE_12`) (Not Null) - Chỉ các khối lớp THPT: lớp 10, 11, 12.
 - `subject`: String (Not Null) - Môn học.
 - `class_mode`: Enum (`ONLINE`, `OFFLINE`) (Not Null).
 - `total_sessions`: Integer (Not Null, $> 0$) - Tổng số buổi học trong toàn khóa.
@@ -212,7 +212,7 @@ erDiagram
         bigint id PK
         string code UK
         string title
-        string grade_level "GRADE_1 | GRADE_2 | GRADE_3"
+        string grade_level "GRADE_10 | GRADE_11 | GRADE_12"
         string subject
         string class_mode "ONLINE | OFFLINE"
         integer total_sessions

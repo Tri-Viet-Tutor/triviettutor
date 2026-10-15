@@ -26,6 +26,7 @@ export const ROUTES = {
   /** Đường dẫn cũ của trang duyệt nghỉ — tự chuyển sang adminReschedules */
   adminRescheduleLegacy: "/admin/leave-requests",
   adminAssignments: "/admin/assignments",
+  adminPayments: "/admin/payments",
   adminProfile: "/admin/profile",
   /** Khu gia sư: tổng quan, lịch dạy + điểm danh, lịch rảnh, xin nghỉ, hồ sơ */
   tutor: "/tutor",

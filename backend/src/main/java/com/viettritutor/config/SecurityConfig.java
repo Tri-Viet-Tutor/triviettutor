@@ -56,7 +56,10 @@ public class SecurityConfig {
                         }))
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/ipn").permitAll()
+                        .requestMatchers("/error").permitAll()
                         // Swagger / OpenAPI docs (dev-friendly)
                         .requestMatchers(
                                 "/swagger-ui.html",
@@ -68,6 +71,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/tutor/**").hasRole("TUTOR")
                         .requestMatchers("/api/v1/enrollments/**").hasRole("STUDENT")
+                        .requestMatchers("/api/v1/payment-intents/**").hasRole("STUDENT")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/*").hasAnyRole("ADMIN", "STUDENT")
                         .requestMatchers(HttpMethod.POST, "/api/v1/sessions/*/leave").hasAnyRole("TUTOR", "STUDENT")
                         .requestMatchers(HttpMethod.GET, "/api/v1/me/leave-requests").hasAnyRole("TUTOR", "STUDENT")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/sessions/*/attendance").hasAnyRole("ADMIN", "TUTOR")

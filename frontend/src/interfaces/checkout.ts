@@ -131,6 +131,19 @@ export interface CheckoutFlowProps {
   stickyTopClassName?: string;
 }
 
+/** Props của SeatHold (đồng hồ giữ chỗ trong CheckoutFlow) */
+export interface SeatHoldProps {
+  /** Thời điểm hết giữ chỗ (ISO 8601) */
+  expiresAt: string;
+}
+
+/** Props của StudentPayment (phần thanh toán của học viên trong CheckoutFlow) */
+export interface StudentPaymentProps {
+  userId: number;
+  /** Trang chọn khóa học để quay lại */
+  shopTo: string;
+}
+
 /** Props của CheckoutPaymentForm */
 export interface CheckoutPaymentFormProps {
   /** Các khóa trong giỏ */

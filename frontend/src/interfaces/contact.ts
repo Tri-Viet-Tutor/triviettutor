@@ -1,10 +1,13 @@
+import type { GradeLevel } from "@/interfaces/api";
+
 // ── components/contact ──
 /** Giá trị form trong ConsultLetterForm — kiểm tra bằng `letterSchema` */
 export interface ConsultLetterFormValues {
   fullName: string;
   phone: string;
   email: string;
-  gradeLevel: string;
+  /** Chỉ lớp 10 – 12 (THPT) */
+  gradeLevel: GradeLevel;
   subject: string;
   deliveryMode: string;
   note: string;

@@ -45,6 +45,8 @@ export type ErrorCode =
   | "OTP_EXPIRED"
   | "ACCOUNT_NOT_VERIFIED"
   | "ACCOUNT_ALREADY_VERIFIED"
+  | "INVALID_RESET_TOKEN"
+  | "RESET_TOKEN_EXPIRED"
   | "EMAIL_SEND_FAILED"
   | "ACCESS_DENIED"
   | "INVALID_PROFILE_FIELD"
@@ -98,6 +100,18 @@ export type ErrorCode =
   | "INVALID_ORDER_ITEMS"
   | "INVALID_PAYMENT_SIGNATURE"
   | "PAYMENT_REQUIRED"
+  | "PAYMENT_GATEWAY_DISABLED"
+  | "PAYMENT_GATEWAY_ERROR"
+  | "INVALID_PAYMENT_RETURN_URL"
+  | "PAYMENT_INTENT_NOT_FOUND"
+  | "PAYMENT_INTENT_EXPIRED"
+  | "PAYMENT_INTENT_NOT_PENDING"
+  | "PAYMENT_PRICE_CHANGED"
+  | "PAYMENT_PROVIDER_CONFLICT"
+  | "PAYMENT_RESERVATION_EXISTS"
+  | "CLASS_PAYMENT_NOT_READY"
+  | "INVALID_REFUND_PERCENTAGE"
+  | "REFUND_ALREADY_SETTLED"
   // Không nằm trong enum ErrorCode nhưng backend vẫn trả về:
   | "VALIDATION_ERROR"
   | "INTERNAL_ERROR";
@@ -189,8 +203,8 @@ export type TimeSlot = "SLOT_MORNING" | "SLOT_AFTERNOON" | "SLOT_EVENING" | "SLO
 // (Documentation/02-System-Architecture/02-Backend-Architecture-and-API-Specification.md, mục 7.3)
 // để giao diện dùng đúng tên thuộc tính ngay từ đầu; đối chiếu lại khi backend làm xong.
 
-/** courses.grade_level — "GRADE_1" … "GRADE_12". Trang web hiện chỉ dùng lớp 10 – 12. */
-export type GradeLevel = `GRADE_${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12}`;
+/** courses.grade_level — chỉ phục vụ học sinh THPT: lớp 10, 11, 12. */
+export type GradeLevel = "GRADE_10" | "GRADE_11" | "GRADE_12";
 
 /** class_groups.delivery_mode — OFFLINE là học tại trung tâm (không dạy tại nhà học viên) */
 export type DeliveryMode = "ONLINE" | "OFFLINE";
@@ -561,15 +575,15 @@ export interface ApiError {
 }
 
 // ── services/authService.ts ──
-/** Dữ liệu gửi khi quên mật khẩu */
+/** POST /auth/forgot-password — email nhận liên kết; frontendUrl để backend dựng liên kết về đúng trang */
 export interface ForgotPasswordRequest {
   email: string;
+  frontendUrl?: string;
 }
 
-/** Dữ liệu gửi khi đặt lại mật khẩu bằng mã OTP */
+/** POST /auth/reset-password — token lấy từ liên kết trong email */
 export interface ResetPasswordRequest {
-  email: string;
-  otp: string;
+  token: string;
   /** 6 – 128 ký tự, cùng giới hạn với mật khẩu lúc đăng ký */
   newPassword: string;
 }
@@ -586,4 +600,68 @@ export interface OrderResponse {
   paymentUrl: string;
   /** Thời điểm đường dẫn hết hạn (ISO 8601) */
   expiresAt?: string;
+}
+
+// ── Thanh toán học phí qua VNPay (services/tuitionPaymentService.ts) ──
+
+/** Trạng thái một giao dịch học phí */
+export type PaymentStatus = "COMPLETED" | "FAILED" | "REQUIRES_REFUND" | "PARTIALLY_REFUNDED" | "REFUNDED";
+
+/** Lớp đang mở đăng ký kèm số chỗ đã giữ và lịch các buổi (GET /catalog/classes) */
+export interface TuitionClass extends CatalogClassResponse {
+  status: ClassStatus;
+  reservedStudents: number;
+  sessions?: { id: number; date: string; startTime: string; endTime: string }[];
+}
+
+/** Yêu cầu thanh toán — giữ chỗ trong lớp tới `expiresAt` */
+export interface PaymentIntent {
+  intentId: number;
+  classGroupId: number;
+  amount: number;
+  status: "PENDING" | "COMPLETED" | "FAILED" | "EXPIRED";
+  expiresAt: string;
+}
+
+/** Một lần hoàn tiền của giao dịch */
+export interface TuitionRefund {
+  refundId: number;
+  amount: number;
+  refundPercentage: number;
+  reason: string;
+  status: "PENDING" | "COMPLETED" | "FAILED";
+  refundedAt: string | null;
+  providerResponseCode: string | null;
+}
+
+/** Giao dịch học phí (GET /admin/payments) */
+export interface TuitionPayment {
+  paymentId: number;
+  studentId: number;
+  classGroupId: number;
+  enrollmentId: number | null;
+  amount: number;
+  refundedAmount: number;
+  method: "MOCK" | "VNPAY";
+  status: PaymentStatus;
+  transactionRef: string;
+  refundReason: string | null;
+  refunds: TuitionRefund[];
+}
+
+/** Chi tiết yêu cầu thanh toán: giao dịch và ghi danh đi kèm (nếu đã có) */
+export interface IntentDetail {
+  intent: PaymentIntent;
+  cancelled: boolean;
+  payment: TuitionPayment | null;
+  enrollment: { enrollmentId: number; status: "ACTIVE" | "CANCELLED" | "REFUNDED" } | null;
+}
+
+/** Đường dẫn sang cổng VNPay Sandbox của một yêu cầu */
+export interface VnpayRedirect {
+  intentId: number;
+  transactionRef: string;
+  amount: number;
+  paymentUrl: string;
+  expiresAt: string;
 }

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { UseFormRegister } from "react-hook-form";
-import type { SessionResponse, SessionStatus, LeaveRequestResponse, AdminUserResponse } from "@/interfaces/api";
+import type { AdminUserResponse, LeaveRequestResponse, SessionResponse, SessionStatus, TuitionPayment } from "@/interfaces/api";
 
 export interface ClassSummary {
   classId: number;
@@ -168,4 +168,12 @@ export interface TutorProfileFormProps {
 /** Props của UserList */
 export interface UserListProps {
   users: AdminUserResponse[];
+}
+
+// ── pages/admin/AdminPaymentsPage.tsx ──
+/** Props của PaymentCard (một giao dịch trong trang Thanh toán) */
+export interface PaymentCardProps {
+  payment: TuitionPayment;
+  /** Gọi lại sau khi hoàn tiền / đối soát để tải lại danh sách */
+  onUpdated: () => void;
 }
