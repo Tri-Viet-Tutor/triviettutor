@@ -27,6 +27,11 @@ public interface SessionRepository extends JpaRepository<Session, Long>, JpaSpec
 
     List<Session> findBySessionDateBetweenOrderBySessionDateAscStartTimeAscIdAsc(LocalDate from, LocalDate to);
 
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from Session s where s.sessionDate between :from and :to order by s.id")
+    List<Session> findPayrollSessionsForUpdate(@Param("from") LocalDate from,@Param("to") LocalDate to);
+
     @Query("select s.classGroupId from Session s where s.id = :id")
     Optional<Long> findClassGroupId(@Param("id") Long id);
 
