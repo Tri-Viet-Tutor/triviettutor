@@ -21,9 +21,13 @@ public class VietTriTutorApplication {
     public static void main(String[] args) {
         // 1. Nap bien moi truong tu .env (ho tro ca root va backend/)
         try {
-            io.github.cdimascio.dotenv.Dotenv dotenv = io.github.cdimascio.dotenv.Dotenv.configure()
-                    .ignoreIfMissing()
-                    .load();
+            java.io.File envFile = new java.io.File(".env");
+            java.io.File backendEnvFile = new java.io.File("backend/.env");
+            io.github.cdimascio.dotenv.DotenvBuilder builder = io.github.cdimascio.dotenv.Dotenv.configure().ignoreIfMissing();
+            if (!envFile.exists() && backendEnvFile.exists()) {
+                builder.directory("backend");
+            }
+            io.github.cdimascio.dotenv.Dotenv dotenv = builder.load();
             dotenv.entries().forEach(entry -> {
                 if (System.getProperty(entry.getKey()) == null) {
                     System.setProperty(entry.getKey(), entry.getValue());

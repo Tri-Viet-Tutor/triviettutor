@@ -3,12 +3,10 @@ import { useAuthStore } from "@/stores/authStore";
 import { ROUTES } from "@/constants/routes";
 
 /**
- * PrivateRoute
+ * Chặn các trang cần đăng nhập: chưa đăng nhập thì chuyển về /login.
+ * Bọc quanh nhóm route cần bảo vệ.
  *
- * Redirects unauthenticated users to /login.
- * Wrap any group of routes that require authentication.
- *
- * Usage in router.tsx:
+ * Cách dùng trong AppRouter.tsx:
  *   <Route element={<PrivateRoute />}>
  *     <Route element={<AdminLayout />}>...</Route>
  *   </Route>

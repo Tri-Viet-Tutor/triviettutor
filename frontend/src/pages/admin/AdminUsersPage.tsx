@@ -1,19 +1,21 @@
 import { useState } from "react";
 import { Icon } from "@/components/ui/Icon";
-import { CreateTutorForm } from "@/features/admin/components/TutorForms";
-import { UserList } from "@/features/admin/components/UserList";
-import { useAdminUsers } from "@/features/admin/hooks/useAdminData";
-import { FilterTabs } from "@/features/portal/components/FilterTabs";
-import { Pager } from "@/features/portal/components/Pager";
-import { PortalPageHeader } from "@/features/portal/components/PortalPageHeader";
-import { PortalEmpty, PortalError, PortalLoading } from "@/features/portal/components/PortalState";
-import { ROLE_NAME } from "@/features/portal/data/labels";
-import { PORTAL_BTN_PRIMARY, PORTAL_INPUT } from "@/features/portal/data/ui";
+import { CreateTutorForm } from "@/components/admin/TutorForms";
+import { UserList } from "@/components/admin/UserList";
+import { useAdminUsers } from "@/hooks/useAdminData";
+import { FilterTabs } from "@/components/dashboard/FilterTabs";
+import { Pager } from "@/components/dashboard/Pager";
+import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
+import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/PortalState";
+import { ROLE_NAME } from "@/constants/labels";
+import { PORTAL_BTN_PRIMARY, PORTAL_INPUT } from "@/constants/classNames";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import type { Role } from "@/types/api";
+import type { Role } from "@/interfaces/api";
 
+/** Số người dùng mỗi trang */
 const PAGE_SIZE = 20;
 
+/** Thẻ lọc theo vai trò; chuỗi rỗng là tất cả */
 const ROLE_TABS: { value: Role | ""; label: string }[] = [
   { value: "", label: "Tất cả" },
   { value: "ROLE_STUDENT", label: ROLE_NAME.ROLE_STUDENT },
@@ -30,7 +32,9 @@ export function AdminUsersPage() {
   const [role, setRole] = useState<Role | "">("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
+  // Đang mở form thêm gia sư
   const [creating, setCreating] = useState(false);
+  // Chờ người dùng ngừng gõ rồi mới gọi API tìm
   const keyword = useDebouncedValue(search.trim());
 
   const usersQuery = useAdminUsers({ ...(role ? { role } : {}), ...(keyword ? { search: keyword } : {}), page, size: PAGE_SIZE });
@@ -87,7 +91,11 @@ export function AdminUsersPage() {
       ) : usersQuery.isError || !users ? (
         <PortalError message="Không tải được danh sách người dùng." onRetry={() => void usersQuery.refetch()} />
       ) : users.content.length === 0 ? (
-        <PortalEmpty icon="group" title="Không tìm thấy người dùng nào" description={keyword ? `Không có ai khớp với "${keyword}".` : undefined} />
+        <PortalEmpty
+          icon="group"
+          title="Không tìm thấy người dùng nào"
+          description={keyword ? `Không có ai khớp với "${keyword}".` : undefined}
+        />
       ) : (
         <>
           <p className="mb-2.5 text-[14px] text-brand-muted">

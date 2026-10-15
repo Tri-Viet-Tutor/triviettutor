@@ -1,18 +1,9 @@
 import { useMemo } from "react";
-import { encodeQr } from "@/lib/qrcode";
+import { encodeQr } from "@/utils/qrcode";
+import type { QrCodeProps } from "@/interfaces/ui";
 
-/** Viền trắng quanh mã, tính theo số ô — chuẩn QR yêu cầu ít nhất 4 */
 const QUIET_ZONE = 4;
 
-interface QrCodeProps {
-  /** Nội dung mã hoá trong mã QR */
-  value: string;
-  /** Mô tả mã cho trình đọc màn hình */
-  label: string;
-  className?: string;
-}
-
-/** Vẽ một mã QR bằng SVG (ô đen trên nền trắng), co giãn theo khung chứa. */
 export function QrCode({ value, label, className = "" }: QrCodeProps) {
   const { path, size } = useMemo(() => {
     const modules = encodeQr(value);

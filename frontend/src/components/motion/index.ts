@@ -5,3 +5,4 @@ export { Fireworks } from "./Fireworks";
 export { ReadingProgress } from "./ReadingProgress";
 export { Reveal } from "./Reveal";
 export { ScrollToTop } from "./ScrollToTop";
+export { Sparkle } from "./Sparkle";

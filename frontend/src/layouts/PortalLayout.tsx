@@ -1,23 +1,12 @@
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { Icon } from "@/components/ui/Icon";
 import { ASSETS } from "@/constants/assets";
+import { FOCUS_RING as FOCUS, PORTAL_SURFACE } from "@/constants/classNames";
 import { ROUTES } from "@/constants/routes";
-import { PortalNav } from "@/features/portal/components/PortalNav";
-import { nameInitial } from "@/features/portal/data/sessions";
-import { PORTAL_SURFACE, type PortalNavItem } from "@/features/portal/data/ui";
+import { PortalNav } from "@/components/dashboard/PortalNav";
+import { nameInitial } from "@/utils/sessions";
 import { useAuthStore } from "@/stores/authStore";
-
-const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
-
-interface PortalLayoutProps {
-  /** Tên khu: "Khu học viên", "Khu gia sư", "Khu quản trị" */
-  areaLabel: string;
-  /** Trang gốc của khu (bấm logo thì về đây) */
-  homeTo: string;
-  /** Trang hồ sơ của khu (bấm tên tài khoản thì tới đây) */
-  profileTo: string;
-  navItems: PortalNavItem[];
-}
+import type { PortalLayoutProps } from "@/interfaces/portal";
 
 /**
  * Khung chung của ba khu sau đăng nhập: thanh trên có logo, tên khu và tài khoản;
@@ -29,6 +18,7 @@ export function PortalLayout({ areaLabel, homeTo, profileTo, navItems }: PortalL
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
 
+  /** Đăng xuất rồi đưa về trang đăng nhập */
   function handleLogout() {
     logout();
     navigate(ROUTES.login);
@@ -36,6 +26,7 @@ export function PortalLayout({ areaLabel, homeTo, profileTo, navItems }: PortalL
 
   return (
     <div className={`min-h-screen font-sans text-brand-ink antialiased ${PORTAL_SURFACE}`}>
+      {/* Thanh trên cùng: logo + tên khu bên trái, tài khoản bên phải */}
       <header className="fixed inset-x-0 top-0 z-40 h-16 border-b border-slate-200 bg-white">
         <div className="flex h-full items-center justify-between gap-4 px-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
@@ -45,7 +36,9 @@ export function PortalLayout({ areaLabel, homeTo, profileTo, navItems }: PortalL
                 Tri Viet <span className="text-brand-orange">Tutor</span>
               </span>
             </Link>
-            <span className="hidden rounded-full bg-brand-tint px-3 py-1 text-[13px] font-semibold text-brand-navy md:block">{areaLabel}</span>
+            <span className="hidden rounded-full bg-brand-tint px-3 py-1 text-[13px] font-semibold text-brand-navy md:block">
+              {areaLabel}
+            </span>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
@@ -54,7 +47,10 @@ export function PortalLayout({ areaLabel, homeTo, profileTo, navItems }: PortalL
               aria-label={`Hồ sơ của ${user?.fullName ?? "tôi"}`}
               className={`flex items-center gap-2.5 rounded-full border border-slate-200 bg-white p-1 transition-colors hover:border-brand-navy/40 sm:pr-3.5 ${FOCUS}`}
             >
-              <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-navy text-[14px] font-bold text-white">
+              <span
+                aria-hidden="true"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-navy text-[14px] font-bold text-white"
+              >
                 {nameInitial(user?.fullName ?? "")}
               </span>
               <span className="hidden max-w-[180px] truncate text-[14px] font-semibold text-brand-ink sm:block">{user?.fullName}</span>

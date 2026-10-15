@@ -1,32 +1,30 @@
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAuthStore } from "@/stores/authStore";
 import { useMutation } from "@tanstack/react-query";
-import { login as loginRequest, getRoleHome } from "@/lib/auth";
+import { useForm } from "react-hook-form";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { z } from "zod";
 import { ROUTES } from "@/constants/routes";
-import { AuthField } from "@/features/auth/components/AuthField";
-import { AuthHeading } from "@/features/auth/components/AuthHeading";
-import { AuthNotice } from "@/features/auth/components/AuthNotice";
-import { AuthSubmitButton } from "@/features/auth/components/AuthSubmitButton";
-import { authErrorCode, authErrorMessage } from "@/features/auth/data/authMessages";
-import { savePendingEmail, type AuthLocationState } from "@/features/auth/data/pendingEmail";
+import { AUTH_TEXT_LINK } from "@/constants/classNames";
+import { AuthField } from "@/components/auth/AuthField";
+import { AuthHeading } from "@/components/auth/AuthHeading";
+import { AuthNotice } from "@/components/auth/AuthNotice";
+import { AuthSubmitButton } from "@/components/auth/AuthSubmitButton";
+import { authErrorCode, authErrorMessage } from "@/utils/errors";
+import { PASSWORD_MIN } from "@/constants/auth";
+import { savePendingEmail } from "@/utils/pendingEmail";
+import type { AuthLocationState, LoginFormValues } from "@/interfaces/auth";
+import { getRoleHome, login as loginRequest } from "@/services/authService";
+import { useAuthStore } from "@/stores/authStore";
 
+/** Kiểm tra form đăng nhập */
 const loginSchema = z.object({
   email: z.string().email("Email chưa đúng"),
-  password: z.string().min(6, "Mật khẩu có ít nhất 6 ký tự"),
+  password: z.string().min(PASSWORD_MIN, `Mật khẩu có ít nhất ${PASSWORD_MIN} ký tự`),
 });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
-
-const TEXT_LINK = "font-semibold text-brand-navy underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
-
 /**
- * LoginPage
- *
- * Handles user login and redirects to the appropriate dashboard
- * based on the user's role (BR-01).
+ * Trang đăng nhập: đăng nhập xong thì chuyển tới trang chủ của vai trò (BR-01),
+ * hoặc quay lại trang thanh toán nếu đang mua khóa học dở.
  * Tài khoản chưa kích hoạt (ACCOUNT_NOT_VERIFIED) được dẫn sang trang nhập mã OTP.
  */
 export function LoginPage() {
@@ -39,7 +37,11 @@ export function LoginPage() {
   // Đang mua khóa học dở: đăng nhập xong quay lại trang thanh toán
   const resumeCheckout = locationState?.resumeCheckout === true;
 
-  const { mutate: login, isPending, error } = useMutation({
+  const {
+    mutate: login,
+    isPending,
+    error,
+  } = useMutation({
     mutationFn: loginRequest,
   });
 
@@ -53,6 +55,7 @@ export function LoginPage() {
     defaultValues: { email: locationState?.email ?? "", password: "" },
   });
 
+  /** Gửi đăng nhập; thành công thì lưu phiên và chuyển trang */
   function onSubmit(data: LoginFormValues) {
     login(data, {
       onSuccess: (response) => {
@@ -69,6 +72,7 @@ export function LoginPage() {
     navigate(ROUTES.verifyEmail, { state: { email, resumeCheckout } satisfies AuthLocationState });
   }
 
+  // Tài khoản chưa kích hoạt → gợi ý nhập mã thay vì báo lỗi
   const notVerified = Boolean(error) && authErrorCode(error) === "ACCOUNT_NOT_VERIFIED";
 
   return (
@@ -100,7 +104,7 @@ export function LoginPage() {
 
         {/* "Quên mật khẩu?" nằm dưới ô mật khẩu, ngay trên nút đăng nhập */}
         <p className="!mt-2.5 text-right">
-          <Link to={ROUTES.forgotPassword} className={`text-[13.5px] ${TEXT_LINK}`}>
+          <Link to={ROUTES.forgotPassword} className={`text-[13.5px] ${AUTH_TEXT_LINK}`}>
             Quên mật khẩu?
           </Link>
         </p>
@@ -109,7 +113,7 @@ export function LoginPage() {
           <AuthNotice tone={notVerified ? "info" : "error"}>
             {authErrorMessage(error, "Đăng nhập chưa thành công. Vui lòng thử lại.")}
             {notVerified && (
-              <button type="button" onClick={goToVerification} className={`mt-1.5 block ${TEXT_LINK}`}>
+              <button type="button" onClick={goToVerification} className={`mt-1.5 block ${AUTH_TEXT_LINK}`}>
                 Nhập mã xác thực
               </button>
             )}

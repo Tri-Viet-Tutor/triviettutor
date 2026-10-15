@@ -1,25 +1,27 @@
 import { Link } from "react-router-dom";
 import { Icon } from "@/components/ui/Icon";
 import { ROUTES } from "@/constants/routes";
-import { LeavePreview } from "@/features/portal/components/LeavePreview";
-import { PortalGreeting } from "@/features/portal/components/PortalGreeting";
-import { PortalError, PortalLoading } from "@/features/portal/components/PortalState";
-import { TODAY_PANEL_CTA, TodayPanel } from "@/features/portal/components/TodayPanel";
-import { UpcomingList } from "@/features/portal/components/UpcomingList";
-import { WeekStrip } from "@/features/portal/components/WeekStrip";
-import { formatLongDate, givenName, nextSession, pendingLeaveOf, splitSessions } from "@/features/portal/data/sessions";
-import { useMyLeaveRequests, useMySessions, useRecentAttendance } from "@/features/portal/hooks/usePortalData";
-import { ClassProgressList } from "@/features/student/components/ClassProgressList";
-import { LearningSummary } from "@/features/student/components/LearningSummary";
-import { RecentAttendance } from "@/features/student/components/RecentAttendance";
+import { LeavePreview } from "@/components/dashboard/LeavePreview";
+import { PortalGreeting } from "@/components/dashboard/PortalGreeting";
+import { PortalError, PortalLoading } from "@/components/dashboard/PortalState";
+import { TODAY_PANEL_CTA } from "@/constants/classNames";
+import { TodayPanel } from "@/components/dashboard/TodayPanel";
+import { UpcomingList } from "@/components/dashboard/UpcomingList";
+import { WeekStrip } from "@/components/dashboard/WeekStrip";
+import { formatLongDate, givenName, nextSession, pendingLeaveOf, splitSessions } from "@/utils/sessions";
+import { useMyLeaveRequests, useMySessions, useRecentAttendance } from "@/hooks/usePortalData";
+import { ClassProgressList } from "@/components/student/ClassProgressList";
+import { LearningSummary } from "@/components/student/LearningSummary";
+import { RecentAttendance } from "@/components/student/RecentAttendance";
 import { useNow } from "@/hooks/useNow";
 import { useAuthStore } from "@/stores/authStore";
 import { startOfToday } from "@/utils/date";
 
 /** Số buổi sắp tới hiện ở trang Tổng quan (không tính buổi trên bảng "hôm nay") */
 const UPCOMING_PREVIEW = 4;
-/** Số buổi gần nhất lấy điểm danh để tính chuyên cần, và số buổi hiện trong danh sách */
+/** Số buổi gần nhất lấy điểm danh để tính chuyên cần */
 const ATTENDANCE_RECENT = 10;
+/** Số buổi hiện trong danh sách "Điểm danh gần đây" */
 const ATTENDANCE_LIST = 5;
 
 /**
@@ -37,6 +39,7 @@ export function StudentHomePage() {
   const sessions = sessionsQuery.data ?? [];
   const leaveRequests = leaveQuery.data?.content ?? [];
   const { upcoming, past } = splitSessions(sessions, now);
+  // Buổi kế tiếp nằm trên bảng "hôm nay"; danh sách bên dưới bỏ buổi đó
   const next = nextSession(upcoming);
   const laterSessions = upcoming.filter((session) => session.sessionId !== next?.sessionId).slice(0, UPCOMING_PREVIEW);
   const attendance = useRecentAttendance(past, ATTENDANCE_RECENT);
@@ -60,7 +63,7 @@ export function StudentHomePage() {
               scheduleTo={ROUTES.studentSchedule}
               leaveTo={ROUTES.studentLeave}
               emptyAction={
-                <Link to={ROUTES.studentCourses} className={TODAY_PANEL_CTA}>
+                <Link to={ROUTES.studentCatalog} className={TODAY_PANEL_CTA}>
                   Mua khóa học
                   <Icon name="arrow_forward" className="text-[19px]" />
                 </Link>
@@ -88,7 +91,12 @@ export function StudentHomePage() {
           </div>
 
           <div className="space-y-7 lg:col-span-4">
-            <LearningSummary sessions={sessions} upcomingCount={upcomingCount} attendance={attendance} leaveTotal={leaveQuery.data?.totalElements} />
+            <LearningSummary
+              sessions={sessions}
+              upcomingCount={upcomingCount}
+              attendance={attendance}
+              leaveTotal={leaveQuery.data?.totalElements}
+            />
             {sessions.length > 0 && <RecentAttendance items={attendance.slice(0, ATTENDANCE_LIST)} />}
             <LeavePreview
               requests={leaveQuery.data?.content}

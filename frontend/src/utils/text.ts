@@ -1,6 +1,6 @@
 /**
- * Đưa chữ về dạng dễ so khớp khi tìm kiếm: chữ thường, bỏ dấu tiếng Việt, gộp khoảng trắng.
- * Ví dụ "Thầy Hồ Đức Thuận" → "thay ho duc thuan".
+ * Chuẩn hóa chuỗi để tìm kiếm không phân biệt dấu / hoa thường:
+ * bỏ dấu tiếng Việt, đ → d, chữ thường, gộp khoảng trắng. Ví dụ: "  Đặng  Văn " → "dang van".
  */
 export function normalizeText(text: string): string {
   return text

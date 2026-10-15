@@ -8,6 +8,8 @@ React 18 + TypeScript + Vite + Tailwind CSS. Backend tương ứng: `../backend`
 npm install
 npm run dev        # máy chủ phát triển
 npm run build      # kiểm tra kiểu + đóng gói
+npm run lint       # kiểm tra code bằng ESLint
+npm run format     # định dạng code bằng Prettier
 ```
 
 ## Cấu trúc thư mục
@@ -17,75 +19,48 @@ src/
 ├─ app/                  Khởi tạo ứng dụng
 │  ├─ AppProviders.tsx   React Query và các provider dùng chung
 │  └─ AppRouter.tsx      Khai báo toàn bộ route
-├─ components/           Thành phần dùng chung cho nhiều trang
-│  ├─ layout/            PublicHeader, PublicFooter
-│  ├─ motion/            Reveal, ReadingProgress, ClickSpark, ScrollToTop, Fireworks
-│  ├─ routing/           PrivateRoute, RoleRoute (chặn theo đăng nhập / vai trò)
-│  └─ ui/                Thành phần giao diện dùng lại (Icon, SectionHeading, FramedSlideshow, ConsultCtaSection, FaqSection, QrCode)
-├─ constants/            Hằng số toàn dự án
-│  ├─ assets.ts          Đường dẫn ảnh trong public/assets (xem "Thư mục ảnh")
-│  ├─ classNames.ts      Chuỗi lớp Tailwind dùng lại giữa các trang công khai
-│  └─ routes.ts          Đường dẫn trang
-├─ features/             Mã theo từng tính năng
-│  ├─ auth/              Các trang xác thực (đăng nhập, đăng ký, OTP, quên mật khẩu)
-│  │  ├─ api/            Lời gọi verify-email, resend-verification, quên / đặt lại mật khẩu
-│  │  ├─ components/     Ô nhập, ô mã OTP, form nhập mã OTP email, hộp báo, nút gửi, tấm giới thiệu
-│  │  └─ data/           Câu báo lỗi theo mã lỗi backend, email đang chờ xác thực
-│  ├─ catalog/           Trang "Khối lớp / Môn học"
-│  │  ├─ components/     Phiếu chọn lớp, sĩ số và tiện ích lớp học, các bước đăng ký
-│  │  └─ data/           Khoá học theo môn + các lựa chọn khớp enum của backend
-│  ├─ checkout/          Trang "Thanh toán" (điền thông tin → thanh toán → tạo tài khoản)
-│  │  ├─ api/            Tạo mã thanh toán VNPay và xác nhận (đang chạy demo — backend chưa có)
-│  │  ├─ components/     CheckoutFlow (cả luồng, trang công khai và khu học viên dùng chung), dãy bước, form thông tin học viên, form thanh toán, thẻ ATM demo, mã QR VNPay, form tạo tài khoản sau thanh toán, tóm tắt đơn hàng, GuestCartScope (khách rời luồng mua thì xóa giỏ)
-│  │  └─ data/           Khóa trong giỏ, tổng tiền, cờ PAYMENT_DEMO, mã thanh toán demo và thẻ thử nghiệm
-│  ├─ contact/           Trang "Liên hệ"
-│  │  ├─ components/     Các cách liên hệ, lá thư đăng ký tư vấn (mở ứng dụng thư)
-│  │  └─ data/           Kênh liên hệ và hàm tạo thư điền sẵn
-│  ├─ home/              Trang chủ
-│  │  ├─ components/     Các khối của trang chủ (HeroSection, CourseDiary, ...)
-│  │  ├─ data/           Nội dung tĩnh (gia sư, ảnh mở đầu, cách tổ chức lớp)
-│  │  └─ hooks/          Hook chỉ trang chủ dùng (useWhirlwindReveal)
-│  ├─ pricing/           Trang "Mua khóa học" (trước là "Bảng học phí")
-│  │  ├─ components/     Thẻ giá, bộ lọc, vé lớp học (CourseTicket), thanh giỏ hàng, ảnh hình thức học, lịch mở đăng ký
-│  │  └─ data/           Nhãn lịch học, đợt mở đăng ký; shopFilters.ts tìm / lọc / sắp xếp khoá
-│  ├─ portal/            Phần dùng chung của ba khu sau đăng nhập (học viên, gia sư, quản trị) — chỉ dùng dữ liệu backend đang có
-│  │  ├─ api/            GET/PUT /me, GET /me/sessions, GET + PUT /sessions/{id}/attendance, GET /me/leave-requests, POST /sessions/{id}/leave
-│  │  ├─ components/     Thanh điều hướng (PortalNav), lời chào, bảng buổi hôm nay (TodayPanel) có linh vật kiến (AntMascot: vác lá, cầm bút, đọc sách), lịch tuần, lịch các buổi (SessionSchedule, SessionRow), điểm danh cả lớp (AttendanceEditor), trung tâm xin nghỉ (LeaveCenter), form hồ sơ, thẻ lọc, phân trang, khung chờ / lỗi / trống
-│  │  ├─ data/           Tính toán trên buổi học (sessions.ts), nhãn trạng thái và vai trò (labels.ts), câu báo lỗi theo mã backend (errors.ts), kiểu dáng chung (ui.ts)
-│  │  └─ hooks/          Hook tải dữ liệu bằng React Query (usePortalData)
-│  ├─ student/           Khu học viên (/student/*); trang mua khóa học và thanh toán trong khu này dùng lại features/pricing và features/checkout
-│  │  ├─ components/     Chi tiết buổi học, tiến độ lớp, điểm danh gần đây, hồ sơ học tập
-│  │  └─ data/           Mục điều hướng
-│  ├─ tutor/             Khu gia sư (/tutor/*)
-│  │  ├─ api/            GET + PUT /tutor/availability
-│  │  ├─ components/     Chi tiết buổi dạy (điểm danh, xin nghỉ dạy), bảng khai lịch rảnh
-│  │  └─ data/           Mục điều hướng
-│  ├─ admin/             Khu quản trị (/admin/*)
-│  │  ├─ api/            /admin/users, /admin/sessions, /admin/leave-requests, /admin/classes/{id}/… (xem adminApi.ts)
-│  │  ├─ components/     Bảng việc cần xử lý, danh sách người dùng, form gia sư, bộ lọc và chi tiết buổi học, điểm danh của quản trị, thẻ xử lý đơn xin nghỉ, chọn lớp và phân công gia sư, form lý do
-│  │  ├─ data/           Mục điều hướng
-│  │  └─ hooks/          Hook tải dữ liệu bằng React Query (useAdminData), tra tên người dùng theo mã
-│  └─ tutors/            Trang "Tìm gia sư"
-│     ├─ components/     Thanh tìm, danh sách gia sư, hồ sơ gia sư
-│     └─ data/           Danh sách gia sư gom từ các khoá học + hàm lọc
-├─ hooks/                Custom hook dùng chung (useInView, useCountdown, useNow, useDebouncedValue)
-├─ layouts/              Khung trang theo khu vực (Public, Auth; PortalLayout là khung chung của Admin, Tutor, Student)
-├─ lib/                  axios, React Query, qrcode.ts (tạo mã QR), và auth.ts (gọi API đăng nhập / đăng ký, trang đích theo vai trò)
-├─ pages/                Mỗi file là một trang gắn với một route
-│  ├─ AccountDashboard.tsx, SessionListPage.tsx   Hai trang tạm ban đầu, không còn gắn route
-│  ├─ admin/             AdminHomePage (Tổng quan), AdminUsersPage (Người dùng), AdminSessionsPage (Buổi học), AdminLeaveRequestsPage (Đơn xin nghỉ), AdminAssignmentsPage (Phân công gia sư)
+├─ pages/                Mỗi file là một trang gắn với một route (chỉ ghép component, ít logic)
+│  ├─ admin/             AdminHomePage, AdminUsersPage, AdminSessionsPage, AdminReschedulesPage (/admin/reschedules), AdminAssignmentsPage
 │  ├─ auth/              LoginPage, RegisterPage, VerifyEmailPage, ForgotPasswordPage, ResetPasswordPage
 │  ├─ error/             ForbiddenPage, NotFoundPage
 │  ├─ portal/            ProfilePage (Hồ sơ — ba khu dùng chung)
 │  ├─ public/            HomePage, SubjectsPage, SearchPage, PricingPage, CheckoutPage, ContactPage
-│  ├─ student/           StudentHomePage (Tổng quan), StudentSchedulePage (Lịch học), StudentCoursesPage (Mua khóa học), StudentCheckoutPage (Thanh toán), StudentLeavePage (Xin nghỉ)
-│  └─ tutor/             TutorHomePage (Tổng quan), TutorSchedulePage (Lịch dạy), TutorAvailabilityPage (Lịch rảnh), TutorLeavePage (Xin nghỉ)
+│  ├─ student/           StudentHomePage, StudentSchedulePage, StudentCatalogPage (/student/catalog), StudentCheckoutPage, StudentLeavePage
+│  └─ tutor/             TutorHomePage, TutorSchedulePage, TutorAvailabilityPage, TutorLeavePage
+├─ layouts/              Khung trang theo khu vực (Public, Auth; PortalLayout là khung chung của Admin, Tutor, Student)
+├─ components/           Component giao diện
+│  ├─ ui/                Dùng lại mọi nơi (Icon, SectionHeading, FramedSlideshow, ConsultCtaSection, FaqSection, QrCode, ErrorScreen)
+│  ├─ layout/            PublicHeader, PublicFooter
+│  ├─ motion/            Hiệu ứng động: Reveal, ReadingProgress, ClickSpark, ScrollToTop, Fireworks, Sparkle
+│  ├─ routing/           PrivateRoute, RoleRoute, LegacyRedirect
+│  ├─ auth/              Ô nhập, ô mã OTP, form nhập mã OTP email, hộp báo, nút gửi, tấm giới thiệu
+│  ├─ home/ catalog/ tutors/ pricing/ contact/   Các khối của từng trang công khai
+│  ├─ checkout/          Luồng thanh toán (CheckoutFlow, form thông tin, thẻ ATM demo, mã QR VNPay, tóm tắt đơn hàng…)
+│  ├─ portal/            Dùng chung cho ba khu sau đăng nhập (thanh điều hướng, bảng hôm nay, lịch buổi, điểm danh, xin nghỉ, hồ sơ…)
+│  ├─ admin/ tutor/ student/   Component riêng của từng khu
+├─ services/             Gọi API (axios)
+│  ├─ api.ts             Axios dùng chung (gắn JWT, xử lý 401) + đọc dữ liệu / lỗi từ khung ApiResponse
+│  ├─ queryClient.ts     Cấu hình TanStack Query
+│  ├─ authService.ts     Đăng nhập, đăng ký, OTP, quên / đặt lại mật khẩu
+│  ├─ portalService.ts   /me, /me/sessions, điểm danh, đơn xin nghỉ của tôi
+│  ├─ adminService.ts    /admin/users, /admin/sessions, /admin/leave-requests, /admin/classes/{id}/…
+│  ├─ tutorService.ts    /tutor/availability
+│  └─ orderService.ts    Đặt mua + thanh toán VNPay (đang chạy demo — backend chưa có)
+├─ interfaces/           Kiểu dữ liệu (interface / type)
+│  ├─ api.ts             Khớp với DTO / enum của backend
+│  └─ admin, auth, checkout, course, portal, pricing, tutor, ui   Kiểu dùng ở phía giao diện
+├─ hooks/                Custom hook: useInView, useCountdown, useNow, useDebouncedValue, useWhirlwindReveal,
+│                        useAdminData, usePortalData (tải dữ liệu bằng TanStack Query)
+├─ utils/                Hàm xử lý thuần: date, currency, text, motion, qrcode, sessions (tính trên buổi học),
+│                        errors (câu báo lỗi), pendingEmail, checkout, pricing, classes, contact, tutors
+├─ constants/            Hằng số và dữ liệu tĩnh: routes, assets, classNames (lớp Tailwind dùng chung), nav, labels,
+│                        rules, auth, courses, classOptions, home, catalog, pricing, tutors, contact, checkout, doodle
+├─ stores/               Trạng thái toàn cục bằng Zustand (authStore, cartStore — giỏ lưu theo phiên trình duyệt)
 ├─ preview/              Chế độ xem thử, chỉ có khi `npm run dev`: chưa đăng nhập mà mở `/admin`, `/tutor` thì vào bằng tài khoản và dữ liệu mẫu, không cần backend; đặt `VITE_PREVIEW=false` để tắt; bản build thật không chứa
-├─ stores/               Trạng thái toàn cục bằng zustand (authStore, cartStore — giỏ lưu theo phiên trình duyệt)
-├─ styles/               CSS toàn cục
-├─ types/                Kiểu dữ liệu khớp với DTO của backend
-└─ utils/                Hàm tiện ích thuần (motion, text, currency, date)
+└─ styles/               CSS toàn cục
 ```
+
+Quy ước phụ thuộc: `pages` → `components` → `hooks` → `services` → `interfaces`; `utils` và `constants` dùng được ở mọi nơi.
 
 ## Thư mục ảnh
 
@@ -115,33 +90,33 @@ public/assets/
 
 ## Quy ước đặt tên
 
-| Loại | Quy ước | Ví dụ |
-| --- | --- | --- |
-| Thư mục | chữ thường, tiếng Anh | `components/routing`, `features/home` |
-| Component React | `PascalCase.tsx`, tên file trùng tên component | `TutorCard.tsx` → `TutorCard` |
-| Trang | hậu tố `Page` | `HomePage.tsx` |
-| Khung trang | hậu tố `Layout` | `PublicLayout.tsx` |
-| Khối lớn của một trang | hậu tố `Section` | `HeroSection.tsx` |
-| Hook | `camelCase`, tiền tố `use` | `useInView.ts` |
-| Store | `camelCase`, hậu tố `Store` | `authStore.ts` → `useAuthStore` |
-| Dữ liệu, tiện ích, hằng số (file) | `camelCase.ts` | `classPractices.ts`, `routes.ts` |
-| Ảnh | `kebab-case`, chữ thường, không dấu | `logo-sba.png` |
-| Hằng số (giá trị) | `UPPER_SNAKE_CASE` | `ROUTES`, `HERO_SLIDE_MS` |
-| Kiểu / interface | `PascalCase`, không tiền tố `I` | `Course`, `AuthResponse` |
-| Props của component | tên component + `Props` | `RevealProps` |
+| Loại                              | Quy ước                                        | Ví dụ                                   |
+| --------------------------------- | ---------------------------------------------- | --------------------------------------- |
+| Thư mục                           | chữ thường, tiếng Anh                          | `components/routing`, `components/home` |
+| Component React                   | `PascalCase.tsx`, tên file trùng tên component | `TutorCard.tsx` → `TutorCard`           |
+| Trang                             | hậu tố `Page`                                  | `HomePage.tsx`                          |
+| Khung trang                       | hậu tố `Layout`                                | `PublicLayout.tsx`                      |
+| Khối lớn của một trang            | hậu tố `Section`                               | `HeroSection.tsx`                       |
+| Hook                              | `camelCase`, tiền tố `use`                     | `useInView.ts`                          |
+| Store                             | `camelCase`, hậu tố `Store`                    | `authStore.ts` → `useAuthStore`         |
+| Dữ liệu, tiện ích, hằng số (file) | `camelCase.ts`                                 | `classPractices.ts`, `routes.ts`        |
+| Ảnh                               | `kebab-case`, chữ thường, không dấu            | `logo-sba.png`                          |
+| Hằng số (giá trị)                 | `UPPER_SNAKE_CASE`                             | `ROUTES`, `HERO_SLIDE_MS`               |
+| Kiểu / interface                  | `PascalCase`, không tiền tố `I`                | `Course`, `AuthResponse`                |
+| Props của component               | tên component + `Props`                        | `RevealProps`                           |
 
 ## Thanh toán
 
 Trang `/thanh-toan` mặc định chạy **demo**: mã đơn, thẻ và mã QR tạo ngay trên trình duyệt, không có giao dịch thật.
 Khi backend có API VNPay, đặt `VITE_PAYMENT_DEMO=false` trong `.env.local` để chuyển sang thanh toán thật.
-Các API frontend sẽ gọi được ghi ở `src/features/checkout/api/orderApi.ts`.
+Các API frontend sẽ gọi được ghi ở `src/services/orderService.ts`.
 
 ## Nguyên tắc
 
 - Dùng named export, không dùng default export.
 - Import bằng bí danh `@/` (trỏ tới `src/`), không dùng đường dẫn tương đối dài.
 - Không viết thẳng đường dẫn trang trong component: lấy từ `constants/routes.ts`.
-- Đăng nhập, đăng ký và phân quyền theo vai trò dùng `lib/auth.ts`, `stores/authStore.ts` và `components/routing/`.
-- Kiểu dữ liệu trao đổi với backend chỉ khai báo ở `types/api.ts`; khi backend đổi DTO thì sửa ở đó trước.
-- Mã chỉ một tính năng dùng thì đặt trong `features/<tên>/`; khi có nơi thứ hai dùng mới chuyển ra `components/`, `hooks/` hoặc `utils/`.
+- Đăng nhập, đăng ký và phân quyền theo vai trò dùng `services/authService.ts`, `stores/authStore.ts` và `components/routing/`.
+- Kiểu dữ liệu trao đổi với backend chỉ khai báo ở `interfaces/api.ts`; khi backend đổi DTO thì sửa ở đó trước.
+- Component đặt trong `components/<khu>/`; gọi API trong `services/`; kiểu dữ liệu trong `interfaces/`; hàm xử lý trong `utils/`; dữ liệu tĩnh trong `constants/`.
 - Thêm trang mới: tạo file trong `pages/`, khai báo đường dẫn ở `constants/routes.ts`, rồi thêm route trong `app/AppRouter.tsx`.

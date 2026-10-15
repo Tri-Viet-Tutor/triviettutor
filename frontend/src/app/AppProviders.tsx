@@ -1,25 +1,17 @@
-import { type ReactNode } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/services/queryClient";
+import type { AppProvidersProps } from "@/interfaces/app";
 
-interface AppProvidersProps {
-  children: ReactNode;
-}
-
-/**
- * Global provider tree.
- * Add new providers here (Theme, Toast, etc.) without touching main.tsx.
- *
- * Current providers:
- *  - QueryClientProvider  — TanStack Query cache
- *  - ReactQueryDevtools   — visible only in development
- */
+// Cung cấp TanStack Query cho toàn bộ ứng dụng
 export function AppProviders({ children }: AppProvidersProps) {
   return (
+    // Cho phép các component con sử dụng React Query
     <QueryClientProvider client={queryClient}>
       {children}
-      <ReactQueryDevtools initialIsOpen={false} />
+
+      {/* Chỉ hiển thị Devtools trong môi trường development */}
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   );
 }

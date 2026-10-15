@@ -1,29 +1,30 @@
 import { useEffect } from "react";
 import { ClickSpark, ReadingProgress, ScrollToTop } from "@/components/motion";
 import { ConsultCtaSection } from "@/components/ui/ConsultCtaSection";
-import { EnrollmentScheduleSection } from "@/features/pricing/components/EnrollmentScheduleSection";
-import { CourseShopSection } from "@/features/pricing/components/CourseShopSection";
-import { LearningModesSection } from "@/features/pricing/components/LearningModesSection";
-import { PricingHero } from "@/features/pricing/components/PricingHero";
-import { cartCourses } from "@/features/checkout/data/checkout";
+import { EnrollmentScheduleSection } from "@/components/pricing/EnrollmentScheduleSection";
+import { CourseShopSection } from "@/components/pricing/CourseShopSection";
+import { LearningModesSection } from "@/components/pricing/LearningModesSection";
+import { PricingHero } from "@/components/pricing/PricingHero";
+import { cartCourses } from "@/utils/checkout";
 import { useCartStore } from "@/stores/cartStore";
-import { prefersReducedMotion } from "@/utils/motion";
+import { scrollToId } from "@/utils/motion";
 
+/** Cuộn xuống danh sách khóa học */
 function scrollToCourseShop() {
-  document
-    .getElementById("course-shop")
-    ?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+  scrollToId("course-shop");
 }
 
 /**
  * Trang "Mua khóa học" (trước đây là "Bảng học phí"): tìm và lọc khóa học, thêm vào giỏ hoặc mua ngay,
  * rồi sang trang thanh toán;
  * bên dưới là ảnh hai hình thức học và lịch mở đăng ký.
- * Học phí từng khóa lấy từ dữ liệu khóa học — xem features/pricing/data/pricing.ts.
+ * Học phí từng khóa lấy từ dữ liệu khóa học — xem constants/pricing.ts.
  */
 export function PricingPage() {
+  // Giỏ đang có khóa (bỏ qua mã môn lạ / khóa chưa có học phí)
   const hasCart = useCartStore((state) => cartCourses(state.subjects).length > 0);
 
+  // Mở trang thì về đầu trang
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, []);
