@@ -1,0 +1,118 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${LOCAL_DB_NAME:?Set LOCAL_DB_NAME in .env.docker}
+      POSTGRES_USER: ${LOCAL_DB_USERNAME:?Set LOCAL_DB_USERNAME in .env.docker}
+      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:?Set LOCAL_DB_PASSWORD in .env.docker}
+      PGPORT: ${LOCAL_DB_PORT:?Set LOCAL_DB_PORT in .env.docker}
+      HEALTHCHECK_HOST: ${CONTAINER_LOOPBACK_ADDRESS:?Set CONTAINER_LOOPBACK_ADDRESS in .env.docker}
+    command: ["postgres", "-p", "${LOCAL_DB_PORT:?Set LOCAL_DB_PORT in .env.docker}"]
+    ports:
+      - "${DOCKER_BIND_ADDRESS:?Set DOCKER_BIND_ADDRESS in .env.docker}:${LOCAL_DB_HOST_PORT:?Set LOCAL_DB_HOST_PORT in .env.docker}:${LOCAL_DB_PORT:?Set LOCAL_DB_PORT in .env.docker}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h \"$$HEALTHCHECK_HOST\" -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      APP_PROFILE: dev
+      PORT: ${BACKEND_PORT:?Set BACKEND_PORT in .env.docker}
+      SERVER_PORT: ${BACKEND_PORT:?Set BACKEND_PORT in .env.docker}
+      DB_URL: jdbc:postgresql://${LOCAL_DB_HOST:?Set LOCAL_DB_HOST in .env.docker}:${LOCAL_DB_PORT:?Set LOCAL_DB_PORT in .env.docker}/${LOCAL_DB_NAME:?Set LOCAL_DB_NAME in .env.docker}
+      DB_USERNAME: ${LOCAL_DB_USERNAME:?Set LOCAL_DB_USERNAME in .env.docker}
+      DB_PASSWORD: ${LOCAL_DB_PASSWORD:?Set LOCAL_DB_PASSWORD in .env.docker}
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "false"
+      SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "true"
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET to at least 32 characters in .env.docker}
+      CORS_ALLOWED_ORIGINS: http://${LOCAL_WEB_HOST:?Set LOCAL_WEB_HOST in .env.docker}:${FRONTEND_HOST_PORT:?Set FRONTEND_HOST_PORT in .env.docker}
+      FRONTEND_URL: http://${LOCAL_WEB_HOST:?Set LOCAL_WEB_HOST in .env.docker}:${FRONTEND_HOST_PORT:?Set FRONTEND_HOST_PORT in .env.docker}
+      HEALTHCHECK_HOST: ${CONTAINER_LOOPBACK_ADDRESS:?Set CONTAINER_LOOPBACK_ADDRESS in .env.docker}
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:?Set SPRING_MAIL_HOST in .env.docker}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:?Set SPRING_MAIL_PORT in .env.docker}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      APP_GG_PASSWORD: ${APP_GG_PASSWORD:-}
+      PAYMENT_MOCK_ENABLED: ${PAYMENT_MOCK_ENABLED:-false}
+      PAYMENT_MOCK_SUCCESS: ${PAYMENT_MOCK_SUCCESS:-true}
+      VNPAY_ENABLED: ${VNPAY_ENABLED:-false}
+      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-}
+      VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-}
+      VNPAY_PAYMENT_URL: ${VNPAY_PAYMENT_URL:-}
+      VNPAY_API_URL: ${VNPAY_API_URL:-}
+      VNPAY_RETURN_PATH: ${VNPAY_RETURN_PATH:-/student/checkout}
+      VNPAY_SERVER_IP: ${VNPAY_SERVER_IP:-}
+      VNPAY_TIMEOUT_SECONDS: ${VNPAY_TIMEOUT_SECONDS:-30}
+    ports:
+      - "${DOCKER_BIND_ADDRESS:?Set DOCKER_BIND_ADDRESS in .env.docker}:${BACKEND_HOST_PORT:?Set BACKEND_HOST_PORT in .env.docker}:${BACKEND_PORT:?Set BACKEND_PORT in .env.docker}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent --output /dev/null \"http://$$HEALTHCHECK_HOST:$$SERVER_PORT/api-docs\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: /api/v1
+      VITE_API_PROXY_TARGET: http://${BACKEND_HOST:?Set BACKEND_HOST in .env.docker}:${BACKEND_PORT:?Set BACKEND_PORT in .env.docker}
+      VITE_DEV_SERVER_HOST: ${CONTAINER_BIND_ADDRESS:?Set CONTAINER_BIND_ADDRESS in .env.docker}
+      VITE_DEV_SERVER_PORT: ${FRONTEND_PORT:?Set FRONTEND_PORT in .env.docker}
+      VITE_USE_POLLING: ${VITE_USE_POLLING:-true}
+      VITE_PREVIEW: "false"
+      HEALTHCHECK_HOST: ${CONTAINER_LOOPBACK_ADDRESS:?Set CONTAINER_LOOPBACK_ADDRESS in .env.docker}
+    ports:
+      - "${DOCKER_BIND_ADDRESS:?Set DOCKER_BIND_ADDRESS in .env.docker}:${FRONTEND_HOST_PORT:?Set FRONTEND_HOST_PORT in .env.docker}:${FRONTEND_PORT:?Set FRONTEND_PORT in .env.docker}"
+    volumes:
+      - ./frontend/src:/app/src:ro
+      - ./frontend/public:/app/public:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          fetch('http://' + process.env.HEALTHCHECK_HOST + ':' + process.env.VITE_DEV_SERVER_PORT)
+          .then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  pgadmin:
+    image: dpage/pgadmin4:9.18
+    profiles: [tools]
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:?Set PGADMIN_DEFAULT_EMAIL in .env.docker}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-}
+      PGADMIN_LISTEN_PORT: ${PGADMIN_PORT:?Set PGADMIN_PORT in .env.docker}
+    ports:
+      - "${DOCKER_BIND_ADDRESS:?Set DOCKER_BIND_ADDRESS in .env.docker}:${PGADMIN_HOST_PORT:?Set PGADMIN_HOST_PORT in .env.docker}:${PGADMIN_PORT:?Set PGADMIN_PORT in .env.docker}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+volumes:
+  postgres_data:
+  pgadmin_data:
