@@ -14,6 +14,7 @@ public class CourseResponse {
     private Long id;
     private String name;
     private String subject;
+    private Long subjectId;
     private GradeLevel gradeLevel;
     private BigDecimal basePrice1on1;
     private Integer totalSessions;
@@ -25,7 +26,7 @@ public class CourseResponse {
 
     public static CourseResponse from(Course course) {
         return CourseResponse.builder()
-                .id(course.getId()).name(course.getName()).subject(course.getSubject())
+                .id(course.getId()).name(course.getName()).subject(course.getSubject()).subjectId(course.getSubjectId())
                 .gradeLevel(course.getGradeLevel()).basePrice1on1(course.getBasePrice1on1())
                 .totalSessions(course.getTotalSessions()).durationMinutes(course.getDurationMinutes())
                 .description(course.getDescription()).active(course.isActive())

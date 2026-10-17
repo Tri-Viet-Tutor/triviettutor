@@ -101,7 +101,7 @@ public class ClassQueryService {
         if (c.getTimeSlot() != null) builder.timeSlotLabel(c.getTimeSlot().getStartTime() + " - " + c.getTimeSlot().getEndTime());
         if (c.getCourse() != null) {
             Course course = c.getCourse();
-            builder.courseId(course.getId()).courseName(course.getName()).subject(course.getSubject())
+            builder.courseId(course.getId()).courseName(course.getName()).subject(course.getSubject()).subjectId(course.getSubjectId())
                     .gradeLevel(course.getGradeLevel()).basePrice1on1(course.getBasePrice1on1());
             if (count < max) {
                 var discount = pricing.discount(c.getClassType(), count);

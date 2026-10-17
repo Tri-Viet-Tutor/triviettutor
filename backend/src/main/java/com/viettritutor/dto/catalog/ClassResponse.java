@@ -17,6 +17,7 @@ public class ClassResponse {
     private Long courseId;
     private String courseName;
     private String subject;
+    private Long subjectId;
     private GradeLevel gradeLevel;
     private ClassType classType;
     private DeliveryMode deliveryMode;

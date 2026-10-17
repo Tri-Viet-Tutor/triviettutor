@@ -117,6 +117,16 @@ public enum ErrorCode {
     CLASS_CONVERSION_NOT_ALLOWED (HttpStatus.UNPROCESSABLE_ENTITY, "Conversion requires a failed group class with exactly one active student"),
     CLASS_CONVERSION_CONFLICT (HttpStatus.CONFLICT, "A different conversion request already exists for this class"),
     INVALID_FEE_RESOLUTION (HttpStatus.BAD_REQUEST, "Invalid paid amount, adjustment, or settlement evidence"),
+    SUBJECT_NOT_FOUND (HttpStatus.NOT_FOUND, "Subject not found"),
+    CART_ITEM_NOT_FOUND (HttpStatus.NOT_FOUND, "Cart item not found"),
+    CART_LIMIT_EXCEEDED (HttpStatus.UNPROCESSABLE_ENTITY, "Cart allows at most 20 subjects"),
+    CART_CHANGED (HttpStatus.CONFLICT, "Cart changed; read the cart and select all items again"),
+    INVALID_CHECKOUT (HttpStatus.BAD_REQUEST, "Select each cart item and class exactly once"),
+    ORDER_SUBJECT_MISMATCH (HttpStatus.CONFLICT, "The selected class does not belong to the cart subject/course"),
+    ORDER_NOT_FOUND (HttpStatus.NOT_FOUND, "Order not found"),
+    ORDER_EXPIRED (HttpStatus.UNPROCESSABLE_ENTITY, "Order expired; checkout again"),
+    ORDER_NOT_PENDING (HttpStatus.UNPROCESSABLE_ENTITY, "Order is no longer pending payment"),
+    ORDER_CANCEL_CONFLICT (HttpStatus.CONFLICT, "Order was cancelled with a different reason"),
     INVALID_STATUS_TRANSITION (HttpStatus.UNPROCESSABLE_ENTITY, "This status transition is not allowed");
 
     private final HttpStatus httpStatus;

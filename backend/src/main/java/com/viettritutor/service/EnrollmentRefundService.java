@@ -26,6 +26,7 @@ public class EnrollmentRefundService {
     private final EntityManager entityManager;
     private final Clock clock;
     private final MockPaymentPolicy mockPolicy;
+    private final OrderRefundSync orderRefunds;
 
     @Transactional
     public EnrollmentResponse cancel(Long enrollmentId, String reason, User student) {
@@ -101,6 +102,7 @@ public class EnrollmentRefundService {
         enrollment.setCancellationReason(reason.trim());
         enrollment.setCancelledBy(actor.getId());
         learning.deactivate(enrollment.getId(), LearningScheduleStatus.CANCELLED);
+        orderRefunds.refresh(payment);
         return refund;
     }
 }
