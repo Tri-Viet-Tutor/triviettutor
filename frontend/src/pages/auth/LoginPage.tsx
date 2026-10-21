@@ -3,7 +3,8 @@ import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { ROUTES } from "@/constants/routes";
+import { COURSES } from "@/constants/courses";
+import { ROUTES, courseDetailPath } from "@/constants/routes";
 import { AUTH_TEXT_LINK } from "@/constants/classNames";
 import { AuthField } from "@/components/auth/AuthField";
 import { AuthHeading } from "@/components/auth/AuthHeading";
@@ -60,7 +61,10 @@ export function LoginPage() {
     login(data, {
       onSuccess: (response) => {
         setAuth(response.accessToken, response.user);
-        navigate(resumeCheckout ? ROUTES.checkout : getRoleHome(response.user.role), { replace: true });
+        const course = COURSES.find((item) => item.id === locationState?.courseSlug);
+        navigate(course ? courseDetailPath(course.id) : resumeCheckout ? ROUTES.checkout : getRoleHome(response.user.role), {
+          replace: true,
+        });
       },
     });
   }
@@ -69,7 +73,7 @@ export function LoginPage() {
   function goToVerification() {
     const email = getValues("email");
     savePendingEmail(email, false, resumeCheckout);
-    navigate(ROUTES.verifyEmail, { state: { email, resumeCheckout } satisfies AuthLocationState });
+    navigate(ROUTES.verifyEmail, { state: { email, resumeCheckout, courseSlug: locationState?.courseSlug } satisfies AuthLocationState });
   }
 
   // Tài khoản chưa kích hoạt → gợi ý nhập mã thay vì báo lỗi

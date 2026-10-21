@@ -96,11 +96,17 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
   const navigate = useNavigate();
   const { search } = useLocation();
   const subjects = useCartStore((state) => state.subjects);
-  const [subject, setSubject] = useState(subjects[0] ?? "");
-  const [grade, setGrade] = useState<GradeLevel | "">("");
+  const initialParams = new URLSearchParams(search);
+  const [subject, setSubject] = useState(initialParams.get("subject") ?? subjects[0] ?? "");
+  const [grade, setGrade] = useState<GradeLevel | "">(
+    () => GRADE_OPTIONS.find((item) => item.value === initialParams.get("gradeLevel"))?.value ?? "",
+  );
   const [mode, setMode] = useState<DeliveryMode | "">("");
   const [page, setPage] = useState(0);
-  const [classId, setClassId] = useState<number | null>(null);
+  const [classId, setClassId] = useState<number | null>(() => {
+    const value = initialParams.get("classId") ?? "";
+    return /^[1-9][0-9]*$/.test(value) && Number.isSafeInteger(Number(value)) ? Number(value) : null;
+  });
   const [activeId, setActiveId] = useState(() => storedIntent(userId));
   const [redirect, setRedirect] = useState<VnpayRedirect | null>(null);
   const attempt = useRef<{ classId: number; key: string; intentId?: number } | null>(null);

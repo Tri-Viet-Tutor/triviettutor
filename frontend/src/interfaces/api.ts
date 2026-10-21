@@ -228,6 +228,9 @@ export interface CourseResponse {
 
 /** Một lớp đang mở đăng ký — phần tử của GET /catalog/classes */
 export interface CatalogClassResponse {
+  courseId?: number;
+  enrollmentDeadline?: IsoDate;
+  full?: boolean;
   id: number;
   /** Ví dụ "MATH-G10-MWF-M-001" */
   classCode: string;
@@ -611,7 +614,7 @@ export type PaymentStatus = "COMPLETED" | "FAILED" | "REQUIRES_REFUND" | "PARTIA
 export interface TuitionClass extends CatalogClassResponse {
   status: ClassStatus;
   reservedStudents: number;
-  sessions?: { id: number; date: string; startTime: string; endTime: string }[];
+  sessions?: { id: number; sessionNumber?: number; date: string; startTime: string; endTime: string; status?: SessionStatus }[];
 }
 
 /** Yêu cầu thanh toán — giữ chỗ trong lớp tới `expiresAt` */

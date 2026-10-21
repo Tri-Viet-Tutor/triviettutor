@@ -6,7 +6,7 @@ import { ShopFilterPanel } from "@/components/pricing/ShopFilterPanel";
 import { Icon } from "@/components/ui/Icon";
 import { CONTAINER, FOCUS_RING, PORTAL_SURFACE } from "@/constants/classNames";
 import { DEFAULT_SHOP_FILTERS, PURCHASE_STEPS, SHOP_SORT_OPTIONS } from "@/constants/pricing";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES, courseDetailPath } from "@/constants/routes";
 import type { ShopFilters, ShopSort, CourseShopSectionProps } from "@/interfaces/pricing";
 import { useCartStore } from "@/stores/cartStore";
 import { cartCourses } from "@/utils/checkout";
@@ -139,6 +139,7 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
                 {results.slice(0, visibleCount).map((course) => (
                   <li key={course.id}>
                     <CourseTicket
+                      detailTo={courseDetailPath(course.id, inStudentArea)}
                       course={course}
                       inCart={subjects.includes(course.subject)}
                       today={today}
