@@ -54,34 +54,22 @@ export function TodayPanel({
         : `Buổi kế tiếp là ${dayLabel(date, today).toLowerCase()} ${formatDayMonth(date)}, ${name} nhé!`;
 
   return (
-    <section
-      aria-labelledby="today-panel-title"
-      className="relative rounded-[26px] bg-gradient-to-br from-[#1456C8] to-[#2F7BEA] p-2 pt-0 md:mt-12"
-    >
-      {/* Chú kiến và bong bóng lời nói nhô lên trên mép bảng (màn hình rộng) */}
-      <div aria-hidden="true" className="pointer-events-none absolute -top-14 right-5 hidden items-end gap-1 md:flex">
-        <p className="relative mb-7 max-w-[340px] rounded-2xl rounded-br-md bg-brand-navyDeep px-4 py-3 text-[15px] font-semibold leading-snug text-white shadow-[0_14px_28px_-16px_rgba(8,42,102,0.9)]">
-          {bubble}
-        </p>
-        <AntMascot className="h-[124px] w-[119px] drop-shadow-[0_10px_10px_rgba(8,42,102,0.35)]" />
-      </div>
-
-      <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
+    <section aria-labelledby="today-panel-title" className="relative rounded-2xl bg-gradient-to-br from-brand-navy to-[#1F63D8] p-1.5 pt-0">
+      <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 sm:px-4">
         <div className="min-w-0">
-          <h2 id="today-panel-title" className="flex items-center gap-2 text-[20px] font-bold text-white">
-            <Icon name="local_fire_department" className="text-[24px] text-brand-orange" />
+          <h2 id="today-panel-title" className="flex items-center gap-2 text-[17px] font-bold text-white">
+            <Icon name="local_fire_department" className="text-[21px] text-brand-orange" />
             {isToday || !session ? `Buổi ${noun} hôm nay` : `Buổi ${noun} kế tiếp`}
           </h2>
-          {/* Điện thoại: lời nhắc nằm ngay dưới tiêu đề */}
-          <p className="mt-1 text-[14px] font-medium text-white/90 md:hidden">{bubble}</p>
+          <p className="mt-0.5 text-[13.5px] font-medium text-white/85">{bubble}</p>
         </div>
-        <AntMascot className="h-[76px] w-[73px] shrink-0 md:hidden" />
+        <AntMascot className="-mb-2 h-[58px] w-[56px] shrink-0" />
       </div>
 
-      <div className="rounded-[20px] bg-white p-2">
+      <div className="rounded-xl bg-white p-1.5">
         {session && date && status ? (
           <>
-            <div className="flex flex-col gap-4 rounded-2xl border-2 border-[#2F7BEA] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 rounded-lg border border-[#2F7BEA]/60 p-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-start gap-3.5">
                 <span
                   aria-hidden="true"
@@ -91,11 +79,11 @@ export function TodayPanel({
                   <span className="text-[17px] font-bold">{date.getDate()}</span>
                 </span>
                 <div className="min-w-0">
-                  <p className="text-[18px] font-bold leading-tight text-brand-ink">
+                  <p className="text-[16px] font-bold leading-tight text-brand-ink">
                     Lớp #{session.classGroupId}, buổi {session.sessionNumber}
                     {session.originalSessionId !== null && " (học bù)"}
                   </p>
-                  <p className="mt-0.5 text-[15.5px] tabular-nums text-brand-muted">
+                  <p className="mt-0.5 text-[14px] tabular-nums text-brand-muted">
                     {formatTimeRange(session)}, {weekdayName(date)} {formatDayMonth(date)}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
@@ -158,7 +146,7 @@ export function TodayPanel({
             </p>
           </>
         ) : (
-          <div className="flex flex-col items-start gap-3 rounded-2xl border-2 border-dashed border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col items-start gap-3 rounded-2xl border-2 border-dashed border-brand-sandLine p-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-[15.5px] leading-relaxed text-brand-ink">
               {isTutor
                 ? hasAnySession

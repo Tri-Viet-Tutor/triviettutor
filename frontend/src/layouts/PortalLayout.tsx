@@ -2,21 +2,28 @@ import { Link, Outlet, useNavigate } from "react-router-dom";
 import { Icon } from "@/components/ui/Icon";
 import { ASSETS } from "@/constants/assets";
 import { FOCUS_RING as FOCUS, PORTAL_SURFACE } from "@/constants/classNames";
+import { ROLE_NAME } from "@/constants/labels";
 import { ROUTES } from "@/constants/routes";
+import { AccountMenu } from "@/components/dashboard/AccountMenu";
 import { PortalNav } from "@/components/dashboard/PortalNav";
-import { nameInitial } from "@/utils/sessions";
+import { formatLongDate } from "@/utils/sessions";
+import { startOfToday } from "@/utils/date";
 import { useAuthStore } from "@/stores/authStore";
+import type { Role } from "@/interfaces/api";
 import type { PortalLayoutProps } from "@/interfaces/portal";
 
 /**
- * Khung chung của ba khu sau đăng nhập: thanh trên có logo, tên khu và tài khoản;
- * thanh điều hướng bên trái (điện thoại: thanh dưới đáy); nền chấm bi nhạt.
- * Việc chặn theo đăng nhập / vai trò vẫn do PrivateRoute + RoleRoute ở AppRouter lo.
+ * Khung chung của ba khu sau đăng nhập.
+ * Máy tính: thanh bên màu navy (logo, điều hướng) + thanh trên mờ có ngày hôm nay.
+ * Điện thoại: thanh trên có logo, điều hướng nằm ở thanh dưới đáy.
+ * Cả hai: avatar góc phải thanh trên mở menu tài khoản (Hồ sơ, Đăng xuất).
+ * Nền giấy kẻ ô màu be — cùng tông với trang chủ. Việc chặn theo đăng nhập / vai trò do PrivateRoute + RoleRoute lo.
  */
 export function PortalLayout({ areaLabel, homeTo, profileTo, navItems }: PortalLayoutProps) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
+  const roleName = user ? ROLE_NAME[user.role as Role] : "";
 
   /** Đăng xuất rồi đưa về trang đăng nhập */
   function handleLogout() {
@@ -26,54 +33,40 @@ export function PortalLayout({ areaLabel, homeTo, profileTo, navItems }: PortalL
 
   return (
     <div className={`min-h-screen font-sans text-brand-ink antialiased ${PORTAL_SURFACE}`}>
-      {/* Thanh trên cùng: logo + tên khu bên trái, tài khoản bên phải */}
-      <header className="fixed inset-x-0 top-0 z-40 h-16 border-b border-slate-200 bg-white">
-        <div className="flex h-full items-center justify-between gap-4 px-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <Link to={homeTo} className={`flex items-center gap-2.5 rounded ${FOCUS}`}>
-              <img src={ASSETS.common.logo} alt="" className="h-10 w-10 rounded-full bg-white object-contain ring-1 ring-brand-line" />
-              <span className="whitespace-nowrap text-[17px] font-extrabold uppercase tracking-tight text-brand-navy">
+      <PortalNav items={navItems} label={areaLabel} homeTo={homeTo} />
+
+      <div className="min-h-screen lg:pl-[228px]">
+        {/* Thanh trên: điện thoại có logo; máy tính chỉ có ngày hôm nay và tài khoản */}
+        <header className="sticky top-0 z-30 border-b border-brand-sandLine/80 bg-brand-sand/85 backdrop-blur-md">
+          <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-10">
+            <Link to={homeTo} className={`flex min-w-0 items-center gap-2.5 rounded lg:hidden ${FOCUS}`}>
+              <img src={ASSETS.common.logo} alt="" className="h-9 w-9 rounded-full bg-white object-contain ring-1 ring-brand-sandLine" />
+              <span className="whitespace-nowrap text-[16px] font-extrabold uppercase tracking-tight text-brand-navy">
                 Tri Viet <span className="text-brand-orange">Tutor</span>
               </span>
             </Link>
-            <span className="hidden rounded-full bg-brand-tint px-3 py-1 text-[13px] font-semibold text-brand-navy md:block">
-              {areaLabel}
-            </span>
-          </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link
-              to={profileTo}
-              aria-label={`Hồ sơ của ${user?.fullName ?? "tôi"}`}
-              className={`flex items-center gap-2.5 rounded-full border border-slate-200 bg-white p-1 transition-colors hover:border-brand-navy/40 sm:pr-3.5 ${FOCUS}`}
-            >
-              <span
-                aria-hidden="true"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-navy text-[14px] font-bold text-white"
-              >
-                {nameInitial(user?.fullName ?? "")}
-              </span>
-              <span className="hidden max-w-[180px] truncate text-[14px] font-semibold text-brand-ink sm:block">{user?.fullName}</span>
-            </Link>
-            <button
-              type="button"
-              onClick={handleLogout}
-              aria-label="Đăng xuất"
-              className={`flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-brand-navy lg:hidden ${FOCUS}`}
-            >
-              <Icon name="logout" className="text-[21px]" />
-            </button>
+            <p className="hidden items-center gap-2 text-[14px] font-medium text-brand-muted lg:flex">
+              <Icon name="calendar_today" className="text-[18px] text-brand-orange" />
+              {formatLongDate(startOfToday())}
+            </p>
+
+            <AccountMenu
+              fullName={user?.fullName ?? ""}
+              roleName={roleName}
+              email={user?.email}
+              profileTo={profileTo}
+              onLogout={handleLogout}
+            />
           </div>
+        </header>
+
+        {/* Nền giấy kẻ ô thật mờ, giống các trang công khai */}
+        <div className="paper-grid-soft">
+          <main className="mx-auto max-w-[1240px] px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12 lg:pt-7">
+            <Outlet />
+          </main>
         </div>
-      </header>
-
-      <PortalNav items={navItems} label={areaLabel} onLogout={handleLogout} />
-
-      {/* Nền chấm bi nhạt như trang vở */}
-      <div className="min-h-screen bg-[radial-gradient(#DCE6F5_1px,transparent_1.4px)] pt-16 [background-size:22px_22px] lg:pl-[240px]">
-        <main className="mx-auto max-w-[1180px] px-4 pb-28 pt-7 sm:px-6 lg:px-10 lg:pb-14">
-          <Outlet />
-        </main>
       </div>
     </div>
   );

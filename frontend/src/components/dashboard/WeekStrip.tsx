@@ -11,9 +11,9 @@ export function WeekStrip({ sessions, today, scheduleTo }: WeekStripProps) {
   const todayIso = toIsoDate(today);
 
   return (
-    <section className={`p-5 ${PORTAL_CARD}`} aria-labelledby="week-strip-title">
+    <section className={`p-4 ${PORTAL_CARD}`} aria-labelledby="week-strip-title">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id="week-strip-title" className="text-[17px] font-bold text-brand-navy">
+        <h2 id="week-strip-title" className="text-[16px] font-bold text-brand-navy">
           Tuần này
         </h2>
         <p className="text-[13.5px] text-brand-muted">
@@ -21,14 +21,14 @@ export function WeekStrip({ sessions, today, scheduleTo }: WeekStripProps) {
         </p>
       </div>
 
-      <ol className="mt-4 grid grid-cols-7 gap-1 sm:gap-2">
+      <ol className="mt-3 grid grid-cols-7 gap-1 sm:gap-2">
         {days.map((day) => {
           const iso = toIsoDate(day);
           const isToday = iso === todayIso;
           // Các buổi trong ngày, xếp theo giờ bắt đầu
           const daySessions = sessions.filter((session) => session.date === iso).sort((a, b) => a.startTime.localeCompare(b.startTime));
           return (
-            <li key={iso} className={`flex min-h-[104px] flex-col items-center rounded-xl px-0.5 py-2 ${isToday ? "bg-brand-tint" : ""}`}>
+            <li key={iso} className={`flex min-h-[88px] flex-col items-center rounded-xl px-0.5 py-2 ${isToday ? "bg-brand-tint" : ""}`}>
               <span className="text-[12px] font-medium text-brand-muted">{weekdayName(day, true)}</span>
               <span
                 className={`mt-1 flex h-8 w-8 items-center justify-center rounded-full text-[15px] font-bold ${

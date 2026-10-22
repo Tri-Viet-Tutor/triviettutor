@@ -37,6 +37,7 @@ import type {
   PreviewState,
   PreviewUser,
 } from "@/interfaces/preview";
+import { MANAGEMENT_ROUTES } from "@/preview/previewManagement";
 
 /*
  * "Backend" của chế độ xem thử: trả lời các API mà khu quản trị và khu gia sư gọi, trên dữ liệu mẫu trong bộ nhớ.
@@ -119,6 +120,11 @@ function filterSessions(sessions: SessionResponse[], params: Record<string, unkn
 
 /** Các buổi của một gia sư: buổi được xếp dạy hoặc dạy thay */
 function sessionsOf(state: PreviewState, tutor: UserInfo): SessionResponse[] {
+  // Học viên (xem thử khu học viên): các buổi của những lớp mình đang học
+  if (tutor.role === "ROLE_STUDENT") {
+    const classIds = new Set(state.classes.filter((item) => item.studentIds.includes(tutor.id)).map((item) => item.classId));
+    return state.sessions.filter((session) => classIds.has(session.classGroupId));
+  }
   return state.sessions.filter((session) => session.scheduledTutorId === tutor.id || session.actualTutorId === tutor.id);
 }
 
@@ -615,7 +621,7 @@ function assignClass(
 
 /** Trả lời một lời gọi API bằng dữ liệu mẫu; trả null nếu API đó không nằm trong chế độ xem thử. */
 export function handlePreviewRequest(state: PreviewState, request: PreviewRequest): PreviewReply | null {
-  for (const [method, pattern, handler] of ROUTES) {
+  for (const [method, pattern, handler] of [...ROUTES, ...MANAGEMENT_ROUTES]) {
     const match = method === request.method ? pattern.exec(request.path) : null;
     if (!match) continue;
     try {
@@ -624,6 +630,13 @@ export function handlePreviewRequest(state: PreviewState, request: PreviewReques
     } catch (error) {
       if (error instanceof PreviewError)
         return { status: error.status, body: { success: false, errorCode: error.errorCode, message: error.errorCode } };
+      // Lỗi nghiệp vụ của previewManagement (gắn mã HTTP + errorCode vào Error thường)
+      const managed = error as { previewStatus?: number; previewErrorCode?: ErrorCode };
+      if (managed.previewStatus && managed.previewErrorCode)
+        return {
+          status: managed.previewStatus,
+          body: { success: false, errorCode: managed.previewErrorCode, message: managed.previewErrorCode },
+        };
       throw error;
     }
   }

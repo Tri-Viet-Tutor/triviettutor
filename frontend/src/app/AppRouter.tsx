@@ -43,12 +43,16 @@ import { AdminSessionsPage } from "@/pages/admin/AdminSessionsPage";
 import { AdminReschedulesPage } from "@/pages/admin/AdminReschedulesPage";
 import { AdminAssignmentsPage } from "@/pages/admin/AdminAssignmentsPage";
 import { AdminPaymentsPage } from "@/pages/admin/AdminPaymentsPage";
+import { AdminCoursesPage } from "@/pages/admin/AdminCoursesPage";
+import { AdminClassesPage } from "@/pages/admin/AdminClassesPage";
+import { AdminPayrollPage } from "@/pages/admin/AdminPayrollPage";
 
 // Trang gia sư
 import { TutorHomePage } from "@/pages/tutor/TutorHomePage";
 import { TutorSchedulePage } from "@/pages/tutor/TutorSchedulePage";
 import { TutorAvailabilityPage } from "@/pages/tutor/TutorAvailabilityPage";
 import { TutorLeavePage } from "@/pages/tutor/TutorLeavePage";
+import { TutorPayrollPage } from "@/pages/tutor/TutorPayrollPage";
 
 // Trang học viên
 import { StudentHomePage } from "@/pages/student/StudentHomePage";
@@ -56,6 +60,7 @@ import { StudentSchedulePage } from "@/pages/student/StudentSchedulePage";
 import { StudentCatalogPage } from "@/pages/student/StudentCatalogPage";
 import { StudentCheckoutPage } from "@/pages/student/StudentCheckoutPage";
 import { StudentLeavePage } from "@/pages/student/StudentLeavePage";
+import { StudentEnrollmentsPage } from "@/pages/student/StudentEnrollmentsPage";
 import { ProfilePage } from "@/pages/dashboard/ProfilePage";
 
 //Khai báo toàn bộ tuyến đường (route) của ứng dụng.
@@ -99,6 +104,9 @@ export function AppRouter() {
               <Route path={ROUTES.adminRescheduleLegacy} element={<LegacyRedirect to={ROUTES.adminReschedules} />} />
               <Route path={ROUTES.adminAssignments} element={<AdminAssignmentsPage />} />
               <Route path={ROUTES.adminPayments} element={<AdminPaymentsPage />} />
+              <Route path={ROUTES.adminCourses} element={<AdminCoursesPage />} />
+              <Route path={ROUTES.adminClasses} element={<AdminClassesPage />} />
+              <Route path={ROUTES.adminPayroll} element={<AdminPayrollPage />} />
               <Route path={ROUTES.adminProfile} element={<ProfilePage />} />
             </Route>
           </Route>
@@ -112,6 +120,7 @@ export function AppRouter() {
               <Route path={ROUTES.tutorSessions} element={<TutorSchedulePage />} />
               <Route path={ROUTES.tutorAvailability} element={<TutorAvailabilityPage />} />
               <Route path={ROUTES.tutorLeave} element={<TutorLeavePage />} />
+              <Route path={ROUTES.tutorPayroll} element={<TutorPayrollPage />} />
               <Route path={ROUTES.tutorProfile} element={<ProfilePage />} />
             </Route>
           </Route>
@@ -127,6 +136,7 @@ export function AppRouter() {
               <Route path={ROUTES.studentCatalogLegacy} element={<LegacyRedirect to={ROUTES.studentCatalog} />} />
               <Route path={ROUTES.studentCheckout} element={<StudentCheckoutPage />} />
               <Route path={ROUTES.studentLeave} element={<StudentLeavePage />} />
+              <Route path={ROUTES.studentEnrollments} element={<StudentEnrollmentsPage />} />
               <Route path={ROUTES.studentProfile} element={<ProfilePage />} />
             </Route>
           </Route>

@@ -173,7 +173,7 @@ export function TutorProfileForm({ tutor, onClose }: TutorProfileFormProps) {
     <form
       onSubmit={handleSubmit((values) => save.mutate(values))}
       noValidate
-      className="space-y-4 border-t border-slate-200 bg-slate-50/70 px-4 py-4 sm:px-5"
+      className="space-y-4 border-t border-brand-sandLine bg-brand-sand/60/70 px-4 py-4 sm:px-5"
     >
       <p className="text-[14px] leading-relaxed text-brand-muted">
         Nhập lại lương cơ bản và thù lao mỗi buổi của {tutor.fullName}. Để trống phần giới thiệu thì giữ nguyên nội dung cũ.

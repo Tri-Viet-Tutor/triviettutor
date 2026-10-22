@@ -10,12 +10,12 @@ import type { Role } from "@/interfaces/api";
 /** Độ trễ giả của mỗi lời gọi, để vẫn thấy trạng thái đang tải */
 const LATENCY_MS = 150;
 
-/** Hai khu chưa có tài khoản thật để đăng nhập (học viên thì tự đăng ký được nên không cần xem thử) */
-const AREA_ROLES: [prefix: string, role: Exclude<Role, "ROLE_STUDENT">][] = [
+/** Các khu xem thử được bằng tài khoản mẫu khi chạy `npm run dev` (chưa đăng nhập thật) */
+const AREA_ROLES: [prefix: string, role: Role][] = [
   [ROUTES.admin, "ROLE_ADMIN"],
   [ROUTES.tutor, "ROLE_TUTOR"],
+  [ROUTES.student, "ROLE_STUDENT"],
 ];
-
 
 export function installPreview() {
   const state = createPreviewState();

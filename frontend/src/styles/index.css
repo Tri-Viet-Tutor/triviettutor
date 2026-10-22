@@ -51,6 +51,14 @@
   background-size: 42px 42px;
 }
 
+/* Giấy kẻ ô thật mờ — nền của các khu sau đăng nhập */
+.paper-grid-soft {
+  background-image:
+    linear-gradient(rgba(11, 58, 140, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(11, 58, 140, 0.035) 1px, transparent 1px);
+  background-size: 32px 32px;
+  min-height: calc(100vh - 4rem);
+}
+
 /* Trang nhật ký: giấy ô ly, đường lề cam*/
 .diary-page {
   --hole-x: 18px;

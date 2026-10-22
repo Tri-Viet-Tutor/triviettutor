@@ -52,7 +52,11 @@ export function LeaveCenter({ role, scheduleTo, isEligible }: LeaveCenterProps) 
 
   return (
     <>
-      <PortalPageHeader title="Xin nghỉ" />
+      <PortalPageHeader
+        icon="event_busy"
+        title="Xin nghỉ"
+        description="Gửi đơn trước buổi học ít nhất 24 giờ để được tính là nghỉ có phép."
+      />
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
         <div className="lg:sticky lg:top-24 lg:col-span-5">

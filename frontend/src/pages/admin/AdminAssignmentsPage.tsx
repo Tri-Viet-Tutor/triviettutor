@@ -28,7 +28,7 @@ export function AdminAssignmentsPage() {
 
   return (
     <>
-      <PortalPageHeader title="Phân công gia sư" description="Chọn một lớp để xem gia sư phù hợp và phân công." />
+      <PortalPageHeader icon="assignment_ind" title="Phân công gia sư" description="Chọn một lớp để xem gia sư phù hợp và phân công." />
 
       {sessionsQuery.isPending ? (
         <PortalLoading label="Đang tải các lớp" />

@@ -13,7 +13,11 @@ export function StudentCatalogPage() {
   return (
     // Giỏ có khóa thì có thanh giỏ hàng ở đáy màn hình — chừa chỗ để không che khóa cuối
     <div className={hasCart ? "pb-[72px]" : ""}>
-      <PortalPageHeader title="Mua khóa học" />
+      <PortalPageHeader
+        icon="storefront"
+        title="Khóa học đang mở"
+        description="Chọn lớp, lịch học phù hợp rồi thanh toán qua VNPay để giữ chỗ."
+      />
       <CourseShopSection variant="student" />
     </div>
   );

@@ -40,7 +40,9 @@ export function AdminReschedulesPage() {
   return (
     <>
       <PortalPageHeader
+        icon="event_busy"
         title="Đơn xin nghỉ"
+        description="Duyệt đơn và xếp buổi học bù, gia sư dạy thay hoặc hủy buổi."
         action={
           <FilterTabs
             label="Lọc đơn theo trạng thái"

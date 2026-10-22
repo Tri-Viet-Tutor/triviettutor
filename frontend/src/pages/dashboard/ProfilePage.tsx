@@ -18,7 +18,7 @@ export function ProfilePage() {
 
   return (
     <>
-      <PortalPageHeader title="Hồ sơ" />
+      <PortalPageHeader icon="person" title="Hồ sơ" description="Thông tin liên hệ và hồ sơ của bạn trên hệ thống." />
 
       {meQuery.isPending ? (
         <PortalLoading label="Đang tải hồ sơ" />
@@ -43,7 +43,7 @@ export function ProfilePage() {
 
           {/* Gia sư: lương và thù lao (chỉ xem, quản trị sửa) */}
           {me.role === "ROLE_TUTOR" && (
-            <dl className="grid grid-cols-2 divide-x divide-slate-200 border-b border-slate-200 text-center">
+            <dl className="grid grid-cols-2 divide-x divide-brand-sandLine border-b border-brand-sandLine text-center">
               <div className="px-3 py-4">
                 <dt className="text-[13.5px] text-brand-muted">Lương cơ bản</dt>
                 <dd className="mt-0.5 text-[17px] font-bold text-brand-navy">

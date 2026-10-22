@@ -21,6 +21,11 @@ export default {
           line: "#DCE6F5",
           ink: "#14213D",
           muted: "#52607A",
+          /** Nền giấy ấm của khu sau đăng nhập (cùng họ màu với trang chủ) */
+          sand: "#F4EFE6",
+          sandDeep: "#EAE3D5",
+          /** Viền ấm của thẻ trên nền giấy */
+          sandLine: "#E4DCCB",
         },
         "secondary-container": "#82f5c1",
         "on-secondary-fixed": "#002114",

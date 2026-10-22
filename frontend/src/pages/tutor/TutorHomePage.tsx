@@ -104,8 +104,8 @@ export function TutorHomePage() {
       ) : sessionsQuery.isError ? (
         <PortalError message="Không tải được lịch dạy." onRetry={() => void sessionsQuery.refetch()} />
       ) : (
-        <div className="grid grid-cols-1 items-start gap-x-8 gap-y-7 lg:grid-cols-12">
-          <div className="space-y-7 lg:col-span-8">
+        <div className="grid grid-cols-1 items-start gap-x-5 gap-y-5 lg:grid-cols-12">
+          <div className="space-y-5 lg:col-span-8">
             <TodayPanel
               role="tutor"
               scheduleTo={ROUTES.tutorSessions}
@@ -123,14 +123,14 @@ export function TutorHomePage() {
                   <Icon name="fact_check" className="text-[22px] text-amber-600" />
                   Cần điểm danh
                 </h2>
-                <ul className="mt-2 divide-y divide-slate-100">
+                <ul className="mt-2 divide-y divide-brand-sandLine">
                   {toRecord.map((session) => {
                     const date = parseIsoDate(session.date);
                     return (
                       <li key={session.sessionId}>
                         <Link
                           to={`${ROUTES.tutorSessions}?buoi=${session.sessionId}`}
-                          className="-mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-navy"
+                          className="-mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-brand-sand/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-navy"
                         >
                           <span className="min-w-0">
                             <span className="block text-[15px] font-semibold text-brand-ink">
@@ -166,7 +166,7 @@ export function TutorHomePage() {
             )}
           </div>
 
-          <div className="space-y-7 lg:col-span-4">
+          <div className="space-y-5 lg:col-span-4">
             <SummaryCard
               id="teaching-summary-title"
               title="Tổng kết giảng dạy"

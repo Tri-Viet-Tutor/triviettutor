@@ -23,7 +23,7 @@ export function ClassProgressList({ sessions }: ClassProgressListProps) {
 
   return (
     <section
-      className={`flex flex-col gap-6 p-5 sm:flex-row sm:items-center sm:gap-8 sm:p-6 ${PORTAL_CARD}`}
+      className={`flex flex-col gap-5 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-5 ${PORTAL_CARD}`}
       aria-labelledby="class-progress-title"
     >
       <div className="relative mx-auto w-[168px] shrink-0 sm:mx-0">
@@ -48,13 +48,13 @@ export function ClassProgressList({ sessions }: ClassProgressListProps) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <h2 id="class-progress-title" className="text-[20px] font-bold text-brand-ink">
+        <h2 id="class-progress-title" className="text-[17px] font-bold text-brand-ink">
           Tiến độ
         </h2>
         <p className="mt-0.5 text-[14.5px] text-brand-muted">
           Đã học <strong className="font-bold text-brand-navy">{completed}</strong> / {total} buổi của {classes.length} lớp
         </p>
-        <ul className="mt-4 space-y-4">
+        <ul className="mt-3 space-y-3">
           {classes.map((item) => (
             <li key={item.classGroupId}>
               <div className="flex items-baseline justify-between gap-3 text-[15px]">

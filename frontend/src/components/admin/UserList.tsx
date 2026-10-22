@@ -18,7 +18,7 @@ export function UserList({ users }: UserListProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
 
   return (
-    <ul className={`divide-y divide-slate-200 overflow-hidden ${PORTAL_CARD}`}>
+    <ul className={`divide-y divide-brand-sandLine overflow-hidden ${PORTAL_CARD}`}>
       {users.map((user) => {
         const editing = editingId === user.id;
         return (

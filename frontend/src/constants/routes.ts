@@ -28,12 +28,18 @@ export const ROUTES = {
   adminAssignments: "/admin/assignments",
   adminPayments: "/admin/payments",
   adminProfile: "/admin/profile",
+  /** Khóa học (khung chương trình), lớp học và bảng lương gia sư */
+  adminCourses: "/admin/courses",
+  adminClasses: "/admin/classes",
+  adminPayroll: "/admin/payroll",
   /** Khu gia sư: tổng quan, lịch dạy + điểm danh, lịch rảnh, xin nghỉ, hồ sơ */
   tutor: "/tutor",
   tutorSessions: "/tutor/sessions",
   tutorAvailability: "/tutor/availability",
   tutorLeave: "/tutor/leave",
   tutorProfile: "/tutor/profile",
+  /** Thu nhập theo tháng */
+  tutorPayroll: "/tutor/payroll",
   /** Khu học viên: tổng quan, lịch học, mua khóa học + thanh toán, xin nghỉ, hồ sơ */
   student: "/student",
   studentSchedule: "/student/schedule",
@@ -43,6 +49,8 @@ export const ROUTES = {
   studentCatalogLegacy: "/student/courses",
   studentCheckout: "/student/checkout",
   studentLeave: "/student/leave",
+  /** Các lớp đã đóng học phí */
+  studentEnrollments: "/student/classes",
   studentProfile: "/student/profile",
   forbidden: "/403",
 } as const;

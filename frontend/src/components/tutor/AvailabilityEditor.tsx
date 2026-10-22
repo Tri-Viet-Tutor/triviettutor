@@ -218,7 +218,7 @@ export function AvailabilityEditor({ saved, queryKey }: AvailabilityEditorProps)
         )}
 
         {days.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white/60 px-6 py-10 text-center">
+          <div className="rounded-2xl border border-dashed border-brand-sandLine bg-white/60 px-6 py-10 text-center">
             <Icon name="event_available" className="text-[40px] text-slate-300" />
             <p className="mt-2 text-[16px] font-semibold text-brand-navy">Chưa có khung giờ rảnh nào sắp tới</p>
             <p className="mx-auto mt-1 max-w-md text-[14.5px] leading-relaxed text-brand-muted">

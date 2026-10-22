@@ -27,7 +27,7 @@ export function ReasonForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 rounded-xl border border-slate-200 bg-white p-3.5">
+    <form onSubmit={handleSubmit} className="space-y-3 rounded-xl border border-brand-sandLine bg-white p-3.5">
       {children}
       <div>
         <label htmlFor={id} className={`mb-1.5 ${AUTH_LABEL}`}>

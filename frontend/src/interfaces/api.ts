@@ -665,3 +665,157 @@ export interface VnpayRedirect {
   paymentUrl: string;
   expiresAt: string;
 }
+
+// ── Quản lý khóa học / lớp, ghi danh và bảng lương (CourseController, ClassController,
+//    EnrollmentController, PayrollController) ──────────────────────────────────
+
+/** dto.course.CourseRequest — POST /admin/courses, PUT /admin/courses/{courseId} */
+export interface CourseRequest {
+  name: string;
+  /** Mã môn, ví dụ "MATH" */
+  subject: string;
+  gradeLevel: GradeLevel;
+  /** Học phí gốc lớp 1 kèm 1 cho trọn khóa (đồng) */
+  basePrice1on1: number;
+  totalSessions: number;
+  durationMinutes: number;
+  description?: string;
+}
+
+/** Tham số lọc của GET /admin/courses */
+export interface AdminCoursesQuery {
+  subject?: string;
+  gradeLevel?: GradeLevel;
+  active?: boolean;
+  page?: number;
+  size?: number;
+}
+
+/** Một buổi trong lịch dự kiến của lớp (ClassResponse.sessions) */
+export interface ClassSessionPreview {
+  id: number;
+  sessionNumber: number;
+  date: IsoDate;
+  startTime: IsoTime;
+  endTime: IsoTime;
+  status: SessionStatus;
+}
+
+/** dto.classgroup.ClassResponse — GET/POST /admin/classes */
+export interface AdminClassResponse extends CatalogClassResponse {
+  courseId: number;
+  status: ClassStatus;
+  enrollmentDeadline: IsoDate | null;
+  reservedStudents: number;
+  full: boolean;
+  meetingUrl: string | null;
+  createdAt: IsoDateTime;
+  sessions?: ClassSessionPreview[];
+}
+
+/** Tham số lọc của GET /admin/classes */
+export interface AdminClassesQuery {
+  courseId?: number;
+  status?: ClassStatus;
+  classType?: ClassType;
+  schedulePattern?: SchedulePattern;
+  page?: number;
+  size?: number;
+}
+
+/** dto.classgroup.CreateClassRequest — POST /admin/classes */
+export interface CreateClassRequest {
+  courseId: number;
+  classType: ClassType;
+  deliveryMode: DeliveryMode;
+  schedulePattern: SchedulePattern;
+  timeSlot: TimeSlot;
+  startDate: IsoDate;
+  enrollmentDeadline?: IsoDate;
+  meetingUrl?: string;
+}
+
+/** PATCH /admin/classes/{classId}/status */
+export interface ChangeClassStatusRequest {
+  newStatus: ClassStatus;
+  reason?: string;
+}
+
+/** POST /admin/classes/{classId}/reopen */
+export interface ReopenClassRequest {
+  startDate: IsoDate;
+  enrollmentDeadline?: IsoDate;
+  reason: string;
+}
+
+/** Trạng thái một ghi danh đã đóng học phí */
+export type EnrollmentStatus = "ACTIVE" | "CANCELLED" | "REFUNDED";
+
+/** dto.payment.EnrollmentResponse — GET /enrollments/my, GET /admin/classes/{classId}/enrollments */
+export interface EnrollmentResponse {
+  enrollmentId: number;
+  studentId: number;
+  classGroupId: number;
+  paymentId: number | null;
+  feeCharged: number;
+  discountRate: number;
+  enrollmentSizeAtTime: number;
+  status: EnrollmentStatus;
+  enrolledAt: IsoDateTime;
+  cancelledAt: IsoDateTime | null;
+  cancellationReason: string | null;
+  cancelledBy: number | null;
+}
+
+/** Tham số của GET /enrollments/my và GET /admin/classes/{classId}/enrollments */
+export interface EnrollmentsQuery {
+  status?: EnrollmentStatus;
+  page?: number;
+  size?: number;
+}
+
+/** Trạng thái bảng lương của một tháng */
+export type PayrollStatus = "DRAFT" | "FINALIZED";
+
+/** dto.payroll.PayrollLineResponse — lương một gia sư trong một tháng */
+export interface PayrollLineResponse {
+  tutorId: number;
+  tutorName: string;
+  year: number;
+  month: number;
+  status: PayrollStatus;
+  finalizedAt: IsoDateTime | null;
+  baseSalary: number;
+  sessionRate: number;
+  /** Buổi được tính lương */
+  validSessions: number;
+  cancelledSessions: number;
+  /** Buổi đã có người dạy thay */
+  substitutedOutSessions: number;
+  /** Buổi chưa chốt (chưa khóa điểm danh / chưa xác nhận đã dạy) */
+  unfinalizedSessions: number;
+  sessionPay: number;
+  totalPay: number;
+}
+
+/** dto.payroll.PayrollResponse — GET /admin/payroll/{year}/{month} */
+export interface PayrollResponse {
+  year: number;
+  month: number;
+  status: PayrollStatus;
+  lines: PayrollLineResponse[];
+  totalPayroll: number;
+  canFinalize: boolean;
+  /** Các buổi còn chặn việc chốt lương */
+  blockingSessionIds: number[];
+  finalizedBy: number | null;
+  finalizedAt: IsoDateTime | null;
+}
+
+/** Tham số của GET /tutor/payroll */
+export interface TutorPayrollQuery {
+  year?: number;
+  month?: number;
+  page?: number;
+  size?: number;
+}

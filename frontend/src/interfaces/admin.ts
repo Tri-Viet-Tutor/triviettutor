@@ -1,6 +1,14 @@
 import type { ReactNode } from "react";
 import type { UseFormRegister } from "react-hook-form";
-import type { AdminUserResponse, LeaveRequestResponse, SessionResponse, SessionStatus, TuitionPayment } from "@/interfaces/api";
+import type {
+  AdminClassResponse,
+  AdminUserResponse,
+  CourseResponse,
+  LeaveRequestResponse,
+  SessionResponse,
+  SessionStatus,
+  TuitionPayment,
+} from "@/interfaces/api";
 
 export interface ClassSummary {
   classId: number;
@@ -176,4 +184,40 @@ export interface PaymentCardProps {
   payment: TuitionPayment;
   /** Gọi lại sau khi hoàn tiền / đối soát để tải lại danh sách */
   onUpdated: () => void;
+}
+
+// ── Khóa học, lớp học, bảng lương (pages/admin/AdminCoursesPage, AdminClassesPage, AdminPayrollPage) ──
+
+/** Props của CourseFormDialog */
+export interface CourseFormDialogProps {
+  open: boolean;
+  /** Khóa đang sửa; null là tạo mới */
+  course: CourseResponse | null;
+  onClose: () => void;
+  /** Lưu xong */
+  onSaved: (course: CourseResponse) => void;
+}
+
+/** Props của ClassFormDialog */
+export interface ClassFormDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSaved: (classItem: AdminClassResponse) => void;
+}
+
+/** Props của ClassStatusDialog */
+export interface ClassStatusDialogProps {
+  /** Lớp đang thao tác; null là đóng hộp thoại */
+  classItem: AdminClassResponse | null;
+  /** "status": đổi trạng thái · "reopen": mở lại lớp không đủ sĩ số */
+  mode: "status" | "reopen";
+  onClose: () => void;
+  onSaved: (classItem: AdminClassResponse) => void;
+}
+
+/** Props của ClassEnrollmentsPanel */
+export interface ClassEnrollmentsPanelProps {
+  classId: number;
+  /** Tra họ tên học viên theo mã */
+  nameOf: (userId: number) => string | undefined;
 }
