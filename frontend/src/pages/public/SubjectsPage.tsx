@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ClickSpark, ReadingProgress, ScrollToTop } from "@/components/motion";
-import { CatalogHero } from "@/features/catalog/components/CatalogHero";
-import { ClassBuilderSection } from "@/features/catalog/components/ClassBuilderSection";
-import { EnrollmentStepsSection } from "@/features/catalog/components/EnrollmentStepsSection";
-import { ClassPerksSection } from "@/features/catalog/components/ClassPerksSection";
-import { COURSES } from "@/features/catalog/data/courses";
-import { prefersReducedMotion } from "@/utils/motion";
+import { CatalogHero } from "@/components/catalog/CatalogHero";
+import { ClassBuilderSection } from "@/components/catalog/ClassBuilderSection";
+import { EnrollmentStepsSection } from "@/components/catalog/EnrollmentStepsSection";
+import { ClassPerksSection } from "@/components/catalog/ClassPerksSection";
+import { COURSES } from "@/constants/courses";
+import { scrollToId } from "@/utils/motion";
 
 /**
  * Trang "Khối lớp / Môn học".
  * Nội dung dựng từ đúng các thuộc tính backend dùng để mô tả một khóa và một lớp
- * (xem features/catalog/data/classOptions.ts và phần "Danh mục" trong types/api.ts).
+ * (xem constants/classOptions.ts và phần "Danh mục" trong interfaces/api.ts).
  */
 export function SubjectsPage() {
   // Môn mở sẵn lấy từ đường dẫn (/cap-hoc-mon-hoc?mon=MATH), ví dụ khi đi từ hồ sơ gia sư sang
@@ -33,9 +33,7 @@ export function SubjectsPage() {
   /** Bấm bong bóng môn ở phần mở đầu: chọn môn rồi cuộn xuống phiếu */
   function pickSubjectFromHero(nextSubject: string) {
     setSubject(nextSubject);
-    document
-      .getElementById("class-builder")
-      ?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+    scrollToId("class-builder");
   }
 
   return (

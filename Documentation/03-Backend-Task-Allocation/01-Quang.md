@@ -159,3 +159,20 @@ Luồng mới dưới đây thay cặp tạo enrollment/pay trước đây. Quan
 - [ ] PR được Hữu review tại ranh giới schedule/teaching; báo cáo test thực chạy và phần chưa chạy.
 
 42 endpoint là cách nhóm công việc, không phải thước đo độ khó; cân bằng với Hữu theo 76 SP/người.
+
+### Q04 — Contract triển khai đã xác nhận (14/10/2026)
+
+- Ba API dùng prefix /api/v1, controller tên PayrollController. Công thức: baseSalary + validSessions * sessionRate, tiền VND nguyên, không trừ CANCELLED thêm lần nữa.
+- Người dùng chốt dùng baseSalary/sessionRate hiện tại tại lúc finalize cho toàn bộ tháng; không chia theo ngày, không tính lịch sử đơn giá. Lưu snapshot bất biến, thay hồ sơ sau đó không đổi kỳ cũ.
+- Tutor đủ điều kiện: ROLE_TUTOR, có TutorProfile và user.createdAt trước đầu tháng kế tiếp. Bao gồm tài khoản disabled và 0 buổi; giữ nguyên đủ lương cứng. Không tính tài khoản tạo sau kỳ. Hồ sơ thiếu cho Tutor có buổi trong kỳ là lỗi cần đối soát, không âm thầm bỏ tiền buổi.
+- Tháng theo Clock/múi giờ ứng dụng. Chỉ finalize tháng đã kết thúc; từ chối tháng hiện tại/tương lai, kỳ còn buổi không CANCELLED chưa COMPLETED hợp lệ (bao gồm thiếu gia sư hoặc thiếu bằng chứng điểm danh).
+- TeachingQuery.periodSummary là nguồn đối soát: completed, cancelled (kèm lý do/người phụ trách lúc hủy), substitutedOut, unfinalized. Dạy thay chỉ trả người thực dạy; buổi bù tính tháng sessionDate của buổi bù. Buổi gốc CANCELLED chỉ đối soát.
+- GET /admin/payroll/{year}/{month}: preview DRAFT thuần đọc hoặc snapshot FINALIZED; lines theo tutorId, mỗi dòng có lương cứng/đơn giá/validSessions/sessionPay/totalPay và 4 nhóm đối soát. Có blockingSessionIds và canFinalize để Admin biết việc cần xử lý. Không tạo kỳ khi GET.
+- POST /admin/payroll/{year}/{month}/finalize: không body; bắt buộc Idempotency-Key 1..100 ký tự chữ/số hoặc . _ : -. Tính lại dưới khóa giao dịch, lưu kỳ + dòng + snapshot chi tiết + finalizedBy/At atomically. Cùng kỳ gọi lại trả snapshot cũ 200, không tính lại; cùng key dùng cho kỳ khác trả 409.
+- GET /tutor/payroll: year/month tùy chọn để lọc (month phải đi cùng year), page=0,size=20 (1..100), kỳ mới nhất trước. Chỉ FINALIZED, danh tính từ JWT, không nhận tutorId chọn người khác. Trả PageResponse của dòng lương cá nhân có year/month/status/finalizedAt; không trả tổng lương trung tâm hoặc dòng của Tutor khác.
+- year hợp lệ 1..9998, month 1..12. Dữ liệu sai 400, chưa đăng nhập 401, sai role 403, xung đột key 409, kỳ chưa kết thúc/chưa đối soát/đã khóa chỉnh sửa 422. Kết quả chốt không đồng nghĩa đã chuyển tiền.
+- Khóa chung cho finalize và tạo buổi lùi vào tháng quá khứ; khóa session theo ID, sau đó hồ sơ gia sư để snapshot. Các writer điểm danh/hủy/bù đã gọi PayrollGuard sẽ kiểm tra tháng đã chốt sau khóa session. Chặn dời buổi hoặc tạo bổ sung vào kỳ đã chốt. Không mở lại hoặc sửa kỳ FINALIZED trong scope.
+- Migration mới V15 cho payroll_periods/payroll_lines, payroll_finalize_keys (lưu cả key của lần gọi lại) và khóa điều phối; unique(year,month), unique(period,tutor), snapshot có session IDs không trùng trong từng nhóm. Không sửa checksum migration đã áp dụng. Nhánh main hiện dùng V13 single_class_payment_enrollment_refunds và V14 vnpay_reservations_and_refund_tracking. Database có V13/V14 của nhánh khác phải được đồng bộ lịch sử/schema riêng trước khi áp dụng V15; không chép thêm migration trùng version hoặc repair checksum để bỏ qua khác biệt.
+- Kiểm thử tích hợp và HTTP với ADMIN/TUTOR/STUDENT: số tiền, hủy không trừ hai lần, dạy thay/bù qua tháng, 0 buổi/disabled, thiếu bằng chứng, khóa sau finalize, idempotency, concurrent finalize/correction, quyền sở hữu, input và Swagger. Không tạo Postman.
+
+- Kết quả kiểm thử 15/10/2026: 216 test pass, gồm 42 test PayrollController và 1 test HTTP thực với 46 lượt kiểm tra API/Swagger. Dữ liệu kiểm thử tách biệt trong H2. Sau khi database được đồng bộ V13/V14 phù hợp nhánh main, V15 đã áp dụng thành công ngày 15/10/2026; backend Supabase khởi động qua bước Hibernate schema validation. Script local đọc .env ở root, hoặc backend/.env nếu root không có.

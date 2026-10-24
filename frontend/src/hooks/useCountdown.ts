@@ -26,7 +26,7 @@ export function useCountdown(initialSeconds: number): [number, (seconds: number)
   return [secondsLeft, restart];
 }
 
-/** 125 → "02:05" */
+/** Đổi số giây sang dạng mm:ss: 125 → "02:05" */
 export function formatClock(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;

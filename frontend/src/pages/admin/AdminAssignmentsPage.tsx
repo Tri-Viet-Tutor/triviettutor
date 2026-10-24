@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { AssignmentPanel } from "@/features/admin/components/AssignmentPanel";
-import { ClassPicker, summarizeClasses } from "@/features/admin/components/ClassPicker";
-import { useAdminSessions, useUserDirectory } from "@/features/admin/hooks/useAdminData";
-import { PortalPageHeader } from "@/features/portal/components/PortalPageHeader";
-import { PortalEmpty, PortalError, PortalLoading } from "@/features/portal/components/PortalState";
+import { AssignmentPanel } from "@/components/admin/AssignmentPanel";
+import { ClassPicker } from "@/components/admin/ClassPicker";
+import { summarizeClasses } from "@/utils/classes";
+import { useAdminSessions, useUserDirectory } from "@/hooks/useAdminData";
+import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
+import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/PortalState";
 import { startOfToday, toIsoDate } from "@/utils/date";
 
 /** Số buổi sắp tới lấy về để suy ra danh sách lớp (tối đa của backend) */
@@ -17,15 +18,17 @@ const SESSIONS_SCANNED = 100;
  */
 export function AdminAssignmentsPage() {
   const [params, setParams] = useSearchParams();
+  // Lớp đang chọn nằm ở ?lop=<mã lớp>
   const selectedId = Number(params.get("lop")) || null;
   const { nameOf } = useUserDirectory();
   const sessionsQuery = useAdminSessions({ from: toIsoDate(startOfToday()), page: 0, size: SESSIONS_SCANNED });
+  // Danh sách lớp suy ra từ các buổi sắp tới
   const classes = useMemo(() => summarizeClasses(sessionsQuery.data?.content ?? []), [sessionsQuery.data]);
   const selected = classes.find((item) => item.classId === selectedId);
 
   return (
     <>
-      <PortalPageHeader title="Phân công gia sư" description="Chọn một lớp để xem gia sư phù hợp và phân công." />
+      <PortalPageHeader icon="assignment_ind" title="Phân công gia sư" description="Chọn một lớp để xem gia sư phù hợp và phân công." />
 
       {sessionsQuery.isPending ? (
         <PortalLoading label="Đang tải các lớp" />
@@ -37,7 +40,12 @@ export function AdminAssignmentsPage() {
             <h2 id="class-list-title" className="mb-3 text-[18px] font-bold text-brand-navy">
               Lớp học
             </h2>
-            <ClassPicker classes={classes} selectedId={selectedId} nameOf={nameOf} onSelect={(classId) => setParams({ lop: String(classId) })} />
+            <ClassPicker
+              classes={classes}
+              selectedId={selectedId}
+              nameOf={nameOf}
+              onSelect={(classId) => setParams({ lop: String(classId) })}
+            />
           </section>
 
           <section aria-labelledby="tutor-list-title" className="lg:col-span-7">

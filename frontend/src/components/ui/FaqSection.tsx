@@ -1,17 +1,7 @@
 import { Reveal } from "@/components/motion";
 import { Icon } from "@/components/ui/Icon";
 import { CONTAINER } from "@/constants/classNames";
-
-export interface Faq {
-  question: string;
-  answer: string;
-}
-
-interface FaqSectionProps {
-  title: string;
-  description?: string;
-  faqs: Faq[];
-}
+import type { FaqSectionProps } from "@/interfaces/ui";
 
 /** Câu hỏi thường gặp: tiêu đề bên trái, các câu hỏi bấm để mở bên phải (câu đầu mở sẵn). */
 export function FaqSection({ title, description, faqs }: FaqSectionProps) {
@@ -19,9 +9,7 @@ export function FaqSection({ title, description, faqs }: FaqSectionProps) {
     <section id="faq" className="scroll-mt-[120px] bg-[#F5F1E9] pb-16 pt-4 lg:pb-24 lg:pt-6">
       <div className={`${CONTAINER} grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-12`}>
         <Reveal className="lg:col-span-4">
-          <h2 className="text-balance text-[28px] font-extrabold leading-tight tracking-tight text-brand-navy lg:text-[36px]">
-            {title}
-          </h2>
+          <h2 className="text-balance text-[28px] font-extrabold leading-tight tracking-tight text-brand-navy lg:text-[36px]">{title}</h2>
           {description && <p className="mt-3 text-[16px] leading-relaxed text-brand-muted lg:text-[17px]">{description}</p>}
         </Reveal>
 

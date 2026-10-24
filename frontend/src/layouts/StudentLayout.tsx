@@ -1,10 +1,8 @@
 import { ROUTES } from "@/constants/routes";
-import { STUDENT_NAV } from "@/features/student/data/nav";
+import { STUDENT_NAV } from "@/constants/nav";
 import { PortalLayout } from "@/layouts/PortalLayout";
 
 /**
- * StudentLayout
- *
  * Khung của mọi trang /student/* (đã được PrivateRoute + RoleRoute chặn theo vai trò ở AppRouter).
  * Mua khóa học và thanh toán cũng nằm trong khu này.
  */

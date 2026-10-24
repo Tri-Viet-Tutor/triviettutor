@@ -1,17 +1,16 @@
 import { useEffect, useState } from "react";
 import { prefersReducedMotion } from "@/utils/motion";
+import type { ScrollToTopProps } from "@/interfaces/motion";
 
-interface ScrollToTopProps {
-  /** Nhích nút lên để không đè lên thanh cố định ở đáy màn hình (ví dụ thanh giỏ hàng) */
-  raised?: boolean;
-}
+/** Cuộn quá bao nhiêu px thì hiện nút */
+const SHOW_AFTER_PX = 600;
 
 /** Nút về đầu trang, hiện sau khi cuộn xuống một đoạn. */
 export function ScrollToTop({ raised = false }: ScrollToTopProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setVisible(window.scrollY > 600);
+    const onScroll = () => setVisible(window.scrollY > SHOW_AFTER_PX);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);

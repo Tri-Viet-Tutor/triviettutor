@@ -2,36 +2,40 @@ import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { ASSETS } from "@/constants/assets";
 import { ROUTES } from "@/constants/routes";
-import { getRoleHome } from "@/lib/auth";
+import { getRoleHome } from "@/services/authService";
 import { useAuthStore } from "@/stores/authStore";
 
+/** Các mục của menu chính (3 mục đầu nằm ở trang trái của "cuốn sách", còn lại ở trang phải) */
+const NAV_ITEMS = [
+  { label: "Trang chủ", to: ROUTES.home },
+  { label: "Khối lớp / Môn học", to: ROUTES.subjects },
+  { label: "Tìm gia sư", to: ROUTES.tutorSearch },
+  { label: "Mua khóa học", to: ROUTES.pricing },
+  { label: "Liên hệ", to: ROUTES.contact },
+];
+
+/**
+ * Thanh đầu trang của các trang công khai.
+ * Hàng 1: logo + nút tài khoản / đăng ký; hàng 2 (màn hình lớn): menu hình cuốn sách mở;
+ * màn hình nhỏ: menu thả xuống.
+ */
 export function PublicHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Đã đăng nhập thì nút "Đăng nhập" đổi thành lối vào tài khoản + nút đăng xuất
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const accountLink = user ? getRoleHome(user.role) : ROUTES.login;
-  const navItems = [
-    { label: "Trang chủ", to: ROUTES.home },
-    { label: "Khối lớp / Môn học", to: ROUTES.subjects },
-    { label: "Tìm gia sư", to: ROUTES.tutorSearch },
-    { label: "Mua khóa học", to: ROUTES.pricing },
-    { label: "Liên hệ", to: ROUTES.contact },
-  ];
+  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
     <header className="w-full z-50 sticky top-0 bg-white shadow-sm">
       {/* ── Hàng 1: Logo, nút hành động ───────────────────────────────── */}
       <div className="bg-white py-2 sm:py-2.5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-6">
-          {/* Brand Logo & Title */}
+          {/* Logo + tên trung tâm */}
           <Link to={ROUTES.home} className="flex items-center gap-3.5 shrink-0">
             <div className="w-11 h-11 rounded-full p-0.5 ring-1 ring-[#DCE6F5] flex items-center justify-center overflow-hidden shrink-0 bg-white">
-              <img
-                src={ASSETS.common.logo}
-                alt="Logo Gia Sư Trí Việt"
-                className="w-full h-full rounded-full object-contain"
-              />
+              <img src={ASSETS.common.logo} alt="Logo Gia Sư Trí Việt" className="w-full h-full rounded-full object-contain" />
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1">
@@ -42,13 +46,11 @@ export function PublicHeader() {
                   Tutor
                 </span>
               </div>
-              <span className="text-[12px] text-slate-500 font-medium leading-none mt-1">
-                Cùng em vững bước tương lai
-              </span>
+              <span className="text-[12px] text-slate-500 font-medium leading-none mt-1">Cùng em vững bước tương lai</span>
             </div>
           </Link>
 
-          {/* Action Buttons */}
+          {/* Nút hành động */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <Link
               to={accountLink}
@@ -68,27 +70,30 @@ export function PublicHeader() {
                 Đăng xuất
               </button>
             )}
-            <Link
-              to={ROUTES.contactForm}
-              className="group hidden sm:inline-flex items-center gap-3 h-10 pl-5 pr-1.5 rounded-full bg-[#F5A00F] hover:bg-[#FFB534] text-[#082A66] font-bold text-[14px] shadow-[0_10px_22px_-10px_rgba(245,160,15,0.9)] transition-colors shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0B3A8C]"
-            >
-              <span>Tìm gia sư</span>
-              <span
-                aria-hidden="true"
-                className="material-symbols-outlined flex h-7 w-7 items-center justify-center rounded-full bg-[#082A66] text-[17px] text-white transition-transform duration-200 group-hover:translate-x-0.5"
+            {!user && (
+              <Link
+                to={ROUTES.register}
+                className="group hidden sm:inline-flex items-center gap-3 h-10 pl-5 pr-1.5 rounded-full bg-[#F5A00F] hover:bg-[#FFB534] text-[#082A66] font-bold text-[14px] shadow-[0_10px_22px_-10px_rgba(245,160,15,0.9)] transition-colors shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0B3A8C]"
               >
-                arrow_forward
-              </span>
-            </Link>
+                <span>Đăng ký</span>
+                <span
+                  aria-hidden="true"
+                  className="material-symbols-outlined flex h-7 w-7 items-center justify-center rounded-full bg-[#082A66] text-[17px] text-white transition-transform duration-200 group-hover:translate-x-0.5"
+                >
+                  arrow_forward
+                </span>
+              </Link>
+            )}
 
-            {/* Mobile Menu Toggle Button */}
+            {/* Nút mở / đóng menu trên điện thoại */}
             <button
               type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              onClick={() => setMobileMenuOpen((open) => !open)}
               className="lg:hidden w-11 h-11 flex items-center justify-center text-[#0B3A8C] rounded-lg hover:bg-[#F3F7FF]"
-              aria-label="Toggle menu"
+              aria-label={mobileMenuOpen ? "Đóng menu" : "Mở menu"}
+              aria-expanded={mobileMenuOpen}
             >
-              <span className="material-symbols-outlined text-[26px]">
+              <span aria-hidden="true" className="material-symbols-outlined text-[26px]">
                 {mobileMenuOpen ? "close" : "menu"}
               </span>
             </button>
@@ -119,10 +124,7 @@ export function PublicHeader() {
                 </linearGradient>
               </defs>
               {/* Bìa sách */}
-              <path
-                d="M0,40 L1000,40 L1000,66 Q1000,70 996,70.3 Q750,73 500,83 Q250,73 4,70.3 Q0,70 0,66 Z"
-                fill="#051B45"
-              />
+              <path d="M0,40 L1000,40 L1000,66 Q1000,70 996,70.3 Q750,73 500,83 Q250,73 4,70.3 Q0,70 0,66 Z" fill="#051B45" />
               {/* Các lớp giấy */}
               <path
                 d="M8,40 L992,40 L992,61 Q992,65 988,65.3 Q750,68 500,78 Q250,68 12,65.3 Q8,65 8,61 Z"
@@ -156,7 +158,7 @@ export function PublicHeader() {
             </svg>
 
             <nav aria-label="Menu chính" className="relative grid h-full grid-cols-2 pt-1.5">
-              {[navItems.slice(0, 3), navItems.slice(3)].map((page, pageIndex) => (
+              {[NAV_ITEMS.slice(0, 3), NAV_ITEMS.slice(3)].map((page, pageIndex) => (
                 <div key={pageIndex} className="flex items-center gap-2 px-5">
                   {page.map((item) => (
                     <NavLink
@@ -165,9 +167,7 @@ export function PublicHeader() {
                       end={item.to === ROUTES.home}
                       className={({ isActive }) =>
                         `relative px-4 py-2 text-[14px] rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-                          isActive
-                            ? "font-bold text-white bg-white/15"
-                            : "font-medium text-white/80 hover:text-white hover:bg-white/10"
+                          isActive ? "font-bold text-white bg-white/15" : "font-medium text-white/80 hover:text-white hover:bg-white/10"
                         }`
                       }
                     >
@@ -191,21 +191,19 @@ export function PublicHeader() {
         </div>
       </div>
 
-      {/* ── Mobile Drawer Menu ────────────────────────────────────────── */}
+      {/* ── Menu thả xuống trên điện thoại ───────────────────────────── */}
       {mobileMenuOpen && (
         <div className="lg:hidden bg-white border-t border-slate-200 px-4 py-4 space-y-3 shadow-xl">
           <nav className="flex flex-col space-y-1">
-            {navItems.map((item) => (
+            {NAV_ITEMS.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 end={item.to === ROUTES.home}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={closeMobileMenu}
                 className={({ isActive }) =>
                   `px-3 py-2 rounded-lg text-sm font-semibold flex items-center justify-between ${
-                    isActive
-                      ? "bg-[#0B3A8C] text-white"
-                      : "text-slate-700 hover:bg-slate-100"
+                    isActive ? "bg-[#0B3A8C] text-white" : "text-slate-700 hover:bg-slate-100"
                   }`
                 }
               >
@@ -218,7 +216,7 @@ export function PublicHeader() {
           <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
             <Link
               to={accountLink}
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={closeMobileMenu}
               className="w-full py-2.5 text-center text-[13px] font-semibold text-[#0B3A8C] border border-[#0B3A8C]/20 rounded-full hover:bg-[#F3F7FF]"
             >
               {user ? `Tài khoản: ${user.fullName}` : "Đăng nhập tài khoản"}
@@ -228,20 +226,22 @@ export function PublicHeader() {
                 type="button"
                 onClick={() => {
                   logout();
-                  setMobileMenuOpen(false);
+                  closeMobileMenu();
                 }}
                 className="w-full py-2.5 text-center text-[13px] font-semibold text-slate-500 border border-slate-200 rounded-full hover:bg-slate-50"
               >
                 Đăng xuất
               </button>
             )}
-            <Link
-              to={ROUTES.contactForm}
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full py-2.5 text-center text-[13px] font-bold text-[#082A66] bg-[#F5A00F] rounded-full"
-            >
-              Đăng ký tìm gia sư
-            </Link>
+            {!user && (
+              <Link
+                to={ROUTES.register}
+                onClick={closeMobileMenu}
+                className="w-full py-2.5 text-center text-[13px] font-bold text-[#082A66] bg-[#F5A00F] rounded-full"
+              >
+                Đăng ký
+              </Link>
+            )}
           </div>
         </div>
       )}

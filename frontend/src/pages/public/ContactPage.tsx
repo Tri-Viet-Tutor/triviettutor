@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { ClickSpark, ReadingProgress, ScrollToTop } from "@/components/motion";
-import { ContactSection } from "@/features/contact/components/ContactSection";
+import { ContactSection } from "@/components/contact/ContactSection";
 import { prefersReducedMotion } from "@/utils/motion";
 
 /**

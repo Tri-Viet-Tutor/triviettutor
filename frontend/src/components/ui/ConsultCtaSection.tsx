@@ -1,9 +1,10 @@
-import { type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { Reveal } from "@/components/motion";
 import { Icon } from "@/components/ui/Icon";
 import { CONTAINER, FOCUS_RING } from "@/constants/classNames";
 import { ROUTES } from "@/constants/routes";
+import { Sparkle } from "@/components/motion/Sparkle";
+import type { ConsultCtaSectionProps } from "@/interfaces/ui";
 
 /* Sao bốn cánh nhấp nháy hai bên câu hỏi — vị trí tính theo % của cả dải */
 const SPARKLES = [
@@ -13,23 +14,14 @@ const SPARKLES = [
   { left: 88, top: 58, size: 24, delay: 1.7 },
 ];
 
-interface ConsultCtaSectionProps {
-  /** Phần đầu câu hỏi, ví dụ "Chưa biết chọn" */
-  title: string;
-  /** Phần cuối câu hỏi, được gạch chân vẽ tay, ví dụ "gia sư nào?" */
-  highlight: string;
-  description: string;
-}
-
-/**
- * Lời mời đăng ký tư vấn ở cuối các trang công khai.
- * Không đóng khung — chữ nằm giữa nền giấy, sau lưng là một quầng cam mờ.
- */
 export function ConsultCtaSection({ title, highlight, description }: ConsultCtaSectionProps) {
   return (
     <section className="relative overflow-hidden bg-[#E8E2D5]">
       {/* Mép trên hoà vào phần phía trên, quầng cam mờ ở giữa */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[#F5F1E9] to-transparent" />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[#F5F1E9] to-transparent"
+      />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_44%_72%_at_50%_58%,rgba(245,160,15,0.34),transparent_72%)]"
@@ -38,21 +30,7 @@ export function ConsultCtaSection({ title, highlight, description }: ConsultCtaS
       {/* Sao nhấp nháy và hai mũi tên nét đứt chỉ vào nút (chỉ hiện từ máy tính bảng) */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden md:block">
         {SPARKLES.map((sparkle) => (
-          <svg
-            key={sparkle.left}
-            viewBox="0 0 24 24"
-            className="twinkle absolute fill-brand-orange"
-            style={
-              {
-                left: `${sparkle.left}%`,
-                top: `${sparkle.top}%`,
-                width: sparkle.size,
-                "--twinkle-delay": `${sparkle.delay}s`,
-              } as CSSProperties
-            }
-          >
-            <path d="M12 1c1 7 4 10 11 11-7 1-10 4-11 11-1-7-4-10-11-11 7-1 10-4 11-11z" />
-          </svg>
+          <Sparkle key={sparkle.left} {...sparkle} />
         ))}
         <svg
           viewBox="0 0 200 110"
@@ -93,9 +71,7 @@ export function ConsultCtaSection({ title, highlight, description }: ConsultCtaS
             </svg>
           </span>
         </h2>
-        <p className="mt-6 max-w-xl text-[16.5px] leading-relaxed text-brand-muted lg:text-[18px]">
-          {description}
-        </p>
+        <p className="mt-6 max-w-xl text-[16.5px] leading-relaxed text-brand-muted lg:text-[18px]">{description}</p>
         <Link
           to={ROUTES.contactForm}
           className={`group mt-8 inline-flex h-14 items-center gap-5 rounded-full bg-brand-orange pl-8 pr-2.5 text-[16px] font-bold text-brand-navyDeep shadow-[0_18px_30px_-16px_rgba(222,139,0,0.95)] transition-colors hover:bg-[#FFB534] ${FOCUS_RING}`}

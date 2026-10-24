@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 
 /**
  * Theo dõi một phần tử đã cuộn vào màn hình hay chưa (chỉ bật một lần, sau đó ngừng theo dõi).

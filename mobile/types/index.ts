@@ -1,0 +1,109 @@
+/**
+ * Kiểu dữ liệu chuẩn cho ứng dụng VietTriTutor Mobile
+ * Đồng bộ với định nghĩa trong Documentation/01-Business-Logic & Documentation/02-System-Architecture
+ */
+
+export type UserRole = 'ROLE_STUDENT' | 'ROLE_TUTOR' | 'ROLE_ADMIN';
+
+export type GradeLevel = 'GRADE_10' | 'GRADE_11' | 'GRADE_12';
+
+export type Subject = 
+  | 'MATH'
+  | 'PHYSICS'
+  | 'CHEMISTRY'
+  | 'ENGLISH'
+  | 'LITERATURE'
+  | 'BIOLOGY';
+
+export type SchedulePattern = 'MON_WED_FRI' | 'TUE_THU_SAT' | 'SAT_SUN';
+
+export type TimeSlot = 
+  | 'SLOT_MORNING' 
+  | 'SLOT_AFTERNOON' 
+  | 'SLOT_EVENING' 
+  | 'SLOT_LATE_EVENING';
+
+export type SessionStatus = 'UPCOMING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+
+export type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT' | 'EXCUSED';
+
+export type DeliveryMode = 'ONLINE' | 'OFFLINE';
+
+export type ClassType = 'ONE_ON_ONE' | 'GROUP';
+
+export interface User {
+  id: string;
+  fullName: string;
+  email: string;
+  phoneNumber?: string;
+  role: UserRole;
+  avatarUrl?: string;
+  gradeLevel?: GradeLevel;
+  school?: string;
+}
+
+export interface TutorInfo {
+  id: string;
+  fullName: string;
+  avatarUrl?: string;
+  bio: string;
+  specialties: string[];
+  rating: number;
+  reviewCount: number;
+}
+
+export interface CourseItem {
+  id: string;
+  code: string;
+  title: string;
+  subject: Subject;
+  subjectLabel: string;
+  gradeLevel: GradeLevel;
+  gradeLabel: string;
+  classType: ClassType;
+  deliveryMode: DeliveryMode;
+  schedulePattern: SchedulePattern;
+  scheduleLabel: string;
+  timeSlot: TimeSlot;
+  timeSlotLabel: string;
+  timeSlotHours: string;
+  totalSessions: number;
+  tuitionFee: number;
+  enrolledStudents: number;
+  maxStudents: number;
+  startDate: string;
+  location: string;
+  tutor: TutorInfo;
+  description: string;
+  highlights: string[];
+}
+
+export interface SessionItem {
+  sessionId: string;
+  classId: string;
+  className: string;
+  subject: Subject;
+  subjectLabel: string;
+  gradeLabel: string;
+  sessionNumber: number;
+  totalSessions: number;
+  date: string; // YYYY-MM-DD
+  dayOfWeek: string;
+  timeSlotHours: string;
+  deliveryMode: DeliveryMode;
+  roomOrLink: string;
+  tutorName: string;
+  status: SessionStatus;
+  attendance?: AttendanceStatus;
+  topic: string;
+}
+
+export interface LeaveRequest {
+  id: string;
+  sessionId: string;
+  sessionTitle: string;
+  date: string;
+  reason: string;
+  submittedAt: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+}

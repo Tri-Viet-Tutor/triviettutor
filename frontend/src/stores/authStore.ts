@@ -1,33 +1,16 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { queryClient } from "@/lib/queryClient";
-export interface AuthUser {
-  id: number;
-  email: string;
-  fullName: string;
-  role: string;
-}
-
-interface AuthState {
-  /** JWT access token — null when logged out */
-  token: string | null;
-  /** User info from the login / register response (AuthResponse.user) */
-  user: AuthUser | null;
-  /** Store the JWT (AuthResponse.accessToken) and user info after login or registration */
-  setAuth: (token: string, user: AuthUser) => void;
-  /** Clear session (logout or 401) */
-  logout: () => void;
-  /** True when a valid token is present */
-  isAuthenticated: boolean;
-}
+import type { AuthState } from "@/interfaces/auth";
+import { queryClient } from "@/services/queryClient";
 
 /**
- * Global authentication state store (Zustand).
+ * Trạng thái đăng nhập toàn cục (Zustand).
  *
- * Uses `persist` middleware to survive page refreshes via localStorage.
- * For production consider switching token storage to an httpOnly cookie.
+ * Dùng middleware `persist` lưu vào localStorage để tải lại trang vẫn còn đăng nhập.
+ * Khi lên production nên cân nhắc chuyển token sang cookie httpOnly.
+ * Mỗi lần đổi người dùng đều xóa cache của TanStack Query để không lộ dữ liệu người trước.
  *
- * Selectors — prefer accessing only what you need:
+ * Chỉ lấy đúng phần cần dùng:
  *   const user = useAuthStore(s => s.user);
  *   const isAuthenticated = useAuthStore(s => s.isAuthenticated);
  */
@@ -49,15 +32,17 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: "viettritutor-auth",    // localStorage key
+      name: "viettritutor-auth", // khóa lưu trong localStorage
+      // Dữ liệu lưu bị thiếu token hoặc user thì coi như đã đăng xuất
       onRehydrateStorage: () => (state) => {
         if (state && (!state.token || !state.user)) state.logout();
       },
-      partialize: (state) => ({     // Only persist token + user, not functions
+      // Chỉ lưu dữ liệu, không lưu các hàm
+      partialize: (state) => ({
         token: state.token,
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
-    }
-  )
+    },
+  ),
 );

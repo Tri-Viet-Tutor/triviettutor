@@ -1,20 +1,9 @@
-/**
- * Đường dẫn ảnh trong public/assets, chia theo đúng cây thư mục:
- *
- *   common/   dùng chung cho mọi vai trò (logo, linh vật)
- *   public/   các trang công khai (khách chưa đăng nhập)
- *   auth/     trang đăng nhập, đăng ký
- *   admin/    khu vực quản trị viên
- *   tutor/    khu vực gia sư
- *   student/  khu vực học viên
- *
- * Thêm ảnh: đặt file vào thư mục của khu vực dùng nó, rồi khai báo ở nhóm tương ứng bên dưới.
- */
 const ROOT = "/assets";
 
 const COMMON = `${ROOT}/common`;
 const PUBLIC = `${ROOT}/public`;
 
+/** Bảng đường dẫn ảnh — luôn lấy ảnh qua đây thay vì viết tay chuỗi đường dẫn. */
 export const ASSETS = {
   common: {
     logo: `${COMMON}/brand/logo-sba.png`,

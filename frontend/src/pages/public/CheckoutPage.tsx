@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { CONTAINER } from "@/constants/classNames";
 import { ROUTES } from "@/constants/routes";
-import { CheckoutFlow } from "@/features/checkout/components/CheckoutFlow";
+import { CheckoutFlow } from "@/components/checkout/CheckoutFlow";
 import { useAuthStore } from "@/stores/authStore";
 
 /**

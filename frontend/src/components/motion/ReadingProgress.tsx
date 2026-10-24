@@ -12,6 +12,7 @@ export function ReadingProgress() {
       const progress = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
       if (barRef.current) barRef.current.style.transform = `scaleX(${progress})`;
     };
+    // Gộp nhiều sự kiện cuộn vào một khung hình để không vẽ lại thừa
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(update);
     };

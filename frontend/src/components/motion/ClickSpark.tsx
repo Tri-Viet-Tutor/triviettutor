@@ -1,9 +1,6 @@
 import { useEffect, useRef } from "react";
 import { prefersReducedMotion } from "@/utils/motion";
-
-interface ClickSparkProps {
-  color?: string;
-}
+import type { ClickSparkProps } from "@/interfaces/motion";
 
 /** Tia sáng toả ra tại điểm bấm chuột / chạm. */
 export function ClickSpark({ color = "#F5A00F" }: ClickSparkProps) {
@@ -14,13 +11,14 @@ export function ClickSpark({ color = "#F5A00F" }: ClickSparkProps) {
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx || prefersReducedMotion()) return;
 
-    const COUNT = 8;
-    const SIZE = 11;
-    const RADIUS = 20;
-    const DURATION = 420;
+    const COUNT = 8; // số tia mỗi lần bấm
+    const SIZE = 11; // độ dài tia lúc đầu (px)
+    const RADIUS = 20; // quãng đường tia bay ra (px)
+    const DURATION = 420; // thời gian một lần toả (ms)
     let sparks: { x: number; y: number; start: number }[] = [];
     let frame = 0;
 
+    // Canvas phủ cả cửa sổ, nhân theo devicePixelRatio để nét vẽ không bị mờ
     const resize = () => {
       const ratio = window.devicePixelRatio || 1;
       canvas.width = window.innerWidth * ratio;
@@ -37,7 +35,7 @@ export function ClickSpark({ color = "#F5A00F" }: ClickSparkProps) {
       ctx.lineCap = "round";
       for (const spark of sparks) {
         const t = (now - spark.start) / DURATION;
-        const eased = t * (2 - t);
+        const eased = t * (2 - t); // ease-out: bay nhanh lúc đầu rồi chậm lại
         const distance = eased * RADIUS;
         const length = SIZE * (1 - eased);
         for (let i = 0; i < COUNT; i++) {
@@ -48,6 +46,7 @@ export function ClickSpark({ color = "#F5A00F" }: ClickSparkProps) {
           ctx.stroke();
         }
       }
+      // Hết tia thì dừng vòng vẽ, đợi lần bấm tiếp theo
       if (sparks.length) frame = requestAnimationFrame(draw);
     };
 
@@ -66,7 +65,5 @@ export function ClickSpark({ color = "#F5A00F" }: ClickSparkProps) {
     };
   }, [color]);
 
-  return (
-    <canvas ref={canvasRef} aria-hidden="true" className="pointer-events-none fixed inset-0 z-[70] h-full w-full" />
-  );
+  return <canvas ref={canvasRef} aria-hidden="true" className="pointer-events-none fixed inset-0 z-[70] h-full w-full" />;
 }

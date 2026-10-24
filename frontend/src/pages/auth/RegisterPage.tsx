@@ -1,53 +1,62 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
-import { registerStudent } from "@/lib/auth";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
+import { z } from "zod";
 import { ROUTES } from "@/constants/routes";
-import { AuthField } from "@/features/auth/components/AuthField";
-import { AuthHeading } from "@/features/auth/components/AuthHeading";
-import { AuthNotice } from "@/features/auth/components/AuthNotice";
-import { AuthSubmitButton } from "@/features/auth/components/AuthSubmitButton";
-import { authErrorMessage, PASSWORD_MAX, PASSWORD_MIN } from "@/features/auth/data/authMessages";
-import { savePendingEmail, type AuthLocationState } from "@/features/auth/data/pendingEmail";
+import { AUTH_TEXT_LINK } from "@/constants/classNames";
+import { AuthField } from "@/components/auth/AuthField";
+import { AuthHeading } from "@/components/auth/AuthHeading";
+import { AuthNotice } from "@/components/auth/AuthNotice";
+import { AuthSubmitButton } from "@/components/auth/AuthSubmitButton";
+import { authErrorMessage } from "@/utils/errors";
+import { PASSWORD_MAX, PASSWORD_MIN } from "@/constants/auth";
+import { savePendingEmail, savePendingPhone } from "@/utils/pendingEmail";
+import type { AuthLocationState, RegisterFormValues } from "@/interfaces/auth";
+import { registerStudent } from "@/services/authService";
 
-const registerSchema = z.object({
-  // Limits mirror the backend's RegisterRequest: fullName 2–100, password 6–128
-  fullName: z
-    .string()
-    .trim()
-    .min(2, "Họ tên có ít nhất 2 ký tự")
-    .max(100, "Họ tên tối đa 100 ký tự"),
-  email: z.string().email("Email chưa đúng"),
-  password: z
-    .string()
-    .min(PASSWORD_MIN, `Mật khẩu có ít nhất ${PASSWORD_MIN} ký tự`)
-    .max(PASSWORD_MAX, `Mật khẩu tối đa ${PASSWORD_MAX} ký tự`),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Hai mật khẩu chưa khớp",
-  path: ["confirmPassword"],
-});
-
-type RegisterFormValues = z.infer<typeof registerSchema>;
-
-const TEXT_LINK = "font-semibold text-brand-navy underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+/** Kiểm tra form đăng ký */
+const registerSchema = z
+  .object({
+    // Giới hạn giống RegisterRequest của backend: họ tên 2 – 100, mật khẩu 6 – 128 ký tự
+    fullName: z.string().trim().min(2, "Họ tên có ít nhất 2 ký tự").max(100, "Họ tên tối đa 100 ký tự"),
+    email: z.string().email("Email chưa đúng"),
+    // Số Việt Nam: 0 hoặc +84 rồi 9 chữ số; cho phép gõ kèm khoảng trắng, dấu chấm, gạch nối
+    phone: z
+      .string()
+      .trim()
+      .min(1, "Hãy nhập số điện thoại")
+      .transform((value) => value.replace(/[\s.-]/g, ""))
+      .refine((value) => /^(0|\+84)\d{9}$/.test(value), "Số điện thoại chưa đúng (ví dụ 0912 345 678)"),
+    password: z
+      .string()
+      .min(PASSWORD_MIN, `Mật khẩu có ít nhất ${PASSWORD_MIN} ký tự`)
+      .max(PASSWORD_MAX, `Mật khẩu tối đa ${PASSWORD_MAX} ký tự`),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Hai mật khẩu chưa khớp",
+    path: ["confirmPassword"],
+  });
 
 /**
- * RegisterPage
- *
- * Self-registration for students/parents (BR-01.04).
- * Admin and tutor accounts are created by the admin.
+ * Trang tự đăng ký tài khoản cho học viên / phụ huynh (BR-01.04).
+ * Tài khoản quản trị và gia sư do quản trị viên tạo.
  *
  * Backend không đăng nhập ngay sau khi đăng ký nữa: POST /auth/register tạo tài khoản chưa kích hoạt
  * và gửi mã OTP qua email (trả về { email, message }). Vì vậy đăng ký xong thì chuyển sang
  * trang nhập mã OTP; phiên đăng nhập chỉ có sau khi xác thực (xem VerifyEmailPage).
+ * Backend /auth/register chưa nhận số điện thoại, nên số được giữ tạm và lưu vào hồ sơ (PUT /me)
+ * ngay sau khi xác thực xong (xem EmailOtpForm).
  */
 export function RegisterPage() {
   const navigate = useNavigate();
 
-  const { mutate: register, isPending, error } = useMutation({
+  const {
+    mutate: register,
+    isPending,
+    error,
+  } = useMutation({
     mutationFn: registerStudent,
   });
 
@@ -59,13 +68,17 @@ export function RegisterPage() {
     resolver: zodResolver(registerSchema),
   });
 
+  /** Gửi đăng ký; thành công thì ghi nhớ email đang chờ mã và sang trang nhập OTP */
   function onSubmit(data: RegisterFormValues) {
     register(
       { email: data.email, password: data.password, fullName: data.fullName },
-      { onSuccess: () => {
-        savePendingEmail(data.email, true);
-        navigate(ROUTES.verifyEmail, { state: { email: data.email } satisfies AuthLocationState });
-      } }
+      {
+        onSuccess: () => {
+          savePendingEmail(data.email, true);
+          savePendingPhone(data.email, data.phone);
+          navigate(ROUTES.verifyEmail, { state: { email: data.email } satisfies AuthLocationState });
+        },
+      },
     );
   }
 
@@ -92,6 +105,16 @@ export function RegisterPage() {
           {...formRegister("email")}
         />
         <AuthField
+          id="reg-phone"
+          label="Số điện thoại"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          placeholder="0912 345 678"
+          error={errors.phone?.message}
+          {...formRegister("phone")}
+        />
+        <AuthField
           id="reg-password"
           label="Mật khẩu"
           type="password"
@@ -116,7 +139,7 @@ export function RegisterPage() {
 
       <p className="mt-6 text-center text-[14px] text-brand-muted">
         Đã có tài khoản?{" "}
-        <Link to={ROUTES.login} className={TEXT_LINK}>
+        <Link to={ROUTES.login} className={AUTH_TEXT_LINK}>
           Đăng nhập
         </Link>
       </p>

@@ -46,3 +46,5 @@ documentation/
 ### `02-System-Architecture/` — kiến trúc triển khai
 
 - **`01-Project-Structure-React-SpringBoot.md`**: Cấu trúc repo **React (Vite + TypeScript)** + **Java Spring Boot 3**, module backend theo nghiệp vụ, REST API, thứ tự dựng MVP.
+- **`02-Backend-Architecture-and-API-Specification.md`**: Đặc tả toàn diện kiến trúc Backend Spring Boot 3 và chi tiết REST API endpoints.
+- **`03-Mobile-App-Architecture-and-Screens.md`**: Đặc tả kiến trúc ứng dụng di động **React Native (Expo SDK 57)**, hệ thống thiết kế và các màn hình cơ bản.

@@ -1,0 +1,24 @@
+import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
+import { CourseShopSection } from "@/components/pricing/CourseShopSection";
+import { useCartStore } from "@/stores/cartStore";
+import { cartCourses } from "@/utils/checkout";
+
+/**
+ * Trang "Mua khóa học" trong khu học viên: cùng danh sách khóa, bộ lọc và giỏ hàng với trang công khai,
+ * nhưng học viên ở lại trong tài khoản và thanh toán ngay tại /student/checkout.
+ */
+export function StudentCatalogPage() {
+  const hasCart = useCartStore((state) => cartCourses(state.subjects).length > 0);
+
+  return (
+    // Giỏ có khóa thì có thanh giỏ hàng ở đáy màn hình — chừa chỗ để không che khóa cuối
+    <div className={hasCart ? "pb-[72px]" : ""}>
+      <PortalPageHeader
+        icon="storefront"
+        title="Khóa học đang mở"
+        description="Chọn lớp, lịch học phù hợp rồi thanh toán qua VNPay để giữ chỗ."
+      />
+      <CourseShopSection variant="student" />
+    </div>
+  );
+}
