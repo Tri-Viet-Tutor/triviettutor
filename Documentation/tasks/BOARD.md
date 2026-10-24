@@ -8,18 +8,14 @@ This board represents the central state of all work orders organized by **Flows 
 
 | Flow Identifier | Flow Name | Total Tasks | Completed | Active Step | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`FLOW-01-MVP`** | MVP Authentication & Core Slice | 4 | 0 / 4 | Step 1 (Contracts) | IN_PROGRESS |
-| **`FLOW-02-PROFILE`** | User Profile & Session Flow | 0 | 0 / 0 | Scheduled | BACKLOG |
+| **`FLOW-AUDIT`** | Codebase Gap Analysis & Backlog Mapping | 1 | 0 / 1 | Step 1 (Audit) | READY |
 
 ---
 
-## 2. Active Flow: `FLOW-01-MVP` Board
+## 2. Active Flow: `FLOW-AUDIT` Board
 
 ### Backlog (Pending Execution)
-- [TASK-001](backlog/FLOW-01-MVP/TASK-001-api-contracts.md): Define OpenAPI Schemas & Domain Parent Interface (`assigned_to: tech-lead`)
-- [TASK-002](backlog/FLOW-01-MVP/TASK-002-backend-endpoints.md): Implement Authentication Service & Endpoints (`assigned_to: backend-dev`)
-- [TASK-003](backlog/FLOW-01-MVP/TASK-003-frontend-view.md): Build Login View, State & API Client Hook (`assigned_to: frontend-dev`)
-- [TASK-004](backlog/FLOW-01-MVP/TASK-004-qa-verification.md): Validate End-to-End Flow against Acceptance Criteria (`assigned_to: qa-engineer`)
+- Awaiting initial Codebase Audit across backend and frontend to identify missing features vs requirements.
 
 ### In Progress (Active Subagents)
 - None
@@ -48,8 +44,7 @@ Items requiring high-level business direction or approval from the **Client** ar
 - **Business Analyst (`business-analyst`)**: Directly interfaces with Client, logs meeting minutes in [CLIENT_BA_ALIGNMENT.md](CLIENT_BA_ALIGNMENT.md), updates use cases, and briefs PM on task adjustments.
 - **Product Owner (`product-owner`)**: Holds full decision-making authority in the squad to prevent delays; enforces invariants and business rules.
 - **Project Manager (`project-manager`)**: Flow orchestration, task assignment, status updates across ticket folders and this board.
-- **Software Architect (`software-architect`)**: System architecture, C4 diagrams, bounded contexts, parent interfaces, ADRs.
-- **Tech Lead (`tech-lead`)**: OpenAPI specifications, schema validation, code review checklists.
-- **Backend Developer (`backend-dev`)**: Endpoints, data persistence, business logic execution, structured logging.
-- **Frontend Developer (`frontend-dev`)**: User interfaces, state machines, API integration.
-- **QA Engineer (`qa-engineer`)**: Test matrices, edge cases, end-to-end verification and sign-off.
+- **Tech Lead (`tech-lead`)**: Directs implementation in code files (`src/`), audits codebase to prevent duplicates, reviews code quality. No code definition in markdown.
+- **Backend Developer (`backend-dev`)**: Production implementation directly in backend source files.
+- **Frontend Developer (`frontend-dev`)**: Production implementation directly in frontend source files.
+- **QA Engineer (`qa-engineer`)**: Verifies working code against acceptance criteria.
