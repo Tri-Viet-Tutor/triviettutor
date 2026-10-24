@@ -1,0 +1,500 @@
+openapi: 3.0.3
+info:
+  title: VietTriTutor Authentication & Core API Specification
+  description: Official OpenAPI 3.0 contract for the VietTriTutor platform, defining authentication endpoints, request/response payloads, and standardized error envelopes.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local Development Environment
+  - url: /api/v1
+    description: Relative API Base Path
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User Login
+      description: Authenticates user credentials (email and password), issues a signed JWT access token, and returns minimal user identity information.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '200':
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseEnvelope'
+        '400':
+          description: Validation error on input fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseEnvelope'
+        '401':
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseEnvelope'
+        '403':
+          description: Account is disabled or pending email verification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseEnvelope'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh Access Token
+      description: Renews an expired access token using a valid refresh token. The refresh token can be delivered via an HttpOnly cookie or optionally in the JSON request body.
+      operationId: refreshToken
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Access token successfully refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefreshResponseEnvelope'
+        '400':
+          description: Missing or malformed refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseEnvelope'
+        '401':
+          description: Expired, revoked, or invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseEnvelope'
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register Student Account
+      description: Registers a new student or parent account (ROLE_STUDENT) and dispatches a 6-digit verification OTP code to the provided email.
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: Account registered; verification code sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponseEnvelope'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseEnvelope'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseEnvelope'
+
+  /auth/verify-email:
+    post:
+      tags:
+        - Authentication
+      summary: Verify Account Email OTP
+      description: Verifies account ownership using the 6-digit OTP received via email, activates the account, and returns an initial access token.
+      operationId: verifyEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+      responses:
+        '200':
+          description: Account verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseEnvelope'
+        '400':
+          description: Invalid or expired OTP code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseEnvelope'
+
+  /auth/resend-verification:
+    post:
+      tags:
+        - Authentication
+      summary: Resend Verification OTP
+      description: Generates and resends a new 6-digit OTP code to an unverified account email.
+      operationId: resendVerification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResendVerificationRequest'
+      responses:
+        '200':
+          description: New OTP code dispatched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponseEnvelope'
+        '400':
+          description: Account already verified or invalid email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseEnvelope'
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Authentication
+      summary: Request Password Reset
+      description: Dispatches a password reset link to the user's email if an account with that email exists. Always returns HTTP 200 to prevent user enumeration.
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Reset email dispatched if account exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoidResponseEnvelope'
+
+  /auth/reset-password:
+    post:
+      tags:
+        - Authentication
+      summary: Confirm Password Reset
+      description: Validates the reset token and updates the user's password to the new value.
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoidResponseEnvelope'
+        '400':
+          description: Invalid or expired reset token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseEnvelope'
+
+components:
+  schemas:
+    AuthRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: student@gmail.com
+        password:
+          type: string
+          format: password
+          minLength: 6
+          maxLength: 128
+          example: Student@123
+
+    RefreshTokenRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          description: The long-lived refresh token. Optional when sent via HttpOnly cookie.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - fullName
+      properties:
+        email:
+          type: string
+          format: email
+          example: phuhuynh@gmail.com
+        password:
+          type: string
+          format: password
+          minLength: 6
+          maxLength: 128
+          example: Password@123
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: Nguyen Van A
+
+    VerifyEmailRequest:
+      type: object
+      required:
+        - email
+        - code
+      properties:
+        email:
+          type: string
+          format: email
+          example: student@gmail.com
+        code:
+          type: string
+          pattern: '^[0-9]{6}$'
+          example: '123456'
+
+    ResendVerificationRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          example: student@gmail.com
+
+    ForgotPasswordRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          example: student@gmail.com
+        frontendUrl:
+          type: string
+          format: uri
+          description: Optional client origin used for redirect links
+          example: http://localhost:5173
+
+    ResetPasswordRequest:
+      type: object
+      required:
+        - token
+        - newPassword
+      properties:
+        token:
+          type: string
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        newPassword:
+          type: string
+          format: password
+          minLength: 6
+          maxLength: 128
+          example: NewSecretPass@123
+
+    UserInfo:
+      type: object
+      required:
+        - id
+        - email
+        - fullName
+        - role
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 2
+        email:
+          type: string
+          format: email
+          example: student@gmail.com
+        fullName:
+          type: string
+          example: Nguyen Van A
+        role:
+          type: string
+          enum:
+            - ROLE_ADMIN
+            - ROLE_TUTOR
+            - ROLE_STUDENT
+          example: ROLE_STUDENT
+
+    AuthResponse:
+      type: object
+      required:
+        - accessToken
+        - user
+      properties:
+        accessToken:
+          type: string
+          description: Signed JWT access token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        tokenType:
+          type: string
+          default: Bearer
+          example: Bearer
+        expiresIn:
+          type: integer
+          description: TTL of the access token in seconds
+          example: 86400
+        user:
+          $ref: '#/components/schemas/UserInfo'
+
+    TokenRefreshResponse:
+      type: object
+      required:
+        - accessToken
+        - tokenType
+        - expiresIn
+      properties:
+        accessToken:
+          type: string
+          description: Newly issued JWT access token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        tokenType:
+          type: string
+          default: Bearer
+          example: Bearer
+        expiresIn:
+          type: integer
+          description: TTL of the new access token in seconds
+          example: 86400
+
+    RegisterResponse:
+      type: object
+      required:
+        - email
+        - message
+      properties:
+        email:
+          type: string
+          format: email
+          example: student@gmail.com
+        message:
+          type: string
+          example: Mã xác thực đã được gửi tới email của bạn.
+
+    # Envelopes
+    AuthResponseEnvelope:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/AuthResponse'
+        message:
+          type: string
+          nullable: true
+          example: null
+
+    TokenRefreshResponseEnvelope:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/TokenRefreshResponse'
+        message:
+          type: string
+          nullable: true
+          example: null
+
+    RegisterResponseEnvelope:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/RegisterResponse'
+        message:
+          type: string
+          nullable: true
+          example: null
+
+    VoidResponseEnvelope:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          nullable: true
+          example: null
+        message:
+          type: string
+          example: Thao tác thực hiện thành công.
+
+    ErrorResponseEnvelope:
+      type: object
+      required:
+        - success
+        - errorCode
+        - message
+      properties:
+        success:
+          type: boolean
+          example: false
+        errorCode:
+          type: string
+          example: INVALID_CREDENTIALS
+        message:
+          type: string
+          example: Invalid email or password
+        timestamp:
+          type: string
+          format: date-time
+          example: 2026-10-24T14:30:00Z
+        details:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+          example:
+            email: must be a valid email
+            password: must be at least 6 characters
