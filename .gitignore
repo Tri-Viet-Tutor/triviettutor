@@ -4,3 +4,5 @@
 **/.env.*
 !.env*.example
 !**/.env*.example
+outputs/vnpay-preview/
+outputs/01a16d96-test-data/

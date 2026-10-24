@@ -48,3 +48,8 @@ documentation/
 - **`01-Project-Structure-React-SpringBoot.md`**: Cấu trúc repo **React (Vite + TypeScript)** + **Java Spring Boot 3**, module backend theo nghiệp vụ, REST API, thứ tự dựng MVP.
 - **`02-Backend-Architecture-and-API-Specification.md`**: Đặc tả toàn diện kiến trúc Backend Spring Boot 3 và chi tiết REST API endpoints.
 - **`03-Mobile-App-Architecture-and-Screens.md`**: Đặc tả kiến trúc ứng dụng di động **React Native (Expo SDK 57)**, hệ thống thiết kế và các màn hình cơ bản.
+- **`05-VNPay-Sandbox-Setup.md`**: Cấu hình merchant, local/Docker, backend dùng chung và checklist kiểm thử VNPay Sandbox.
+
+### Dữ liệu kiểm thử
+
+- [Dữ liệu test Supabase, tài khoản và cách kiểm tra](Database_script/TEST-DATA.md): bộ fixture `TEST-20261024`, seed SQL có thể chạy lại và các truy vấn kiểm tra tính nhất quán.

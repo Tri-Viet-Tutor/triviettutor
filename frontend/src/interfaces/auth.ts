@@ -19,6 +19,8 @@ export interface AuthLocationState {
   notice?: string;
   /** Đăng nhập / xác thực xong thì quay lại trang thanh toán thay vì vào trang của vai trò */
   resumeCheckout?: boolean;
+  /** Đường dẫn checkout nội bộ và query VNPay cần khôi phục sau đăng nhập. */
+  returnTo?: string;
 }
 
 // ── components/auth ──
