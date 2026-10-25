@@ -66,3 +66,5 @@ services:
         value: "30"
       - key: VNPAY_SERVER_IP
         sync: false
+      - key: VNPAY_PUBLIC_BACKEND_URL
+        sync: false

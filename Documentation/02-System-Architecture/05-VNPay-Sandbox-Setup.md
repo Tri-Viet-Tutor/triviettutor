@@ -76,6 +76,8 @@ Nhật ký triển khai: commit `d9f34f9` build Docker thành công; startup ban
 
 Đăng ký IPN đã được người dùng xác nhận lưu và mở lại đúng vào ngày 25/10/2026 sau khi công cụ trình duyệt bị gián đoạn. Chưa nghiệm thu một giao dịch Sandbox thành công tạo enrollment thực tế; chuyển hướng tới gateway đã được xác minh riêng bằng preview H2. `VNPAY_SERVER_IP` cho query/refund được đặt riêng trên Render theo IP public thực tế trong Supavisor connection logs (`app_name=viettritutor-backend`, `local=false`), không dùng IP proxy nội bộ. Khi đổi host/vùng hoặc outbound IP thay đổi phải cập nhật biến này. Chưa nghiệm thu query/refund gateway thật vì chưa có giao dịch Sandbox thành công để đối soát.
 
+Deploy cuối bổ sung IP máy chủ: `dep-dbel0jrncjis73ejf790`, LIVE lúc 07:43 ngày 25/10/2026 (Asia/Bangkok). Đã kiểm tra lại IP outbound sau restart vẫn khớp cấu hình và endpoint IPN HTTP 200/RspCode 97. Mã backend đang deploy là `d9f34f9`; các commit tiếp theo chỉ bổ sung manifest/template/tài liệu, không thay đổi Java hoặc frontend checkout. Auto-deploy vẫn tắt.
+
 Runtime Free dùng `-XX:TieredStopAtLevel=1` để giảm chi phí JIT khi cold start và `SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT=60000` để cho phép thử lại kết nối khởi tạo trong tối đa 60 giây. Hikari mặc định chỉ thử khởi tạo rất ngắn, trong khi Supavisor giới hạn bắt tay TLS 2,5 giây; lần khởi tạo crypto đầu trên CPU nhỏ có thể vượt giới hạn. Backend vẫn phải lấy được kết nối và validate schema trước khi sẵn sàng, không dùng timeout âm/khởi tạo bất đồng bộ để báo healthy giả. Không để SSL debug bật trong cấu hình cuối.
 
 Tham chiếu chẩn đoán: <https://github.com/supabase/supavisor/blob/main/lib/supavisor/client_handler.ex>, <https://github.com/brettwooldridge/HikariCP#infrequently-used>.
@@ -131,6 +133,19 @@ npm run dev
 ### Checklist
 
 Kết quả đã kiểm tra: 17 automated tests về VNPay/protocol/environment đều pass; frontend build và lint các file thay đổi pass. Smoke test backend Render ngày 25/10: đăng nhập fixture Student thành công, tạo intent 13 cho lớp 7 (120.000đ), nhận URL HTTPS VNPay có chữ ký, hủy intent thành công; DB xác nhận EXPIRED, cancelled=true, không tạo payment. CORS localhost:5173 cho phép, origin ngoài danh sách trả 403. Đây là kiểm tra API; chưa thay thế giao dịch thẻ Sandbox thành công nhận IPN và tự ghi danh.
+
+### Giao dịch thẻ Sandbox để nghiệm thu cuối
+
+Mở backend để warm-up trước, chạy frontend bằng cấu hình backend chung, đăng nhập Student đã xác thực rồi chọn lớp đang nhận đăng ký. Bấm thanh toán để tạo intent mới và tự chuyển sang VNPay. Chọn **Thẻ nội địa và tài khoản ngân hàng → NCB**, dùng bộ thẻ test do VNPay gửi trong email merchant:
+
+| Trường | Giá trị Sandbox |
+|---|---|
+| Số thẻ | `9704198526191432198` |
+| Chủ thẻ | `NGUYEN VAN A` |
+| Ngày phát hành | `07/15` |
+| OTP test | `123456` |
+
+Hoàn tất trong thời hạn intent (mặc định 5 phút). Sau khi VNPay trả về, kiểm tra trạng thái đã được backend xác nhận, lớp xuất hiện trong lớp đã đăng ký và lịch học được tạo. Đối chiếu database: đúng một Payment COMPLETED, một Enrollment và bộ LearningSchedule tương ứng; gọi lại callback không nhân đôi. Nếu phiên thanh toán cũ đã hết hạn/hủy, tạo yêu cầu mới trong ứng dụng. Không tự sửa chữ ký/response code hoặc ghi Payment COMPLETED bằng SQL để làm bằng chứng nghiệm thu.
 
 - Kiểm tra template cả `.env` và `.env.docker`, importer PowerShell, cấu hình Docker và lỗi startup không lộ secret.
 - Test checkout giữ chỗ, retry cùng intent, khác chủ sở hữu, lớp đầy/trùng lịch, intent hết hạn/hủy.
