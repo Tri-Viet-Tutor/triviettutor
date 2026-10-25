@@ -24,7 +24,7 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
   // Học viên chỉ nhận về bản ghi của chính mình
   const record = attendance.data?.records[0];
   const recordStyle = record ? ATTENDANCE_STATUS[record.status] : null;
-  const canJoin = Boolean(session.meetingUrl) && session.status !== "CANCELLED" && session.status !== "COMPLETED";
+  const canJoin = session.status !== "CANCELLED" && session.status !== "COMPLETED";
   const canLeave = canRequestLeave(session, now);
 
   return (
@@ -85,16 +85,14 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
 
       {(canJoin || canLeave || hasPendingLeave) && (
         <div className="mt-4 flex flex-wrap items-center gap-2.5">
-          {canJoin && session.meetingUrl && (
-            <a
-              href={session.meetingUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+          {canJoin && (
+            <Link
+              to={`/classroom/${session.sessionId}`}
               className={`${LINK} bg-brand-orange text-brand-navyDeep hover:bg-brand-orangeHover`}
             >
               <Icon name="videocam" className="text-[19px]" />
-              Vào lớp trực tuyến
-            </a>
+              Vào phòng học trực tuyến
+            </Link>
           )}
           {hasPendingLeave ? (
             <StatusChip tone="amber" icon="hourglass_top">

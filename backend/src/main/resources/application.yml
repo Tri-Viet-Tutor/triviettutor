@@ -56,3 +56,10 @@ app:
       timeout-seconds: ${VNPAY_TIMEOUT_SECONDS:30}
   jwt:
     expiration-ms: 86400000 # 24 hours
+
+# LiveKit settings
+livekit:
+  url: ${LIVEKIT_URL:ws://localhost:7880}
+  api:
+    key: ${LIVEKIT_API_KEY:devkey}
+    secret: ${LIVEKIT_API_SECRET:secret}

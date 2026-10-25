@@ -1,4 +1,13 @@
 services:
+  livekit:
+    image: livekit/livekit-server:latest
+    command: --dev --bind 0.0.0.0
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+    restart: unless-stopped
+
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -54,6 +63,9 @@ services:
       VNPAY_RETURN_PATH: ${VNPAY_RETURN_PATH:-/student/checkout}
       VNPAY_SERVER_IP: ${VNPAY_SERVER_IP:-}
       VNPAY_TIMEOUT_SECONDS: ${VNPAY_TIMEOUT_SECONDS:-30}
+      LIVEKIT_URL: ${LIVEKIT_URL:-ws://livekit:7880}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
     ports:
       - "${DOCKER_BIND_ADDRESS:?Set DOCKER_BIND_ADDRESS in .env.docker}:${BACKEND_HOST_PORT:?Set BACKEND_HOST_PORT in .env.docker}:${BACKEND_PORT:?Set BACKEND_PORT in .env.docker}"
     depends_on:

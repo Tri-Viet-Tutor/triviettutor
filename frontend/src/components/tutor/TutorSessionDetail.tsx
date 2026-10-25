@@ -67,16 +67,14 @@ export function TutorSessionDetail({ session, now, tutorId, hasPendingLeave }: T
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2.5">
-        {session.meetingUrl && session.status !== "CANCELLED" && session.status !== "COMPLETED" && (
-          <a
-            href={session.meetingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+        {session.status !== "CANCELLED" && session.status !== "COMPLETED" && (
+          <Link
+            to={`/classroom/${session.sessionId}`}
             className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-brand-orange px-4 text-[14px] font-semibold text-brand-navyDeep transition-colors hover:bg-brand-orangeHover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
           >
             <Icon name="videocam" className="text-[19px]" />
-            Vào lớp trực tuyến
-          </a>
+            Vào phòng học trực tuyến
+          </Link>
         )}
         {isTeacher &&
           (hasPendingLeave ? (

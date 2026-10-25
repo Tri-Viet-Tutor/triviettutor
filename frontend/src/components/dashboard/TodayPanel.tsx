@@ -100,10 +100,10 @@ export function TodayPanel({
               </div>
 
               {session.meetingUrl ? (
-                <a href={session.meetingUrl} target="_blank" rel="noopener noreferrer" className={TODAY_PANEL_CTA}>
+                <Link to={`/classroom/${session.sessionId}`} className={TODAY_PANEL_CTA}>
                   Vào lớp
                   <Icon name="arrow_forward" className="text-[19px]" />
-                </a>
+                </Link>
               ) : (
                 <Link to={`${scheduleTo}?buoi=${session.sessionId}`} className={TODAY_PANEL_CTA}>
                   Xem chi tiết
