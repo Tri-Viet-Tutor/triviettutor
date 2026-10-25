@@ -48,6 +48,7 @@ export const ROUTES = {
   /** Đường dẫn cũ của trang mua khóa học — tự chuyển sang studentCatalog */
   studentCatalogLegacy: "/student/courses",
   studentCheckout: "/student/checkout",
+  studentWallet: "/student/wallet",
   studentLeave: "/student/leave",
   /** Các lớp đã đóng học phí */
   studentEnrollments: "/student/classes",

@@ -5,4 +5,6 @@
 !.env*.example
 !**/.env*.example
 outputs/vnpay-preview/
+outputs/wallet-preview/
+outputs/wallet-*.log
 outputs/01a16d96-test-data/

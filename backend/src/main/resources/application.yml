@@ -54,5 +54,10 @@ app:
       return-path: ${VNPAY_RETURN_PATH:/student/checkout}
       server-ip: ${VNPAY_SERVER_IP:}
       timeout-seconds: ${VNPAY_TIMEOUT_SECONDS:30}
+  wallet:
+    topup-min-amount: ${WALLET_TOPUP_MIN_AMOUNT:10000}
+    topup-max-amount: ${WALLET_TOPUP_MAX_AMOUNT:50000000}
+    topup-ttl-minutes: ${WALLET_TOPUP_TTL_MINUTES:15}
+    vnpay-return-path: ${WALLET_VNPAY_RETURN_PATH:/student/wallet}
   jwt:
     expiration-ms: 86400000 # 24 hours

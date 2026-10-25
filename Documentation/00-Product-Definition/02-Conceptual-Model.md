@@ -1,5 +1,11 @@
 # Conceptual Data Model (Mô hình Dữ liệu Khái niệm)
 
+## Bổ sung mô hình ví học viên — 24/10/2026
+
+HỌC VIÊN sở hữu tối đa một VÍ. VÍ lưu số dư và có nhiều BÚT TOÁN. YÊU CẦU NẠP thuộc học viên, khi VNPay xác nhận mới sinh một bút toán ghi tăng. THANH TOÁN HỌC PHÍ bằng ví sinh một bút toán ghi giảm; HOÀN HỌC PHÍ ví sinh một bút toán ghi tăng. Mỗi bút toán có đúng một nguồn nghiệp vụ, không dùng ví ảo của người bán hoặc tài khoản System từ Bike Exchange.
+
+Quan hệ bổ sung: học viên 1—0..1 ví, ví 1—N bút toán, học viên 1—N yêu cầu nạp; mỗi yêu cầu nạp/thanh toán/hoàn tiền có tối đa một bút toán tương ứng. Xem [contract ví](../02-System-Architecture/06-Student-Wallet-and-VNPay.md).
+
 Tài liệu này định nghĩa **Mô hình Dữ liệu Khái niệm (Conceptual Data Model)** hoàn chỉnh cho hệ thống **VietTriTutor** theo chuẩn **Ký pháp Chân quạ (Crow's Foot Notation / KnowledgeWare Standard)**.
 
 Ở tầng Khái niệm, mô hình tập trung 100% vào **ranh giới thực thể kinh doanh (Business Entities)** và **ngữ nghĩa nghiệp vụ cấp cao**. 

@@ -26,6 +26,7 @@ public class EnrollmentRefundService {
     private final EntityManager entityManager;
     private final Clock clock;
     private final MockPaymentPolicy mockPolicy;
+    private final WalletService wallet;
 
     @Transactional
     public EnrollmentResponse cancel(Long enrollmentId, String reason, User student) {
@@ -78,10 +79,13 @@ public class EnrollmentRefundService {
     }
 
     private Refund settle(Enrollment enrollment, int percentage, String reason, User actor) {
-        mockPolicy.requireEnabled();
         Payment payment = payments.findById(enrollment.getPaymentId()).orElseThrow();
         entityManager.refresh(payment, LockModeType.PESSIMISTIC_WRITE);
-        if (!"MOCK".equals(payment.getMethod())) throw new BusinessException(ErrorCode.PAYMENT_PROVIDER_CONFLICT);
+        boolean walletPayment = "WALLET".equals(payment.getMethod());
+        if (!walletPayment) {
+            if (!"MOCK".equals(payment.getMethod())) throw new BusinessException(ErrorCode.PAYMENT_PROVIDER_CONFLICT);
+            mockPolicy.requireEnabled();
+        }
         if (payment.getStatus() != PaymentStatus.COMPLETED || payment.getRefundedAmount().signum() != 0) {
             throw new BusinessException(ErrorCode.REFUND_ALREADY_SETTLED);
         }
@@ -93,7 +97,8 @@ public class EnrollmentRefundService {
         OffsetDateTime now = OffsetDateTime.now(clock);
         Refund refund = refunds.saveAndFlush(Refund.builder().enrollmentId(enrollment.getId()).paymentId(payment.getId())
                 .paidAmount(payment.getAmount()).amount(amount).percentage(percentage).reason(reason.trim()).actorId(actor.getId())
-                .transactionRef("MOCK-REFUND-" + UUID.randomUUID()).createdAt(now).completedAt(now).build());
+                .transactionRef((walletPayment ? "WALLET-REFUND-" : "MOCK-REFUND-") + UUID.randomUUID()).createdAt(now).completedAt(now).build());
+        if (walletPayment) wallet.post(payment.getStudentId(), "REFUND", amount, null, null, refund.getId(), reason.trim());
         payment.setRefundedAmount(amount);
         payment.setStatus(amount.compareTo(payment.getAmount()) == 0 ? PaymentStatus.REFUNDED : PaymentStatus.PARTIALLY_REFUNDED);
         enrollment.setStatus(EnrollmentStatus.REFUNDED);

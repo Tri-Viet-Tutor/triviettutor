@@ -68,5 +68,10 @@ export function useMyEnrollments(query: EnrollmentsQuery = { size: 100 }) {
 export function useRefreshMine() {
   const queryClient = useQueryClient();
   const userId = useUserId();
-  return () => queryClient.invalidateQueries({ queryKey: ["me", userId] });
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["me", userId] }),
+      queryClient.invalidateQueries({ queryKey: ["wallet", userId] }),
+      queryClient.invalidateQueries({ queryKey: ["wallet-history", userId] }),
+    ]);
 }
