@@ -20,7 +20,7 @@ spring:
             enable: true
   data:
     mongodb:
-      uri: ${MONGODB_URI:}
+      uri: ${MONGODB_URI:mongodb://localhost:27017/triviettutor}
       database: ${MONGODB_DATABASE:triviettutor}
   jpa:
     open-in-view: false
