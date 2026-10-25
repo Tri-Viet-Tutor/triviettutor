@@ -28,7 +28,7 @@ Tat ca cac AI Agent va Developer khi lam viec trong repository nay bat buoc phai
 
 ## 5. Bat Buoc Commit Va Push Len Main Sau Moi Thay Doi (Mandatory Git Delivery)
 
-- **Tat ca cac role (BA, PM, PO, Tech Lead, Backend, Frontend, QA, UI-UX, Architect) khi hoan thanh bat ky thay doi nao (chinh sua docs, cap nhat ticket, viet code, sua bug) deu BAT BUOC phai commit va push ngay len `origin main`**.
+- **Tat ca cac role (BA, PM, PO, Tech Lead, Backend, Frontend, QA, UI-UX, Architect, DevOps) khi hoan thanh bat ky thay doi nao (chinh sua docs, cap nhat ticket, viet code, sua bug, cap nhat ha tang/deployment) deu BAT BUOC phai commit va push ngay len `origin main`**.
 - Khong bao gio duoc de lai thay doi chua commit (uncommitted changes) hoac chua push (unpushed commits).
 - Quy trinh thuc hien:
   1. `git status` kiem tra cac file da thay doi/tao moi.
