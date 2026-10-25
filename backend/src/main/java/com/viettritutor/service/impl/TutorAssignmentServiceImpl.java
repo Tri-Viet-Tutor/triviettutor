@@ -55,7 +55,7 @@ public class TutorAssignmentServiceImpl implements TutorAssignmentService {
         if (classGroup.getStatus() != ClassStatus.ASSIGNED && classGroup.getStatus() != ClassStatus.IN_PROGRESS) {
             throw new BusinessException(ErrorCode.CLASS_NOT_ASSIGNABLE);
         }
-        TutorAssignment previous = assignmentRepository.findByClassGroupIdAndStatus(classId, AssignmentStatus.ACTIVE)
+        TutorAssignment previous = assignmentRepository.findByClassGroupIdAndStatusForUpdate(classId, AssignmentStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ASSIGNMENT_NOT_FOUND));
         if (previous.getTutorId().equals(tutorId)) {
             throw new BusinessException(ErrorCode.TUTOR_ALREADY_ASSIGNED);
