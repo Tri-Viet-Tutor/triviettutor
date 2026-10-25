@@ -18,6 +18,10 @@ spring:
           auth: true
           starttls:
             enable: true
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:}
+      database: ${MONGODB_DATABASE:triviettutor}
   jpa:
     open-in-view: false
     properties:
