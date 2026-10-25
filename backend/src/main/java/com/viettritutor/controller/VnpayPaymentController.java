@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 public class VnpayPaymentController {
     private static final Logger log = LoggerFactory.getLogger(VnpayPaymentController.class);
     private final VnpayPaymentService service;
+    private final com.viettritutor.service.WalletTopupService topups;
 
     @PostMapping("/payment-intents/{intentId}/vnpay")
     @PreAuthorize("hasRole('STUDENT')")
@@ -54,7 +55,10 @@ public class VnpayPaymentController {
     @GetMapping("/payments/vnpay/ipn")
     @Operation(summary = "Receive a signed VNPay server callback; uses the VNPay acknowledgement format")
     public VnpayIpnResponse ipn(@RequestParam MultiValueMap<String, String> params) {
-        try { return service.ipn(params); }
+        try {
+            String reference = params.getFirst("vnp_TxnRef");
+            return reference != null && reference.startsWith("WLT") ? topups.ipn(params) : service.ipn(params);
+        }
         catch (BusinessException exception) {
             return new VnpayIpnResponse(exception.getErrorCode() == ErrorCode.INVALID_PAYMENT_SIGNATURE ? "97" : "99", "Cannot confirm transaction");
         } catch (RuntimeException exception) {
