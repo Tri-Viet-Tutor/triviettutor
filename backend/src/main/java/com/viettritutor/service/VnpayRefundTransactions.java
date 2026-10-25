@@ -101,11 +101,15 @@ public class VnpayRefundTransactions {
         }
         String code = response.get("vnp_ResponseCode");
         refund.setProviderResponseCode(code);
+        // QueryDr can describe the original PAYMENT. It is not evidence of a refund.
+        boolean matchingRefund = (refund.getAmount().compareTo(payment.getAmount()) == 0 ? "02" : "03")
+                .equals(response.get("vnp_TransactionType"))
+                && VnpayPaymentService.cents(refund.getAmount()).equals(response.get("vnp_Amount"));
         boolean refunded = "00".equals(code) && "00".equals(response.get("vnp_TransactionStatus"))
-                && (refund.getAmount().compareTo(payment.getAmount()) == 0 ? "02" : "03").equals(response.get("vnp_TransactionType"))
-                && VnpayPaymentService.cents(refund.getAmount()).equals(response.get("vnp_Amount"))
+                && matchingRefund
                 && response.getOrDefault("vnp_TransactionNo", "").matches("[0-9]{1,15}")
-                && new BigDecimal(response.get("vnp_TransactionNo")).signum() > 0;
+                && new BigDecimal(response.get("vnp_TransactionNo")).signum() > 0
+                && !Objects.equals(payment.getProviderTransactionNo(), response.get("vnp_TransactionNo"));
         if (refunded) {
             OffsetDateTime now = OffsetDateTime.now(clock);
             refund.setStatus("COMPLETED");
@@ -123,7 +127,7 @@ public class VnpayRefundTransactions {
                 learning.deactivate(enrollment.getId(), LearningScheduleStatus.CANCELLED);
             }
         } else if (("refund".equals(response.get("vnp_Command")) && Set.of("02", "03", "91", "95", "97").contains(code))
-                || "09".equals(response.get("vnp_TransactionStatus"))) {
+                || (matchingRefund && "00".equals(code) && "09".equals(response.get("vnp_TransactionStatus")))) {
             refund.setStatus("FAILED");
         }
         return RefundResponse.from(refund);

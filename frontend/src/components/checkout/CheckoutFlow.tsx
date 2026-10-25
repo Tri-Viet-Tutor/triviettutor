@@ -22,6 +22,7 @@ import {
 import { useAuthStore } from "@/stores/authStore";
 import { useCartStore } from "@/stores/cartStore";
 import { formatVnd } from "@/utils/currency";
+import { Icon } from "@/components/ui/Icon";
 
 /** Câu báo cho các mã lỗi thanh toán thường gặp */
 const PAYMENT_ERRORS: Record<string, string> = {
@@ -34,6 +35,8 @@ const PAYMENT_ERRORS: Record<string, string> = {
   ENROLLMENT_ALREADY_EXISTS: "Bạn đã ghi danh vào lớp này.",
   PAYMENT_INTENT_EXPIRED: "Yêu cầu đã hết hạn. Vui lòng tạo thanh toán mới.",
   PAYMENT_PRICE_CHANGED: "Học phí đã thay đổi. Vui lòng tạo thanh toán mới.",
+  PAYMENT_GATEWAY_ERROR: "Chưa kết nối được VNPay. Vui lòng thử lại sau.",
+  PAYMENT_INTENT_NOT_PENDING: "Yêu cầu này đã kết thúc. Vui lòng tạo thanh toán mới.",
   INVALID_PAYMENT_SIGNATURE: "Không xác minh được kết quả VNPay. Hãy kiểm tra lại trạng thái yêu cầu.",
 };
 
@@ -123,9 +126,20 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
   const state = detail.data ?? returned.data;
   const enrollmentStatus = state?.enrollment?.status;
   useEffect(() => {
-    if (enrollmentStatus) void cache.invalidateQueries({ queryKey: portalKeys.sessions(userId) });
+    if (enrollmentStatus) {
+      void cache.invalidateQueries({ queryKey: portalKeys.sessions(userId) });
+      void cache.invalidateQueries({ queryKey: ["me", userId, "enrollments"] });
+    }
   }, [enrollmentStatus, cache, userId]);
   const pending = state?.intent.status === "PENDING";
+  const returnNotice =
+    returned.data && pending
+      ? params.get("vnp_ResponseCode") === "00"
+        ? "VNPay đã trả kết quả thành công. Hệ thống đang chờ xác nhận giao dịch trước khi ghi danh."
+        : params.get("vnp_ResponseCode") === "24"
+          ? "Bạn đã hủy thanh toán trên VNPay. Bạn có thể hủy yêu cầu bên dưới để giải phóng chỗ."
+          : "VNPay chưa xác nhận thanh toán thành công. Hãy kiểm tra trạng thái hoặc hủy yêu cầu để thử lại."
+      : null;
   const catalog = useQuery({
     queryKey: ["tuition-classes", userId, subject, grade, mode, page],
     queryFn: () =>
@@ -138,10 +152,11 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
       }),
     enabled: !pending && !returning,
   });
+  const summaryClassId = classId ?? state?.intent.classGroupId;
   const selected = useQuery({
-    queryKey: ["tuition-class", userId, classId],
-    queryFn: () => getTuitionClass(classId!),
-    enabled: classId !== null,
+    queryKey: ["tuition-class", userId, summaryClassId],
+    queryFn: () => getTuitionClass(summaryClassId!),
+    enabled: Boolean(summaryClassId),
   });
 
   function saveIntent(id: number | null) {
@@ -168,6 +183,7 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
       setRedirect(value);
       void cache.invalidateQueries({ queryKey: ["tuition-intent"] });
       void cache.invalidateQueries({ queryKey: ["tuition-classes"] });
+      window.location.assign(value.paymentUrl);
     },
   });
   const cancel = useMutation({
@@ -184,6 +200,7 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
     onSuccess: (value) => {
       setRedirect(value);
       void cache.invalidateQueries({ queryKey: ["tuition-classes"] });
+      window.location.assign(value.paymentUrl);
     },
   });
 
@@ -220,18 +237,31 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
       <Link to={shopTo} className="text-sm font-semibold text-brand-navy">
         ← Chọn khóa học
       </Link>
-      <h1 className="text-3xl font-bold text-brand-navy">Đăng ký lớp · VNPay Sandbox</h1>
-      <p className="text-brand-muted">Môi trường thử nghiệm, không thanh toán tiền thật. Mỗi yêu cầu dành cho một lớp.</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-3xl font-bold text-brand-navy">Thanh toán học phí</h1>
+        <span className="rounded-full bg-brand-navy/10 px-3 py-1 text-xs font-semibold text-brand-navy">VNPay Sandbox</span>
+      </div>
+      <p className="text-brand-muted">
+        Thanh toán trên cổng VNPay để hoàn tất đăng ký lớp. Đây là môi trường thử nghiệm, không thu tiền thật.
+      </p>
       {paymentError && <AuthNotice tone="error">{errorMessage(paymentError)}</AuthNotice>}
       {(intentId || returning) && (
         <section className={`${PORTAL_CARD} space-y-4 p-6`} aria-live="polite">
           {(returned.isFetching || detail.isFetching) && <p>Đang kiểm tra kết quả thanh toán…</p>}
           {state && (
-            <p>
-              Lớp #{state.intent.classGroupId} · Học phí {formatVnd(state.intent.amount)}
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-brand-sandLine pb-4">
+              <div>
+                <h2 className="text-lg font-bold text-brand-navy">{selected.data?.courseName ?? `Lớp #${state.intent.classGroupId}`}</h2>
+                <p className="mt-1 text-sm text-brand-muted">{selected.data?.classCode ?? `Yêu cầu #${state.intent.intentId}`}</p>
+              </div>
+              <div>
+                <p className="text-sm text-brand-muted">Học phí thanh toán</p>
+                <p className="text-2xl font-bold text-brand-navy">{formatVnd(state.intent.amount)}</p>
+              </div>
+            </div>
           )}
           {outcome && <AuthNotice tone={state?.enrollment?.status === "ACTIVE" ? "success" : "info"}>{outcome}</AuthNotice>}
+          {returnNotice && <AuthNotice tone="info">{returnNotice}</AuthNotice>}
           {state?.enrollment?.status === "ACTIVE" && (
             <Link to={ROUTES.studentSchedule} className={PORTAL_BTN_PRIMARY}>
               Xem lịch học
@@ -240,7 +270,12 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
           {pending && (
             <>
               <SeatHold key={state.intent.intentId} expiresAt={state.intent.expiresAt} />
-              <p className="text-sm text-brand-muted">Kết quả sẽ được cập nhật sau khi VNPay xác nhận.</p>
+              <p className="flex items-start gap-2 text-sm text-brand-muted">
+                <Icon name="lock" className="text-lg" />
+                {redirect
+                  ? "Đang chuyển đến cổng VNPay. Nếu trang chưa mở, bấm nút bên dưới."
+                  : "Thông tin thẻ và OTP được nhập trực tiếp trên trang VNPay. Kết quả sẽ cập nhật sau khi xác nhận."}
+              </p>
               <div className="flex flex-wrap gap-3">
                 {redirect && Date.parse(redirect.expiresAt) > Date.now() ? (
                   <a href={redirect.paymentUrl} className={PORTAL_BTN_PRIMARY}>
@@ -387,7 +422,7 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
                 onClick={() => start.mutate()}
                 className={PORTAL_BTN_PRIMARY}
               >
-                {start.isPending ? "Đang tạo thanh toán…" : "Giữ chỗ và thanh toán"}
+                {start.isPending ? "Đang kết nối VNPay…" : "Thanh toán qua VNPay"}
               </button>
             </section>
           )}

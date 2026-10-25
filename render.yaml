@@ -1,0 +1,70 @@
+# Prepared for the team's Sandbox backend; applying this file publishes a web service.
+# Fill secret values in Render, never here. Supabase migrations remain manual.
+services:
+  - type: web
+    name: triviettutor-sandbox-api
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: vnpay-sandbox-configuration
+    autoDeployTrigger: "off"
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api-docs
+    envVars:
+      - key: APP_PROFILE
+        value: supabase
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_POOL_SIZE
+        value: "5"
+      - key: DB_POOL_MIN_IDLE
+        value: "1"
+      - key: DB_SSL_MODE
+        value: require
+      - key: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+        value: "60000"
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: SERVER_FORWARD_HEADERS_STRATEGY
+        value: framework
+      - key: JAVA_TOOL_OPTIONS
+        value: -XX:MaxRAMPercentage=65 -XX:InitialRAMPercentage=20 -XX:TieredStopAtLevel=1
+      - key: SPRING_MAIL_HOST
+        value: smtp.gmail.com
+      - key: SPRING_MAIL_PORT
+        value: "587"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: APP_GG_PASSWORD
+        sync: false
+      - key: PAYMENT_MOCK_ENABLED
+        value: "false"
+      - key: PAYMENT_INTENT_TTL_MINUTES
+        value: "5"
+      - key: VNPAY_ENABLED
+        value: "true"
+      - key: VNPAY_TMN_CODE
+        sync: false
+      - key: VNPAY_HASH_SECRET
+        sync: false
+      - key: VNPAY_PAYMENT_URL
+        value: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+      - key: VNPAY_API_URL
+        value: https://sandbox.vnpayment.vn/merchant_webapi/api/transaction
+      - key: VNPAY_RETURN_PATH
+        value: /student/checkout
+      - key: VNPAY_TIMEOUT_SECONDS
+        value: "30"
+      - key: VNPAY_SERVER_IP
+        sync: false
+      - key: VNPAY_PUBLIC_BACKEND_URL
+        sync: false

@@ -3,6 +3,9 @@ package com.viettritutor;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 /**
  * VietTriTutor Spring Boot Application entry point.
  *
@@ -21,18 +24,7 @@ public class VietTriTutorApplication {
     public static void main(String[] args) {
         // 1. Nap bien moi truong tu .env (ho tro ca root va backend/)
         try {
-            java.io.File envFile = new java.io.File(".env");
-            java.io.File backendEnvFile = new java.io.File("backend/.env");
-            io.github.cdimascio.dotenv.DotenvBuilder builder = io.github.cdimascio.dotenv.Dotenv.configure().ignoreIfMissing();
-            if (!envFile.exists() && backendEnvFile.exists()) {
-                builder.directory("backend");
-            }
-            io.github.cdimascio.dotenv.Dotenv dotenv = builder.load();
-            dotenv.entries().forEach(entry -> {
-                if (System.getProperty(entry.getKey()) == null) {
-                    System.setProperty(entry.getKey(), entry.getValue());
-                }
-            });
+            loadEnvironment(Path.of(""));
         } catch (Exception e) {
             System.err.println("[WARN] Khong the nap file .env: " + e.getMessage());
         }
@@ -47,6 +39,32 @@ public class VietTriTutorApplication {
             printDiagnosticError(t);
             System.exit(1);
         }
+    }
+
+    static void loadEnvironment(Path workingDirectory) {
+        Path projectRoot = workingDirectory.toAbsolutePath().normalize();
+        if (projectRoot.getFileName() != null
+                && projectRoot.getFileName().toString().equals("backend")
+                && Files.isRegularFile(projectRoot.resolve("pom.xml"))) {
+            projectRoot = projectRoot.getParent();
+        }
+
+        Path envFile = projectRoot.resolve(".env");
+        if (!Files.isRegularFile(envFile)) {
+            envFile = projectRoot.resolve("backend/.env");
+        }
+        if (!Files.isRegularFile(envFile)) {
+            return;
+        }
+
+        var dotenv = io.github.cdimascio.dotenv.Dotenv.configure()
+                .directory(envFile.getParent().toString())
+                .load();
+        dotenv.entries().forEach(entry -> {
+            if (System.getProperty(entry.getKey()) == null && System.getenv(entry.getKey()) == null) {
+                System.setProperty(entry.getKey(), entry.getValue());
+            }
+        });
     }
 
     private static void validateEnvironment() {

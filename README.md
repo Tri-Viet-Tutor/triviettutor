@@ -143,6 +143,24 @@ All protected routes require `Authorization: Bearer <token>` header.
 
 See [`.env.example`](.env.example) for the full list of required variables.
 
+## VNPay Sandbox
+
+Use the [team setup and acceptance guide](Documentation/02-System-Architecture/05-VNPay-Sandbox-Setup.md).
+The merchant secret belongs only in an ignored backend `.env` file or the backend host's secret store.
+
+```powershell
+./scripts/configure-vnpay-sandbox.ps1 -EnvironmentFile .env
+# Fill merchant credentials in .env, then set VNPAY_ENABLED=true.
+./scripts/check-vnpay-sandbox.ps1 -EnvironmentFile .env
+./scripts/start-backend.ps1 -Profile supabase
+```
+
+For Docker, use `.env.docker` in both scripts and recreate the backend container after changes.
+Checkout redirects to the real VNPay Sandbox page. Enrollment is confirmed by signed IPN callbacks;
+the browser return alone cannot enroll a student. A public HTTPS backend registered with VNPay is
+required for end-to-end settlement. Team members sharing one merchant must use the same IPN backend
+and database, or obtain separate sandbox merchants for independent backends.
+
 ---
 
 ## Contributing
