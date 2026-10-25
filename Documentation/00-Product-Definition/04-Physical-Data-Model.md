@@ -1,5 +1,11 @@
 # Physical Data Model (Mô hình Dữ liệu Vật lý - PostgreSQL DDL)
 
+## Bổ sung DDL ví học viên — 24/10/2026
+
+Migration có hiệu lực: [V16__create_student_wallet.sql](../../backend/src/main/resources/db/migration/V16__create_student_wallet.sql), áp sau V15. Tạo wallets, wallet_topup_intents, wallet_transactions; BigDecimal ánh xạ NUMERIC(15,0), nguồn ledger UNIQUE/FK/CHECK, index lịch sử và chủ sở hữu, RLS bật cho ba bảng. Mở rộng CHECK phương thức thanh toán và payment operation; không sửa các migration đã áp dụng.
+
+DDL chi tiết của phần mở rộng nằm trong V16; [contract ví](../02-System-Architecture/06-Student-Wallet-and-VNPay.md) định nghĩa business rules, concurrency và cách triển khai. Không chạy đoạn DDL thiết kế ban đầu bên dưới để thay thế Flyway history của database đang dùng.
+
 Tài liệu này chi tiết hóa **Mô hình Dữ liệu Vật lý (Physical Data Model)** cho hệ thống **VietTriTutor**, nhắm trực tiếp vào hệ quản trị cơ sở dữ liệu **PostgreSQL 15+** (được sử dụng với Java Spring Boot 3 & Spring Data JPA/Flyway).
 
 Mô hình vật lý định nghĩa chính xác: Kiểu dữ liệu vật lý (Data Types), Khóa chính tự tăng (Identity Bigserial), Khóa ngoại kèm hành vi tham chiếu (`ON DELETE RESTRICT/CASCADE`), Bảng chỉ mục Index phục vụ tối ưu hóa truy vấn chặn trùng lịch (Hard Conflict Query) và các ràng buộc kiểm tra toàn vẹn (`CHECK Constraints`).

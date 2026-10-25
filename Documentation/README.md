@@ -50,6 +50,8 @@ documentation/
 - **`03-Mobile-App-Architecture-and-Screens.md`**: Đặc tả kiến trúc ứng dụng di động **React Native (Expo SDK 57)**, hệ thống thiết kế và các màn hình cơ bản.
 - **`05-VNPay-Sandbox-Setup.md`**: Cấu hình merchant, local/Docker, backend dùng chung và checklist kiểm thử VNPay Sandbox.
 
+- [Ví học viên và VNPay Sandbox](02-System-Architecture/06-Student-Wallet-and-VNPay.md): đặc tả được xác nhận trên nhánh `d_wallet`, nguồn chuyển từ Bike Exchange, API, dữ liệu, UI và nghiệm thu.
+
 ### Dữ liệu kiểm thử
 
 - [Dữ liệu test Supabase, tài khoản và cách kiểm tra](Database_script/TEST-DATA.md): bộ fixture `TEST-20261024`, seed SQL có thể chạy lại và các truy vấn kiểm tra tính nhất quán.

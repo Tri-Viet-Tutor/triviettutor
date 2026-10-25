@@ -1,5 +1,16 @@
 # Functional Requirements (Yêu cầu Chức năng Hệ thống)
 
+## Bổ sung ví học viên — đã xác nhận 24/10/2026
+
+| Chức năng | Actor | Điều kiện và kết quả |
+| --- | --- | --- |
+| FR-WALLET-01 Xem ví và lịch sử | Học viên | Đã xác thực; chỉ xem ví của mình, số dư VND và lịch sử phân trang. |
+| FR-WALLET-02 Nạp VNPay Sandbox | Học viên / IPN VNPay | Tạo intent và redirect; chỉ IPN hợp lệ cộng ví một lần, return chỉ đọc. |
+| FR-WALLET-03 Đóng học phí bằng ví | Học viên | Trả trọn một lớp bằng số dư; đủ tiền, chỗ và không trùng lịch mới trừ tiền và ghi danh atomically. |
+| FR-WALLET-04 Hoàn học phí ví | Học viên hủy đúng hạn / Admin | Dùng quy tắc hoàn hiện có; học phí WALLET hoàn đúng ví gốc, VNPay trực tiếp hoàn qua provider. |
+
+Contract đầy đủ: [Ví học viên và VNPay](../02-System-Architecture/06-Student-Wallet-and-VNPay.md). Chưa có rút/chuyển tiền, ví gia sư hoặc mobile.
+
 Tài liệu này hệ thống hóa toàn bộ các **Yêu cầu Chức năng (Functional Requirements - FR)** của dự án **VietTriTutor**. Mỗi chức năng được đánh mã chuẩn (`FR-XXX`), mô tả chi tiết actor thực hiện, điều kiện tiên quyết (Pre-conditions), luồng thực thi (Flow), và quy tắc nghiệp vụ liên quan (Business Rules).
 
 **Phạm vi phục vụ:** Hệ thống chỉ cung cấp khóa học cho học sinh cấp 3 (THPT), gồm lớp 10, 11 và 12. Không mở khóa học lớp 1–9.

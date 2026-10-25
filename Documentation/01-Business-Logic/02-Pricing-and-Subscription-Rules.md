@@ -96,3 +96,7 @@ Gia sư nhận **lương tháng** từ Trung tâm, không chia % học phí lớ
 | **BR-02.44** | Gia sư **dạy thay** nhận đơn giá buổi cho buổi đó; lương cứng vẫn theo hợp đồng của từng người. |
 | **BR-02.45** | Buổi gia sư vắng không có người dạy thay: buổi `CANCELLED` hoặc chuyển học bù; **không** tính đơn giá buổi cho gia sư gốc. |
 | **BR-02.46** | Admin chốt bảng lương theo tháng dương lịch. Gia sư chỉ được xem bảng lương của mình. |
+
+## Ví học viên (được xác nhận 24/10/2026)
+
+Học viên nạp VNPay Sandbox vào ví và dùng số dư trả trọn học phí một lớp; vẫn hỗ trợ VNPay trực tiếp. Chỉ IPN hợp lệ được cộng tiền. Học phí WALLET hoàn về ví, VNPAY hoàn qua provider theo tỷ lệ/hạn hủy hiện có. Contract chi tiết tại [Student Wallet](../02-System-Architecture/06-Student-Wallet-and-VNPay.md). Chưa có rút/chuyển tiền hoặc ví gia sư.

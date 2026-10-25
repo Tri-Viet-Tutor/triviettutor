@@ -1635,3 +1635,7 @@ flowchart TD
 > - [03-Scheduling-and-Conflict-Validation.md](../01-Business-Logic/03-Scheduling-and-Conflict-Validation.md) — BR-03  
 > - [04-Matching-and-Class-Management.md](../01-Business-Logic/04-Matching-and-Class-Management.md) — BR-04  
 > - [01-Project-Structure-React-SpringBoot.md](01-Project-Structure-React-SpringBoot.md) — Cấu trúc tổng thể
+
+## Student wallet — approved 2026-10-24
+
+The [student wallet contract](06-Student-Wallet-and-VNPay.md) defines the additional `/wallet`, `/wallet/transactions`, `/wallet/topups`, `/wallet/vnpay/return` and `/payment-intents/{id}/wallet` APIs, shared VNPay IPN dispatch, `WALLET` payment method, refund routing, configuration and UI. It supplements the single-class contract; existing direct VNPay behavior remains in force.
