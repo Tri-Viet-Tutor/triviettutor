@@ -26,6 +26,8 @@ services:
         value: "1"
       - key: DB_SSL_MODE
         value: require
+      - key: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+        value: "60000"
       - key: JWT_SECRET
         sync: false
       - key: FRONTEND_URL
@@ -35,7 +37,7 @@ services:
       - key: SERVER_FORWARD_HEADERS_STRATEGY
         value: framework
       - key: JAVA_TOOL_OPTIONS
-        value: -XX:MaxRAMPercentage=65 -XX:InitialRAMPercentage=20
+        value: -XX:MaxRAMPercentage=65 -XX:InitialRAMPercentage=20 -XX:TieredStopAtLevel=1
       - key: SPRING_MAIL_HOST
         value: smtp.gmail.com
       - key: SPRING_MAIL_PORT

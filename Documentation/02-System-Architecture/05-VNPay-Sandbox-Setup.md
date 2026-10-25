@@ -1,6 +1,6 @@
 # VNPay Sandbox — cấu hình và nghiệm thu cho cả nhóm
 
-Ngày cập nhật: 24/10/2026. Phạm vi được người dùng yêu cầu trên nhánh `vnpay-sandbox-configuration`: thanh toán một lớp bằng VNPay Sandbox, chuyển hướng tới trang thanh toán do VNPay cung cấp, nhận kết quả và hoàn tiền theo business rules hiện có. Không mở rộng sang thanh toán nhiều lớp hoặc ứng dụng mobile.
+Ngày cập nhật: 25/10/2026. Phạm vi được người dùng yêu cầu trên nhánh `vnpay-sandbox-configuration`: thanh toán một lớp bằng VNPay Sandbox, chuyển hướng tới trang thanh toán do VNPay cung cấp, nhận kết quả và hoàn tiền theo business rules hiện có. Không mở rộng sang thanh toán nhiều lớp hoặc ứng dụng mobile.
 
 ## 1. Contract và trải nghiệm thanh toán
 
@@ -51,13 +51,38 @@ Một backend public HTTPS + một database + một bộ merchant nhận IPN. M�
 
 Không chia sẻ một merchant rồi thay IPN lần lượt về các máy dùng database khác nhau. Trình duyệt có thể quay về localhost của thành viên qua Return URL nhưng IPN phải tới đúng backend chung. Một origin frontend mới chỉ có hiệu lực sau khi cập nhật CORS và khởi động lại backend.
 
-### Phương án chuẩn bị: backend Render
+Frontend chạy với backend Render chung trên nhánh VNPay:
 
-`render.yaml` định nghĩa một backend Docker test dùng Supabase hiện có, plan Free, vùng Singapore và nhánh `vnpay-sandbox-configuration`; không tạo database mới và tắt auto-deploy. Đây là cấu hình chuẩn bị, chưa tạo dịch vụ. Chỉ triển khai sau khi người dùng chọn workspace và chấp thuận publish backend/cung cấp secrets cho host. Nếu repo private, chủ repo phải cấp Render quyền đọc Git trước khi deploy.
+```powershell
+# Chạy sau khi checkout nhánh vnpay-sandbox-configuration.
+# Nếu đã có .env.local, sửa VITE_API_BASE_URL theo template, không ghi đè file riêng.
+Copy-Item frontend/.env.sandbox.example frontend/.env.local
+cd frontend
+npm ci
+npm run dev
+```
 
-Health check dùng `/api-docs`; profile `supabase` validate schema và tắt Flyway để không tự migrate database dùng chung. Biến DB/JWT/SMTP/merchant nhập riêng qua secret store, không nằm trong manifest. Giới hạn pool 5 kết nối và cấu hình bộ nhớ JVM phù hợp môi trường test. Điền origin frontend thực tế (bao gồm từng localhost của nhóm) qua FRONTEND_URL/CORS_ALLOWED_ORIGINS, không wildcard. Sau deploy mới lấy URL HTTPS thực tế để đăng ký IPN; không đoán trước tên miền dịch vụ.
+Template `frontend/.env.sandbox.example` chỉ chứa cấu hình public, tắt preview giả. Các origin được cấu hình trên Render: `http://localhost:5173`, `http://127.0.0.1:5173`, `https://triviettutor-web.vercel.app`, `https://triviettutor.vercel.app`. Thành viên dùng port/domain khác cần bổ sung origin chính xác ở backend. Không đổi cấu hình frontend trong checkout đang phát triển tính năng backend chưa được deploy, ví dụ nhánh ví học viên riêng.
+
+### Backend Render dùng chung
+
+`render.yaml` định nghĩa một backend Docker test dùng Supabase hiện có, plan Free, vùng Singapore và nhánh `vnpay-sandbox-configuration`; không tạo database mới và tắt auto-deploy. Ngày 24/10/2026, người dùng đã chấp thuận deploy vào workspace FPT và lưu DB/JWT/SMTP/VNPay secrets riêng trên Render. Service được tạo qua Render MCP: `srv-dbe98k8ae00c73cc9gl0`, URL `https://triviettutor-sandbox-api.onrender.com`. Việc có URL chưa chứng minh backend đã hoạt động; chỉ chuyển frontend sang backend này sau khi kiểm tra HTTP thành công.
+
+Manifest đặt health check `/api-docs`; service tạo qua MCP hiện dùng TCP health check mặc định vì API tạo service không có trường healthCheckPath. Cần kiểm tra `/api-docs` qua HTTP riêng. Profile `supabase` validate schema và tắt Flyway để không tự migrate database dùng chung. Biến DB/JWT/SMTP/merchant nhập riêng qua secret store, không nằm trong manifest. Giới hạn pool 5 kết nối và cấu hình bộ nhớ JVM phù hợp môi trường test. Điền origin frontend thực tế (bao gồm từng localhost của nhóm) qua FRONTEND_URL/CORS_ALLOWED_ORIGINS, không wildcard.
+
+IPN đã đăng ký: `https://triviettutor-sandbox-api.onrender.com/api/v1/payments/vnpay/ipn`. Ngày 25/10/2026 người dùng xác nhận đã lưu và mở lại thấy đúng URL, GET, HMACSHA512 trong Merchant Admin. Trong Merchant Admin: menu tài khoản → Thông tin tài khoản → dòng website đúng TmnCode của dự án → biểu tượng sửa → IPN Url, GET, HMACSHA512. Mục email thông báo không phải nơi đăng ký IPN. Merchant Admin và SIT Testing dùng các phiên đăng nhập riêng; SIT phục vụ chạy kịch bản kiểm thử.
+
+Nhật ký triển khai: commit `d9f34f9` build Docker thành công; startup ban đầu bị đóng TLS khi kết nối Supabase Session Pooler (SQLState 08006, chưa tới bước xác thực). Cùng cấu hình đã kiểm tra `SELECT 1` thành công bằng psql và JDBC Java 21 từ máy phát triển. Sau cấu hình runtime bên dưới, deploy `dep-dbedooom7kps73dik3kg` đã LIVE lúc 23:29 ngày 24/10/2026 (Asia/Bangkok), kết nối Supabase và validate schema thành công. Đã xác minh IPN public HTTP 200, `RspCode=97` khi không có chữ ký. Giữ `DB_SSL_MODE=require`, không ép phiên bản TLS và tắt SSL debug. Ngày 25/10 đã quan sát cold start sau khi ngủ: Hikari kết nối lại thành công; backend khởi động trong khoảng 93 giây, `/api-docs` và IPN đều trả HTTP 200 sau warm-up.
+
+Đăng ký IPN đã được người dùng xác nhận lưu và mở lại đúng vào ngày 25/10/2026 sau khi công cụ trình duyệt bị gián đoạn. Chưa nghiệm thu một giao dịch Sandbox thành công tạo enrollment thực tế; chuyển hướng tới gateway đã được xác minh riêng bằng preview H2. `VNPAY_SERVER_IP` cho query/refund được đặt riêng trên Render theo IP public thực tế trong Supavisor connection logs (`app_name=viettritutor-backend`, `local=false`), không dùng IP proxy nội bộ. Khi đổi host/vùng hoặc outbound IP thay đổi phải cập nhật biến này. Chưa nghiệm thu query/refund gateway thật vì chưa có giao dịch Sandbox thành công để đối soát.
+
+Runtime Free dùng `-XX:TieredStopAtLevel=1` để giảm chi phí JIT khi cold start và `SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT=60000` để cho phép thử lại kết nối khởi tạo trong tối đa 60 giây. Hikari mặc định chỉ thử khởi tạo rất ngắn, trong khi Supavisor giới hạn bắt tay TLS 2,5 giây; lần khởi tạo crypto đầu trên CPU nhỏ có thể vượt giới hạn. Backend vẫn phải lấy được kết nối và validate schema trước khi sẵn sàng, không dùng timeout âm/khởi tạo bất đồng bộ để báo healthy giả. Không để SSL debug bật trong cấu hình cuối.
+
+Tham chiếu chẩn đoán: <https://github.com/supabase/supavisor/blob/main/lib/supavisor/client_handler.ex>, <https://github.com/brettwooldridge/HikariCP#infrequently-used>.
 
 Theo tài liệu Render, Free có thể ngủ sau 15 phút không có request. Mở backend và chờ warm-up trước demo; gói này dành cho kiểm thử, không bảo đảm IPN liên tục như production. Chưa có Render CLI thì phải ghi rõ chưa xác minh platform validation, dù đã kiểm tra manifest bằng JSON schema chính thức.
+
+Render Free chặn SMTP outbound trên port 25/465/587. SMTP secrets được lưu riêng nhưng gửi OTP/reset email qua Gmail SMTP hiện không hoạt động trên host này; demo thanh toán bằng tài khoản test đã enabled. Luồng đăng ký mới/gửi email cần cấu hình nhà cung cấp email qua HTTPS hoặc gói host hỗ trợ SMTP sau khi chọn phương án. Không tự đánh dấu email người dùng mới là đã xác thực để vượt giới hạn host.
 
 Tài liệu Render: <https://render.com/docs/blueprint-spec>, <https://render.com/docs/free>.
 
@@ -104,6 +129,8 @@ npm run dev
 ```
 
 ### Checklist
+
+Kết quả đã kiểm tra: 17 automated tests về VNPay/protocol/environment đều pass; frontend build và lint các file thay đổi pass. Smoke test backend Render ngày 25/10: đăng nhập fixture Student thành công, tạo intent 13 cho lớp 7 (120.000đ), nhận URL HTTPS VNPay có chữ ký, hủy intent thành công; DB xác nhận EXPIRED, cancelled=true, không tạo payment. CORS localhost:5173 cho phép, origin ngoài danh sách trả 403. Đây là kiểm tra API; chưa thay thế giao dịch thẻ Sandbox thành công nhận IPN và tự ghi danh.
 
 - Kiểm tra template cả `.env` và `.env.docker`, importer PowerShell, cấu hình Docker và lỗi startup không lộ secret.
 - Test checkout giữ chỗ, retry cùng intent, khác chủ sở hữu, lớp đầy/trùng lịch, intent hết hạn/hủy.
