@@ -248,6 +248,43 @@ const ROUTES: [method: string, pattern: RegExp, handler: PreviewHandler][] = [
       return session;
     },
   ],
+  [
+    "POST",
+    /^\/meetings\/sessions\/(\d+)\/token$/,
+    ({ state, user, ids }) => {
+      requireRole(user, "ROLE_ADMIN", "ROLE_TUTOR", "ROLE_STUDENT");
+      const session = findSession(state, ids[0]);
+      return {
+        token: "preview_mock_jwt_token",
+        serverUrl: "ws://localhost:7880",
+        roomName: `classroom-session-${session.sessionId}`,
+        role: user.role === "ROLE_TUTOR" ? "TUTOR" : user.role === "ROLE_ADMIN" ? "ADMIN" : "STUDENT",
+        sessionId: session.sessionId,
+        classGroupId: session.classGroupId,
+        courseTitle: "Lớp học trực tuyến VietTriTutor",
+        sessionNumber: session.sessionNumber,
+        tutorName: "Thầy Trần Minh Hoàng",
+      };
+    },
+  ],
+  [
+    "POST",
+    /^\/meetings\/classes\/(\d+)\/token$/,
+    ({ user, ids }) => {
+      requireRole(user, "ROLE_ADMIN", "ROLE_TUTOR", "ROLE_STUDENT");
+      return {
+        token: "preview_mock_jwt_token",
+        serverUrl: "ws://localhost:7880",
+        roomName: `classroom-class-${ids[0]}`,
+        role: user.role === "ROLE_TUTOR" ? "TUTOR" : user.role === "ROLE_ADMIN" ? "ADMIN" : "STUDENT",
+        sessionId: null,
+        classGroupId: ids[0],
+        courseTitle: "Lớp học trực tuyến VietTriTutor",
+        sessionNumber: 1,
+        tutorName: "Thầy Trần Minh Hoàng",
+      };
+    },
+  ],
 
   // Xin nghỉ
   [

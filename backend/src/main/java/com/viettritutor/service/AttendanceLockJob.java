@@ -20,19 +20,28 @@ public class AttendanceLockJob {
     private final Clock clock;
 
     @Scheduled(fixedDelayString = "${app.jobs.attendance-lock-delay-ms:60000}")
-    public void run() {
+    public int run() {
         long afterId = 0;
         List<Long> batch;
+        int lockedCount = 0;
         do {
             batch = sessions.findAttendanceLockCandidates(LocalDate.now(clock), afterId, PageRequest.of(0, 200));
             for (Long sessionId : batch) {
                 try {
-                    attendance.autoLock(sessionId);
+                    if (attendance.autoLock(sessionId)) {
+                        lockedCount++;
+                        log.info("Attendance auto-locked successfully for session {}", sessionId);
+                    }
                 } catch (RuntimeException exception) {
                     log.warn("Could not finalize attendance for session {}: {}", sessionId, exception.getMessage());
                 }
                 afterId = sessionId;
             }
         } while (batch.size() == 200);
+
+        if (lockedCount > 0) {
+            log.info("AttendanceLockJob: Auto-locked {} sessions", lockedCount);
+        }
+        return lockedCount;
     }
 }

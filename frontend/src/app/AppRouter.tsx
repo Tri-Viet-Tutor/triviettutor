@@ -64,6 +64,9 @@ import { StudentLeavePage } from "@/pages/student/StudentLeavePage";
 import { StudentEnrollmentsPage } from "@/pages/student/StudentEnrollmentsPage";
 import { ProfilePage } from "@/pages/dashboard/ProfilePage";
 
+// Phòng học trực tuyến LiveKit
+import ClassroomPage from "@/pages/ClassroomPage";
+
 //Khai báo toàn bộ tuyến đường (route) của ứng dụng.
 //admin / gia sư / học viên đều qua 2 lớp chặn: phải đăng nhập (PrivateRoute)
 //và đúng vai trò (RoleRoute); trang hồ sơ dùng chung một component cho cả 3 vai trò.
@@ -142,6 +145,11 @@ export function AppRouter() {
               <Route path={ROUTES.studentProfile} element={<ProfilePage />} />
             </Route>
           </Route>
+        </Route>
+
+        {/* ── Phòng học trực tuyến LiveKit SFU (Admin, Gia sư, Học viên) ─ */}
+        <Route element={<PrivateRoute />}>
+          <Route path={ROUTES.classroom} element={<ClassroomPage />} />
         </Route>
 
         {/* ── Trang lỗi ────────────────────────────────────────────────── */}

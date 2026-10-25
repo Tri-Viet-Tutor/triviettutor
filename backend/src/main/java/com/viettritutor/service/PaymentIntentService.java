@@ -44,7 +44,7 @@ public class PaymentIntentService {
         if (ttlMinutes < 1) throw new IllegalStateException("Payment intent TTL must be positive");
         OffsetDateTime now = OffsetDateTime.now(clock);
         PaymentIntent intent = intents.saveAndFlush(PaymentIntent.builder().studentId(student.getId()).classGroupId(classId)
-                .courseId(admission.course().getId()).amount(admission.course().getBasePrice1on1())
+                .courseId(admission.course().getId()).amount(admission.expectedAmount())
                 .status(PaymentIntentStatus.PENDING).createdAt(now).expiresAt(now.plusMinutes(ttlMinutes)).build());
         idempotency.remember(student.getId(), PaymentOperationType.CREATE_INTENT, key, request, intent.getId());
         return PaymentIntentResponse.from(intent, clock);
@@ -78,7 +78,7 @@ public class PaymentIntentService {
         if (intent.getStatus() != PaymentIntentStatus.PENDING) throw new BusinessException(ErrorCode.PAYMENT_INTENT_NOT_PENDING);
         var admission = support.admission(classGroup, student.getId());
         if (!intent.getCourseId().equals(admission.course().getId())
-                || intent.getAmount().compareTo(admission.course().getBasePrice1on1()) != 0) {
+                || intent.getAmount().compareTo(admission.expectedAmount()) != 0) {
             throw new BusinessException(ErrorCode.PAYMENT_PRICE_CHANGED);
         }
         boolean successful = gateway.confirm();
@@ -91,7 +91,7 @@ public class PaymentIntentService {
         if (successful) {
             Enrollment enrollment = enrollments.saveAndFlush(Enrollment.builder().studentId(student.getId())
                     .classGroupId(classGroup.getId()).paymentId(payment.getId()).feeCharged(intent.getAmount())
-                    .discountRate(BigDecimal.ZERO).enrollmentSizeAtTime(admission.enrollmentSize()).status(EnrollmentStatus.ACTIVE)
+                    .discountRate(admission.discountRate()).enrollmentSizeAtTime(admission.enrollmentSize()).status(EnrollmentStatus.ACTIVE)
                     .enrolledAt(now).build());
             learning.activate(enrollment.getId(), student.getId(), classGroup.getId(), admission.start(), admission.end());
         }

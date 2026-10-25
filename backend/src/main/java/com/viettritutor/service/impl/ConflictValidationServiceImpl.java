@@ -31,13 +31,17 @@ public class ConflictValidationServiceImpl implements ConflictValidationService 
 
     @Override
     public List<ScheduleConflictResponse> checkTutor(Long tutorId, List<Session> requested, Set<Long> excludedSessionIds) {
-        if (requested.isEmpty()) {
+        if (requested == null || requested.isEmpty()) {
             return List.of();
         }
-        LocalDate from = requested.stream().map(Session::getSessionDate).min(LocalDate::compareTo).orElseThrow();
-        LocalDate to = requested.stream().map(Session::getSessionDate).max(LocalDate::compareTo).orElseThrow();
+        Set<Long> safeExcluded = excludedSessionIds != null ? excludedSessionIds : Set.of();
+        LocalDate from = requested.stream().map(Session::getSessionDate).filter(Objects::nonNull).min(LocalDate::compareTo).orElse(null);
+        LocalDate to = requested.stream().map(Session::getSessionDate).filter(Objects::nonNull).max(LocalDate::compareTo).orElse(null);
+        if (from == null || to == null) {
+            return List.of();
+        }
         List<Session> commitments = sessionRepository.findTutorCommitments(tutorId, from, to).stream()
-                .filter(session -> !excludedSessionIds.contains(session.getId())).toList();
+                .filter(session -> !safeExcluded.contains(session.getId())).toList();
         return findConflicts(requested, Stream.concat(commitments.stream(), requested.stream()).distinct().toList());
     }
 
@@ -61,26 +65,35 @@ public class ConflictValidationServiceImpl implements ConflictValidationService 
 
     @Override
     public List<ScheduleConflictResponse> checkStudent(Long studentId, List<Session> requested, Set<Long> excludedSessionIds) {
-        if (requested.isEmpty()) {
+        if (requested == null || requested.isEmpty()) {
             return List.of();
         }
-        LocalDate from = requested.stream().map(Session::getSessionDate).min(LocalDate::compareTo).orElseThrow();
-        LocalDate to = requested.stream().map(Session::getSessionDate).max(LocalDate::compareTo).orElseThrow();
+        Set<Long> safeExcluded = excludedSessionIds != null ? excludedSessionIds : Set.of();
+        LocalDate from = requested.stream().map(Session::getSessionDate).filter(Objects::nonNull).min(LocalDate::compareTo).orElse(null);
+        LocalDate to = requested.stream().map(Session::getSessionDate).filter(Objects::nonNull).max(LocalDate::compareTo).orElse(null);
+        if (from == null || to == null) {
+            return List.of();
+        }
         return findConflicts(requested, sessionRepository.findStudentCommitments(studentId, from, to).stream()
-                .filter(session -> !excludedSessionIds.contains(session.getId())).toList());
+                .filter(session -> !safeExcluded.contains(session.getId())).toList());
     }
 
     private List<ScheduleConflictResponse> findConflicts(List<Session> requested, List<Session> existing) {
         return requested.stream()
+                .filter(Objects::nonNull)
                 .filter(candidate -> candidate.getStatus() != SessionStatus.CANCELLED)
+                .filter(candidate -> candidate.getSessionDate() != null && candidate.getStartTime() != null && candidate.getEndTime() != null)
                 .flatMap(candidate -> existing.stream()
+                        .filter(Objects::nonNull)
                         .filter(conflict -> conflict.getStatus() != SessionStatus.CANCELLED)
+                        .filter(conflict -> conflict.getSessionDate() != null && conflict.getStartTime() != null && conflict.getEndTime() != null)
                         .filter(conflict -> candidate != conflict
                                 && (candidate.getId() == null || !Objects.equals(candidate.getId(), conflict.getId())))
                         .filter(conflict -> candidate.getSessionDate().equals(conflict.getSessionDate()))
                         .filter(conflict -> TimeOverlap.isOverlapping(candidate.getStartTime(), candidate.getEndTime(),
                                 conflict.getStartTime(), conflict.getEndTime()))
                         .map(conflict -> ScheduleConflictResponse.from(candidate, conflict)))
+                .distinct()
                 .toList();
     }
 }

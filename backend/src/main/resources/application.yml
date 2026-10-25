@@ -20,7 +20,7 @@ spring:
             enable: true
   data:
     mongodb:
-      uri: ${MONGODB_URI:}
+      uri: ${MONGODB_URI:mongodb://localhost:27017/triviettutor}
       database: ${MONGODB_DATABASE:triviettutor}
   jpa:
     open-in-view: false
@@ -61,3 +61,10 @@ app:
     vnpay-return-path: ${WALLET_VNPAY_RETURN_PATH:/student/wallet}
   jwt:
     expiration-ms: 86400000 # 24 hours
+
+# LiveKit settings
+livekit:
+  url: ${LIVEKIT_URL:ws://localhost:7880}
+  api:
+    key: ${LIVEKIT_API_KEY:devkey}
+    secret: ${LIVEKIT_API_SECRET:secret}

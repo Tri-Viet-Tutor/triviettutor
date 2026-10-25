@@ -294,6 +294,19 @@ export interface MeetingUrlRequest {
   meetingUrl: string;
 }
 
+/** dto.meeting.MeetingTokenResponse — POST /api/v1/meetings/sessions/{sessionId}/token */
+export interface MeetingTokenResponse {
+  token: string;
+  serverUrl: string;
+  roomName: string;
+  role: "TUTOR" | "STUDENT" | "ADMIN";
+  sessionId: number | null;
+  classGroupId: number | null;
+  courseTitle: string;
+  sessionNumber: number;
+  tutorName: string | null;
+}
+
 /** Tham số lọc của GET /me/sessions */
 export interface MySessionsQuery {
   from?: IsoDate;

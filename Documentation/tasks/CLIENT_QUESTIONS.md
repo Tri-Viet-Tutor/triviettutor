@@ -30,3 +30,4 @@ Whenever business decisions or requirement trade-offs require Client confirmatio
 | Decision ID | Topic | Selected Decision | Sign-off Date | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | `DECISION-000` | Squad Operating Model | Autonomous Squad with User as Client/Stakeholder | 2026-10-24 | RESOLVED |
+| `DECISION-001` | Core Milestone Priority Directive | **Top Priority**: Làm chức năng meeting online. Ưu tiên bốc và giải quyết ticket meeting online trước tiên. Sau khi xong mới làm tiếp các chức năng khác bám theo main flow. | 2026-10-25 | RESOLVED |

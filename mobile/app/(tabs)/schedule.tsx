@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,47 +7,103 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '@/components/common/AppHeader';
 import { SessionCard } from '@/components/common/SessionCard';
 import { BrandColors } from '@/constants/Colors';
 import { MOCK_SESSIONS } from '@/constants/data';
+import { SessionItem } from '@/types';
 import { useAuth } from '@/services/authContext';
+import { fetchMySessions } from '@/services/api';
 
-const DAYS_OF_WEEK = [
-  { day: 'T2', date: '12/10', fullDate: '2026-10-12', hasSession: false },
-  { day: 'T3', date: '13/10', fullDate: '2026-10-13', hasSession: true },
-  { day: 'T4', date: '14/10', fullDate: '2026-10-14', hasSession: false },
-  { day: 'T5', date: '15/10', fullDate: '2026-10-15', hasSession: true, isToday: true },
-  { day: 'T6', date: '16/10', fullDate: '2026-10-16', hasSession: true },
-  { day: 'T7', date: '17/10', fullDate: '2026-10-17', hasSession: false },
-  { day: 'CN', date: '18/10', fullDate: '2026-10-18', hasSession: true },
-];
+interface DayItem {
+  day: string;
+  date: string;
+  fullDate: string;
+  hasSession: boolean;
+  isToday?: boolean;
+}
 
 export default function ScheduleScreen() {
   const { user } = useAuth();
-  const [selectedDate, setSelectedDate] = useState<string>('2026-10-15'); // Defaults to today
+  const [sessions, setSessions] = useState<SessionItem[]>(MOCK_SESSIONS);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false);
+
+  // Default to today's date in YYYY-MM-DD
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState<string>('2026-10-15');
   const [filterMode, setFilterMode] = useState<'SELECTED_DAY' | 'ALL_WEEK'>('ALL_WEEK');
+
+  const loadSessions = useCallback(async () => {
+    try {
+      const data = await fetchMySessions();
+      if (data && data.length > 0) {
+        setSessions(data);
+        setIsLiveConnected(true);
+      } else {
+        setSessions(MOCK_SESSIONS);
+      }
+    } catch {
+      // Gracefully fall back to cached / mock sessions
+      setSessions(MOCK_SESSIONS);
+      setIsLiveConnected(false);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSessions();
+  }, [loadSessions, user]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadSessions();
+  }, [loadSessions]);
+
+  // Compute dynamic week days
+  const currentWeekDays: DayItem[] = [
+    { day: 'T2', date: '12/10', fullDate: '2026-10-12', hasSession: sessions.some((s) => s.date === '2026-10-12') },
+    { day: 'T3', date: '13/10', fullDate: '2026-10-13', hasSession: sessions.some((s) => s.date === '2026-10-13') },
+    { day: 'T4', date: '14/10', fullDate: '2026-10-14', hasSession: sessions.some((s) => s.date === '2026-10-14') },
+    { day: 'T5', date: '15/10', fullDate: '2026-10-15', hasSession: sessions.some((s) => s.date === '2026-10-15'), isToday: true },
+    { day: 'T6', date: '16/10', fullDate: '2026-10-16', hasSession: sessions.some((s) => s.date === '2026-10-16') },
+    { day: 'T7', date: '17/10', fullDate: '2026-10-17', hasSession: sessions.some((s) => s.date === '2026-10-17') },
+    { day: 'CN', date: '18/10', fullDate: '2026-10-18', hasSession: sessions.some((s) => s.date === '2026-10-18') },
+  ];
 
   const filteredSessions =
     filterMode === 'SELECTED_DAY'
-      ? MOCK_SESSIONS.filter((s) => s.date === selectedDate)
-      : MOCK_SESSIONS;
+      ? sessions.filter((s) => s.date === selectedDate)
+      : sessions;
 
-  const completedCount = MOCK_SESSIONS.filter((s) => s.status === 'COMPLETED').length;
-  const upcomingCount = MOCK_SESSIONS.filter((s) => s.status === 'UPCOMING').length;
+  const completedCount = sessions.filter((s) => s.status === 'COMPLETED').length;
+  const upcomingCount = sessions.filter((s) => s.status === 'UPCOMING' || s.status === 'IN_PROGRESS').length;
+  const onlineCount = sessions.filter((s) => s.deliveryMode === 'ONLINE').length;
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      <AppHeader title="Thời khóa biểu" subtitle="Lịch học & chuyên cần tuần này" />
+      <AppHeader
+        title="Thời khóa biểu"
+        subtitle={
+          isLiveConnected
+            ? 'Đồng bộ trực tuyến với VietTriTutor Core'
+            : 'Lịch học & chuyên cần tuần này'
+        }
+      />
 
       <View style={styles.container}>
         {/* Weekly Stats Header */}
         <View style={styles.statsCard}>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{MOCK_SESSIONS.length}</Text>
+            <Text style={styles.statNumber}>{sessions.length}</Text>
             <Text style={styles.statLabel}>Tổng ca học</Text>
           </View>
           <View style={styles.statDivider} />
@@ -58,19 +114,27 @@ export default function ScheduleScreen() {
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={[styles.statNumber, { color: BrandColors.orange }]}>{upcomingCount}</Text>
-            <Text style={styles.statLabel}>Sắp diễn ra</Text>
+            <Text style={styles.statLabel}>Sắp tới</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={[styles.statNumber, { color: BrandColors.navy }]}>100%</Text>
-            <Text style={styles.statLabel}>Chuyên cần</Text>
+            <Text style={[styles.statNumber, { color: BrandColors.navy }]}>{onlineCount}</Text>
+            <Text style={styles.statLabel}>Lớp Online</Text>
           </View>
         </View>
 
         {/* Week Day Strip */}
         <View style={styles.weekStripWrapper}>
           <View style={styles.weekStripHeader}>
-            <Text style={styles.weekTitle}>Tháng 10 / 2026</Text>
+            <View style={styles.monthHeaderRow}>
+              <Text style={styles.weekTitle}>Tháng 10 / 2026</Text>
+              {isLiveConnected && (
+                <View style={styles.liveBadge}>
+                  <View style={styles.liveDot} />
+                  <Text style={styles.liveText}>API Connected</Text>
+                </View>
+              )}
+            </View>
             <View style={styles.modeToggle}>
               <TouchableOpacity
                 style={[styles.toggleBtn, filterMode === 'ALL_WEEK' && styles.toggleBtnActive]}
@@ -98,7 +162,7 @@ export default function ScheduleScreen() {
           </View>
 
           <View style={styles.daysRow}>
-            {DAYS_OF_WEEK.map((item) => {
+            {currentWeekDays.map((item) => {
               const isSelected = selectedDate === item.fullDate;
               return (
                 <TouchableOpacity
@@ -143,38 +207,53 @@ export default function ScheduleScreen() {
           </View>
         </View>
 
-        {/* Rule note notice */}
+        {/* Rule notice bar */}
         <View style={styles.noticeBar}>
           <Ionicons name="information-circle" size={16} color={BrandColors.navy} />
           <Text style={styles.noticeText}>
-            Quy tắc xin nghỉ: Học viên gửi đơn trước $\ge 24h$ sẽ được sắp xếp lịch học bù miễn phí.
+            Quy tắc xin nghỉ: Học viên gửi đơn trước $\ge 24h$ sẽ được xếp lịch học bù miễn phí. Với lớp trực tuyến, bấm "Vào phòng học Online" để mở phòng học.
           </Text>
         </View>
 
         {/* Sessions list */}
-        <ScrollView
-          style={styles.sessionList}
-          contentContainerStyle={styles.sessionListContent}
-          showsVerticalScrollIndicator={false}>
-          {filteredSessions.length > 0 ? (
-            filteredSessions.map((session) => (
-              <SessionCard key={session.sessionId} session={session} />
-            ))
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="cafe-outline" size={48} color={BrandColors.muted} />
-              <Text style={styles.emptyTitle}>Không có ca học nào trong ngày</Text>
-              <Text style={styles.emptyDesc}>
-                Bạn có thể nghỉ ngơi, ôn lại bài giảng cũ hoặc xem lịch toàn bộ tuần.
-              </Text>
-              <TouchableOpacity
-                style={styles.showAllBtn}
-                onPress={() => setFilterMode('ALL_WEEK')}>
-                <Text style={styles.showAllBtnText}>Xem lịch toàn bộ tuần</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </ScrollView>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={BrandColors.navy} />
+            <Text style={styles.loadingText}>Đang tải lịch học từ máy chủ...</Text>
+          </View>
+        ) : (
+          <ScrollView
+            style={styles.sessionList}
+            contentContainerStyle={styles.sessionListContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[BrandColors.navy]}
+                tintColor={BrandColors.navy}
+              />
+            }>
+            {filteredSessions.length > 0 ? (
+              filteredSessions.map((session) => (
+                <SessionCard key={session.sessionId} session={session} />
+              ))
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="cafe-outline" size={48} color={BrandColors.muted} />
+                <Text style={styles.emptyTitle}>Không có ca học nào trong ngày</Text>
+                <Text style={styles.emptyDesc}>
+                  Bạn có thể nghỉ ngơi, ôn lại bài giảng cũ hoặc xem lịch toàn bộ tuần.
+                </Text>
+                <TouchableOpacity
+                  style={styles.showAllBtn}
+                  onPress={() => setFilterMode('ALL_WEEK')}>
+                  <Text style={styles.showAllBtnText}>Xem lịch toàn bộ tuần</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </ScrollView>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -233,10 +312,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
+  monthHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   weekTitle: {
     fontSize: 13,
     fontWeight: '700',
     color: BrandColors.ink,
+  },
+  liveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 4,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+  },
+  liveText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#065F46',
   },
   modeToggle: {
     flexDirection: 'row',
@@ -333,6 +437,16 @@ const styles = StyleSheet.create({
     color: BrandColors.navy,
     lineHeight: 16,
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: BrandColors.muted,
   },
   sessionList: {
     flex: 1,

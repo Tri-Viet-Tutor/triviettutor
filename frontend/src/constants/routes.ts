@@ -53,5 +53,7 @@ export const ROUTES = {
   /** Các lớp đã đóng học phí */
   studentEnrollments: "/student/classes",
   studentProfile: "/student/profile",
+  /** Phòng học trực tuyến LiveKit SFU (chia sẻ màn hình, bảng trắng, video 1-nhiều) */
+  classroom: "/classroom/:sessionId",
   forbidden: "/403",
 } as const;

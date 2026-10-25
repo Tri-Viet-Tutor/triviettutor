@@ -242,4 +242,77 @@ class VnpayPaymentIntegrationTest {
         assertThat(enrollment.getStatus()).isEqualTo(EnrollmentStatus.REFUNDED);
         assertThat(learning.findByEnrollmentId(enrollment.getId()).orElseThrow().getStatus()).isEqualTo(LearningScheduleStatus.CANCELLED);
     }
+
+    ClassGroup newGroupClass(BigDecimal basePrice) {
+        Course course = courses.saveAndFlush(Course.builder().name("Group fixture").subject("MATH")
+                .gradeLevel(GradeLevel.GRADE_11).basePrice1on1(basePrice)
+                .totalSessions(2).durationMinutes(120).active(true).build());
+        LocalDate start = LocalDate.now(clock).plusWeeks(3).with(java.time.temporal.TemporalAdjusters.nextOrSame(DayOfWeek.TUESDAY));
+        ClassGroup c = classes.saveAndFlush(ClassGroup.builder().course(course).classCode(UUID.randomUUID().toString())
+                .classType(ClassType.GROUP).status(ClassStatus.ENROLLING).enrollmentDeadline(start.minusDays(3))
+                .deliveryMode(DeliveryMode.ONLINE).schedulePattern(SchedulePattern.TUE_THU_SAT).timeSlot(TimeSlot.SLOT_MORNING)
+                .startDate(start).totalSessions(2).maxStudents(8).build());
+        for (int i = 0; i < 2; i++) {
+            sessions.saveAndFlush(Session.builder().classGroupId(c.getId()).sessionNumber(i + 1)
+                    .sessionDate(start.plusDays(2L * i)).startTime(LocalTime.of(8, 0)).endTime(LocalTime.of(10, 0))
+                    .status(SessionStatus.SCHEDULED).build());
+        }
+        return c;
+    }
+
+    @Test
+    void groupClassProgressiveDiscountMatrixAndCapacityLimit() throws Exception {
+        BigDecimal base = new BigDecimal("1000000");
+        ClassGroup groupClass = newGroupClass(base);
+
+        BigDecimal[] expectedAmounts = {
+                new BigDecimal("800000"),
+                new BigDecimal("800000"),
+                new BigDecimal("800000"),
+                new BigDecimal("650000"),
+                new BigDecimal("650000"),
+                new BigDecimal("600000"),
+                new BigDecimal("600000"),
+                new BigDecimal("600000")
+        };
+        BigDecimal[] expectedDiscounts = {
+                new BigDecimal("0.20"),
+                new BigDecimal("0.20"),
+                new BigDecimal("0.20"),
+                new BigDecimal("0.35"),
+                new BigDecimal("0.35"),
+                new BigDecimal("0.40"),
+                new BigDecimal("0.40"),
+                new BigDecimal("0.40")
+        };
+
+        for (int i = 0; i < 8; i++) {
+            User s = user("STUDENT");
+            long intentId = quote(s, groupClass, UUID.randomUUID().toString());
+            PaymentIntent intent = intents.findById(intentId).orElseThrow();
+            assertThat(intent.getAmount()).isEqualByComparingTo(expectedAmounts[i]);
+
+            request("POST", "/api/v1/payment-intents/" + intentId + "/vnpay", null, s, null, 200);
+
+            ipn(callback(intentId, "00"), "00");
+
+            Payment paid = payments.findByIntentId(intentId).orElseThrow();
+            assertThat(paid.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
+
+            Enrollment enrollment = enrollments.findByPaymentId(paid.getId()).orElseThrow();
+            assertThat(enrollment.getStatus()).isEqualTo(EnrollmentStatus.ACTIVE);
+            assertThat(enrollment.getFeeCharged()).isEqualByComparingTo(expectedAmounts[i]);
+            assertThat(enrollment.getDiscountRate()).isEqualByComparingTo(expectedDiscounts[i]);
+            assertThat(enrollment.getEnrollmentSizeAtTime()).isEqualTo(i + 1);
+        }
+
+        User rejected = user("STUDENT");
+        http.perform(post("/api/v1/payment-intents")
+                .header("Authorization", token(rejected))
+                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .contentType("application/json")
+                .content(json.writeValueAsString(Map.of("classGroupId", groupClass.getId()))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("CLASS_FULL"));
+    }
 }
