@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { SessionItem } from '@/types';
 import { BrandColors } from '@/constants/Colors';
 import { Badge } from './Badge';
@@ -57,11 +59,67 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, onLeaveReques
     );
   };
 
-  const handleJoinClass = () => {
-    Alert.alert(
-      'Vào lớp học',
-      `Địa điểm / Phòng học:\n${session.roomOrLink}\n\nChúc bạn có một buổi học bổ ích và tập trung cao độ!`
-    );
+  const getMeetingUrl = (): string => {
+    if (session.meetingUrl && session.meetingUrl.trim().length > 0) {
+      const trimmed = session.meetingUrl.trim();
+      return trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
+    }
+
+    const link = session.roomOrLink?.trim() || '';
+    if (link.startsWith('http://') || link.startsWith('https://')) {
+      return link;
+    }
+    if (link.includes('meet.google.com') || link.includes('zoom.us') || link.includes('livekit')) {
+      return `https://${link}`;
+    }
+
+    // Default internal web classroom link for VietTriTutor LiveKit room
+    return `https://viettritutor.edu.vn/classroom/${session.sessionId}`;
+  };
+
+  const handleJoinClass = async () => {
+    if (session.deliveryMode === 'ONLINE') {
+      const url = getMeetingUrl();
+      try {
+        if (Platform.OS === 'web') {
+          window.open(url, '_blank');
+        } else {
+          await WebBrowser.openBrowserAsync(url);
+        }
+      } catch {
+        try {
+          const supported = await Linking.canOpenURL(url);
+          if (supported) {
+            await Linking.openURL(url);
+          } else {
+            Alert.alert('Liên kết phòng học', `Không thể tự động mở trình duyệt. Vui lòng truy cập:\n${url}`);
+          }
+        } catch {
+          Alert.alert('Liên kết phòng học', `Địa chỉ phòng học trực tuyến:\n${url}`);
+        }
+      }
+    } else {
+      // Offline classroom
+      const address = session.roomOrLink || 'Trung tâm Gia sư VietTriTutor, Phú Thọ';
+      const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(address)}`;
+      Alert.alert(
+        'Phòng học trực tiếp (Offline)',
+        `Địa điểm: ${address}\n\nBạn có muốn mở bản đồ chỉ đường không?`,
+        [
+          { text: 'Đóng', style: 'cancel' },
+          {
+            text: 'Mở Google Maps',
+            onPress: async () => {
+              try {
+                await Linking.openURL(mapsUrl);
+              } catch {
+                Alert.alert('Thông báo', `Địa chỉ: ${address}`);
+              }
+            },
+          },
+        ]
+      );
+    }
   };
 
   return (
@@ -88,16 +146,26 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, onLeaveReques
           <Text style={styles.metaText}>{session.timeSlotHours}</Text>
         </View>
 
-        <View style={styles.metaRow}>
+        <TouchableOpacity
+          style={styles.metaRow}
+          onPress={session.deliveryMode === 'ONLINE' ? handleJoinClass : undefined}
+          activeOpacity={session.deliveryMode === 'ONLINE' ? 0.7 : 1}>
           <Ionicons
             name={session.deliveryMode === 'ONLINE' ? 'videocam' : 'location'}
             size={16}
-            color={BrandColors.navy}
+            color={session.deliveryMode === 'ONLINE' ? BrandColors.orange : BrandColors.navy}
           />
-          <Text style={styles.metaText} numberOfLines={1}>
-            {session.roomOrLink}
+          <Text
+            style={[
+              styles.metaText,
+              session.deliveryMode === 'ONLINE' && styles.onlineLinkText,
+            ]}
+            numberOfLines={1}>
+            {session.deliveryMode === 'ONLINE'
+              ? `${session.roomOrLink} (Bấm để tham gia)`
+              : session.roomOrLink}
           </Text>
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.metaRow}>
           <Ionicons name="person" size={16} color={BrandColors.muted} />
@@ -109,16 +177,19 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, onLeaveReques
       {session.status !== 'COMPLETED' && (
         <View style={styles.actionRow}>
           <TouchableOpacity
-            style={styles.joinBtn}
+            style={[
+              styles.joinBtn,
+              session.deliveryMode === 'ONLINE' && styles.joinBtnOnline,
+            ]}
             onPress={handleJoinClass}
             activeOpacity={0.8}>
             <Ionicons
-              name={session.deliveryMode === 'ONLINE' ? 'videocam-outline' : 'navigate-outline'}
+              name={session.deliveryMode === 'ONLINE' ? 'videocam' : 'navigate-outline'}
               size={16}
               color="#FFFFFF"
             />
             <Text style={styles.joinBtnText}>
-              {session.deliveryMode === 'ONLINE' ? 'Vào phòng học' : 'Chỉ đường tới lớp'}
+              {session.deliveryMode === 'ONLINE' ? 'Vào phòng học Online' : 'Chỉ đường tới lớp'}
             </Text>
           </TouchableOpacity>
 
@@ -204,6 +275,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     flex: 1,
   },
+  onlineLinkText: {
+    color: BrandColors.navy,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -219,6 +295,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     gap: 6,
+  },
+  joinBtnOnline: {
+    backgroundColor: BrandColors.orange,
   },
   joinBtnText: {
     color: '#FFFFFF',

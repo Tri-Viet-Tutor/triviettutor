@@ -96,6 +96,31 @@ export interface SessionItem {
   status: SessionStatus;
   attendance?: AttendanceStatus;
   topic: string;
+  meetingUrl?: string;
+}
+
+export interface BackendSessionResponse {
+  sessionId: number;
+  classGroupId: number;
+  sessionNumber: number;
+  date: string; // YYYY-MM-DD
+  startTime: string; // HH:mm:ss
+  endTime: string; // HH:mm:ss
+  status: SessionStatus;
+  scheduledTutorId?: number | null;
+  actualTutorId?: number | null;
+  meetingUrl?: string | null;
+  topicId?: number | null;
+  originalSessionId?: number | null;
+  attendanceLocked?: boolean;
+  attendanceNeedsReview?: boolean;
+}
+
+export interface BackendApiResponse<T> {
+  success: boolean;
+  message?: string;
+  data: T;
+  errorCode?: string | null;
 }
 
 export interface LeaveRequest {
