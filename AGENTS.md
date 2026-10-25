@@ -1,23 +1,38 @@
-# Quy Tắc Phát Triển Dự Án AIVES (Agent Instructions)
+# Quy Tac Phat Trien Du An TriVietTutor (Agent Instructions)
 
-Tất cả các AI Agent và Developer khi làm việc trong repository này bắt buộc phải tuân thủ nghiêm ngặt các nguyên tắc sau:
+Tat ca cac AI Agent va Developer khi lam viec trong repository nay bat buoc phai tuan thu nghiem ngat cac nguyen tac sau:
 
-## 1. Docs Là Source of Truth (Single Source of Truth)
+## 1. Docs La Source of Truth (Single Source of Truth)
 
-- Toàn bộ đặc tả hệ thống nằm trong thư mục `Documentation/`.
-- Mọi thay đổi code mới (Backend `backend`, `mobile` `frontend`) **phải bám sát 100% theo tài liệu**.
+- Toan bo dac ta he thong nam trong thu muc `Documentation/`.
+- Moi thay doi code moi (Backend `backend`, Frontend `frontend`, Mobile `mobile`) **phai bam sat 100% theo tai lieu**.
 
-## 2. Quy Trình "Doc First - Code Later"
+## 2. Quy Trinh "Doc First - Code Later"
 
-- Khi gặp yêu cầu mới, tính năng mới hoặc luồng mà tài liệu chưa định nghĩa:
-  1. **Không được tự ý viết code.**
-  2. Trao đổi, xác nhận (confirm) phương án với người dùng.
-  3. **Cập nhật tài liệu trước** (kiến trúc, business rules, API, UI flow).
-  4. Sau khi tài liệu đã chuẩn hóa, mới được tiến hành viết code theo tài liệu.
+- Khi gap yeu cau moi, tinh nang moi hoac luong ma tai lieu chua dinh nghia:
+  1. **Khong duoc tu y viet code.**
+  2. Trao doi, xac nhan (confirm) phuong an voi nguoi dung.
+  3. **Cap nhat tai lieu truoc** (kien truc, business rules, API, UI flow).
+  4. Sau khi tai lieu da chuan hoa, moi duoc tien hanh viet code theo tai lieu.
 
-## 3. Cấm Hardcode Cấu Hình & Dữ Liệu (No Hardcoding)
+## 3. Cam Hardcode Cau Hinh & Du Lieu (No Hardcoding)
 
-- Tuyệt đối không hardcode URL, domain, port, credentials, secret key trong mã nguồn.
-- Mọi giá trị cấu hình phải đọc từ biến môi trường (`.env`, `@Value`, `import.meta.env`).
-- Tuyệt đối không dùng ký tự wildcard bất hợp lệ (như `*` trong `http://localhost:*`) trong các URL hoặc thuộc tính định tuyến vì sẽ làm hỏng URL routing của trình duyệt.
-- Với các đường dẫn redirect/callback/email link: ưu tiên nhận diện động từ HTTP header `Origin`/`Referer` hoặc trường client gửi lên, kết hợp fallback biến môi trường đã được sanitize.
+- Tuyet doi khong hardcode URL, domain, port, credentials, secret key trong ma nguon.
+- Moi gia tri cau hinh phai doc tu bien moi truong (`.env`, `@Value`, `import.meta.env`).
+- Tuyet doi khong dung ky tu wildcard bat hop le (nhu `*` trong `http://localhost:*`) trong cac URL hoac thuoc tinh dinh tuyen.
+
+## 4. Khong Tu Y Chay Test (No Unrequested Tests)
+
+- **Tuyet doi khong bao gio tu y chay test** (`mvn test`, `npm test`, test runners) tru khi nguoi dung yeu cau truc tiep.
+- Khi can build hoac package du an, bat buoc phai bo qua buoc test (vi du: `-DskipTests`).
+
+## 5. Bat Buoc Commit Va Push Len Main Sau Moi Thay Doi (Mandatory Git Delivery)
+
+- **Tat ca cac role (BA, PM, PO, Tech Lead, Backend, Frontend, QA, UI-UX, Architect) khi hoan thanh bat ky thay doi nao (chinh sua docs, cap nhat ticket, viet code, sua bug) deu BAT BUOC phai commit va push ngay len `origin main`**.
+- Khong bao gio duoc de lai thay doi chua commit (uncommitted changes) hoac chua push (unpushed commits).
+- Quy trinh thuc hien:
+  1. `git status` kiem tra cac file da thay doi/tao moi.
+  2. `git add <files>` stage dung cac file lien quan.
+  3. `git commit -m "[<role/ticket-id>] <mo ta cong viec>"`
+  4. `git pull --rebase origin main` (neu can giai quyet conflicts)
+  5. `git push origin main`
