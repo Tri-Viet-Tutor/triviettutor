@@ -85,6 +85,10 @@ export type ErrorCode =
   | "CLASS_NOT_ENROLLING"
   | "ENROLLMENT_ALREADY_EXISTS"
   | "REFUND_NOT_ALLOWED"
+  | "WALLET_INSUFFICIENT_FUNDS"
+  | "WALLET_INVALID_TOPUP_AMOUNT"
+  | "WALLET_TOPUP_NOT_FOUND"
+  | "WALLET_BALANCE_LIMIT"
   | "ATTENDANCE_LOCKED"
   | "SESSION_NOT_IN_PROGRESS"
   | "ATTENDANCE_NOT_FOUND"
@@ -642,7 +646,7 @@ export interface TuitionPayment {
   enrollmentId: number | null;
   amount: number;
   refundedAmount: number;
-  method: "MOCK" | "VNPAY";
+  method: "MOCK" | "VNPAY" | "WALLET";
   status: PaymentStatus;
   transactionRef: string;
   refundReason: string | null;

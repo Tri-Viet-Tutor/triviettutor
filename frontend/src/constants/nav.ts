@@ -23,6 +23,7 @@ export const STUDENT_NAV: PortalNavItem[] = [
   { to: ROUTES.studentEnrollments, label: "Lớp của tôi", shortLabel: "Lớp", icon: "local_library" },
   { to: ROUTES.studentCatalog, label: "Khóa học đang mở", shortLabel: "Khóa học", icon: "storefront" },
   { to: ROUTES.studentLeave, label: "Xin nghỉ", icon: "event_busy" },
+  { to: ROUTES.studentWallet, label: "Ví của tôi", shortLabel: "Ví", icon: "account_balance_wallet" },
 ];
 
 /** Các trang của khu gia sư. Hồ sơ mở từ menu avatar trên thanh trên. */

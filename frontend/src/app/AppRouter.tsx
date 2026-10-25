@@ -59,6 +59,7 @@ import { StudentHomePage } from "@/pages/student/StudentHomePage";
 import { StudentSchedulePage } from "@/pages/student/StudentSchedulePage";
 import { StudentCatalogPage } from "@/pages/student/StudentCatalogPage";
 import { StudentCheckoutPage } from "@/pages/student/StudentCheckoutPage";
+import { StudentWalletPage } from "@/pages/student/StudentWalletPage";
 import { StudentLeavePage } from "@/pages/student/StudentLeavePage";
 import { StudentEnrollmentsPage } from "@/pages/student/StudentEnrollmentsPage";
 import { ProfilePage } from "@/pages/dashboard/ProfilePage";
@@ -135,6 +136,7 @@ export function AppRouter() {
               <Route path={ROUTES.studentCatalog} element={<StudentCatalogPage />} />
               <Route path={ROUTES.studentCatalogLegacy} element={<LegacyRedirect to={ROUTES.studentCatalog} />} />
               <Route path={ROUTES.studentCheckout} element={<StudentCheckoutPage />} />
+              <Route path={ROUTES.studentWallet} element={<StudentWalletPage />} />
               <Route path={ROUTES.studentLeave} element={<StudentLeavePage />} />
               <Route path={ROUTES.studentEnrollments} element={<StudentEnrollmentsPage />} />
               <Route path={ROUTES.studentProfile} element={<ProfilePage />} />
