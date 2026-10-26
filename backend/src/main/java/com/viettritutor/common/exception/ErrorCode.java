@@ -121,6 +121,25 @@ public enum ErrorCode {
     CLASS_CONVERSION_NOT_ALLOWED (HttpStatus.UNPROCESSABLE_ENTITY, "Conversion requires a failed group class with exactly one active student"),
     CLASS_CONVERSION_CONFLICT (HttpStatus.CONFLICT, "A different conversion request already exists for this class"),
     INVALID_FEE_RESOLUTION (HttpStatus.BAD_REQUEST, "Invalid paid amount, adjustment, or settlement evidence"),
+
+    INVALID_HOMEWORK_DATE_RANGE (HttpStatus.BAD_REQUEST, "from must not be later than to"),
+    HOMEWORK_NOT_FOUND (HttpStatus.NOT_FOUND, "Homework not found"),
+    HOMEWORK_LOCKED (HttpStatus.UNPROCESSABLE_ENTITY, "Closed homework cannot be edited or reopened"),
+    HOMEWORK_PUBLISHED_EDIT_RESTRICTED (HttpStatus.UNPROCESSABLE_ENTITY, "Published content is immutable; only extend the deadline or increase maxScore"),
+    HOMEWORK_DEADLINE_PASSED (HttpStatus.UNPROCESSABLE_ENTITY, "The homework deadline has been reached"),
+    HOMEWORK_INVALID_DEADLINE (HttpStatus.BAD_REQUEST, "The homework deadline must be in the future"),
+    HOMEWORK_NOT_ACCEPTING (HttpStatus.UNPROCESSABLE_ENTITY, "Homework is not accepting student work"),
+    HOMEWORK_SESSION_CANCELLED (HttpStatus.UNPROCESSABLE_ENTITY, "The session is cancelled"),
+    LEARNING_VERSION_CONFLICT (HttpStatus.CONFLICT, "The record has changed; reload its current version"),
+    INVALID_RESOURCE_URL (HttpStatus.BAD_REQUEST, "Resource URL must use HTTPS without user information"),
+    SUBMISSION_NOT_FOUND (HttpStatus.NOT_FOUND, "Submission not found"),
+    SUBMISSION_NOT_STARTED (HttpStatus.UNPROCESSABLE_ENTITY, "Start the homework before saving or submitting"),
+    SUBMISSION_LOCKED (HttpStatus.UNPROCESSABLE_ENTITY, "The submission state does not permit this action"),
+    EMPTY_SUBMISSION (HttpStatus.BAD_REQUEST, "Provide content or a resource URL before submitting"),
+    SUBMISSION_NOT_SUBMITTED (HttpStatus.UNPROCESSABLE_ENTITY, "Only submitted work can be graded"),
+    INVALID_SUBMISSION_FILTER (HttpStatus.BAD_REQUEST, "The submission list supports SUBMITTED or GRADED"),
+    INVALID_HOMEWORK_SCORE (HttpStatus.BAD_REQUEST, "Score must not exceed maxScore"),
+    GRADING_REASON_REQUIRED (HttpStatus.BAD_REQUEST, "An audit reason is required to revise a grade"),
     INVALID_STATUS_TRANSITION (HttpStatus.UNPROCESSABLE_ENTITY, "This status transition is not allowed");
 
     private final HttpStatus httpStatus;
