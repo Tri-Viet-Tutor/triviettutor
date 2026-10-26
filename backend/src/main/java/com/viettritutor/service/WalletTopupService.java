@@ -11,6 +11,7 @@ import jakarta.persistence.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.MultiValueMap;
 import java.math.BigDecimal;
 import java.time.*;
@@ -27,6 +28,8 @@ public class WalletTopupService {
     private final VnpayProperties vnpay;
     private final VnpaySignature signature;
     private final VnpayReturnUrl returns;
+    private final VnpayApiClient gateway;
+    private final TransactionTemplate transaction;
     private final EntityManager entityManager;
     private final Clock clock;
 
@@ -78,7 +81,44 @@ public class WalletTopupService {
         Map<String, String> fields = signature.verified(input);
         var found = topups.findByReference(fields.get("vnp_TxnRef"));
         if (found.isEmpty()) return new VnpayIpnResponse("01", "Top-up not found");
-        WalletTopupIntent topup = found.get();
+        return settle(found.get(), fields, true);
+    }
+
+    /**
+     * Recovers a top-up whose IPN never reached this backend (sleeping host, wrong IPN URL, outdated deploy).
+     * Asks VNPay querydr for the signed transaction result and settles it through the same checks as the IPN.
+     * Only a confirmed payment changes state; a pending or unknown result leaves the top-up untouched.
+     */
+    public WalletTopupResponse reconcile(Long id, User student, String clientIp) {
+        support.student(student);
+        WalletTopupIntent topup = find(id);
+        support.owner(topup.getStudentId(), student);
+        if ("COMPLETED".equals(topup.getStatus())) return response(topup, clientIp);
+        if (vnpay.getServerIp() == null || !vnpay.getServerIp().matches("[0-9a-fA-F:.]{7,45}")) {
+            throw new BusinessException(ErrorCode.PAYMENT_GATEWAY_DISABLED);
+        }
+        Map<String, String> query = new LinkedHashMap<>();
+        query.put("vnp_RequestId", UUID.randomUUID().toString().replace("-", ""));
+        query.put("vnp_Version", "2.1.0");
+        query.put("vnp_Command", "querydr");
+        query.put("vnp_TmnCode", vnpay.getTmnCode());
+        query.put("vnp_TxnRef", topup.getReference());
+        query.put("vnp_OrderInfo", "Reconcile wallet top-up " + topup.getId());
+        query.put("vnp_TransactionDate", VnpayPaymentService.date(topup.getCreatedAt()));
+        query.put("vnp_CreateDate", VnpayPaymentService.date(OffsetDateTime.now(clock)));
+        query.put("vnp_IpAddr", vnpay.getServerIp());
+        String data = VnpayApiClient.join(query, List.of("vnp_RequestId", "vnp_Version", "vnp_Command", "vnp_TmnCode",
+                "vnp_TxnRef", "vnp_TransactionDate", "vnp_CreateDate", "vnp_IpAddr", "vnp_OrderInfo"));
+        // The gateway call stays outside the database transaction so no lock is held while waiting on VNPay.
+        Map<String, String> result = gateway.exchange(query, data, "querydr");
+        boolean paid = "00".equals(result.get("vnp_ResponseCode")) && "00".equals(result.get("vnp_TransactionStatus"))
+                && "01".equals(result.get("vnp_TransactionType"));
+        if (paid) transaction.executeWithoutResult(ignored -> settle(find(id), result, false));
+        return transaction.execute(ignored -> response(find(id), clientIp));
+    }
+
+    // Shared by IPN and querydr. Only the IPN is authoritative for failures; querydr may report an unfinished payment.
+    private VnpayIpnResponse settle(WalletTopupIntent topup, Map<String, String> fields, boolean recordFailure) {
         support.lockPeople(topup.getStudentId());
         entityManager.refresh(topup, LockModeType.PESSIMISTIC_WRITE);
         if (!VnpayPaymentService.cents(topup.getAmount()).equals(fields.get("vnp_Amount"))) {
@@ -108,6 +148,7 @@ public class WalletTopupService {
             return new VnpayIpnResponse("02", "Top-up already confirmed");
         }
         if (!success) {
+            if (!recordFailure) return new VnpayIpnResponse("02", "Top-up not paid yet");
             if ("FAILED".equals(topup.getStatus())) return new VnpayIpnResponse("02", "Top-up already confirmed");
             topup.setStatus("FAILED");
         } else {
