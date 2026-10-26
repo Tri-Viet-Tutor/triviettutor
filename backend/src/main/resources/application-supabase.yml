@@ -14,8 +14,12 @@ spring:
         sslmode: ${DB_SSL_MODE:require}
         ApplicationName: viettritutor-backend
   jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
     show-sql: false
   flyway:
     # Apply shared migrations explicitly with scripts/migrate-database.ps1.

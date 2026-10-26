@@ -24,8 +24,10 @@ spring:
       database: ${MONGODB_DATABASE:triviettutor}
   jpa:
     open-in-view: false
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     properties:
       hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
 # API documentation config
