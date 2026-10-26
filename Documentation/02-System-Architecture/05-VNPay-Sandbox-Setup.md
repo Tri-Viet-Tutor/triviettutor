@@ -101,7 +101,7 @@ Mỗi thành viên dùng merchant test riêng và URL HTTPS public riêng (host 
 ./scripts/check-vnpay-sandbox.ps1 -EnvironmentFile .env
 ./scripts/start-backend.ps1 -Profile supabase
 
-# Docker: database local, KHÔNG tự dùng dữ liệu đã seed trên Supabase
+# Docker: backend trong container dùng chung database Supabase (cấu hình trong .env)
 ./scripts/init-docker-env.ps1
 ./scripts/configure-vnpay-sandbox.ps1 -EnvironmentFile .env
 # Điền credential rồi kiểm tra và tạo lại container để nhận biến mới:
