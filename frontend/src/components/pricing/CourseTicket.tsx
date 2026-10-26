@@ -28,7 +28,15 @@ const NOTCH = "absolute h-5 w-5 rounded-full border border-slate-200";
  * phần xé bên phải là học phí và hai nút "Thêm vào giỏ" / "Mua ngay".
  * Gọn theo chiều dọc để danh sách dài vẫn dễ lướt.
  */
-export function CourseTicket({ course, inCart, today, onToggleCart, onBuyNow, surfaceClassName = "bg-[#F5F1E9]" }: CourseTicketProps) {
+export function CourseTicket({
+  detailTo,
+  course,
+  inCart,
+  today,
+  onToggleCart,
+  onBuyNow,
+  surfaceClassName = "bg-[#F5F1E9]",
+}: CourseTicketProps) {
   // Màu cuống vé theo vị trí khóa trong danh sách gốc (không đổi khi lọc / sắp xếp)
   const tone = STUB_TONES[Math.max(COURSES.indexOf(course), 0) % STUB_TONES.length];
   const enrollment = enrollmentWindowOf(course);
@@ -68,8 +76,13 @@ export function CourseTicket({ course, inCart, today, onToggleCart, onBuyNow, su
             </>
           )}
         </p>
-        <h3 className="mt-1.5 text-[20px] font-bold leading-tight text-brand-navy">{course.name}</h3>
-        <p className="mt-1 text-[14.5px] leading-relaxed text-brand-muted">{course.summary}</p>
+        <Link to={detailTo} className={"group mt-1.5 block rounded-md " + FOCUS_RING}>
+          <h3 className="text-[20px] font-bold leading-tight text-brand-navy group-hover:underline">{course.name}</h3>
+          <p className="mt-1 text-[14.5px] leading-relaxed text-brand-muted">{course.summary}</p>
+          <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand-navy">
+            Xem chi tiết khóa học <Icon name="arrow_forward" className="text-[17px]" />
+          </span>
+        </Link>
 
         <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-2">
           <span className="flex -space-x-2">

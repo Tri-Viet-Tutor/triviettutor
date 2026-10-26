@@ -13,6 +13,8 @@ export interface AuthUser {
 
 /** Dữ liệu các trang xác thực truyền cho nhau qua router state */
 export interface AuthLocationState {
+  /** Khóa đang xem trước khi đăng nhập; chỉ nhận slug thuộc COURSES. */
+  courseSlug?: string;
   /** Email điền sẵn */
   email?: string;
   /** Câu báo thành công hiện ở đầu trang kế tiếp */

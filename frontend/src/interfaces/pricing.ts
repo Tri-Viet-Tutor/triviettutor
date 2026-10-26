@@ -82,6 +82,7 @@ export interface CourseShopSectionProps {
 
 /** Props của CourseTicket */
 export interface CourseTicketProps {
+  detailTo: string;
   course: Course;
   /** Khóa đã nằm trong giỏ */
   inCart: boolean;
