@@ -6,7 +6,8 @@ services:
     runtime: docker
     plan: free
     region: singapore
-    branch: vnpay-sandbox-configuration
+    # Must contain the wallet top-up IPN dispatch; the old vnpay-sandbox-configuration branch predates it.
+    branch: main
     autoDeployTrigger: "off"
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
@@ -68,3 +69,11 @@ services:
         sync: false
       - key: VNPAY_PUBLIC_BACKEND_URL
         sync: false
+      - key: WALLET_VNPAY_RETURN_PATH
+        value: /student/wallet
+      - key: WALLET_TOPUP_MIN_AMOUNT
+        value: "10000"
+      - key: WALLET_TOPUP_MAX_AMOUNT
+        value: "50000000"
+      - key: WALLET_TOPUP_TTL_MINUTES
+        value: "15"
