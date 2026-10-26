@@ -1,4 +1,4 @@
-import type { SchedulePattern } from "@/interfaces/api";
+import type { DeliveryMode, GradeLevel, SchedulePattern, TuitionClass } from "@/interfaces/api";
 import type { PurchasableCourse } from "@/interfaces/checkout";
 import type { Course } from "@/interfaces/course";
 
@@ -36,6 +36,29 @@ export interface ShopFilters {
   schedule: SchedulePattern | "";
   /** Học phí tối đa (VND) */
   maxFee: number;
+}
+
+/** Bộ lọc danh sách lớp đang mở (CourseShopSection) */
+export interface ClassShopFilters {
+  query: string;
+  subject: string;
+  grade: GradeLevel | "";
+  mode: DeliveryMode | "";
+  schedule: SchedulePattern | "";
+}
+
+/** Cách sắp xếp danh sách lớp đang mở */
+export type ClassShopSort = "DEFAULT" | "START_ASC" | "FEE_ASC" | "FEE_DESC";
+
+/** Props của ClassTicket */
+export interface ClassTicketProps {
+  item: TuitionClass;
+  /** Vị trí trong danh sách, để chọn màu cuống vé */
+  index: number;
+  /** Tài khoản hiện tại được đăng ký lớp không (chỉ học viên) */
+  canBuy: boolean;
+  onBuy: () => void;
+  surfaceClassName?: string;
 }
 
 // ── components/pricing ──

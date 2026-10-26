@@ -9,7 +9,7 @@ export function checkoutReturnPath(value: unknown): string | null {
     const url = new URL(value, window.location.origin);
     if (
       url.origin !== window.location.origin ||
-      ![ROUTES.checkout, ROUTES.studentCheckout, ROUTES.studentWallet].some((path) => path === url.pathname)
+      ![ROUTES.checkout, ROUTES.studentCheckout, ROUTES.studentCatalog, ROUTES.studentWallet].some((path) => path === url.pathname)
     )
       return null;
     return `${url.pathname}${url.search}`;

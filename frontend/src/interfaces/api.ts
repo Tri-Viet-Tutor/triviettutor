@@ -245,6 +245,8 @@ export interface CatalogClassResponse {
   /** Ví dụ "08:00 – 10:00" */
   timeSlotLabel: string;
   startDate: IsoDate;
+  /** Hạn chốt đăng ký */
+  enrollmentDeadline?: IsoDate | null;
   totalSessions: number;
   basePrice1on1: number;
   /** Học phí ước tính nếu đăng ký ngay (theo bậc sĩ số sau khi thêm học viên này) */

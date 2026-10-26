@@ -10,6 +10,7 @@ import { formatClock, useCountdown } from "@/hooks/useCountdown";
 import type { DeliveryMode, GradeLevel, VnpayRedirect } from "@/interfaces/api";
 import type { CheckoutFlowProps, SeatHoldProps, StudentPaymentProps } from "@/interfaces/checkout";
 import { getApiError } from "@/services/api";
+import { saveCheckoutReturn } from "@/utils/checkoutReturn";
 import {
   cancelIntent,
   getIntent,
@@ -20,7 +21,6 @@ import {
   verifyVnpayReturn,
 } from "@/services/tuitionPaymentService";
 import { useAuthStore } from "@/stores/authStore";
-import { useCartStore } from "@/stores/cartStore";
 import { formatVnd } from "@/utils/currency";
 import { Icon } from "@/components/ui/Icon";
 import { walletService } from "@/services/walletService";
@@ -75,6 +75,9 @@ function SeatHold({ expiresAt }: SeatHoldProps) {
  */
 export function CheckoutFlow({ shopTo = ROUTES.pricing }: CheckoutFlowProps) {
   const user = useAuthStore((state) => state.user);
+  const { search } = useLocation();
+  // Đăng nhập / đăng ký xong quay lại đúng lớp đã chọn
+  const returnTo = `${ROUTES.studentCheckout}${search}`;
   return user?.role === "ROLE_STUDENT" ? (
     <StudentPayment key={user.id} userId={user.id} shopTo={shopTo} />
   ) : (
@@ -83,10 +86,20 @@ export function CheckoutFlow({ shopTo = ROUTES.pricing }: CheckoutFlowProps) {
       <p>Đăng nhập tài khoản học viên đã xác thực để chọn lớp và thanh toán qua VNPay Sandbox.</p>
       {!user ? (
         <div className="flex gap-3">
-          <Link to={ROUTES.login} state={{ resumeCheckout: true }} className={PORTAL_BTN_PRIMARY}>
+          <Link
+            to={ROUTES.login}
+            state={{ resumeCheckout: true, returnTo }}
+            onClick={() => saveCheckoutReturn(returnTo)}
+            className={PORTAL_BTN_PRIMARY}
+          >
             Đăng nhập
           </Link>
-          <Link to={ROUTES.register} state={{ resumeCheckout: true }} className={PORTAL_BTN_SECONDARY}>
+          <Link
+            to={ROUTES.register}
+            state={{ resumeCheckout: true }}
+            onClick={() => saveCheckoutReturn(returnTo)}
+            className={PORTAL_BTN_SECONDARY}
+          >
             Tạo tài khoản
           </Link>
         </div>
@@ -102,12 +115,14 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
   const cache = useQueryClient();
   const navigate = useNavigate();
   const { search } = useLocation();
-  const subjects = useCartStore((state) => state.subjects);
-  const [subject, setSubject] = useState(subjects[0] ?? "");
+  const [subject, setSubject] = useState("");
   const [grade, setGrade] = useState<GradeLevel | "">("");
   const [mode, setMode] = useState<DeliveryMode | "">("");
   const [page, setPage] = useState(0);
-  const [classId, setClassId] = useState<number | null>(null);
+  // Bấm "Đăng ký ngay" ở trang "Mua khóa học" (?lop=<id>): chỉ thanh toán đúng lớp đó
+  const lopParam = Number(new URLSearchParams(search).get("lop"));
+  const lockedClassId = Number.isSafeInteger(lopParam) && lopParam > 0 ? lopParam : null;
+  const [classId, setClassId] = useState<number | null>(lockedClassId);
   const [activeId, setActiveId] = useState(() => storedIntent(userId));
   const [redirect, setRedirect] = useState<VnpayRedirect | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"VNPAY" | "WALLET">("VNPAY");
@@ -158,7 +173,7 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
         page,
         size: 10,
       }),
-    enabled: !pending && !returning,
+    enabled: !pending && !returning && !lockedClassId,
   });
   const summaryClassId = classId ?? state?.intent.classGroupId;
   const selected = useQuery({
@@ -394,108 +409,78 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
       )}
       {!pending && !returning && !state?.payment && (
         <>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <label className="text-sm">
-              Mã môn
-              <input
-                className={PORTAL_INPUT}
-                value={subject}
-                onChange={(event) => {
-                  setSubject(event.target.value);
-                  setPage(0);
-                  setClassId(null);
-                }}
-                placeholder="Ví dụ: MATH"
-              />
-            </label>
-            <label className="text-sm">
-              Khối lớp
-              <select
-                className={PORTAL_INPUT}
-                value={grade}
-                onChange={(event) => {
-                  setGrade(event.target.value as GradeLevel | "");
-                  setPage(0);
-                  setClassId(null);
-                }}
-              >
-                <option value="">Tất cả</option>
-                {GRADE_OPTIONS.map((value) => (
-                  <option key={value.value} value={value.value}>
-                    {value.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm">
-              Hình thức
-              <select
-                className={PORTAL_INPUT}
-                value={mode}
-                onChange={(event) => {
-                  setMode(event.target.value as DeliveryMode | "");
-                  setPage(0);
-                  setClassId(null);
-                }}
-              >
-                <option value="">Tất cả</option>
-                {DELIVERY_MODE_OPTIONS.map((value) => (
-                  <option key={value.value} value={value.value}>
-                    {value.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          {catalog.isError && (
-            <AuthNotice tone="error">
-              Không tải được danh sách lớp. <button onClick={() => void catalog.refetch()}>Thử lại</button>
-            </AuthNotice>
-          )}
-          {catalog.isPending && <p>Đang tải lớp học…</p>}
-          {catalog.data?.content.length === 0 && <p>Chưa có lớp phù hợp đang mở đăng ký.</p>}
-          <div className="grid gap-4 md:grid-cols-2">
-            {catalog.data?.content.map((group) => (
-              <button
-                key={group.id}
-                aria-pressed={classId === group.id}
-                onClick={() => {
-                  setClassId(group.id);
-                  attempt.current = null;
-                  start.reset();
-                }}
-                className={`${PORTAL_CARD} space-y-2 p-5 text-left ${classId === group.id ? "ring-2 ring-brand-navy" : "hover:border-brand-navy"}`}
-              >
-                <strong className="block text-brand-navy">
-                  {group.courseName} · {group.classCode}
-                </strong>
-                <span className="block text-sm">
-                  {SCHEDULE_PATTERN_OPTIONS.find((value) => value.value === group.schedulePattern)?.label} · {group.timeSlotLabel}
-                </span>
-                <span className="block text-sm">
-                  Khai giảng {group.startDate} · Còn {group.spotsLeft} chỗ
-                </span>
-                <span className="block font-semibold">Học phí {formatVnd(group.basePrice1on1)}</span>
-              </button>
-            ))}
-          </div>
-          {catalog.data && catalog.data.totalPages > 1 && (
-            <div className="flex items-center gap-3">
-              <button disabled={page === 0} onClick={() => setPage(page - 1)} className={PORTAL_BTN_SECONDARY}>
-                Trang trước
-              </button>
-              <span>
-                Trang {page + 1}/{catalog.data.totalPages}
-              </span>
-              <button disabled={page + 1 >= catalog.data.totalPages} onClick={() => setPage(page + 1)} className={PORTAL_BTN_SECONDARY}>
-                Trang sau
-              </button>
+          {!lockedClassId && (
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="text-sm">
+                Mã môn
+                <input
+                  className={PORTAL_INPUT}
+                  value={subject}
+                  onChange={(event) => {
+                    setSubject(event.target.value);
+                    setPage(0);
+                    setClassId(null);
+                  }}
+                  placeholder="Ví dụ: MATH"
+                />
+              </label>
+              <label className="text-sm">
+                Khối lớp
+                <select
+                  className={PORTAL_INPUT}
+                  value={grade}
+                  onChange={(event) => {
+                    setGrade(event.target.value as GradeLevel | "");
+                    setPage(0);
+                    setClassId(null);
+                  }}
+                >
+                  <option value="">Tất cả</option>
+                  {GRADE_OPTIONS.map((value) => (
+                    <option key={value.value} value={value.value}>
+                      {value.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm">
+                Hình thức
+                <select
+                  className={PORTAL_INPUT}
+                  value={mode}
+                  onChange={(event) => {
+                    setMode(event.target.value as DeliveryMode | "");
+                    setPage(0);
+                    setClassId(null);
+                  }}
+                >
+                  <option value="">Tất cả</option>
+                  {DELIVERY_MODE_OPTIONS.map((value) => (
+                    <option key={value.value} value={value.value}>
+                      {value.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
           )}
+          {lockedClassId && selected.isPending && <p>Đang tải thông tin lớp…</p>}
           {selected.isError && <AuthNotice tone="error">Không tải được lịch của lớp đã chọn.</AuthNotice>}
           {selected.data && (
             <section className={`${PORTAL_CARD} space-y-3 p-5`}>
-              <h2 className="font-bold text-brand-navy">Lịch học · {selected.data.classCode}</h2>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-brand-navy">{selected.data.courseName}</h2>
+                  <p className="text-sm text-brand-muted">
+                    Mã lớp {selected.data.classCode} · Khai giảng {selected.data.startDate} · Còn {selected.data.spotsLeft} chỗ
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-brand-muted">Học phí dự kiến</p>
+                  <p className="text-2xl font-bold text-brand-navy">{formatVnd(selected.data.estimatedFee)}</p>
+                </div>
+              </div>
+              <h3 className="font-semibold text-brand-navy">Lịch học</h3>
               <ul className="max-h-52 overflow-y-auto text-sm">
                 {selected.data.sessions?.map((session) => (
                   <li key={session.id}>
@@ -513,6 +498,55 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
                 {start.isPending ? "Đang xử lý…" : paymentMethod === "WALLET" ? "Thanh toán bằng ví" : "Thanh toán qua VNPay"}
               </button>
             </section>
+          )}
+          {!lockedClassId && (
+            <>
+              {catalog.isError && (
+                <AuthNotice tone="error">
+                  Không tải được danh sách lớp. <button onClick={() => void catalog.refetch()}>Thử lại</button>
+                </AuthNotice>
+              )}
+              {catalog.isPending && <p>Đang tải lớp học…</p>}
+              {catalog.data?.content.length === 0 && <p>Chưa có lớp phù hợp đang mở đăng ký.</p>}
+              <div className="grid gap-4 md:grid-cols-2">
+                {catalog.data?.content.map((group) => (
+                  <button
+                    key={group.id}
+                    aria-pressed={classId === group.id}
+                    onClick={() => {
+                      setClassId(group.id);
+                      attempt.current = null;
+                      start.reset();
+                    }}
+                    className={`${PORTAL_CARD} space-y-2 p-5 text-left ${classId === group.id ? "ring-2 ring-brand-navy" : "hover:border-brand-navy"}`}
+                  >
+                    <strong className="block text-brand-navy">
+                      {group.courseName} · {group.classCode}
+                    </strong>
+                    <span className="block text-sm">
+                      {SCHEDULE_PATTERN_OPTIONS.find((value) => value.value === group.schedulePattern)?.label} · {group.timeSlotLabel}
+                    </span>
+                    <span className="block text-sm">
+                      Khai giảng {group.startDate} · Còn {group.spotsLeft} chỗ
+                    </span>
+                    <span className="block font-semibold">Học phí {formatVnd(group.basePrice1on1)}</span>
+                  </button>
+                ))}
+              </div>
+              {catalog.data && catalog.data.totalPages > 1 && (
+                <div className="flex items-center gap-3">
+                  <button disabled={page === 0} onClick={() => setPage(page - 1)} className={PORTAL_BTN_SECONDARY}>
+                    Trang trước
+                  </button>
+                  <span>
+                    Trang {page + 1}/{catalog.data.totalPages}
+                  </span>
+                  <button disabled={page + 1 >= catalog.data.totalPages} onClick={() => setPage(page + 1)} className={PORTAL_BTN_SECONDARY}>
+                    Trang sau
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </>
       )}
