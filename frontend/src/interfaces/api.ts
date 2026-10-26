@@ -311,6 +311,48 @@ export interface MeetingTokenResponse {
   tutorName: string | null;
 }
 
+export interface MeetingSessionLogDto {
+  id?: string;
+  sessionId?: string;
+  roomName?: string;
+  classGroupId?: number;
+  scheduleId?: number;
+  hostUserId?: number;
+  startTime?: string;
+  endTime?: string;
+  durationSeconds?: number;
+  status?: string;
+  maxParticipants?: number;
+  totalParticipantsCount?: number;
+}
+
+export interface MeetingParticipantLogDto {
+  id?: string;
+  sessionId?: string;
+  roomName?: string;
+  userId?: number;
+  userRole?: string;
+  participantIdentity?: string;
+  participantName?: string;
+  joinedAt?: string;
+  leftAt?: string;
+  durationSeconds?: number;
+  disconnectReason?: string;
+  eventHistory?: Array<{
+    event: string;
+    timestamp: string;
+    details?: Record<string, any>;
+  }>;
+}
+
+export interface MeetingSessionLogsResponse {
+  sessionId: number;
+  roomName: string;
+  sessionLog: MeetingSessionLogDto | null;
+  participantLogs: MeetingParticipantLogDto[];
+  totalParticipants: number;
+}
+
 /** Tham số lọc của GET /me/sessions */
 export interface MySessionsQuery {
   from?: IsoDate;

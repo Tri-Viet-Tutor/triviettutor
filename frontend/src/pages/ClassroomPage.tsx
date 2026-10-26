@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getSessionMeetingToken } from "../services/meeting";
-import { MeetingTokenResponse } from "../interfaces/api";
+import { getSessionMeetingToken, getSessionMeetingLogs } from "../services/meeting";
+import { MeetingTokenResponse, MeetingSessionLogsResponse } from "../interfaces/api";
 import { useAuthStore } from "../stores/authStore";
 
 export default function ClassroomPage() {
@@ -21,6 +21,13 @@ export default function ClassroomPage() {
   const [showChat, setShowChat] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
 
+  // WebRTC Media Streams
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const screenVideoRef = useRef<HTMLVideoElement | null>(null);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+  const [mediaPermissionDenied, setMediaPermissionDenied] = useState(false);
+
   // In-class chat
   const [chatMessages, setChatMessages] = useState<Array<{ sender: string; text: string; time: string; isMe: boolean }>>([
     {
@@ -31,6 +38,11 @@ export default function ClassroomPage() {
     },
   ]);
   const [inputMsg, setInputMsg] = useState("");
+
+  // Audit Logs (MongoDB Atlas) Modal
+  const [showLogsModal, setShowLogsModal] = useState(false);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [sessionLogs, setSessionLogs] = useState<MeetingSessionLogsResponse | null>(null);
 
   // Whiteboard Canvas State
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -59,14 +71,13 @@ export default function ClassroomPage() {
       })
       .catch((err: any) => {
         if (isMounted) {
-          // If in preview or mock mode without backend connection, fallback gracefully
           const isMock = localStorage.getItem("vtt_preview_mode") === "true";
           if (isMock) {
             setMeetingData({
               token: "preview_mock_token",
               serverUrl: "ws://localhost:7880",
               roomName: `classroom-session-${sessionId}`,
-              role: user?.role === "ROLE_TUTOR" ? "TUTOR" : "STUDENT",
+              role: user?.role === "ROLE_TUTOR" ? "TUTOR" : user?.role === "ROLE_ADMIN" ? "ADMIN" : "STUDENT",
               sessionId: Number(sessionId),
               classGroupId: 1,
               courseTitle: "Toán 12 Chuyên Đề Hàm Số & Khảo Sát Đồ Thị",
@@ -86,6 +97,54 @@ export default function ClassroomPage() {
     };
   }, [sessionId, user]);
 
+  // Request browser WebRTC camera & microphone streams
+  useEffect(() => {
+    let active = true;
+
+    if (meetingData && typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+      navigator.mediaDevices
+        .getUserMedia({ video: true, audio: true })
+        .then((stream) => {
+          if (active) {
+            setLocalStream(stream);
+            if (localVideoRef.current) {
+              localVideoRef.current.srcObject = stream;
+            }
+          }
+        })
+        .catch((err) => {
+          console.warn("Webcam/mic not available or permission denied:", err);
+          if (active) {
+            setMediaPermissionDenied(true);
+          }
+        });
+    }
+
+    return () => {
+      active = false;
+      if (localStream) {
+        localStream.getTracks().forEach((t) => t.stop());
+      }
+      if (screenStream) {
+        screenStream.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, [meetingData]);
+
+  // Bind local stream to video ref
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream, cameraEnabled]);
+
+  // Bind screen stream to video ref
+  useEffect(() => {
+    if (screenVideoRef.current && screenStream) {
+      screenVideoRef.current.srcObject = screenStream;
+    }
+  }, [screenStream]);
+
   // Setup whiteboard canvas context
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -94,10 +153,68 @@ export default function ClassroomPage() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Fill white background initially
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }, [showWhiteboard]);
+
+  const toggleMic = () => {
+    if (localStream) {
+      localStream.getAudioTracks().forEach((t) => {
+        t.enabled = !micEnabled;
+      });
+    }
+    setMicEnabled((prev) => !prev);
+  };
+
+  const toggleCamera = () => {
+    if (localStream) {
+      localStream.getVideoTracks().forEach((t) => {
+        t.enabled = !cameraEnabled;
+      });
+    }
+    setCameraEnabled((prev) => !prev);
+  };
+
+  const toggleScreenShare = async () => {
+    if (screenSharing) {
+      if (screenStream) {
+        screenStream.getTracks().forEach((t) => t.stop());
+        setScreenStream(null);
+      }
+      setScreenSharing(false);
+    } else {
+      if (typeof navigator !== "undefined" && navigator.mediaDevices?.getDisplayMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+          stream.getVideoTracks()[0].onended = () => {
+            setScreenStream(null);
+            setScreenSharing(false);
+          };
+          setScreenStream(stream);
+          setScreenSharing(true);
+        } catch (err) {
+          console.warn("Screen share cancelled:", err);
+          setScreenSharing(false);
+        }
+      } else {
+        setScreenSharing((prev) => !prev);
+      }
+    }
+  };
+
+  const loadMeetingLogs = async () => {
+    if (!sessionId) return;
+    setLogsLoading(true);
+    setShowLogsModal(true);
+    try {
+      const data = await getSessionMeetingLogs(Number(sessionId));
+      setSessionLogs(data);
+    } catch (err: any) {
+      console.error("Failed to load session logs:", err);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -167,6 +284,12 @@ export default function ClassroomPage() {
 
   const handleLeave = () => {
     if (window.confirm("Bạn có chắc chắn muốn rời khỏi phòng học trực tuyến?")) {
+      if (localStream) {
+        localStream.getTracks().forEach((t) => t.stop());
+      }
+      if (screenStream) {
+        screenStream.getTracks().forEach((t) => t.stop());
+      }
       navigate(-1);
     }
   };
@@ -210,7 +333,8 @@ export default function ClassroomPage() {
   }
 
   const isTutor = meetingData.role === "TUTOR";
-  const roleLabel = isTutor ? "Gia sư" : meetingData.role === "ADMIN" ? "Quản trị viên" : "Học sinh";
+  const isAdmin = meetingData.role === "ADMIN";
+  const roleLabel = isTutor ? "Gia sư" : isAdmin ? "Quản trị viên" : "Học sinh";
 
   return (
     <div className="flex h-screen flex-col bg-slate-950 text-slate-100 overflow-hidden select-none">
@@ -233,8 +357,18 @@ export default function ClassroomPage() {
           </div>
         </div>
 
-        {/* View mode toggle */}
+        {/* View mode toggle & Actions */}
         <div className="flex items-center gap-2">
+          {(isTutor || isAdmin) && (
+            <button
+              onClick={loadMeetingLogs}
+              className="flex items-center gap-1.5 rounded-lg bg-slate-800 border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition"
+              title="Xem nhật ký tham gia MongoDB Atlas"
+            >
+              📋 Nhật ký phòng học
+            </button>
+          )}
+
           <button
             onClick={() => setShowWhiteboard((prev) => !prev)}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
@@ -265,6 +399,19 @@ export default function ClassroomPage() {
           </button>
         </div>
       </header>
+
+      {/* Permission Denied Notice Banner */}
+      {mediaPermissionDenied && (
+        <div className="bg-amber-900/40 border-b border-amber-800 px-4 py-1.5 text-xs text-amber-300 flex items-center justify-between">
+          <span>⚠️ Thiết bị webcam/micro chưa được cấp quyền truy cập. Bạn vẫn có thể xem bảng trắng và trò chuyện.</span>
+          <button
+            onClick={() => setMediaPermissionDenied(false)}
+            className="text-amber-400 hover:text-white text-xs font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* ── Main Workspace: Whiteboard & Video Conference ──────────────────── */}
       <div className="flex flex-1 overflow-hidden relative">
@@ -337,33 +484,51 @@ export default function ClassroomPage() {
 
         {/* Video Conference Section */}
         <div className={`flex flex-col ${showWhiteboard ? "w-96 border-l border-slate-800" : "flex-1"} bg-slate-950`}>
-          {/* Active Speaker / Tutor Stage */}
           <div className="flex-1 p-3 overflow-y-auto">
             <div className="grid h-full grid-cols-1 gap-3">
-              {/* Tutor Screen / Main Tile */}
-              <div className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-800 bg-slate-900 p-4 shadow-lg">
-                <div className="flex items-center justify-between">
+              {/* Main Tile / Screen Share or Tutor Video */}
+              <div className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-800 bg-slate-900 p-3 shadow-lg">
+                <div className="flex items-center justify-between z-10">
                   <span className="rounded-full bg-indigo-600/80 px-2.5 py-0.5 text-xs font-semibold text-white">
-                    {isTutor ? "Màn hình của bạn" : `Gia sư: ${meetingData.tutorName || "Thầy phụ trách"}`}
+                    {screenSharing
+                      ? "🖥️ Màn hình đang chia sẻ"
+                      : isTutor
+                      ? "Màn hình của bạn (Gia sư)"
+                      : `Gia sư: ${meetingData.tutorName || "Thầy phụ trách"}`}
                   </span>
                   {micEnabled && (
-                    <span className="flex items-center gap-1 text-xs text-emerald-400">
+                    <span className="flex items-center gap-1 text-xs text-emerald-400 bg-slate-900/80 px-2 py-0.5 rounded">
                       <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" /> Mic Bật
                     </span>
                   )}
                 </div>
 
-                {/* Simulated video placeholder / canvas */}
-                <div className="flex flex-1 items-center justify-center py-8">
-                  {cameraEnabled ? (
+                {/* Video Container */}
+                <div className="flex flex-1 items-center justify-center relative overflow-hidden my-2 rounded-lg bg-black">
+                  {screenSharing && screenStream ? (
+                    <video
+                      ref={screenVideoRef}
+                      autoPlay
+                      playsInline
+                      className="h-full w-full object-contain rounded"
+                    />
+                  ) : localStream && cameraEnabled ? (
+                    <video
+                      ref={localVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="h-full w-full object-cover rounded mirror"
+                    />
+                  ) : cameraEnabled ? (
                     <div className="flex flex-col items-center text-center">
                       <div className="flex h-20 w-20 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-400 text-3xl font-bold border-2 border-indigo-500/30">
                         {isTutor ? "T" : "G"}
                       </div>
                       <p className="mt-3 text-sm font-semibold text-slate-200">
-                        {isTutor ? (user?.fullName || "Gia sư") : (meetingData.tutorName || "Gia sư")}
+                        {isTutor ? user?.fullName || "Gia sư" : meetingData.tutorName || "Gia sư"}
                       </p>
-                      <p className="text-xs text-slate-400">Camera HD đang phát trực tuyến</p>
+                      <p className="text-xs text-slate-400">Đang đồng bộ luồng video HD</p>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center text-slate-500">
@@ -375,11 +540,11 @@ export default function ClassroomPage() {
 
                 <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-800 pt-2">
                   <span>Chất lượng: 1080p @ 30fps</span>
-                  <span>SFU Server: Connected</span>
+                  <span>LiveKit SFU: Connected</span>
                 </div>
               </div>
 
-              {/* Participants Secondary Tile */}
+              {/* Secondary Participant Tile */}
               <div className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 p-3">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-slate-300">
@@ -397,7 +562,7 @@ export default function ClassroomPage() {
                   </div>
                 </div>
                 <div className="text-center text-xs text-slate-400">
-                  {isTutor ? "1 học sinh đã kết nối" : "Sẵn sàng nhận phát biểu"}
+                  {isTutor ? "Học sinh đã kết nối vào phòng" : "Sẵn sàng phát biểu"}
                 </div>
               </div>
             </div>
@@ -409,10 +574,7 @@ export default function ClassroomPage() {
           <div className="flex w-80 flex-col border-l border-slate-800 bg-slate-900">
             <div className="flex h-11 items-center justify-between border-b border-slate-800 px-4">
               <span className="text-xs font-bold text-slate-200 uppercase tracking-wide">Trò chuyện trong lớp</span>
-              <button
-                onClick={() => setShowChat(false)}
-                className="text-slate-400 hover:text-white text-sm"
-              >
+              <button onClick={() => setShowChat(false)} className="text-slate-400 hover:text-white text-sm">
                 ✕
               </button>
             </div>
@@ -426,9 +588,7 @@ export default function ClassroomPage() {
                   </div>
                   <div
                     className={`max-w-[85%] rounded-lg px-3 py-1.5 text-xs ${
-                      msg.isMe
-                        ? "bg-indigo-600 text-white"
-                        : "bg-slate-800 text-slate-200 border border-slate-700"
+                      msg.isMe ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-200 border border-slate-700"
                     }`}
                   >
                     {msg.text}
@@ -456,24 +616,24 @@ export default function ClassroomPage() {
         )}
       </div>
 
-      {/* ── Bottom Control Bar ────────────────────────────────────────────── */}
+      {/* ── Control Footer ─────────────────────────────────────────────────── */}
       <footer className="flex h-16 items-center justify-center gap-3 border-t border-slate-800 bg-slate-900 px-4">
         {/* Mic Toggle */}
         <button
-          onClick={() => setMicEnabled((prev) => !prev)}
+          onClick={toggleMic}
           className={`flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-semibold transition ${
             micEnabled
               ? "bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700"
               : "bg-rose-600/20 text-rose-400 border border-rose-500/30"
           }`}
-          title={micEnabled ? "Tắt Micro" : "Bật Micro"}
+          title={micEnabled ? "Tắt Mic" : "Bật Mic"}
         >
           <span>{micEnabled ? "🎙️ Mic Bật" : "🔇 Mic Tắt"}</span>
         </button>
 
         {/* Camera Toggle */}
         <button
-          onClick={() => setCameraEnabled((prev) => !prev)}
+          onClick={toggleCamera}
           className={`flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-semibold transition ${
             cameraEnabled
               ? "bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700"
@@ -486,7 +646,7 @@ export default function ClassroomPage() {
 
         {/* Screen Share Toggle */}
         <button
-          onClick={() => setScreenSharing((prev) => !prev)}
+          onClick={toggleScreenShare}
           className={`flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-semibold transition ${
             screenSharing
               ? "bg-emerald-600 text-white"
@@ -520,6 +680,102 @@ export default function ClassroomPage() {
           <span>Rời phòng</span>
         </button>
       </footer>
+
+      {/* ── MongoDB Atlas Meeting Logs Modal ──────────────────────────────── */}
+      {showLogsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl rounded-xl bg-slate-900 border border-slate-800 p-6 shadow-2xl text-slate-100 flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-100">Nhật ký phiên học trực tuyến (MongoDB Atlas)</h3>
+                <p className="text-xs text-slate-400">LiveKit Room Audit & Chuyên cần người tham gia</p>
+              </div>
+              <button
+                onClick={() => setShowLogsModal(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-4 space-y-4">
+              {logsLoading ? (
+                <div className="py-12 text-center text-slate-400">
+                  <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent mb-2" />
+                  Đang đồng bộ dữ liệu nhật ký từ MongoDB...
+                </div>
+              ) : sessionLogs ? (
+                <>
+                  {/* Session Overview */}
+                  <div className="rounded-lg bg-slate-800/80 p-4 border border-slate-750 space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-400">Tên phòng LiveKit:</span>
+                      <span className="font-mono text-indigo-300 font-semibold">{sessionLogs.roomName}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-400">Trạng thái phòng:</span>
+                      <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-emerald-400 font-semibold">
+                        {sessionLogs.sessionLog?.status || "ACTIVE"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-400">Tổng người tham gia:</span>
+                      <span className="text-slate-200 font-semibold">{sessionLogs.totalParticipants}</span>
+                    </div>
+                  </div>
+
+                  {/* Participants List */}
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wide mb-2">
+                      Chi tiết người tham gia ({sessionLogs.participantLogs.length})
+                    </h4>
+                    {sessionLogs.participantLogs.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic">Chưa có người tham gia nào được ghi nhận.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {sessionLogs.participantLogs.map((p, idx) => (
+                          <div
+                            key={idx}
+                            className="rounded-lg bg-slate-800/50 p-3 border border-slate-750 flex items-center justify-between text-xs"
+                          >
+                            <div>
+                              <div className="font-semibold text-slate-200">
+                                {p.participantName || p.participantIdentity || "Người dùng"}
+                              </div>
+                              <div className="text-slate-400 text-[11px]">
+                                Vai trò: <span className="text-indigo-400">{p.userRole || "Học sinh"}</span> • Vào lúc:{" "}
+                                {p.joinedAt ? new Date(p.joinedAt).toLocaleTimeString("vi-VN") : "N/A"}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="rounded bg-indigo-500/20 px-2 py-0.5 text-indigo-300 font-mono">
+                                {p.durationSeconds ? `${Math.round(p.durationSeconds / 60)} phút` : "Đang tham gia"}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="py-8 text-center text-xs text-slate-400">
+                  Không tìm thấy dữ liệu nhật ký cho buổi học này.
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-slate-800 pt-3 text-right">
+              <button
+                onClick={() => setShowLogsModal(false)}
+                className="rounded-lg bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

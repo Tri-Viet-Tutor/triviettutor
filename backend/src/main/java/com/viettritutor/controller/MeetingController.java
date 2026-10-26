@@ -1,6 +1,7 @@
 package com.viettritutor.controller;
 
 import com.viettritutor.common.api.ApiResponse;
+import com.viettritutor.dto.meeting.MeetingSessionLogsResponse;
 import com.viettritutor.dto.meeting.MeetingTokenResponse;
 import com.viettritutor.entity.User;
 import com.viettritutor.security.CurrentUser;
@@ -11,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -57,5 +59,27 @@ public class MeetingController {
             @PathVariable @Min(1) Long targetId,
             @CurrentUser User currentUser) {
         return ApiResponse.ok(meetingService.generateTokenForTarget(targetId, currentUser));
+    }
+
+    @PostMapping("/webhook")
+    @Operation(summary = "LiveKit server webhook endpoint")
+    public ResponseEntity<Void> handleWebhook(
+            @RequestBody String body,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        log.info("Received LiveKit webhook callback");
+        meetingService.handleWebhook(body, authHeader);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/sessions/{sessionId}/logs")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TUTOR')")
+    @Operation(summary = "Retrieve meeting session audit and participant attendance logs")
+    public ApiResponse<MeetingSessionLogsResponse> getSessionLogs(
+            @Parameter(description = "Session ID", required = true)
+            @PathVariable @Min(1) Long sessionId,
+            @CurrentUser User currentUser) {
+        log.info("Fetching meeting logs for session {} by user {} ({})",
+                sessionId, currentUser.getId(), currentUser.getRole());
+        return ApiResponse.ok(meetingService.getSessionMeetingLogs(sessionId, currentUser));
     }
 }

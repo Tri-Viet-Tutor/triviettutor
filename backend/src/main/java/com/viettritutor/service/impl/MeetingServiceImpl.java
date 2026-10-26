@@ -4,6 +4,7 @@ import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.common.exception.ErrorCode;
 import com.viettritutor.document.MeetingParticipantLog;
 import com.viettritutor.document.MeetingSessionLog;
+import com.viettritutor.dto.meeting.MeetingSessionLogsResponse;
 import com.viettritutor.dto.meeting.MeetingTokenResponse;
 import com.viettritutor.entity.ClassGroup;
 import com.viettritutor.entity.Session;
@@ -16,6 +17,8 @@ import com.viettritutor.repository.mongo.MeetingParticipantLogRepository;
 import com.viettritutor.repository.mongo.MeetingSessionLogRepository;
 import com.viettritutor.service.MeetingService;
 import io.livekit.server.*;
+import livekit.LivekitModels;
+import livekit.LivekitWebhook;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,9 +26,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -328,5 +331,202 @@ public class MeetingServiceImpl implements MeetingService {
         } catch (Exception e) {
             log.warn("Mongo meeting log failed for session {} (safe fallback): {}", roomName, e.getMessage());
         }
+    }
+
+    @Override
+    public void handleWebhook(String body, String authHeader) {
+        if (authHeader == null || authHeader.isBlank()) {
+            log.warn("Missing LiveKit webhook Authorization header");
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "Missing webhook authorization header");
+        }
+
+        LivekitWebhook.WebhookEvent event;
+        try {
+            WebhookReceiver receiver = new WebhookReceiver(livekitApiKey, livekitApiSecret);
+            event = receiver.receive(body, authHeader);
+        } catch (Exception e) {
+            log.error("Failed to validate LiveKit webhook event: {}", e.getMessage());
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "Invalid webhook signature: " + e.getMessage());
+        }
+
+        String eventType = event.getEvent();
+        log.info("Processing LiveKit webhook event: {}", eventType);
+
+        if (meetingSessionLogRepository == null || meetingParticipantLogRepository == null) {
+            log.warn("MongoDB repositories are not available for meeting event processing");
+            return;
+        }
+
+        try {
+            String roomName = event.hasRoom() ? event.getRoom().getName() : null;
+            if (roomName == null || roomName.isBlank()) {
+                log.debug("Event {} does not contain room name", eventType);
+                return;
+            }
+
+            switch (eventType) {
+                case "room_started" -> {
+                    MeetingSessionLog sessionLog = meetingSessionLogRepository.findBySessionId(roomName)
+                            .orElse(MeetingSessionLog.builder()
+                                    .sessionId(roomName)
+                                    .roomName(roomName)
+                                    .build());
+                    sessionLog.setStatus("ACTIVE");
+                    sessionLog.setStartTime(Instant.now());
+                    meetingSessionLogRepository.save(sessionLog);
+                }
+                case "participant_joined" -> {
+                    if (event.hasParticipant()) {
+                        LivekitModels.ParticipantInfo participant = event.getParticipant();
+                        String identity = participant.getIdentity();
+                        String name = participant.getName();
+
+                        MeetingParticipantLog pLog = meetingParticipantLogRepository
+                                .findBySessionIdAndParticipantIdentity(roomName, identity)
+                                .orElse(MeetingParticipantLog.builder()
+                                        .sessionId(roomName)
+                                        .roomName(roomName)
+                                        .participantIdentity(identity)
+                                        .participantName(name)
+                                        .eventHistory(new ArrayList<>())
+                                        .build());
+
+                        pLog.setJoinedAt(Instant.now());
+                        if (pLog.getEventHistory() == null) {
+                            pLog.setEventHistory(new ArrayList<>());
+                        }
+                        pLog.getEventHistory().add(MeetingParticipantLog.ParticipantEvent.builder()
+                                .event("JOINED")
+                                .timestamp(Instant.now())
+                                .details(Map.of("name", name != null ? name : identity))
+                                .build());
+                        meetingParticipantLogRepository.save(pLog);
+
+                        meetingSessionLogRepository.findBySessionId(roomName).ifPresent(sLog -> {
+                            int currentCount = sLog.getTotalParticipantsCount() != null ? sLog.getTotalParticipantsCount() + 1 : 1;
+                            sLog.setTotalParticipantsCount(currentCount);
+                            if (sLog.getMaxParticipants() == null || currentCount > sLog.getMaxParticipants()) {
+                                sLog.setMaxParticipants(currentCount);
+                            }
+                            meetingSessionLogRepository.save(sLog);
+                        });
+                    }
+                }
+                case "participant_left" -> {
+                    if (event.hasParticipant()) {
+                        LivekitModels.ParticipantInfo participant = event.getParticipant();
+                        String identity = participant.getIdentity();
+
+                        meetingParticipantLogRepository.findBySessionIdAndParticipantIdentity(roomName, identity).ifPresent(pLog -> {
+                            Instant now = Instant.now();
+                            pLog.setLeftAt(now);
+                            if (pLog.getJoinedAt() != null) {
+                                pLog.setDurationSeconds(Duration.between(pLog.getJoinedAt(), now).getSeconds());
+                            }
+                            String reason = participant.getDisconnectReason() != null
+                                    ? participant.getDisconnectReason().name()
+                                    : "UNKNOWN";
+                            pLog.setDisconnectReason(reason);
+                            if (pLog.getEventHistory() == null) {
+                                pLog.setEventHistory(new ArrayList<>());
+                            }
+                            pLog.getEventHistory().add(MeetingParticipantLog.ParticipantEvent.builder()
+                                    .event("LEFT")
+                                    .timestamp(now)
+                                    .details(Map.of("reason", reason))
+                                    .build());
+                            meetingParticipantLogRepository.save(pLog);
+                        });
+                    }
+                }
+                case "track_published" -> {
+                    if (event.hasParticipant() && event.hasTrack()) {
+                        LivekitModels.ParticipantInfo participant = event.getParticipant();
+                        LivekitModels.TrackInfo track = event.getTrack();
+                        String identity = participant.getIdentity();
+
+                        meetingParticipantLogRepository.findBySessionIdAndParticipantIdentity(roomName, identity).ifPresent(pLog -> {
+                            String eventName = track.getType() == LivekitModels.TrackType.AUDIO ? "PUBLISHED_AUDIO" : "PUBLISHED_VIDEO";
+                            if (pLog.getEventHistory() == null) {
+                                pLog.setEventHistory(new ArrayList<>());
+                            }
+                            pLog.getEventHistory().add(MeetingParticipantLog.ParticipantEvent.builder()
+                                    .event(eventName)
+                                    .timestamp(Instant.now())
+                                    .details(Map.of("trackSid", track.getSid()))
+                                    .build());
+                            meetingParticipantLogRepository.save(pLog);
+                        });
+                    }
+                }
+                case "room_finished" -> {
+                    meetingSessionLogRepository.findBySessionId(roomName).ifPresent(sLog -> {
+                        Instant now = Instant.now();
+                        sLog.setEndTime(now);
+                        sLog.setStatus("COMPLETED");
+                        if (sLog.getStartTime() != null) {
+                            sLog.setDurationSeconds(Duration.between(sLog.getStartTime(), now).getSeconds());
+                        }
+                        meetingSessionLogRepository.save(sLog);
+                    });
+                }
+                default -> log.debug("Unhandled LiveKit webhook event: {}", eventType);
+            }
+        } catch (Exception e) {
+            log.error("Error processing LiveKit webhook event {}: {}", eventType, e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MeetingSessionLogsResponse getSessionMeetingLogs(Long sessionId, User currentUser) {
+        if (currentUser == null) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));
+
+        boolean isAdmin = ROLE_ADMIN.equals(currentUser.getRole());
+        boolean isTutor = ROLE_TUTOR.equals(currentUser.getRole());
+        if (!isAdmin && !isTutor) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        if (isTutor) {
+            Long tutorId = currentUser.getId();
+            boolean isAssigned = tutorId.equals(session.getActualTutorId()) || tutorId.equals(session.getScheduledTutorId());
+            if (!isAssigned && session.getClassGroupId() != null) {
+                isAssigned = tutorAssignmentRepository
+                        .findByClassGroupIdAndStatus(session.getClassGroupId(), AssignmentStatus.ACTIVE)
+                        .map(a -> tutorId.equals(a.getTutorId()))
+                        .orElse(false);
+            }
+            if (!isAssigned) {
+                throw new BusinessException(ErrorCode.ACCESS_DENIED);
+            }
+        }
+
+        String roomName = "classroom-session-" + sessionId;
+        MeetingSessionLog sessionLog = null;
+        List<MeetingParticipantLog> participantLogs = Collections.emptyList();
+
+        if (meetingSessionLogRepository != null) {
+            sessionLog = meetingSessionLogRepository.findBySessionId(roomName).orElse(null);
+        }
+        if (meetingParticipantLogRepository != null) {
+            participantLogs = meetingParticipantLogRepository.findBySessionId(roomName);
+            if (participantLogs == null) {
+                participantLogs = Collections.emptyList();
+            }
+        }
+
+        return MeetingSessionLogsResponse.builder()
+                .sessionId(sessionId)
+                .roomName(roomName)
+                .sessionLog(sessionLog)
+                .participantLogs(participantLogs)
+                .totalParticipants(participantLogs != null ? participantLogs.size() : 0)
+                .build();
     }
 }
