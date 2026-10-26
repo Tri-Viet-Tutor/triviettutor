@@ -25,30 +25,35 @@ public class UserProfileServiceImpl implements UserProfileService {
     @Override
     @Transactional(readOnly = true)
     public MeResponse getMyProfile(User user) {
+
         MeResponse.Profile profile = switch (user.getRole()) {
             case "ROLE_STUDENT" -> studentProfileRepository.findById(user.getId())
-                    .map(p -> MeResponse.StudentProfileResponse.builder()
-                            .phone(p.getPhone())
-                            .address(p.getAddress())
-                            .build())
+                    .map(p -> new MeResponse.StudentProfileResponse(
+                            p.getPhone(),
+                            p.getAddress()
+                    ))
                     .orElse(null);
+
             case "ROLE_TUTOR" -> tutorProfileRepository.findById(user.getId())
-                    .map(p -> MeResponse.TutorProfileResponse.builder()
-                            .baseSalary(p.getBaseSalary())
-                            .sessionRate(p.getSessionRate())
-                            .bio(p.getBio())
-                            .build())
+                    .map(p -> new MeResponse.TutorProfileResponse(
+                            p.getBaseSalary(),
+                            p.getSessionRate(),
+                            p.getBio()
+                    ))
                     .orElse(null);
+
             default -> null;
         };
-        return MeResponse.builder()
-                .id(user.getId())
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .role(user.getRole())
-                .createdAt(user.getCreatedAt())
-                .profile(profile)
-                .build();
+
+        return new MeResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole(),
+                user.getCreatedAt(),
+                profile
+        );
+
     }
 
     @Override

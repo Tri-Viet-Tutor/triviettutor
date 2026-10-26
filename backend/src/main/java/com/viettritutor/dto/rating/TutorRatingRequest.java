@@ -1,0 +1,16 @@
+package com.viettritutor.dto.rating;
+
+import jakarta.validation.constraints.*;
+
+import java.math.BigDecimal;
+
+public record TutorRatingRequest(
+        @NotNull
+        @DecimalMin("1.0")
+        @DecimalMax("5.0")
+        @Digits(integer = 1, fraction = 1)
+        BigDecimal rating,
+
+        @Size(max = 5000)
+        String comment
+) {}
