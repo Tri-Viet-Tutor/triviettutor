@@ -2,6 +2,7 @@ import axios, { type AxiosResponse, isAxiosError } from "axios";
 import { ROUTES } from "@/constants/routes";
 import type { ApiResponse, ErrorCode, ApiError } from "@/interfaces/api";
 import { useAuthStore } from "@/stores/authStore";
+import { saveCheckoutReturn } from "@/utils/checkoutReturn";
 
 /**
  * Axios dùng chung cho mọi lời gọi API.
@@ -22,6 +23,12 @@ export const api = axios.create({
 
 //Interceptor request — gắn JWT
 api.interceptors.request.use((config) => {
+  // Public auth requests must work even when a stored session token has expired.
+  if (config.url?.startsWith("/auth/")) {
+    config.headers.delete("Authorization");
+    return config;
+  }
+
   const token = useAuthStore.getState().token;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -37,6 +44,7 @@ api.interceptors.response.use(
     const isSessionExpired =
       error.response?.status === 401 && Boolean(useAuthStore.getState().token) && !error.config?.url?.startsWith("/auth/");
     if (isSessionExpired) {
+      saveCheckoutReturn(window.location.pathname + window.location.search);
       // Token hết hạn hoặc không hợp lệ — xóa phiên rồi đưa về trang đăng nhập
       useAuthStore.getState().logout();
       window.location.href = ROUTES.login;

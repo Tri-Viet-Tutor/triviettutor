@@ -24,8 +24,11 @@ public class VnpayReturnUrl {
     }
 
     public String resolve(String requestedOrigin) {
+        return resolve(requestedOrigin, properties.getReturnPath());
+    }
+
+    public String resolve(String requestedOrigin, String path) {
         String target = requestedOrigin == null || requestedOrigin.isBlank() ? fallback : origin(requestedOrigin);
-        String path = properties.getReturnPath();
         if (!origins.contains(target) || path == null || !path.matches("/[a-zA-Z0-9/_-]+") || path.startsWith("//")) {
             throw new BusinessException(ErrorCode.INVALID_PAYMENT_RETURN_URL);
         }

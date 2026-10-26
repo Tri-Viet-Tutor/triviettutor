@@ -29,7 +29,7 @@ export function GuestCartScope() {
     if (isAuthenticated) return;
     // Bỏ dấu "/" ở cuối để so khớp đường dẫn
     const path = pathname.replace(/\/+$/, "") || ROUTES.home;
-    if (PURCHASE_FLOW_PATHS.includes(path)) return;
+    if (PURCHASE_FLOW_PATHS.includes(path) || path.startsWith(ROUTES.pricing + "/")) return;
     const cart = useCartStore.getState();
     if (cart.subjects.length > 0) cart.clear();
   }, [pathname, isAuthenticated]);

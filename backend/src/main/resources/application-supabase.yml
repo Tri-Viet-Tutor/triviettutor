@@ -25,8 +25,12 @@ spring:
               - profile
               - email
   jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
     show-sql: false
   mail:
     host: ${SPRING_MAIL_HOST:smtp.gmail.com}

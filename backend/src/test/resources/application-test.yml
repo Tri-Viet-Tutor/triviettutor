@@ -1,5 +1,16 @@
 # Test-only origins; override through TEST_FRONTEND_ORIGIN when needed.
+spring:
+  data:
+    mongodb:
+      uri: ${TEST_MONGODB_URI:mongodb://localhost:27017/test}
+
 app:
   frontend-url: ${TEST_FRONTEND_ORIGIN:http://localhost}
   cors:
     allowed-origins: ${TEST_FRONTEND_ORIGIN:http://localhost}
+
+livekit:
+  url: ws://localhost:7880
+  api:
+    key: devkey
+    secret: secret

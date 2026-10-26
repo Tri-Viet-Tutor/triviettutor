@@ -14,5 +14,6 @@ public class SessionLifecycleJob {
     public void run() {
         lifecycleService.advanceEligibleSessions();
         lifecycleService.evaluateAllClasses();
+        lifecycleService.evaluateRegistrationDeadlines();
     }
 }

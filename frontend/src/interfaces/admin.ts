@@ -203,6 +203,17 @@ export interface ClassFormDialogProps {
   open: boolean;
   onClose: () => void;
   onSaved: (classItem: AdminClassResponse) => void;
+  /** Khóa chọn sẵn khi mở hộp thoại (tạo lớp từ trang Khóa học) */
+  initialCourseId?: number;
+}
+
+/** Props của CourseClassesPanel */
+export interface CourseClassesPanelProps {
+  course: CourseResponse;
+  /** Bấm "Tạo lớp" cho khóa này */
+  onCreate: () => void;
+  /** Bấm đổi trạng thái / mở lại một lớp */
+  onChangeStatus: (item: AdminClassResponse, mode: "status" | "reopen") => void;
 }
 
 /** Props của ClassStatusDialog */

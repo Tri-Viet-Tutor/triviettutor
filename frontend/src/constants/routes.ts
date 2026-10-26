@@ -5,6 +5,8 @@ export const ROUTES = {
   tutorSearch: "/tim-gia-su",
   /** Trang "Mua khóa học" (trước đây là "Bảng học phí" ở /bang-hoc-phi — đường dẫn cũ tự chuyển sang đây) */
   pricing: "/mua-khoa-hoc",
+  courseDetail: "/mua-khoa-hoc/:courseSlug",
+  studentCourseDetail: "/student/catalog/:courseSlug",
   pricingLegacy: "/bang-hoc-phi",
   /** Thanh toán các khóa trong giỏ */
   checkout: "/thanh-toan",
@@ -48,9 +50,16 @@ export const ROUTES = {
   /** Đường dẫn cũ của trang mua khóa học — tự chuyển sang studentCatalog */
   studentCatalogLegacy: "/student/courses",
   studentCheckout: "/student/checkout",
+  studentWallet: "/student/wallet",
   studentLeave: "/student/leave",
   /** Các lớp đã đóng học phí */
   studentEnrollments: "/student/classes",
   studentProfile: "/student/profile",
+  /** Phòng học trực tuyến LiveKit SFU (chia sẻ màn hình, bảng trắng, video 1-nhiều) */
+  classroom: "/classroom/:sessionId",
   forbidden: "/403",
 } as const;
+
+export function courseDetailPath(slug: string, student = false): string {
+  return (student ? ROUTES.studentCourseDetail : ROUTES.courseDetail).replace(":courseSlug", encodeURIComponent(slug));
+}

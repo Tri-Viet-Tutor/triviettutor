@@ -5,8 +5,6 @@ import { EnrollmentScheduleSection } from "@/components/pricing/EnrollmentSchedu
 import { CourseShopSection } from "@/components/pricing/CourseShopSection";
 import { LearningModesSection } from "@/components/pricing/LearningModesSection";
 import { PricingHero } from "@/components/pricing/PricingHero";
-import { cartCourses } from "@/utils/checkout";
-import { useCartStore } from "@/stores/cartStore";
 import { scrollToId } from "@/utils/motion";
 
 /** Cuộn xuống danh sách khóa học */
@@ -21,20 +19,16 @@ function scrollToCourseShop() {
  * Học phí từng khóa lấy từ dữ liệu khóa học — xem constants/pricing.ts.
  */
 export function PricingPage() {
-  // Giỏ đang có khóa (bỏ qua mã môn lạ / khóa chưa có học phí)
-  const hasCart = useCartStore((state) => cartCourses(state.subjects).length > 0);
-
   // Mở trang thì về đầu trang
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, []);
 
   return (
-    <main className={`w-full flex-1 overflow-x-clip bg-[#F5F1E9] text-brand-ink ${hasCart ? "pb-[72px]" : ""}`}>
+    <main className={`w-full flex-1 overflow-x-clip bg-[#F5F1E9] text-brand-ink`}>
       <ReadingProgress />
       <ClickSpark />
-      {/* Giỏ có khóa thì có thanh giỏ hàng ở đáy màn hình — nhích nút về đầu trang lên trên thanh đó */}
-      <ScrollToTop raised={hasCart} />
+      <ScrollToTop />
       <PricingHero onViewFees={scrollToCourseShop} />
       <CourseShopSection />
       <LearningModesSection />

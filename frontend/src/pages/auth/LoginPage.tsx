@@ -15,6 +15,7 @@ import { savePendingEmail } from "@/utils/pendingEmail";
 import type { AuthLocationState, LoginFormValues } from "@/interfaces/auth";
 import { getRoleHome, login as loginRequest } from "@/services/authService";
 import { useAuthStore } from "@/stores/authStore";
+import { checkoutReturnPath, consumeCheckoutReturn } from "@/utils/checkoutReturn";
 
 /** Kiểm tra form đăng nhập */
 const loginSchema = z.object({
@@ -60,7 +61,12 @@ export function LoginPage() {
     login(data, {
       onSuccess: (response) => {
         setAuth(response.accessToken, response.user);
-        navigate(resumeCheckout ? ROUTES.checkout : getRoleHome(response.user.role), { replace: true });
+        const savedReturn = consumeCheckoutReturn();
+        const returnTo = checkoutReturnPath(locationState?.returnTo) ?? savedReturn;
+        navigate(
+          response.user.role === "ROLE_STUDENT" && returnTo ? returnTo : resumeCheckout ? ROUTES.checkout : getRoleHome(response.user.role),
+          { replace: true },
+        );
       },
     });
   }

@@ -85,6 +85,10 @@ export type ErrorCode =
   | "CLASS_NOT_ENROLLING"
   | "ENROLLMENT_ALREADY_EXISTS"
   | "REFUND_NOT_ALLOWED"
+  | "WALLET_INSUFFICIENT_FUNDS"
+  | "WALLET_INVALID_TOPUP_AMOUNT"
+  | "WALLET_TOPUP_NOT_FOUND"
+  | "WALLET_BALANCE_LIMIT"
   | "ATTENDANCE_LOCKED"
   | "SESSION_NOT_IN_PROGRESS"
   | "ATTENDANCE_NOT_FOUND"
@@ -228,6 +232,8 @@ export interface CourseResponse {
 
 /** Một lớp đang mở đăng ký — phần tử của GET /catalog/classes */
 export interface CatalogClassResponse {
+  courseId?: number;
+  full?: boolean;
   id: number;
   /** Ví dụ "MATH-G10-MWF-M-001" */
   classCode: string;
@@ -241,6 +247,8 @@ export interface CatalogClassResponse {
   /** Ví dụ "08:00 – 10:00" */
   timeSlotLabel: string;
   startDate: IsoDate;
+  /** Hạn chốt đăng ký */
+  enrollmentDeadline?: IsoDate | null;
   totalSessions: number;
   basePrice1on1: number;
   /** Học phí ước tính nếu đăng ký ngay (theo bậc sĩ số sau khi thêm học viên này) */
@@ -288,6 +296,61 @@ export interface SessionResponse {
 /** dto.schedule.MeetingUrlRequest — PUT /admin/sessions/{sessionId}/meeting-url (phải là URL https) */
 export interface MeetingUrlRequest {
   meetingUrl: string;
+}
+
+/** dto.meeting.MeetingTokenResponse — POST /api/v1/meetings/sessions/{sessionId}/token */
+export interface MeetingTokenResponse {
+  token: string;
+  serverUrl: string;
+  roomName: string;
+  role: "TUTOR" | "STUDENT" | "ADMIN";
+  sessionId: number | null;
+  classGroupId: number | null;
+  courseTitle: string;
+  sessionNumber: number;
+  tutorName: string | null;
+}
+
+export interface MeetingSessionLogDto {
+  id?: string;
+  sessionId?: string;
+  roomName?: string;
+  classGroupId?: number;
+  scheduleId?: number;
+  hostUserId?: number;
+  startTime?: string;
+  endTime?: string;
+  durationSeconds?: number;
+  status?: string;
+  maxParticipants?: number;
+  totalParticipantsCount?: number;
+}
+
+export interface MeetingParticipantLogDto {
+  id?: string;
+  sessionId?: string;
+  roomName?: string;
+  userId?: number;
+  userRole?: string;
+  participantIdentity?: string;
+  participantName?: string;
+  joinedAt?: string;
+  leftAt?: string;
+  durationSeconds?: number;
+  disconnectReason?: string;
+  eventHistory?: Array<{
+    event: string;
+    timestamp: string;
+    details?: Record<string, any>;
+  }>;
+}
+
+export interface MeetingSessionLogsResponse {
+  sessionId: number;
+  roomName: string;
+  sessionLog: MeetingSessionLogDto | null;
+  participantLogs: MeetingParticipantLogDto[];
+  totalParticipants: number;
 }
 
 /** Tham số lọc của GET /me/sessions */
@@ -611,7 +674,7 @@ export type PaymentStatus = "COMPLETED" | "FAILED" | "REQUIRES_REFUND" | "PARTIA
 export interface TuitionClass extends CatalogClassResponse {
   status: ClassStatus;
   reservedStudents: number;
-  sessions?: { id: number; date: string; startTime: string; endTime: string }[];
+  sessions?: { id: number; sessionNumber?: number; date: string; startTime: string; endTime: string; status?: SessionStatus }[];
 }
 
 /** Yêu cầu thanh toán — giữ chỗ trong lớp tới `expiresAt` */
@@ -642,7 +705,7 @@ export interface TuitionPayment {
   enrollmentId: number | null;
   amount: number;
   refundedAmount: number;
-  method: "MOCK" | "VNPAY";
+  method: "MOCK" | "VNPAY" | "WALLET";
   status: PaymentStatus;
   transactionRef: string;
   refundReason: string | null;

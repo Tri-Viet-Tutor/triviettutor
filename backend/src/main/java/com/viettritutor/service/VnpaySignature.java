@@ -61,5 +61,5 @@ public class VnpaySignature {
         return fields;
     }
 
-    private String encode(String value) { return URLEncoder.encode(value, StandardCharsets.US_ASCII); }
+    private String encode(String value) { return URLEncoder.encode(value, StandardCharsets.UTF_8); }
 }

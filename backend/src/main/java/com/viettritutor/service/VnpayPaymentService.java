@@ -48,7 +48,7 @@ public class VnpayPaymentService {
         if (!clock.instant().isBefore(intent.getExpiresAt().toInstant())) throw new PaymentIntentExpiredException();
         var admission = support.admission(group, student.getId(), intentId);
         if (intent.getVnpayReference() == null) {
-            if (intent.getAmount().compareTo(admission.course().getBasePrice1on1()) != 0
+            if (intent.getAmount().compareTo(admission.expectedAmount()) != 0
                     || !intent.getCourseId().equals(admission.course().getId())) throw new BusinessException(ErrorCode.PAYMENT_PRICE_CHANGED);
             intent.setVnpayReference("TVT" + UUID.randomUUID().toString().replace("-", ""));
             intent.setVnpayCreatedAt(OffsetDateTime.now(clock).truncatedTo(ChronoUnit.SECONDS));
@@ -133,7 +133,7 @@ public class VnpayPaymentService {
         if (admission != null) {
             Enrollment enrollment = enrollments.saveAndFlush(Enrollment.builder().studentId(intent.getStudentId())
                     .classGroupId(group.getId()).paymentId(payment.getId()).feeCharged(intent.getAmount())
-                    .discountRate(BigDecimal.ZERO).enrollmentSizeAtTime(admission.enrollmentSize())
+                    .discountRate(admission.discountRate()).enrollmentSizeAtTime(admission.enrollmentSize())
                     .status(EnrollmentStatus.ACTIVE).enrolledAt(OffsetDateTime.now(clock)).build());
             learning.activate(enrollment.getId(), intent.getStudentId(), group.getId(), admission.start(), admission.end());
         }
