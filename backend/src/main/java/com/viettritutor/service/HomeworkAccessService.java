@@ -1,0 +1,128 @@
+package com.viettritutor.service;
+
+import com.viettritutor.common.exception.*;
+import com.viettritutor.entity.*;
+import com.viettritutor.enums.*;
+import com.viettritutor.repository.*;
+import jakarta.persistence.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.*;
+import org.springframework.stereotype.Service;
+import java.net.*;
+import java.time.*;
+import java.time.temporal.ChronoUnit;
+import java.util.Objects;
+
+@Service
+@RequiredArgsConstructor
+public class HomeworkAccessService {
+    private final SessionRepository sessions;
+    private final ClassGroupRepository classes;
+    private final LearningScheduleRepository learning;
+    private final HomeworkRepository homeworks;
+    private final EntityManager entityManager;
+    private final Clock clock;
+
+    public record Context(Session session, Homework homework) {}
+
+    public Session session(Long id) {
+        return sessions.findById(id).orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));
+    }
+
+    // All writes share the class -> session -> homework lock order with reassignment/cancellation.
+    public Session lockSession(Long id) {
+        Long classId = sessions.findClassGroupId(id).orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));
+        classes.findForUpdate(classId).orElseThrow(() -> new BusinessException(ErrorCode.CLASS_NOT_FOUND));
+        Session s = sessions.findForUpdate(id).orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));
+        entityManager.refresh(s, LockModeType.PESSIMISTIC_WRITE);
+        return s;
+    }
+
+    public Context lock(Long homeworkId) {
+        Long sessionId = homeworks.findSessionId(homeworkId).orElseThrow(() -> new BusinessException(ErrorCode.HOMEWORK_NOT_FOUND));
+        Session s = lockSession(sessionId);
+        Homework h = homeworks.findForUpdate(homeworkId).orElseThrow(() -> new BusinessException(ErrorCode.HOMEWORK_NOT_FOUND));
+        entityManager.refresh(h, LockModeType.PESSIMISTIC_WRITE);
+        return new Context(s, h);
+    }
+
+    public Context find(Long homeworkId) {
+        Homework h = homeworks.findById(homeworkId).orElseThrow(() -> new BusinessException(ErrorCode.HOMEWORK_NOT_FOUND));
+        return new Context(session(h.getSessionId()), h);
+    }
+
+    public boolean isAdmin(User user) { return "ROLE_ADMIN".equals(user.getRole()); }
+    public boolean isStudent(User user) { return "ROLE_STUDENT".equals(user.getRole()); }
+
+    public void requireWriter(Session s, User actor) {
+        Long tutor = s.getActualTutorId() != null ? s.getActualTutorId() : s.getScheduledTutorId();
+        if (!isAdmin(actor) && (!"ROLE_TUTOR".equals(actor.getRole()) || !Objects.equals(tutor, actor.getId())))
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+    }
+
+    public void requireStudent(Session s, User actor) {
+        if (!isStudent(actor) || !learning.existsByStudentIdAndClassGroupIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                actor.getId(), s.getClassGroupId(), LearningScheduleStatus.ACTIVE, s.getSessionDate(), s.getSessionDate()))
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+    }
+
+    public void requireReader(Session s, User actor) {
+        if (isStudent(actor)) requireStudent(s, actor);
+        else requireWriter(s, actor);
+    }
+
+    public void requireVisible(Context context, User actor) {
+        requireReader(context.session(), actor);
+        if (isStudent(actor) && context.homework().getPublishedAt() == null)
+            throw new BusinessException(ErrorCode.HOMEWORK_NOT_FOUND);
+    }
+
+    public void requireSessionOpen(Session s) {
+        if (s.getStatus() == SessionStatus.CANCELLED)
+            throw new BusinessException(ErrorCode.HOMEWORK_SESSION_CANCELLED);
+    }
+
+    public void requireBeforeDeadline(Homework h) {
+        if (!clock.instant().isBefore(h.getDueAt().toInstant()))
+            throw new BusinessException(ErrorCode.HOMEWORK_DEADLINE_PASSED);
+    }
+
+    public void requireAccepting(Context context) {
+        requireSessionOpen(context.session());
+        if (context.homework().getStatus() != HomeworkStatus.PUBLISHED)
+            throw new BusinessException(ErrorCode.HOMEWORK_NOT_ACCEPTING);
+        requireBeforeDeadline(context.homework());
+    }
+
+    public void requireVersion(long current, Long provided) {
+        if (provided == null || current != provided)
+            throw new BusinessException(ErrorCode.LEARNING_VERSION_CONFLICT);
+    }
+
+    public OffsetDateTime now() { return OffsetDateTime.now(clock).truncatedTo(ChronoUnit.MICROS); }
+
+    public void requireFuture(OffsetDateTime date) {
+        if (!date.toInstant().isAfter(clock.instant()))
+            throw new BusinessException(ErrorCode.HOMEWORK_INVALID_DEADLINE);
+    }
+
+    public Pageable pageable(int page, int size) {
+        if (page < 0 || size < 1 || size > 100) throw new BusinessException(ErrorCode.INVALID_PAGINATION);
+        return PageRequest.of(page, size, Sort.by("id"));
+    }
+
+    public String text(String value) { return value == null || value.isBlank() ? null : value.trim(); }
+
+    public String resourceUrl(String value) {
+        String normalized = text(value);
+        if (normalized == null) return null;
+        try {
+            URI uri = new URI(normalized);
+            if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null || uri.getUserInfo() != null)
+                throw new BusinessException(ErrorCode.INVALID_RESOURCE_URL);
+            return uri.toASCIIString();
+        } catch (URISyntaxException ex) {
+            throw new BusinessException(ErrorCode.INVALID_RESOURCE_URL);
+        }
+    }
+}

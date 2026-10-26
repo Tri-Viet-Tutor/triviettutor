@@ -64,7 +64,7 @@ Chủ đề gắn vào buổi phải thuộc đúng môn của lớp. Topic là 
 - `GET /homeworks/{homeworkId}/submissions` — Xem danh sách bài nộp để chấm. **Admin hoặc Tutor phụ trách.**
 - `PATCH /submissions/{submissionId}/grade` — Chấm điểm và ghi nhận xét. **Admin hoặc Tutor phụ trách.**
 
-Chức năng bài tập hiện là **đề xuất theo ERD**; các quy tắc như hạn nộp, nộp lại và trạng thái DRAFT/PUBLISHED cần nhóm chốt trước khi triển khai.
+Quy tắc bài tập đã được chốt theo mục H07 bổ sung trong 02-Huu.md: hai vòng đời độc lập, không sửa đề đã công bố, không mở lại bài CLOSED và có bắt đầu/lưu nháp riêng.
 
 ## Phối hợp với Quang
 
@@ -72,4 +72,12 @@ Chức năng bài tập hiện là **đề xuất theo ERD**; các quy tắc nh�
 - Hữu cung cấp lịch và bộ kiểm tra trùng để Quang kiểm tra trước khi ghi danh.
 - Hữu cung cấp người thực dạy, buổi hoàn thành và buổi hủy cho bảng lương của Quang.
 
-**Tổng: 34 API.** Chi tiết input/output, quy tắc và test nằm trong [tài liệu giao việc Hữu](02-Huu.md); các điểm schema chưa chốt nằm trong [tổng quan phân công](00-Tong-quan-phan-cong.md).
+**Tổng: 36 API (gồm 2 API bắt đầu/lưu nháp bổ sung).** Chi tiết input/output, quy tắc và test nằm trong [tài liệu giao việc Hữu](02-Huu.md); các điểm schema chưa chốt nằm trong [tổng quan phân công](00-Tong-quan-phan-cong.md).
+
+### Các API bổ sung cho luồng bắt đầu và lưu nháp đã chốt
+- `POST /homeworks/{homeworkId}/submissions/me/start` — Bắt đầu làm; tạo trạng thái IN_PROGRESS. **Student ghi danh.**
+- `PUT /homeworks/{homeworkId}/submissions/me/draft` — Lưu nháp trước hạn, chưa nộp. **Student ghi danh.**
+
+PUT /homeworks/{homeworkId}/submissions/me là thao tác nộp chính thức sau khi đã bắt đầu. NOT_STARTED/IN_PROGRESS/SUBMITTED/GRADED thuộc bài làm từng học sinh, độc lập với DRAFT/PUBLISHED/CLOSED của Homework. Chi tiết request, version, phân quyền, deadline và luồng UI được chốt ở mục “H07 — Quy tắc đã chốt” trong 02-Huu.md.
+
+GET /student/homeworks thay cho /me/homeworks: chỉ Student, danh tính từ JWT; lọc trạng thái bài làm, khoảng dueAt và phân trang. PUT bài nộp cho phép cập nhật SUBMITTED trước hạn nếu chưa chấm, Homework còn PUBLISHED và buổi không bị hủy; GRADED vẫn khóa. Chi tiết được người dùng chốt ở mục H07 ngày 13/10/2026 trong 02-Huu.md.
