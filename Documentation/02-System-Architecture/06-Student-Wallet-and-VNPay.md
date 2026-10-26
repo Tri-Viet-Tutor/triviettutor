@@ -43,6 +43,7 @@ Khóa user tuần tự bảo vệ cả tạo ví và ghi số dư; thao tác l�
 | POST /wallet/topups | {amount}, Idempotency-Key, Origin | 201: topupId, amount, status, reference, paymentUrl (null khi kết thúc/hết hạn), expiresAt, paidAt |
 | GET /wallet/topups/{id} | STUDENT owner | cùng dữ liệu top-up đã lưu |
 | GET /wallet/vnpay/return | VNPay query, STUDENT owner | cùng dữ liệu, không settle |
+| POST /wallet/topups/{id}/reconcile | STUDENT owner | Gọi VNPay querydr khi IPN không tới; chỉ kết quả có chữ ký, đúng merchant/reference/amount, ResponseCode 00, TransactionStatus 00 và TransactionType 01 mới cộng ví qua cùng logic IPN. Kết quả chưa thanh toán không đổi trạng thái. Cần VNPAY_SERVER_IP. |
 | POST /payment-intents/{id}/wallet | Idempotency-Key, STUDENT owner | PaymentConfirmationResponse hiện có |
 
 Response API thường theo ApiResponse success/data; IPN dùng VnpayIpnResponse. Lỗi mới: WALLET_INSUFFICIENT_FUNDS (409), WALLET_INVALID_TOPUP_AMOUNT (400), WALLET_TOPUP_NOT_FOUND (404), WALLET_BALANCE_LIMIT (409); dùng chung lỗi quyền, gateway, signature, idempotency, giá/lịch/expiry hiện có.

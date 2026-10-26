@@ -90,6 +90,13 @@ function WalletContent({ userId, fullName }: { userId: number; fullName: string 
       if (value.paymentUrl) window.location.assign(value.paymentUrl);
     },
   });
+  const reconcile = useMutation({
+    mutationFn: (id: number) => walletService.reconcileTopup(id),
+    onSuccess: (value) => {
+      cache.setQueryData(["wallet-topup", userId, value.topupId], value);
+      setNotice(value.status === "COMPLETED" ? "" : "VNPay chưa xác nhận giao dịch này đã thanh toán.");
+    },
+  });
   const value = Number(amount);
   const validAmount = Boolean(
     wallet.data &&
@@ -99,7 +106,7 @@ function WalletContent({ userId, fullName }: { userId: number; fullName: string 
     value <= wallet.data.maxTopupAmount,
   );
   const pending = topup?.status === "PENDING";
-  const error = create.error ?? returned.error ?? detail.error;
+  const error = create.error ?? reconcile.error ?? returned.error ?? detail.error;
   function refresh() {
     void wallet.refetch();
     if (topupId) void detail.refetch();
@@ -211,6 +218,16 @@ function WalletContent({ userId, fullName }: { userId: number; fullName: string 
                 <button type="button" onClick={refresh} className={PORTAL_BTN_SECONDARY}>
                   Kiểm tra trạng thái
                 </button>
+                {(pending || topup.status === "EXPIRED") && (
+                  <button
+                    type="button"
+                    onClick={() => reconcile.mutate(topup.topupId)}
+                    disabled={reconcile.isPending}
+                    className={PORTAL_BTN_SECONDARY}
+                  >
+                    {reconcile.isPending ? "Đang đối soát…" : "Đối soát với VNPay"}
+                  </button>
+                )}
               </div>
             </>
           ) : (

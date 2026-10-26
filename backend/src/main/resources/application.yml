@@ -24,10 +24,9 @@ spring:
       database: ${MONGODB_DATABASE:triviettutor}
   jpa:
     open-in-view: false
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    # Hibernate detects the dialect from the connection; application-supabase.yml pins PostgreSQL explicitly.
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
 # API documentation config

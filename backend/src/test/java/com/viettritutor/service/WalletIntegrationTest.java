@@ -35,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     "logging.level.root=WARN", "app.payments.mock-enabled=false", "app.payments.vnpay.enabled=true",
     "app.payments.vnpay.tmn-code=TEST0001", "app.payments.vnpay.payment-url=https://gateway.test.invalid/pay",
     "app.payments.vnpay.api-url=https://gateway.test.invalid/api", "app.payments.vnpay.return-path=/student/checkout",
-    "app.payments.vnpay.timeout-seconds=10", "app.payments.intent-ttl-minutes=5",
+    "app.payments.vnpay.timeout-seconds=10", "app.payments.vnpay.server-ip=127.0.0.1", "app.payments.intent-ttl-minutes=5",
     "app.frontend-url=https://frontend.test.invalid", "app.cors.allowed-origins=https://frontend.test.invalid",
     "app.wallet.vnpay-return-path=/student/wallet", "app.wallet.topup-min-amount=10000",
     "app.wallet.topup-max-amount=50000000", "app.wallet.topup-ttl-minutes=15"
@@ -69,8 +69,15 @@ class WalletIntegrationTest {
         @Override public Clock withZone(ZoneId zone) { return Clock.fixed(value, zone); }
         @Override public Instant instant() { return value; }
     }
+    /** Stands in for the VNPay merchant API; the real client still signs requests and verifies the reply. */
+    static class FakeGateway extends com.viettritutor.service.VnpayApiClient {
+        volatile Map<String, Object> reply;
+        FakeGateway(com.viettritutor.config.VnpayProperties p, VnpaySignature s) { super(p, s); }
+        @Override protected Map<String, Object> post(Map<String, String> body) { return reply; }
+    }
     @TestConfiguration static class TestTime {
         @Bean @Primary MutableClock walletClock() { return new MutableClock(); }
+        @Bean @Primary FakeGateway fakeGateway(com.viettritutor.config.VnpayProperties p, VnpaySignature s) { return new FakeGateway(p, s); }
     }
     @Autowired MockMvc http;
     @Autowired ObjectMapper json;
@@ -91,6 +98,7 @@ class WalletIntegrationTest {
     @Autowired WalletPaymentService walletPayment;
     @Autowired VnpayPaymentService directPayment;
     @Autowired com.viettritutor.config.VnpayProperties vnpay;
+    @Autowired FakeGateway gateway;
     User student, other, admin;
     ClassGroup group;
     @BeforeEach void fixture() {
@@ -225,6 +233,39 @@ class WalletIntegrationTest {
         ipn(callback(id,"00"),"00"); balance("10000");
         long failed=topup(20000); ipn(callback(failed,"24"),"00"); ipn(callback(failed,"24"),"02"); balance("10000");
         ipn(callback(failed,"00"),"00"); balance("30000");
+    }
+    Map<String,Object> querydr(long id, String status, String transactionNo) throws Exception {
+        var f=new HashMap<String,String>(callback(id,"00"));
+        f.put("vnp_ResponseId",UUID.randomUUID().toString().replace("-","")); f.put("vnp_Command","querydr");
+        f.put("vnp_Message","OK"); f.put("vnp_BankCode","NCB"); f.put("vnp_TransactionType","01");
+        f.put("vnp_TransactionStatus",status); f.put("vnp_TransactionNo",transactionNo); f.put("vnp_OrderInfo","Wallet top-up "+id);
+        f.put("vnp_SecureHash",hash(VnpayApiClient.join(f,List.of("vnp_ResponseId","vnp_Command","vnp_ResponseCode","vnp_Message",
+            "vnp_TmnCode","vnp_TxnRef","vnp_Amount","vnp_BankCode","vnp_PayDate","vnp_TransactionNo","vnp_TransactionType",
+            "vnp_TransactionStatus","vnp_OrderInfo","vnp_PromotionCode","vnp_PromotionAmount"))));
+        return new HashMap<>(f);
+    }
+    JsonNode reconcile(long id, User actor, int expected) throws Exception {
+        return request("POST","/api/v1/wallet/topups/"+id+"/reconcile",null,actor,null,expected);
+    }
+    @Test void missedIpnIsRecoveredOnceThroughQuerydr() throws Exception {
+        long id=topup(50000); clock.value=clock.value.plusSeconds(20*60);
+        String no=Long.toString(NUMBERS.incrementAndGet());
+        gateway.reply=querydr(id,"00",no);
+        reconcile(id,other,403); balance("0");
+        assertThat(reconcile(id,student,200).path("status").asText()).isEqualTo("COMPLETED");
+        assertThat(reconcile(id,student,200).path("status").asText()).isEqualTo("COMPLETED");
+        balance("50000"); assertThat(wallet.history(student,0,20).getTotalElements()).isEqualTo(1);
+        var late=callback(id,"00"); late.put("vnp_TransactionNo",no); ipn(late,"02"); balance("50000");
+    }
+    @Test void unpaidOrForgedQuerydrNeverCredits() throws Exception {
+        long id=topup(10000);
+        gateway.reply=querydr(id,"01",Long.toString(NUMBERS.incrementAndGet()));
+        assertThat(reconcile(id,student,200).path("status").asText()).isEqualTo("PENDING");
+        var wrongAmount=querydr(id,"00",Long.toString(NUMBERS.incrementAndGet()));
+        wrongAmount.put("vnp_Amount","100"); wrongAmount.put("vnp_SecureHash",hash("forged"));
+        gateway.reply=wrongAmount; reconcile(id,student,502);
+        balance("0"); assertThat(topups.findById(id).orElseThrow().getStatus()).isEqualTo("PENDING");
+        ipn(callback(id,"00"),"00"); balance("10000");
     }
     @Test void pendingTopupCanStillBeReadWhenGatewayIsDisabled() throws Exception {
         long id=topup(10000);

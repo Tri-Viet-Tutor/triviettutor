@@ -55,15 +55,19 @@ public class VnpayPaymentController {
     @GetMapping("/payments/vnpay/ipn")
     @Operation(summary = "Receive a signed VNPay server callback; uses the VNPay acknowledgement format")
     public VnpayIpnResponse ipn(@RequestParam MultiValueMap<String, String> params) {
+        String reference = params.getFirst("vnp_TxnRef");
+        VnpayIpnResponse response;
         try {
-            String reference = params.getFirst("vnp_TxnRef");
-            return reference != null && reference.startsWith("WLT") ? topups.ipn(params) : service.ipn(params);
+            response = reference != null && reference.startsWith("WLT") ? topups.ipn(params) : service.ipn(params);
         }
         catch (BusinessException exception) {
-            return new VnpayIpnResponse(exception.getErrorCode() == ErrorCode.INVALID_PAYMENT_SIGNATURE ? "97" : "99", "Cannot confirm transaction");
+            response = new VnpayIpnResponse(exception.getErrorCode() == ErrorCode.INVALID_PAYMENT_SIGNATURE ? "97" : "99", "Cannot confirm transaction");
         } catch (RuntimeException exception) {
             log.error("VNPay IPN settlement failed", exception);
-            return new VnpayIpnResponse("99", "Cannot confirm transaction");
+            response = new VnpayIpnResponse("99", "Cannot confirm transaction");
         }
+        // References are opaque order ids, not secrets; logging the outcome makes missed settlements traceable.
+        log.info("VNPay IPN reference={} responseCode={} rspCode={}", reference, params.getFirst("vnp_ResponseCode"), response.code());
+        return response;
     }
 }

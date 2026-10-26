@@ -43,6 +43,10 @@ public class WalletController {
     public ApiResponse<WalletTopupResponse> detail(@PathVariable @Min(1) Long id, @CurrentUser User student, HttpServletRequest request) {
         return ApiResponse.ok(topups.detail(id, student, request.getRemoteAddr()));
     }
+    @PostMapping("/wallet/topups/{id}/reconcile")
+    public ApiResponse<WalletTopupResponse> reconcile(@PathVariable @Min(1) Long id, @CurrentUser User student, HttpServletRequest request) {
+        return ApiResponse.ok(topups.reconcile(id, student, request.getRemoteAddr()));
+    }
     @GetMapping("/wallet/vnpay/return")
     public ApiResponse<WalletTopupResponse> returned(@RequestParam MultiValueMap<String, String> params,
             @CurrentUser User student, HttpServletRequest request) {
