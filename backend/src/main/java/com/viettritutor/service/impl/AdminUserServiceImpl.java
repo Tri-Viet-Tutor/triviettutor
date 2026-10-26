@@ -77,18 +77,14 @@ public class AdminUserServiceImpl implements AdminUserService {
         profile.setBio(request.getBio());
         tutorProfileRepository.save(profile);
 
-        return MeResponse.builder()
-                .id(user.getId())
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .role(user.getRole())
-                .createdAt(user.getCreatedAt())
-                .profile(MeResponse.TutorProfileResponse.builder()
-                        .baseSalary(profile.getBaseSalary())
-                        .sessionRate(profile.getSessionRate())
-                        .bio(profile.getBio())
-                        .build())
-                .build();
+        return new MeResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole(),
+                user.getCreatedAt(),
+                null
+        );
     }
 
     @Override
@@ -113,17 +109,17 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
         tutorProfileRepository.save(profile);
 
-        return MeResponse.builder()
-                .id(user.getId())
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .role(user.getRole())
-                .createdAt(user.getCreatedAt())
-                .profile(MeResponse.TutorProfileResponse.builder()
-                        .baseSalary(profile.getBaseSalary())
-                        .sessionRate(profile.getSessionRate())
-                        .bio(profile.getBio())
-                        .build())
-                .build();
+        return new MeResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole(),
+                user.getCreatedAt(),
+                new MeResponse.TutorProfileResponse(
+                        profile.getBaseSalary(),
+                        profile.getSessionRate(),
+                        profile.getBio()
+                )
+        );
     }
 }
