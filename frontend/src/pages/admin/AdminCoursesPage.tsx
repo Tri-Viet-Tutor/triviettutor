@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { ClassFormDialog } from "@/components/admin/ClassFormDialog";
+import { ClassStatusDialog } from "@/components/admin/ClassStatusDialog";
+import { CourseClassesPanel } from "@/components/admin/CourseClassesPanel";
 import { CourseFormDialog } from "@/components/admin/CourseFormDialog";
 import { FilterTabs } from "@/components/dashboard/FilterTabs";
 import { Pager } from "@/components/dashboard/Pager";
@@ -16,7 +19,8 @@ import { useRefreshAdmin } from "@/hooks/useAdminData";
 import { toggleCourse } from "@/services/managementService";
 import { formatVnd } from "@/utils/currency";
 import { portalErrorMessage } from "@/utils/errors";
-import type { CourseResponse, GradeLevel } from "@/interfaces/api";
+import { CLASS_STATUS } from "@/constants/labels";
+import type { AdminClassResponse, CourseResponse, GradeLevel } from "@/interfaces/api";
 
 /** Bộ lọc trạng thái bán */
 type ActiveFilter = "all" | "active" | "inactive";
@@ -25,6 +29,7 @@ const PAGE_SIZE = 12;
 
 /**
  * Quản lý khóa học: danh sách theo môn / khối / trạng thái bán, tạo, sửa và bật / tắt bán.
+ * Mỗi khóa có phần "Lớp học" để xem và tạo lớp ngay trong khóa; tạo khóa mới xong thì mở luôn bước tạo lớp.
  * API: GET/POST /admin/courses, PUT /admin/courses/{id}, PATCH /admin/courses/{id}/toggle.
  */
 export function AdminCoursesPage() {
@@ -35,6 +40,12 @@ export function AdminCoursesPage() {
   const [editing, setEditing] = useState<CourseResponse | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  // Khóa đang mở phần "Lớp học"
+  const [expandedCourse, setExpandedCourse] = useState<number | null>(null);
+  // Khóa đang tạo lớp (hộp thoại tạo lớp); null là đóng
+  const [classFor, setClassFor] = useState<CourseResponse | null>(null);
+  // Lớp đang đổi trạng thái / mở lại
+  const [statusTarget, setStatusTarget] = useState<{ item: AdminClassResponse; mode: "status" | "reopen" } | null>(null);
   const refresh = useRefreshAdmin();
 
   const courses = useAdminCourses({
@@ -191,7 +202,7 @@ export function AdminCoursesPage() {
             {courses.data.content.map((course) => (
               <li
                 key={course.id}
-                className={`group flex flex-col overflow-hidden transition-shadow hover:shadow-[0_20px_40px_-24px_rgba(11,58,140,0.45)] ${PORTAL_CARD}`}
+                className={`group flex flex-col overflow-hidden transition-shadow ${expandedCourse === course.id ? "md:col-span-2 xl:col-span-3" : ""} hover:shadow-[0_20px_40px_-24px_rgba(11,58,140,0.45)] ${PORTAL_CARD}`}
               >
                 <div className="relative flex items-start gap-3 bg-gradient-to-br from-brand-tint to-white px-5 pb-4 pt-5">
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-navy text-white">
@@ -229,10 +240,22 @@ export function AdminCoursesPage() {
                 </div>
 
                 <div className="flex items-center justify-between gap-2 border-t border-brand-sandLine px-3 py-2">
-                  <button type="button" onClick={() => openForm(course)} className={PORTAL_BTN_GHOST}>
-                    <Icon name="edit" className="text-[18px]" />
-                    Sửa
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => openForm(course)} className={PORTAL_BTN_GHOST}>
+                      <Icon name="edit" className="text-[18px]" />
+                      Sửa
+                    </button>
+                    <button
+                      type="button"
+                      aria-expanded={expandedCourse === course.id}
+                      onClick={() => setExpandedCourse(expandedCourse === course.id ? null : course.id)}
+                      className={PORTAL_BTN_GHOST}
+                    >
+                      <Icon name="school" className="text-[18px]" />
+                      Lớp học
+                      <Icon name={expandedCourse === course.id ? "expand_less" : "expand_more"} className="text-[18px]" />
+                    </button>
+                  </div>
                   <button
                     type="button"
                     role="switch"
@@ -252,6 +275,13 @@ export function AdminCoursesPage() {
                     </span>
                   </button>
                 </div>
+                {expandedCourse === course.id && (
+                  <CourseClassesPanel
+                    course={course}
+                    onCreate={() => setClassFor(course)}
+                    onChangeStatus={(item, mode) => setStatusTarget({ item, mode })}
+                  />
+                )}
               </li>
             ))}
           </ul>
@@ -264,8 +294,39 @@ export function AdminCoursesPage() {
         course={editing}
         onClose={() => setDialogOpen(false)}
         onSaved={(saved) => {
+          const isNew = editing === null;
           setDialogOpen(false);
-          setNotice({ tone: "ok", text: `Đã lưu khóa "${saved.name}".` });
+          void refresh();
+          if (isNew && saved.active) {
+            setNotice({ tone: "ok", text: `Đã tạo khóa "${saved.name}". Tạo lớp đầu tiên cho khóa này để học viên đăng ký.` });
+            setExpandedCourse(saved.id);
+            setClassFor(saved);
+          } else {
+            setNotice({ tone: "ok", text: `Đã lưu khóa "${saved.name}".` });
+          }
+        }}
+      />
+      <ClassFormDialog
+        open={classFor !== null}
+        initialCourseId={classFor?.id}
+        onClose={() => setClassFor(null)}
+        onSaved={(saved) => {
+          setClassFor(null);
+          setExpandedCourse(saved.courseId);
+          setNotice({
+            tone: "ok",
+            text: `Đã tạo lớp ${saved.classCode} (bản nháp). Bấm "Đổi trạng thái" để mở tuyển sinh thì học viên mới thấy lớp.`,
+          });
+          void refresh();
+        }}
+      />
+      <ClassStatusDialog
+        classItem={statusTarget?.item ?? null}
+        mode={statusTarget?.mode ?? "status"}
+        onClose={() => setStatusTarget(null)}
+        onSaved={(saved) => {
+          setStatusTarget(null);
+          setNotice({ tone: "ok", text: `Lớp ${saved.classCode}: ${CLASS_STATUS[saved.status].label}.` });
           void refresh();
         }}
       />

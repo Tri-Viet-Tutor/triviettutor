@@ -52,7 +52,7 @@ function Choice<T extends string>({
 }
 
 /** Hộp thoại mở lớp mới từ một khóa học đang bán (POST /admin/classes). */
-export function ClassFormDialog({ open, onClose, onSaved }: ClassFormDialogProps) {
+export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: ClassFormDialogProps) {
   const courses = useAdminCourses({ active: true, size: 100 });
   const defaultStart = toIsoDate(addDays(startOfToday(), 14));
   const [courseId, setCourseId] = useState<number | "">("");
@@ -65,10 +65,12 @@ export function ClassFormDialog({ open, onClose, onSaved }: ClassFormDialogProps
   const [meetingUrl, setMeetingUrl] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Mở lại thì xoá lỗi cũ
+  // Mở lại thì xoá lỗi cũ; mở từ một khóa cụ thể thì chọn sẵn khóa đó
   useEffect(() => {
-    if (open) setFormError(null);
-  }, [open]);
+    if (!open) return;
+    setFormError(null);
+    if (initialCourseId !== undefined) setCourseId(initialCourseId);
+  }, [open, initialCourseId]);
 
   const save = useMutation({
     mutationFn: (request: CreateClassRequest) => createClass(request),
