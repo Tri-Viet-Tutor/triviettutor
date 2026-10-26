@@ -2,7 +2,7 @@ import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
 import { CourseShopSection } from "@/components/pricing/CourseShopSection";
 
 /**
- * Trang "Mua khóa học" trong khu học viên: các lớp admin đang mở đăng ký, bộ lọc và nút đăng ký;
+ * Trang "Mua khóa học" trong khu học viên: thẻ các khóa admin đang bán, mỗi khóa mở ra các lớp đang mở đăng ký, bộ lọc và nút đăng ký;
  * học viên ở lại trong tài khoản và thanh toán tại /student/checkout.
  */
 export function StudentCatalogPage() {

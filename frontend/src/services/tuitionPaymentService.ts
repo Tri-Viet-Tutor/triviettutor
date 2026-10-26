@@ -2,6 +2,8 @@ import { api } from "@/services/api";
 import type {
   ApiResponse,
   CatalogClassesQuery,
+  CourseResponse,
+  GradeLevel,
   IntentDetail,
   PageResponse,
   PaymentIntent,
@@ -21,6 +23,12 @@ import type {
 function unwrap<T>(response: ApiResponse<T>): T {
   if (!response.success || response.data === undefined) throw new Error("Missing API response");
   return response.data;
+}
+/** GET /catalog/courses — các khóa admin đang bật bán (mọi tài khoản đã đăng nhập) */
+export async function listCatalogCourses(
+  query: { subject?: string; gradeLevel?: GradeLevel; page?: number; size?: number } = {},
+): Promise<PageResponse<CourseResponse>> {
+  return unwrap((await api.get<ApiResponse<PageResponse<CourseResponse>>>("/catalog/courses", { params: query })).data);
 }
 export async function listTuitionClasses(query: CatalogClassesQuery): Promise<PageResponse<TuitionClass>> {
   return unwrap((await api.get<ApiResponse<PageResponse<TuitionClass>>>("/catalog/classes", { params: query })).data);
