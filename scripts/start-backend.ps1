@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('dev', 'supabase')][string]$Profile = 'supabase',
+    [ValidateSet('dev', 'supabase')][string]$Profile = 'dev',
     [ValidateRange(1, 65535)][int]$Port = 8080
 )
 

@@ -8,25 +8,43 @@ services:
       - "7882:7882/udp"
     restart: unless-stopped
 
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${LOCAL_DB_NAME:-viettritutor}
+      POSTGRES_USER: ${LOCAL_DB_USERNAME:-viettri}
+      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:-viettripassword}
+    ports:
+      - "${DOCKER_BIND_ADDRESS:-127.0.0.1}:${LOCAL_DB_HOST_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${LOCAL_DB_USERNAME:-viettri} -d ${LOCAL_DB_NAME:-viettritutor}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
     restart: unless-stopped
-    # The database is Supabase Cloud; there is no local database container.
-    # Every value comes from the root .env (see .env.example).
+    depends_on:
+      postgres:
+        condition: service_healthy
     env_file:
       - .env
     environment:
-      SPRING_PROFILES_ACTIVE: ${APP_PROFILE:-supabase}
-      APP_PROFILE: ${APP_PROFILE:-supabase}
+      SPRING_PROFILES_ACTIVE: ${APP_PROFILE:-dev}
+      APP_PROFILE: ${APP_PROFILE:-dev}
       PORT: ${BACKEND_PORT:-8080}
       SERVER_PORT: ${BACKEND_PORT:-8080}
-      DB_URL: ${DB_URL:?Set DB_URL (Supabase JDBC URL) in .env}
-      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME in .env}
-      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
-      DB_SSL_MODE: ${DB_SSL_MODE:-require}
-      DB_POOL_SIZE: ${DB_POOL_SIZE:-5}
-      DB_POOL_MIN_IDLE: ${DB_POOL_MIN_IDLE:-1}
+      DB_URL: ${DB_URL:-jdbc:postgresql://postgres:5432/viettritutor}
+      DB_USERNAME: ${DB_USERNAME:-viettri}
+      DB_PASSWORD: ${DB_PASSWORD:-viettripassword}
+      DB_SSL_MODE: ${DB_SSL_MODE:-disable}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+      DB_POOL_MIN_IDLE: ${DB_POOL_MIN_IDLE:-2}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET (32+ bytes) in .env}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
@@ -95,4 +113,7 @@ services:
       timeout: 5s
       retries: 6
       start_period: 15s
+
+volumes:
+  pgdata:
 

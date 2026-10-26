@@ -22,9 +22,9 @@ echo.
 echo [2/4] Starting Backend (Spring Boot) ...
 echo Starting Backend on port 8080 ...
 if exist "backend\mvnw.cmd" (
-    start "VietTriTutor - Backend (8080)" /D "backend" cmd /k "mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=supabase -Dspring.profiles.active=supabase || (echo. && echo [ERROR] Backend gap su co! Xem nguyen nhan o tren. && pause)"
+    start "VietTriTutor - Backend (8080)" /D "backend" cmd /k "mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev -Dspring.profiles.active=dev || (echo. && echo [ERROR] Backend gap su co! Xem nguyen nhan o tren. && pause)"
 ) else (
-    start "VietTriTutor - Backend (8080)" /D "backend" cmd /k "mvn spring-boot:run -Dspring-boot.run.profiles=supabase -Dspring.profiles.active=supabase || (echo. && echo [ERROR] Backend gap su co! Xem nguyen nhan o tren. && pause)"
+    start "VietTriTutor - Backend (8080)" /D "backend" cmd /k "mvn spring-boot:run -Dspring-boot.run.profiles=dev -Dspring.profiles.active=dev || (echo. && echo [ERROR] Backend gap su co! Xem nguyen nhan o tren. && pause)"
 )
 
 echo.
