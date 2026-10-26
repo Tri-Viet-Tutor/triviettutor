@@ -38,12 +38,12 @@ public class AdminUserServiceImpl implements AdminUserService {
         if (page < 0 || size < 1 || size > 100) {
             throw new BusinessException(ErrorCode.INVALID_PAGINATION);
         }
-        String normalizedRole = role == null || role.isBlank() ? null : role.trim();
-        if (normalizedRole != null && !ROLES.contains(normalizedRole)) {
+        String normalizedRole = role == null || role.isBlank() ? "" : role.trim();
+        if (!normalizedRole.isEmpty() && !ROLES.contains(normalizedRole)) {
             throw new BusinessException(ErrorCode.INVALID_ROLE_FILTER);
         }
         String normalizedSearch = search == null || search.isBlank()
-                ? null : search.trim().toLowerCase(Locale.ROOT);
+                ? "" : search.trim().toLowerCase(Locale.ROOT);
         return PageResponse.from(userRepository.findAdminUsers(
                 normalizedRole, normalizedSearch,
                 PageRequest.of(page, size, Sort.by("id").ascending()))
