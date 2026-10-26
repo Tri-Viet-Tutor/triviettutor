@@ -1,10 +1,10 @@
 param(
-    [string]$EnvironmentFile = (Join-Path (Split-Path -Parent $PSScriptRoot) '.env.docker')
+    [string]$EnvironmentFile = (Join-Path (Split-Path -Parent $PSScriptRoot) '.env')
 )
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$templatePath = Join-Path $projectRoot '.env.docker.example'
+$templatePath = Join-Path $projectRoot '.env.example'
 $environmentPath = [System.IO.Path]::GetFullPath($EnvironmentFile)
 $lines = New-Object 'System.Collections.Generic.List[string]'
 $entries = [System.Collections.Generic.Dictionary[string, int]]::new([System.StringComparer]::Ordinal)
@@ -66,18 +66,10 @@ foreach ($line in [System.IO.File]::ReadAllLines($templatePath)) {
     }
 }
 
-foreach ($key in @('LOCAL_DB_PASSWORD', 'JWT_SECRET', 'PGADMIN_PASSWORD')) {
+foreach ($key in @('JWT_SECRET')) {
     if ([string]::IsNullOrWhiteSpace($values[$key])) {
         $values[$key] = New-LocalSecret
         $lines[$entries[$key]] = "$key=$($values[$key])"
-    }
-}
-
-$composePath = Join-Path $projectRoot 'docker-compose.yml'
-foreach ($reference in [regex]::Matches([System.IO.File]::ReadAllText($composePath), '\$\{([A-Z][A-Z0-9_]*):\?')) {
-    $key = $reference.Groups[1].Value
-    if (-not $values.ContainsKey($key) -or [string]::IsNullOrWhiteSpace($values[$key])) {
-        throw "Set $key in the Docker environment file before continuing."
     }
 }
 
@@ -87,4 +79,16 @@ if ([System.Text.Encoding]::UTF8.GetByteCount($values['JWT_SECRET']) -lt 32) {
 
 $encoding = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllLines($environmentPath, $lines, $encoding)
-Write-Host "Docker environment ready: $environmentPath"
+Write-Host "Docker environment written: $environmentPath"
+
+$composePath = Join-Path $projectRoot 'docker-compose.yml'
+$missing = @()
+foreach ($reference in [regex]::Matches([System.IO.File]::ReadAllText($composePath), '\$\{([A-Z][A-Z0-9_]*):\?')) {
+    $key = $reference.Groups[1].Value
+    if (-not $values.ContainsKey($key) -or [string]::IsNullOrWhiteSpace($values[$key])) {
+        $missing += $key
+    }
+}
+if ($missing.Count -gt 0) {
+    throw "Fill these Supabase values in $environmentPath before docker compose up: $(($missing | Select-Object -Unique) -join ', ')."
+}

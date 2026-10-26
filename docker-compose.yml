@@ -8,31 +8,12 @@ services:
       - "7882:7882/udp"
     restart: unless-stopped
 
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${LOCAL_DB_NAME:?Set LOCAL_DB_NAME in .env.docker}
-      POSTGRES_USER: ${LOCAL_DB_USERNAME:?Set LOCAL_DB_USERNAME in .env.docker}
-      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:?Set LOCAL_DB_PASSWORD in .env.docker}
-      PGPORT: ${LOCAL_DB_PORT:?Set LOCAL_DB_PORT in .env.docker}
-      HEALTHCHECK_HOST: ${CONTAINER_LOOPBACK_ADDRESS:?Set CONTAINER_LOOPBACK_ADDRESS in .env.docker}
-    command: ["postgres", "-p", "${LOCAL_DB_PORT:?Set LOCAL_DB_PORT in .env.docker}"]
-    ports:
-      - "${DOCKER_BIND_ADDRESS:?Set DOCKER_BIND_ADDRESS in .env.docker}:${LOCAL_DB_HOST_PORT:?Set LOCAL_DB_HOST_PORT in .env.docker}:${LOCAL_DB_PORT:?Set LOCAL_DB_PORT in .env.docker}"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h \"$$HEALTHCHECK_HOST\" -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-
   backend:
     build:
       context: ./backend
     restart: unless-stopped
+    # The database is Supabase Cloud; there is no local database container.
+    # Every value comes from the root .env (see .env.example).
     env_file:
       - .env
     environment:
@@ -40,10 +21,13 @@ services:
       APP_PROFILE: ${APP_PROFILE:-supabase}
       PORT: ${BACKEND_PORT:-8080}
       SERVER_PORT: ${BACKEND_PORT:-8080}
-      DB_URL: ${DB_URL}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
+      DB_URL: ${DB_URL:?Set DB_URL (Supabase JDBC URL) in .env}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME in .env}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      DB_SSL_MODE: ${DB_SSL_MODE:-require}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-5}
+      DB_POOL_MIN_IDLE: ${DB_POOL_MIN_IDLE:-1}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET (32+ bytes) in .env}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
       HEALTHCHECK_HOST: ${CONTAINER_LOOPBACK_ADDRESS:-127.0.0.1}
@@ -71,7 +55,7 @@ services:
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
     ports:
-      - "${BACKEND_PORT:-8080}:${BACKEND_PORT:-8080}"
+      - "${DOCKER_BIND_ADDRESS:-127.0.0.1}:${BACKEND_HOST_PORT:-8080}:${BACKEND_PORT:-8080}"
     healthcheck:
       test: ["CMD-SHELL", "curl --fail --silent --output /dev/null \"http://$$HEALTHCHECK_HOST:$$SERVER_PORT/api-docs\""]
       interval: 10s
@@ -85,14 +69,14 @@ services:
     restart: unless-stopped
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
-      VITE_API_PROXY_TARGET: http://${BACKEND_HOST:?Set BACKEND_HOST in .env.docker}:${BACKEND_PORT:?Set BACKEND_PORT in .env.docker}
-      VITE_DEV_SERVER_HOST: ${CONTAINER_BIND_ADDRESS:?Set CONTAINER_BIND_ADDRESS in .env.docker}
-      VITE_DEV_SERVER_PORT: ${FRONTEND_PORT:?Set FRONTEND_PORT in .env.docker}
+      VITE_API_PROXY_TARGET: http://${BACKEND_HOST:-backend}:${BACKEND_PORT:-8080}
+      VITE_DEV_SERVER_HOST: ${CONTAINER_BIND_ADDRESS:-0.0.0.0}
+      VITE_DEV_SERVER_PORT: ${FRONTEND_PORT:-5173}
       VITE_USE_POLLING: ${VITE_USE_POLLING:-true}
       VITE_PREVIEW: "false"
-      HEALTHCHECK_HOST: ${CONTAINER_LOOPBACK_ADDRESS:?Set CONTAINER_LOOPBACK_ADDRESS in .env.docker}
+      HEALTHCHECK_HOST: ${CONTAINER_LOOPBACK_ADDRESS:-127.0.0.1}
     ports:
-      - "${DOCKER_BIND_ADDRESS:?Set DOCKER_BIND_ADDRESS in .env.docker}:${FRONTEND_HOST_PORT:?Set FRONTEND_HOST_PORT in .env.docker}:${FRONTEND_PORT:?Set FRONTEND_PORT in .env.docker}"
+      - "${DOCKER_BIND_ADDRESS:-127.0.0.1}:${FRONTEND_HOST_PORT:-5173}:${FRONTEND_PORT:-5173}"
     volumes:
       - ./frontend/src:/app/src:ro
       - ./frontend/public:/app/public:ro
@@ -112,22 +96,3 @@ services:
       retries: 6
       start_period: 15s
 
-  pgadmin:
-    image: dpage/pgadmin4:9.18
-    profiles: [tools]
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:?Set PGADMIN_DEFAULT_EMAIL in .env.docker}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-}
-      PGADMIN_LISTEN_PORT: ${PGADMIN_PORT:?Set PGADMIN_PORT in .env.docker}
-    ports:
-      - "${DOCKER_BIND_ADDRESS:?Set DOCKER_BIND_ADDRESS in .env.docker}:${PGADMIN_HOST_PORT:?Set PGADMIN_HOST_PORT in .env.docker}:${PGADMIN_PORT:?Set PGADMIN_PORT in .env.docker}"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-
-volumes:
-  postgres_data:
-  pgadmin_data:
