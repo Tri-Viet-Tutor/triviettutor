@@ -285,6 +285,44 @@ const ROUTES: [method: string, pattern: RegExp, handler: PreviewHandler][] = [
       };
     },
   ],
+  [
+    "GET",
+    /^\/meetings\/sessions\/(\d+)\/logs$/,
+    ({ user, ids }) => {
+      requireRole(user, "ROLE_ADMIN", "ROLE_TUTOR");
+      return {
+        sessionId: Number(ids[0]),
+        roomName: `classroom-session-${ids[0]}`,
+        sessionLog: {
+          sessionId: `classroom-session-${ids[0]}`,
+          roomName: `classroom-session-${ids[0]}`,
+          status: "ACTIVE",
+          startTime: new Date(Date.now() - 30 * 60000).toISOString(),
+          maxParticipants: 3,
+          totalParticipantsCount: 3,
+        },
+        participantLogs: [
+          {
+            sessionId: `classroom-session-${ids[0]}`,
+            userId: 2,
+            userRole: "TUTOR",
+            participantName: "Thầy Trần Minh Hoàng (Gia sư)",
+            joinedAt: new Date(Date.now() - 30 * 60000).toISOString(),
+            durationSeconds: 1800,
+          },
+          {
+            sessionId: `classroom-session-${ids[0]}`,
+            userId: 3,
+            userRole: "STUDENT",
+            participantName: "Nguyễn Văn A (Học sinh)",
+            joinedAt: new Date(Date.now() - 28 * 60000).toISOString(),
+            durationSeconds: 1680,
+          },
+        ],
+        totalParticipants: 2,
+      };
+    },
+  ],
 
   // Xin nghỉ
   [
