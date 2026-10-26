@@ -16,6 +16,10 @@ export const walletService = {
   async getTopup(id: number): Promise<WalletTopup> {
     return unwrap(await api.get<ApiResponse<WalletTopup>>(`/wallet/topups/${id}`));
   },
+  /** Asks the backend to query VNPay when the IPN never arrived; only a signed paid result credits the wallet. */
+  async reconcileTopup(id: number): Promise<WalletTopup> {
+    return unwrap(await api.post<ApiResponse<WalletTopup>>(`/wallet/topups/${id}/reconcile`));
+  },
   async verifyReturn(search: string): Promise<WalletTopup> {
     return unwrap(await api.get<ApiResponse<WalletTopup>>("/wallet/vnpay/return", { params: new URLSearchParams(search) }));
   },
