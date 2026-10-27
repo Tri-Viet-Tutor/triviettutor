@@ -33,7 +33,7 @@ public class ClassTestServer {
  static class Fixtures {
   @Bean ApplicationRunner classFixtures(UserRepository users, PasswordEncoder encoder, CourseRepository courses,
    ClassGroupRepository classes, LearningScheduleRepository rosters, SessionRepository sessions,
-   ClassService service, PlatformTransactionManager manager, Clock clock) {
+   ClassService service, com.viettritutor.service.SubjectService subjects, PlatformTransactionManager manager, Clock clock) {
    return args -> new TransactionTemplate(manager).executeWithoutResult(tx -> {
     String hash=encoder.encode(System.getenv("CLASS_TEST_PASSWORD"));
     User admin=null, student=null;
@@ -45,7 +45,7 @@ public class ClassTestServer {
     }
     int index=0;
     for(String fixture:new String[]{"REOPEN","KEEP","COLLECT","REFUND"}) {
-     Course course=courses.saveAndFlush(Course.builder().name("Fixture "+fixture).subject("FIXTURE_"+fixture)
+     Course course=courses.saveAndFlush(Course.builder().name("Fixture "+fixture).subject("FIXTURE_"+fixture).subjectId(subjects.resolve("FIXTURE_"+fixture).getId())
       .gradeLevel(GradeLevel.GRADE_10).basePrice1on1(new BigDecimal("8000000")).totalSessions(4).durationMinutes(120).build());
      CreateClassRequest r=new CreateClassRequest();r.setCourseId(course.getId());r.setClassType(ClassType.GROUP);
      r.setDeliveryMode(DeliveryMode.ONLINE);r.setSchedulePattern(SchedulePattern.MON_WED_FRI);r.setTimeSlot(TimeSlot.SLOT_MORNING);

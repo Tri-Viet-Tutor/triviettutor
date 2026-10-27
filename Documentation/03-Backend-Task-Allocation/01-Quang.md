@@ -133,7 +133,7 @@ Luồng mới dưới đây thay cặp tạo enrollment/pay trước đây. Quan
 | ID | API | Quyền | Input chính → Output | Nguồn |
 |---|---|---|---|---|
 | Q-A33 | GET `/cart` | S | JWT → cart,items,giá dự kiến,cảnh báo | Mới ERD |
-| Q-A34 | POST `/cart/items` | S | classGroupId → cart item | Mới ERD |
+| Q-A34 | POST `/cart/items` | S | subjectId → cart item | Mới ERD |
 | Q-A35 | DELETE `/cart/items/{itemId}` | S sở hữu | itemId → cart cập nhật | Mới ERD |
 | Q-A36 | DELETE `/cart/items` | S | JWT → cart rỗng | Mới ERD |
 | Q-A37 | POST `/orders/checkout` | S | cartVersion + Idempotency-Key → order,items,total,expiry | Mới ERD |
@@ -176,3 +176,18 @@ Luồng mới dưới đây thay cặp tạo enrollment/pay trước đây. Quan
 - Kiểm thử tích hợp và HTTP với ADMIN/TUTOR/STUDENT: số tiền, hủy không trừ hai lần, dạy thay/bù qua tháng, 0 buổi/disabled, thiếu bằng chứng, khóa sau finalize, idempotency, concurrent finalize/correction, quyền sở hữu, input và Swagger. Không tạo Postman.
 
 - Kết quả kiểm thử 15/10/2026: 216 test pass, gồm 42 test PayrollController và 1 test HTTP thực với 46 lượt kiểm tra API/Swagger. Dữ liệu kiểm thử tách biệt trong H2. Sau khi database được đồng bộ V13/V14 phù hợp nhánh main, V15 đã áp dụng thành công ngày 15/10/2026; backend Supabase khởi động qua bước Hibernate schema validation. Script local đọc .env ở root, hoặc backend/.env nếu root không có.
+
+### Q06/Q07 — Contract xác nhận ngày 15/10/2026
+
+- Giỏ chọn môn: subjects(id,name) với tên chuẩn hóa uppercase; courses.subject_id liên kết môn, vẫn giữ Course.subject để tương thích API cũ. Migration chuyển các tên môn có sẵn; Course create/update đồng bộ cả tên và ID. Catalog trả thêm subjectId để Student chọn môn.
+- Mỗi Student một cart, mỗi subject chỉ xuất hiện một lần; GET giỏ rỗng không tạo dữ liệu. POST nhận subjectId; thêm trùng trả lại giỏ hiện tại. Giỏ tối đa 20 môn; cartVersion tăng khi danh sách thay đổi. DELETE item kiểm tra chủ sở hữu; DELETE toàn bộ giỏ lặp không gây lỗi.
+- Checkout nhận cartVersion và items[{cartItemId,classId}], đủ đúng toàn bộ mục hiện tại, không trùng mục/lớp; lớp phải thuộc đúng môn, đang ENROLLING, còn hạn, course active, đủ lịch tương lai, còn chỗ và không trùng lịch với lớp đã học/đang giữ chỗ VNPay hoặc lớp khác trong đơn.
+- Người dùng chốt THU GIÁ GỐC Course.basePrice1on1, không áp dụng PricingService.discount. Server lưu snapshot tên môn/khóa học/mã lớp và giá mỗi item, tổng tiền VND nguyên. Không nhận amount/discount từ client.
+- Đơn PENDING_PAYMENT giữ giá snapshot đến expiresAt, mặc định 5 phút qua ORDER_TTL_MINUTES; checkout không giữ chỗ và chưa xóa giỏ. Giá Course thay đổi sau checkout không thay giá đơn. Thanh toán kiểm tra lại trạng thái/lịch/chỗ và quan hệ lớp/môn/khóa học.
+- POST checkout/payment/cancel bắt buộc Idempotency-Key (cùng quy tắc key thanh toán hiện có). Cùng actor+operation+key+payload trả snapshot response đã ghi; payload khác trả 409. Request khóa toàn bộ class theo ID, rồi Student, rồi Order; khóa Course theo ID trước admission. Các luồng một lớp vẫn dùng cùng class/student locks.
+- Mock thanh toán dùng MockPaymentPolicy/MockPaymentGateway hiện có (chỉ dev/demo/test được bật cấu hình), gọi gateway một lần cho toàn đơn. Tái sử dụng PaymentIntent/Payment/Enrollment/LearningSchedule cho từng item trong cùng transaction. Nếu bất kỳ ghi danh lỗi, rollback toàn bộ. Mỗi lần mock thất bại lưu payment FAILED cho từng item, không ghi danh, đơn còn PENDING_PAYMENT để thử lại bằng key mới trước hạn.
+- Thành công: đơn PAID, liên kết payment/enrollment từng item, xóa đúng các cart item đã mua (mục đã xóa rồi thêm lại mang ID mới được giữ). Retry không tạo thêm payment/enrollment. Mỗi item tối đa một payment thành công.
+- Cancel nhận reason, chỉ đơn chưa thanh toán và còn hạn; trả CANCELLED, không xóa giỏ. Hết hạn hiển thị EXPIRED; GET chỉ đọc. Pay/cancel sau hết hạn trả 422; đơn đã PAID không hủy qua API order. Refund từng enrollment dùng luồng hiện có và cập nhật tổng/trạng thái PARTIALLY_REFUNDED/REFUNDED của Order.
+- GET /orders/my và /admin/orders: status,from,to,page,size (mặc định 0/20, tối đa 100); Admin thêm studentId. Mốc ngày inclusive theo Clock; newest first. Detail chỉ Admin hoặc Student sở hữu; Tutor bị từ chối. /orders/my giữ theo yêu cầu, toàn bộ prefix /api/v1.
+- HTTP 400 cho input/key/phân trang sai, 401 chưa đăng nhập, 403 sai quyền/chủ sở hữu, 404 ID không tồn tại, 409 giỏ cũ/môn không khớp/lịch trùng/hết chỗ/key khác payload, 422 đơn hết hạn/không còn pending/lớp chưa sẵn sàng/mock bị tắt.
+- Kiểm thử: ba role và ownership; CRUD giỏ/version; checkout môn-lớp/giá/expiry; mock thành công/thất bại/rollback/retry; concurrent pay/cancel và tranh chỗ/lịch; refund liên kết; Swagger và HTTP thật. Dữ liệu test tách biệt, không tạo Postman.

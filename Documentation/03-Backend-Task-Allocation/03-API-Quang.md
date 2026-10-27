@@ -74,3 +74,39 @@ Theo logical model mới, `CartItem` lưu **môn** (`subject_id`) còn `OrderIte
 **Tổng: 42 API.** Chi tiết input/output, quy tắc và test nằm trong [tài liệu giao việc Quang](01-Quang.md); các điểm schema chưa chốt nằm trong [tổng quan phân công](00-Tong-quan-phan-cong.md).
 
 Contract bảng lương ngày 14/10/2026 nằm tại mục Q04 bổ sung trong 01-Quang.md: mức hiện tại cho cả tháng, chỉ chốt kỳ đã kết thúc và đối soát đủ; Tutor đọc danh sách kỳ FINALIZED của mình. POST finalize nhận Idempotency-Key, không body.
+
+
+### Contract giỏ hàng đã triển khai (16/10/2026)
+
+CartController và OrderController cung cấp đủ 10 API tại mục 5. Chi tiết quy tắc đã chốt nằm ở Q06/Q07 trong 01-Quang.md.
+
+- CartItem lưu subjectId; lấy subjectId từ phản hồi catalog lớp hoặc khóa học. Thêm trùng môn giữ nguyên mục và cartVersion.
+- Checkout toàn bộ giỏ, mỗi môn chọn một lớp thuộc môn đó. Thu đúng Course.basePrice1on1, **không giảm giá**; lưu snapshot giá, chưa giữ chỗ, chưa ghi danh.
+- POST checkout, thanh toán mock và cancel bắt buộc header Idempotency-Key (1..100 ký tự chữ/số hoặc . _ : -). Retry cùng payload dùng lại key; thao tác mới dùng key mới.
+- Giá giữ mặc định 5 phút (ORDER_TTL_MINUTES). Thanh toán kiểm tra lại lịch, chỗ, trạng thái lớp rồi ghi danh tất cả trong cùng transaction. Lỗi một lớp thì rollback toàn bộ. Mock bị từ chối thì giữ đơn PENDING_PAYMENT, có thể thử lại với key mới trước hạn.
+- Mock chỉ hoạt động khi PAYMENT_MOCK_ENABLED=true và profile dev/demo/test. Profile supabase không cho phép mock; dùng Swagger test riêng để thử thanh toán giả lập.
+- GET /orders/my và /admin/orders hỗ trợ status, from, to, page, size; Admin thêm studentId. from/to là ngày inclusive, page bắt đầu từ 0, size 1..100. GET detail gồm snapshot từng lớp và danh sách payments.
+
+Ví dụ body POST /cart/items (thay ID bằng dữ liệu thực tế):
+
+```json
+{"subjectId": 1}
+```
+
+Sau GET /cart, lấy cartVersion và id của từng item để POST /orders/checkout:
+
+```json
+{
+  "cartVersion": 2,
+  "items": [
+    {"cartItemId": 1, "classId": 1},
+    {"cartItemId": 2, "classId": 2}
+  ]
+}
+```
+
+POST /orders/{orderId}/payments/mock không có body. POST /orders/{orderId}/cancel nhận {"reason":"Đổi kế hoạch học"}. Cả hai dùng orderId từ checkout và JWT của Student sở hữu đơn.
+
+Migration V16 bổ sung subjects, courses.subject_id, carts, cart_items, orders, order_items, order_request_keys và liên kết payments. Giữ Course.subject để tương thích. Hoàn tiền từng enrollment qua API hiện có sẽ cập nhật tổng hoàn và trạng thái đơn.
+
+Kiểm thử: CartOrderControllerTest (38 case), CartOrderHttpTest (10 case HTTP/Swagger/rollback/concurrency); CartOrderPostgresTest chạy lại 10 case HTTP trên schema PostgreSQL tạm được tạo từ migrations, rồi xóa riêng schema đó. Test PostgreSQL bật bằng CART_POSTGRES_URL, CART_POSTGRES_USER, CART_POSTGRES_PASSWORD; mặc định không chạy khi chưa cấu hình. Không tạo Postman.

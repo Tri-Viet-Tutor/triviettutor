@@ -38,6 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 @Import(ClassControllerTest.FixedTime.class)
 class ClassControllerTest {
+ @Autowired com.viettritutor.service.SubjectService subjects;
  static final String BASE = "/api/v1/admin/classes", CAT = "/api/v1/catalog/classes";
  static final LocalDate TODAY = LocalDate.of(2030, 1, 1), START = TODAY.plusDays(20);
  @TestConfiguration static class FixedTime {
@@ -62,7 +63,7 @@ class ClassControllerTest {
  @BeforeEach void setup() {
   admin = token(user("ADMIN"));
   student = user("STUDENT");
-  course = courses.saveAndFlush(Course.builder().name("Math").subject("MATH").gradeLevel(GradeLevel.GRADE_10)
+  course = courses.saveAndFlush(Course.builder().name("Math").subject("MATH").subjectId(subjects.resolve("MATH").getId()).gradeLevel(GradeLevel.GRADE_10)
    .basePrice1on1(new BigDecimal("8000000")).totalSessions(4).durationMinutes(120).build());
  }
  User user(String role) { return users.saveAndFlush(User.builder().email(UUID.randomUUID()+"@classes.test")
