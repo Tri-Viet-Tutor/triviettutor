@@ -1,221 +1,277 @@
-# ==============================================================================
-# VietTriTutor - Smart Startup Script (.ps1)
-# 1. Kiem tra file .env so voi .env.example (canh bao / yeu cau cap nhat)
-# 2. Kiem tra moi truong PC (DB, Java/Maven cho Backend, Node/npm cho Frontend/Mobile)
-# 3. Chay truc tiep tren PC neu du moi truong, chi fallback Docker cho dich vu thieu
-# ==============================================================================
-
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$ErrorActionPreference = 'Continue'
-$projectRoot = $PSScriptRoot
+$Host.UI.RawUI.WindowTitle = "VietTriTutor - Startup Script"
 
-Write-Host "===================================================" -ForegroundColor Cyan
-Write-Host "            VietTriTutor - Startup Script          " -ForegroundColor Cyan
-Write-Host "===================================================" -ForegroundColor Cyan
-Write-Host ""
+$rootDir = $PSScriptRoot
+if (-not $rootDir) { $rootDir = (Get-Location).Path }
 
-# ------------------------------------------------------------------------------
-# 1. Kiem tra file .env va so sanh voi .env.example
-# ------------------------------------------------------------------------------
-Write-Host "[1/5] Checking environment configuration (.env) ..." -ForegroundColor Yellow
-$envPath = Join-Path $projectRoot ".env"
-$envExamplePath = Join-Path $projectRoot ".env.example"
+# Ham dong tat ca cac cua so va giai phong port
+function Stop-AllServices {
+    param($backend, $frontend, $mobile)
 
-if (-not (Test-Path -LiteralPath $envPath)) {
-    if (Test-Path -LiteralPath $envExamplePath) {
-        Copy-Item -LiteralPath $envExamplePath -Destination $envPath
-        Write-Host "[CANH BAO] File .env chua ton tai! Da tu dong tao .env tu .env.example." -ForegroundColor Red
-        Write-Host "-> Vui long kiem tra va dien day du cac thong so (JWT_SECRET, DB, v.v.) trong file .env roi chay lai script!" -ForegroundColor Red
-        Read-Host "Nhan Enter sau khi ban da chinh sua xong .env de tiep tuc hoac Ctrl+C de thoat"
-    } else {
-        Write-Host "[LOI] Khong tim thay ca file .env lan .env.example!" -ForegroundColor Red
-        exit 1
+    Write-Host "`nDang dong toan bo cac cua so ung dung..." -ForegroundColor Yellow
+
+    @($backend, $frontend, $mobile) | ForEach-Object {
+        if ($_ -and !$_.HasExited) {
+            Write-Host " - Dong cua so va tien trinh (PID: $($_.Id))..." -ForegroundColor DarkGray
+            taskkill /F /T /PID $_.Id 2>$null | Out-Null
+            Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+        }
     }
-}
 
-# So sanh cac key giua .env va .env.example
-if (Test-Path -LiteralPath $envExamplePath) {
-    function Get-EnvKeys($filePath) {
-        $keys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-        foreach ($line in (Get-Content -LiteralPath $filePath)) {
-            $trimmed = $line.Trim()
-            if ($trimmed -and -not $trimmed.StartsWith('#')) {
-                if ($trimmed -match '^([A-Za-z_][A-Za-z0-9_]*)\s*=') {
-                    [void]$keys.Add($Matches[1])
-                }
+    # Quet sach lai cac port de dam bao giai phong hoan toan
+    8080, 5173, 8081 | ForEach-Object {
+        $port = $_
+        Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue | ForEach-Object {
+            $pId = $_.OwningProcess
+            if ($pId -and $pId -gt 0) {
+                taskkill /F /T /PID $pId 2>$null | Out-Null
             }
         }
-        return $keys
-    }
-
-    $exampleKeys = Get-EnvKeys $envExamplePath
-    $currentKeys = Get-EnvKeys $envPath
-    $missingKeys = @()
-
-    foreach ($k in $exampleKeys) {
-        if (-not $currentKeys.Contains($k)) {
-            $missingKeys += $k
-        }
-    }
-
-    if ($missingKeys.Count -gt 0) {
-        Write-Host "[CANH BAO] File .env cua ban dang thieu cac bien sau so voi .env.example:" -ForegroundColor Red
-        foreach ($mk in $missingKeys) {
-            Write-Host "  - $mk" -ForegroundColor Magenta
-        }
-        Write-Host "Vui long bo sung cac bien tren vao file .env de he thong hoat dong chinh xac!" -ForegroundColor Red
-        Write-Host ""
-    } else {
-        Write-Host ".env hop le va day du key theo mau .env.example." -ForegroundColor Green
     }
 }
 
-# ------------------------------------------------------------------------------
-# 2. Don dep cac port dang bi chiem dung (8080, 5173, 8081)
-# ------------------------------------------------------------------------------
-Write-Host "`n[2/5] Cleaning up ports: 8080, 5173, 8081 ..." -ForegroundColor Yellow
-$ports = @(8080, 5173, 8081)
-foreach ($p in $ports) {
-    $conns = Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue
-    if ($conns) {
-        foreach ($conn in $conns) {
+# Ham nap dataset mau tu thu muc data
+function Import-SampleData {
+    param($dataFile)
+
+    if (-not (Test-Path -LiteralPath $dataFile)) {
+        Write-Host " - Khong tim thay file du lieu: $dataFile" -ForegroundColor DarkGray
+        return
+    }
+
+    Write-Host " - Dang nap dataset mau: $(Split-Path $dataFile -Leaf) ..." -ForegroundColor Cyan
+
+    # Doc thong tin database tu .env
+    $dbName = "viettritutor"
+    $dbUser = "viettri"
+    $dbPass = "viettripassword"
+    $envFile = Join-Path $rootDir ".env"
+
+    if (Test-Path $envFile) {
+        foreach ($line in (Get-Content -LiteralPath $envFile)) {
+            if ($line -match '^\s*LOCAL_DB_NAME\s*=\s*(.+)$') { $dbName = $Matches[1].Trim() }
+            if ($line -match '^\s*LOCAL_DB_USERNAME\s*=\s*(.+)$') { $dbUser = $Matches[1].Trim() }
+            if ($line -match '^\s*LOCAL_DB_PASSWORD\s*=\s*(.+)$') { $dbPass = $Matches[1].Trim() }
+        }
+    }
+
+    # Uu tien chay qua Docker PostgreSQL neu container dang chay hoac chay truc tiep psql
+    $dockerRunning = $false
+    try {
+        $null = docker info 2>&1
+        if ($LASTEXITCODE -eq 0) { $dockerRunning = $true }
+    } catch { $dockerRunning = $false }
+
+    if ($dockerRunning) {
+        # Copy sql file vao container va thuc thi
+        $targetInContainer = "/tmp/" + (Split-Path $dataFile -Leaf)
+        docker compose cp "$dataFile" "postgres:$targetInContainer" 2>$null | Out-Null
+        docker compose exec -T postgres sh -c "PGPASSWORD='$dbPass' psql -U '$dbUser' -d '$dbName' -f '$targetInContainer'" 2>$null | Out-Null
+        Write-Host " - Da nap du lieu vao PostgreSQL container thanh cong!" -ForegroundColor Green
+    } else {
+        # Thu psql truc tiep tren may host
+        if (Get-Command psql -ErrorAction SilentlyContinue) {
+            $env:PGPASSWORD = $dbPass
+            psql -h localhost -U $dbUser -d $dbName -f "$dataFile" 2>$null | Out-Null
+            Write-Host " - Da nap du lieu vao PostgreSQL host thanh cong!" -ForegroundColor Green
+        }
+    }
+}
+
+do {
+    Clear-Host
+    Write-Host "===================================================" -ForegroundColor Cyan
+    Write-Host "            VietTriTutor - Startup Script          " -ForegroundColor Cyan
+    Write-Host "===================================================" -ForegroundColor Cyan
+    Write-Host ""
+
+    # 1. Kiem tra file .env va so sanh voi .env.example
+    Write-Host "[1/6] Checking environment configuration (.env) ..." -ForegroundColor Yellow
+    $envPath = Join-Path $rootDir ".env"
+    $envExamplePath = Join-Path $rootDir ".env.example"
+
+    if (-not (Test-Path -LiteralPath $envPath)) {
+        if (Test-Path -LiteralPath $envExamplePath) {
+            Copy-Item -LiteralPath $envExamplePath -Destination $envPath
+            Write-Host "[CANH BAO] File .env chua ton tai! Da tu dong tao .env tu .env.example." -ForegroundColor Red
+            Write-Host "-> Vui long kiem tra va dien thong tin trong .env roi chay lai!" -ForegroundColor Red
+            Read-Host "Nhan Enter de tiep tuc hoac Ctrl+C de thoat"
+        }
+    }
+
+    # 2. Don dep cac port cu (8080, 5173, 8081)
+    Write-Host "`n[2/6] Dang kiem tra va giai phong cac cong 8080, 5173, 8081..." -ForegroundColor Yellow
+    8080, 5173, 8081 | ForEach-Object {
+        $port = $_
+        Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue | ForEach-Object {
+            $pId = $_.OwningProcess
+            if ($pId -and $pId -gt 0) {
+                Write-Host " - Giai phong cong $port (PID: $pId)" -ForegroundColor DarkGray
+                taskkill /F /T /PID $pId 2>$null | Out-Null
+            }
+        }
+    }
+
+    # Ham kiem tra va khoi dong Docker neu chua chay
+    function Ensure-DockerRunning {
+        try {
+            $null = docker info 2>&1
+            if ($LASTEXITCODE -eq 0) { return $true }
+        } catch {}
+
+        Write-Host " - Docker chua chay. Dang khoi dong Docker Desktop..." -ForegroundColor Cyan
+
+        $dockerExe = "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+        if (-not (Test-Path $dockerExe)) {
+            $regPath = (Get-ItemProperty 'HKLM:\Software\Microsoft\Windows\CurrentVersion\App Paths\Docker Desktop.exe' -ErrorAction SilentlyContinue).'(default)'
+            if ($regPath -and (Test-Path $regPath)) {
+                $dockerExe = $regPath
+            }
+        }
+
+        if (Test-Path $dockerExe) {
+            Start-Process -FilePath $dockerExe
+        } else {
+            Start-Process "docker" -ArgumentList "desktop" -ErrorAction SilentlyContinue
+        }
+
+        Write-Host " - Dang cho Docker Desktop khoi dong..." -ForegroundColor Yellow
+        $timeout = 60
+        $waited = 0
+        while ($waited -lt $timeout) {
+            Start-Sleep -Seconds 3
+            $waited += 3
             try {
-                $proc = Get-Process -Id $conn.OwningProcess -ErrorAction SilentlyContinue
-                Write-Host "Killing process $($proc.ProcessName) (PID $($conn.OwningProcess)) on port $p ..." -ForegroundColor DarkYellow
-                Stop-Process -Id $conn.OwningProcess -Force -ErrorAction SilentlyContinue
-            } catch {
-                Write-Host "Could not stop PID $($conn.OwningProcess): $_" -ForegroundColor DarkGray
-            }
+                $null = docker info 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host " - Docker Desktop da san sang ($waited giay)!" -ForegroundColor Green
+                    return $true
+                }
+            } catch {}
+            Write-Host "   ...dang cho Docker san sang ($waited/$timeout giay)" -ForegroundColor DarkGray
+        }
+
+        Write-Host " - [CANH BAO] Docker Desktop mat nhieu thoi gian hon du kien de khoi dong." -ForegroundColor Yellow
+        return $false
+    }
+
+    # 3. Kiem tra Database (PC vs Docker fallback)
+    Write-Host "`n[3/6] Dang kiem tra Database PostgreSQL..." -ForegroundColor Yellow
+    $dbTest = Test-NetConnection -ComputerName "127.0.0.1" -Port 5432 -WarningAction SilentlyContinue -InformationLevel Quiet
+    if ($dbTest) {
+        Write-Host " - PostgreSQL dang chay tren port 5432 cua PC." -ForegroundColor Green
+        $dockerAvailable = $false
+        try {
+            $null = docker info 2>&1
+            if ($LASTEXITCODE -eq 0) { $dockerAvailable = $true }
+        } catch { $dockerAvailable = $false }
+    } else {
+        $dockerAvailable = Ensure-DockerRunning
+        if ($dockerAvailable) {
+            Write-Host " - Khoi dong PostgreSQL qua Docker Compose..." -ForegroundColor Cyan
+            docker compose up -d postgres
+            Start-Sleep -Seconds 3
+            Write-Host " - PostgreSQL container san sang!" -ForegroundColor Green
+        } else {
+            Write-Host " - [LOI] Khong tim thay PostgreSQL tren PC va khong the khoi dong Docker!" -ForegroundColor Red
         }
     }
-}
 
-# ------------------------------------------------------------------------------
-# 3. Kiem tra Docker Daemon (de dung lam phuong an backup)
-# ------------------------------------------------------------------------------
-$dockerAvailable = $false
-try {
-    $null = docker info 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        $dockerAvailable = $true
-    }
-} catch {
-    $dockerAvailable = $false
-}
-
-# ------------------------------------------------------------------------------
-# 4. Kiem tra Database (PostgreSQL tren PC vs Docker fallback)
-# ------------------------------------------------------------------------------
-Write-Host "`n[3/5] Checking Database environment ..." -ForegroundColor Yellow
-$localDbReady = $false
-
-# Test ket noi port 5432 tren PC
-$dbTest = Test-NetConnection -ComputerName "127.0.0.1" -Port 5432 -WarningAction SilentlyContinue -InformationLevel Quiet
-if ($dbTest) {
-    Write-Host "Phat hien PostgreSQL dang chay tren may host (port 5432). Su dung Database noi bo PC." -ForegroundColor Green
-    $localDbReady = $true
-} else {
-    Write-Host "Khong co PostgreSQL chay tren cong 5432 cua PC." -ForegroundColor Yellow
-    if ($dockerAvailable) {
-        Write-Host "Fallback Docker: Dang khoi dong PostgreSQL container qua Docker Compose..." -ForegroundColor Cyan
-        docker compose up -d postgres
-        Write-Host "PostgreSQL Docker container san sang!" -ForegroundColor Green
-        $localDbReady = $true
-    } else {
-        Write-Host "[CANH BAO] PC khong co PostgreSQL san sang tren port 5432 va Docker cung khong hoat dong!" -ForegroundColor Red
-        Write-Host "Luu y: Neu ban dung Supabase Cloud Database thi Backend van co the ket noi duoc." -ForegroundColor DarkYellow
-    }
-}
-
-# ------------------------------------------------------------------------------
-# 5. Kiem tra Backend (Java 21 & Maven/mvnw vs Docker fallback)
-# ------------------------------------------------------------------------------
-Write-Host "`n[4/5] Checking Backend environment ..." -ForegroundColor Yellow
-$hasJava = $false
-try {
-    $javaVer = java -version 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        $hasJava = $true
-    }
-} catch {
+    # 4. Khoi dong Backend (Spring Boot :8080)
+    Write-Host "`n[4/6] Dang khoi dong Backend (Spring Boot :8080)..." -ForegroundColor Yellow
     $hasJava = $false
-}
+    try {
+        $null = java -version 2>&1
+        if ($LASTEXITCODE -eq 0) { $hasJava = $true }
+    } catch { $hasJava = $false }
 
-$backendDir = Join-Path $projectRoot "backend"
-$hasMvnw = Test-Path (Join-Path $backendDir "mvnw.cmd")
-$hasMaven = $false
-try {
-    $mvnVer = mvn -v 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        $hasMaven = $true
-    }
-} catch {
-    $hasMaven = $false
-}
-
-if ($hasJava -and ($hasMvnw -or $hasMaven)) {
-    Write-Host "PC co du Java & Maven. Khoi chay Backend truc tiep tren may host..." -ForegroundColor Green
-    if ($hasMvnw) {
-        Start-Process cmd -ArgumentList "/k", "cd /d `"$backendDir`" && mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev -Dspring.profiles.active=dev"
+    $backendProcess = $null
+    if ($hasJava) {
+        $backendCmd = if (Test-Path "$rootDir\backend\mvnw.cmd") {
+            "mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev -Dspring.profiles.active=dev"
+        } else {
+            "mvn spring-boot:run -Dspring-boot.run.profiles=dev -Dspring.profiles.active=dev"
+        }
+        $backendProcess = Start-Process cmd.exe -WorkingDirectory "$rootDir\backend" -ArgumentList "/k title VietTriTutor - Backend (8080) && $backendCmd" -PassThru
+        Write-Host " - Backend da khoi dong tren may host (PID: $($backendProcess.Id))" -ForegroundColor Green
     } else {
-        Start-Process cmd -ArgumentList "/k", "cd /d `"$backendDir`" && mvn spring-boot:run -Dspring-boot.run.profiles=dev -Dspring.profiles.active=dev"
+        if ($dockerAvailable) {
+            Write-Host " - PC thieu Java. Chay Backend bang Docker..." -ForegroundColor Cyan
+            docker compose up -d backend
+        } else {
+            Write-Host " - [LOI] Khong the chay Backend vi thieu Java va Docker!" -ForegroundColor Red
+        }
     }
-} else {
-    Write-Host "PC thieu Java hoac Maven. Kiem tra phuong an backup Docker..." -ForegroundColor Yellow
-    if ($dockerAvailable) {
-        Write-Host "Fallback Docker: Dang chay Backend bang Docker container..." -ForegroundColor Cyan
-        docker compose up -d backend
-    } else {
-        Write-Host "[LOI] PC thieu Java/Maven de chay Backend va Docker Desktop cung khong chay!" -ForegroundColor Red
-    }
-}
 
-# ------------------------------------------------------------------------------
-# 6. Kiem tra Frontend & Mobile (Node.js & npm vs Docker fallback)
-# ------------------------------------------------------------------------------
-Write-Host "`n[5/5] Checking Frontend & Mobile environment ..." -ForegroundColor Yellow
-$hasNode = $false
-try {
-    $nodeVer = node -v 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        $hasNode = $true
+    # Nap dataset mau sau khi DB/Backend san sang
+    $dataCandidates = @(
+        (Join-Path $rootDir "data\sample_data.sql"),
+        (Join-Path $rootDir "backend\src\main\resources\data\sample_data.sql")
+    )
+    $foundDataFile = $dataCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if ($foundDataFile) {
+        Write-Host "`n[*] Dang kiem tra va cap nhat du lieu mau vao Database..." -ForegroundColor Yellow
+        Import-SampleData -dataFile $foundDataFile
     }
-} catch {
+
+    # 5. Khoi dong Frontend (React + Vite :5173)
+    Write-Host "`n[5/6] Dang khoi dong Frontend (React + Vite :5173)..." -ForegroundColor Yellow
     $hasNode = $false
-}
+    try {
+        $null = node -v 2>&1
+        if ($LASTEXITCODE -eq 0) { $hasNode = $true }
+    } catch { $hasNode = $false }
 
-$frontendDir = Join-Path $projectRoot "frontend"
-$mobileDir = Join-Path $projectRoot "mobile"
-
-if ($hasNode) {
-    Write-Host "PC da cai dat Node.js. Khoi chay Frontend & Mobile truc tiep..." -ForegroundColor Green
-    
-    # Khoi dong Frontend Web
-    Write-Host "Starting Frontend Web on port 5173..." -ForegroundColor Cyan
-    Start-Process cmd -ArgumentList "/k", "cd /d `"$frontendDir`" && npm run dev"
-    
-    # Khoi dong Mobile App neu thu muc ton tai
-    if (Test-Path $mobileDir) {
-        Write-Host "Starting Mobile Dev Server on port 8081..." -ForegroundColor Cyan
-        Start-Process cmd -ArgumentList "/k", "cd /d `"$mobileDir`" && npm start"
-    }
-} else {
-    Write-Host "PC chua co Node.js. Kiem tra phuong an backup Docker..." -ForegroundColor Yellow
-    if ($dockerAvailable) {
-        Write-Host "Fallback Docker: Dang chay Frontend bang Docker container..." -ForegroundColor Cyan
-        docker compose up -d frontend
-        Write-Host "Luu y: Mobile App (Expo) khong duoc dong goi trong Docker. Vui long cai Node.js tren PC de chay Mobile App." -ForegroundColor DarkYellow
+    $frontendProcess = $null
+    if ($hasNode) {
+        $frontendProcess = Start-Process cmd.exe -WorkingDirectory "$rootDir\frontend" -ArgumentList "/k title VietTriTutor - Frontend (5173) && npm run dev" -PassThru
+        Write-Host " - Frontend da khoi dong tren may host (PID: $($frontendProcess.Id))" -ForegroundColor Green
     } else {
-        Write-Host "[LOI] PC thieu Node.js va Docker Desktop khong chay. Khong the bat Frontend!" -ForegroundColor Red
+        if ($dockerAvailable) {
+            Write-Host " - PC thieu Node.js. Chay Frontend bang Docker..." -ForegroundColor Cyan
+            docker compose up -d frontend
+        } else {
+            Write-Host " - [LOI] Khong the chay Frontend vi thieu Node.js va Docker!" -ForegroundColor Red
+        }
     }
-}
 
-Write-Host "`n===================================================" -ForegroundColor Cyan
-Write-Host "Cac dich vu da duoc khoi dong:" -ForegroundColor Cyan
-Write-Host " - Backend API:    http://localhost:8080"
-Write-Host " - Swagger UI:     http://localhost:8080/swagger-ui.html"
-Write-Host " - Frontend Web:   http://localhost:5173"
-Write-Host " - Mobile Metro:   http://localhost:8081 (neu chay tren PC)"
-Write-Host "===================================================" -ForegroundColor Cyan
-Write-Host ""
-Read-Host "Nhan Enter de hoan tat"
+    # 6. Khoi dong Mobile (Expo :8081)
+    Write-Host "`n[6/6] Dang khoi dong Mobile (Expo :8081)..." -ForegroundColor Yellow
+    $mobileProcess = $null
+    if ($hasNode -and (Test-Path "$rootDir\mobile")) {
+        $mobileProcess = Start-Process cmd.exe -WorkingDirectory "$rootDir\mobile" -ArgumentList "/k title VietTriTutor - Mobile (8081) && npm start" -PassThru
+        Write-Host " - Mobile da khoi dong tren may host (PID: $($mobileProcess.Id))" -ForegroundColor Green
+    } else {
+        Write-Host " - Bo qua khoi dong Mobile tren host." -ForegroundColor DarkGray
+    }
+
+    Write-Host "`n===================================================" -ForegroundColor Cyan
+    Write-Host "Tat ca dich vu dang chay tren cac cua so rieng biet:" -ForegroundColor White
+    Write-Host " - Backend API:    http://localhost:8080" -ForegroundColor Cyan
+    Write-Host " - Swagger UI:     http://localhost:8080/swagger-ui.html" -ForegroundColor Cyan
+    Write-Host " - Frontend Web:   http://localhost:5173" -ForegroundColor Cyan
+    Write-Host " - Mobile Metro:   http://localhost:8081 (scan QR via Expo Go)" -ForegroundColor Cyan
+    Write-Host "===================================================" -ForegroundColor Cyan
+
+    Write-Host "`n=========================================================================" -ForegroundColor Magenta
+    Write-Host " [r] + Enter : KHOI DONG LAI TOAN BO (Restart services)" -ForegroundColor Yellow
+    Write-Host " [Enter]     : DONG CAC CUA SO VA THOAT (Stop & Exit)" -ForegroundColor Red
+    Write-Host "=========================================================================" -ForegroundColor Magenta
+
+    $inputChoice = Read-Host "`nNhap lua chon cua ban"
+
+    # Dong toan bo cac cua so truoc
+    Stop-AllServices -backend $backendProcess -frontend $frontendProcess -mobile $mobileProcess
+
+    if ($inputChoice.Trim() -ieq "r") {
+        Write-Host "`n[RESTART] Dang khoi dong lai tat ca cac dich vu sau 2 giay..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 2
+        $shouldRestart = $true
+    } else {
+        $shouldRestart = $false
+    }
+
+} while ($shouldRestart)
+
+Write-Host "[OK] Da dong thanh cong cac cua so va tat toan bo tien trinh!" -ForegroundColor Green
+Start-Sleep -Seconds 1
