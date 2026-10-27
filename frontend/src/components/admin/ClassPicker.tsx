@@ -25,7 +25,7 @@ export function ClassPicker({ classes, selectedId, nameOf, onSelect }: ClassPick
       {classes.length === 0 ? (
         <p className="px-4 py-4 text-[14.5px] text-brand-muted sm:px-5">Chưa có lớp nào có buổi học sắp tới.</p>
       ) : (
-        <ul className="max-h-[440px] divide-y divide-slate-200 overflow-y-auto">
+        <ul className="max-h-[440px] divide-y divide-brand-sandLine overflow-y-auto">
           {classes.map((item) => {
             const selected = item.classId === selectedId;
             const date = parseIsoDate(item.nextSession.date);
@@ -36,7 +36,7 @@ export function ClassPicker({ classes, selectedId, nameOf, onSelect }: ClassPick
                   aria-pressed={selected}
                   onClick={() => onSelect(item.classId)}
                   className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-navy sm:px-5 ${
-                    selected ? "bg-brand-tint" : "hover:bg-slate-50"
+                    selected ? "bg-brand-tint" : "hover:bg-brand-sand/60"
                   }`}
                 >
                   <span className="min-w-0">
@@ -59,7 +59,7 @@ export function ClassPicker({ classes, selectedId, nameOf, onSelect }: ClassPick
         </ul>
       )}
 
-      <form onSubmit={handleSubmit} className="flex items-end gap-2 border-t border-slate-200 bg-slate-50/70 px-4 py-3.5 sm:px-5">
+      <form onSubmit={handleSubmit} className="flex items-end gap-2 border-t border-brand-sandLine bg-brand-sand/60/70 px-4 py-3.5 sm:px-5">
         <div className="min-w-0 flex-1">
           <label htmlFor="class-id" className="mb-1.5 block text-[13.5px] font-medium text-brand-ink">
             Lớp khác (nhập mã lớp)

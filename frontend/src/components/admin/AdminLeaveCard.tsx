@@ -120,7 +120,7 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
       </p>
 
       {pending && (
-        <div className="mt-4 border-t border-slate-200 pt-4">
+        <div className="mt-4 border-t border-brand-sandLine pt-4">
           {!fromTutor && (
             <p className="mb-3 text-[14px] leading-relaxed text-brand-muted">
               Để duyệt nghỉ có phép: khi buổi học đã bắt đầu, mở buổi học và điểm danh "Nghỉ có phép" cho học viên này. Đơn báo trễ (dưới 24
@@ -213,7 +213,7 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
                 event.preventDefault();
                 if (makeupValid) makeup.mutate();
               }}
-              className="space-y-3 rounded-xl border border-slate-200 bg-white p-3.5"
+              className="space-y-3 rounded-xl border border-brand-sandLine bg-white p-3.5"
             >
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>

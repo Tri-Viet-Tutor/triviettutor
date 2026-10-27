@@ -14,7 +14,7 @@ export function TutorAvailabilityPage() {
 
   return (
     <>
-      <PortalPageHeader title="Lịch rảnh" description="Trung tâm dựa vào lịch này để gợi ý khi phân công lớp." />
+      <PortalPageHeader icon="event_available" title="Lịch rảnh" description="Trung tâm dựa vào lịch này để gợi ý khi phân công lớp." />
       {query.isPending ? (
         <PortalLoading label="Đang tải lịch rảnh" />
       ) : query.isError ? (

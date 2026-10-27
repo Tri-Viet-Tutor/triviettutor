@@ -20,6 +20,7 @@ import { ResetPasswordPage } from "@/pages/auth/ResetPasswordPage";
 import { HomePage } from "@/pages/public/HomePage";
 import { SubjectsPage } from "@/pages/public/SubjectsPage";
 import { SearchPage } from "@/pages/public/SearchPage";
+import { CourseDetailPage } from "@/pages/public/CourseDetailPage";
 import { PricingPage } from "@/pages/public/PricingPage";
 import { ContactPage } from "@/pages/public/ContactPage";
 import { CheckoutPage } from "@/pages/public/CheckoutPage";
@@ -43,20 +44,29 @@ import { AdminSessionsPage } from "@/pages/admin/AdminSessionsPage";
 import { AdminReschedulesPage } from "@/pages/admin/AdminReschedulesPage";
 import { AdminAssignmentsPage } from "@/pages/admin/AdminAssignmentsPage";
 import { AdminPaymentsPage } from "@/pages/admin/AdminPaymentsPage";
+import { AdminCoursesPage } from "@/pages/admin/AdminCoursesPage";
+import { AdminClassesPage } from "@/pages/admin/AdminClassesPage";
+import { AdminPayrollPage } from "@/pages/admin/AdminPayrollPage";
 
 // Trang gia sư
 import { TutorHomePage } from "@/pages/tutor/TutorHomePage";
 import { TutorSchedulePage } from "@/pages/tutor/TutorSchedulePage";
 import { TutorAvailabilityPage } from "@/pages/tutor/TutorAvailabilityPage";
 import { TutorLeavePage } from "@/pages/tutor/TutorLeavePage";
+import { TutorPayrollPage } from "@/pages/tutor/TutorPayrollPage";
 
 // Trang học viên
 import { StudentHomePage } from "@/pages/student/StudentHomePage";
 import { StudentSchedulePage } from "@/pages/student/StudentSchedulePage";
 import { StudentCatalogPage } from "@/pages/student/StudentCatalogPage";
 import { StudentCheckoutPage } from "@/pages/student/StudentCheckoutPage";
+import { StudentWalletPage } from "@/pages/student/StudentWalletPage";
 import { StudentLeavePage } from "@/pages/student/StudentLeavePage";
+import { StudentEnrollmentsPage } from "@/pages/student/StudentEnrollmentsPage";
 import { ProfilePage } from "@/pages/dashboard/ProfilePage";
+
+// Phòng học trực tuyến LiveKit
+import ClassroomPage from "@/pages/ClassroomPage";
 
 //Khai báo toàn bộ tuyến đường (route) của ứng dụng.
 //admin / gia sư / học viên đều qua 2 lớp chặn: phải đăng nhập (PrivateRoute)
@@ -74,6 +84,7 @@ export function AppRouter() {
           <Route path={ROUTES.subjects} element={<SubjectsPage />} />
           <Route path={ROUTES.tutorSearch} element={<SearchPage />} />
           <Route path={ROUTES.pricing} element={<PricingPage />} />
+          <Route path={ROUTES.courseDetail} element={<CourseDetailPage />} />
           <Route path={ROUTES.pricingLegacy} element={<Navigate to={ROUTES.pricing} replace />} />
           <Route path={ROUTES.checkout} element={<CheckoutPage />} />
           <Route path={ROUTES.contact} element={<ContactPage />} />
@@ -99,6 +110,9 @@ export function AppRouter() {
               <Route path={ROUTES.adminRescheduleLegacy} element={<LegacyRedirect to={ROUTES.adminReschedules} />} />
               <Route path={ROUTES.adminAssignments} element={<AdminAssignmentsPage />} />
               <Route path={ROUTES.adminPayments} element={<AdminPaymentsPage />} />
+              <Route path={ROUTES.adminCourses} element={<AdminCoursesPage />} />
+              <Route path={ROUTES.adminClasses} element={<AdminClassesPage />} />
+              <Route path={ROUTES.adminPayroll} element={<AdminPayrollPage />} />
               <Route path={ROUTES.adminProfile} element={<ProfilePage />} />
             </Route>
           </Route>
@@ -112,6 +126,7 @@ export function AppRouter() {
               <Route path={ROUTES.tutorSessions} element={<TutorSchedulePage />} />
               <Route path={ROUTES.tutorAvailability} element={<TutorAvailabilityPage />} />
               <Route path={ROUTES.tutorLeave} element={<TutorLeavePage />} />
+              <Route path={ROUTES.tutorPayroll} element={<TutorPayrollPage />} />
               <Route path={ROUTES.tutorProfile} element={<ProfilePage />} />
             </Route>
           </Route>
@@ -124,12 +139,20 @@ export function AppRouter() {
               <Route path={ROUTES.student} element={<StudentHomePage />} />
               <Route path={ROUTES.studentSchedule} element={<StudentSchedulePage />} />
               <Route path={ROUTES.studentCatalog} element={<StudentCatalogPage />} />
+              <Route path={ROUTES.studentCourseDetail} element={<CourseDetailPage variant="student" />} />
               <Route path={ROUTES.studentCatalogLegacy} element={<LegacyRedirect to={ROUTES.studentCatalog} />} />
               <Route path={ROUTES.studentCheckout} element={<StudentCheckoutPage />} />
+              <Route path={ROUTES.studentWallet} element={<StudentWalletPage />} />
               <Route path={ROUTES.studentLeave} element={<StudentLeavePage />} />
+              <Route path={ROUTES.studentEnrollments} element={<StudentEnrollmentsPage />} />
               <Route path={ROUTES.studentProfile} element={<ProfilePage />} />
             </Route>
           </Route>
+        </Route>
+
+        {/* ── Phòng học trực tuyến LiveKit SFU (Admin, Gia sư, Học viên) ─ */}
+        <Route element={<PrivateRoute />}>
+          <Route path={ROUTES.classroom} element={<ClassroomPage />} />
         </Route>
 
         {/* ── Trang lỗi ────────────────────────────────────────────────── */}

@@ -2,6 +2,7 @@ package com.viettritutor.config;
 
 import com.viettritutor.security.jwt.JwtAuthFilter;
 import com.viettritutor.security.RestAuthenticationEntryPoint;
+import com.viettritutor.security.oauth2.OAuth2LoginSuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,13 +41,14 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .cors(cors -> {})
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler((request, response, exception) -> {
@@ -54,11 +56,13 @@ public class SecurityConfig {
                             response.setContentType("application/json");
                             response.getWriter().write("{\"success\":false,\"message\":\"Access denied\",\"errorCode\":\"ACCESS_DENIED\"}");
                         }))
+                .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2LoginSuccessHandler))
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/ipn").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/meetings/webhook").permitAll()
                         .requestMatchers("/error").permitAll()
                         // Swagger / OpenAPI docs (dev-friendly)
                         .requestMatchers(
@@ -83,6 +87,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/sessions/*/attendance").hasAnyRole("ADMIN", "TUTOR", "STUDENT")
                         // Catalog accessible to all authenticated users
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalog/**").authenticated()
+                        .requestMatchers("/oauth2/**", "/login/**").permitAll()
                         // Everything else requires authentication
                         .anyRequest().authenticated()
                 )

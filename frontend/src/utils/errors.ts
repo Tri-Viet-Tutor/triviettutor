@@ -78,6 +78,15 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   INVALID_DATE_RANGE: "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.",
   INVALID_PAGINATION: "Số trang không hợp lệ.",
   INVALID_ROLE_FILTER: "Vai trò lọc không hợp lệ.",
+  // Khóa học, lớp, ghi danh, bảng lương
+  COURSE_NOT_FOUND: "Không tìm thấy khóa học này.",
+  INVALID_STATUS_TRANSITION: "Không chuyển được lớp sang trạng thái này từ trạng thái hiện tại.",
+  SESSION_CONFIG_MISMATCH: "Thời lượng khóa học không khớp với ca học đã chọn.",
+  CLASS_FULL: "Lớp đã đủ sĩ số.",
+  CLASS_NOT_ENROLLING: "Lớp không còn mở đăng ký.",
+  ENROLLMENT_NOT_FOUND: "Không tìm thấy ghi danh này.",
+  REFUND_NOT_ALLOWED: "Ghi danh này không hủy / hoàn tiền được theo quy định.",
+  REFUND_ALREADY_SETTLED: "Ghi danh này đã được xử lý hoàn tiền.",
 };
 
 /** Đổi lỗi của một lời gọi API thành câu báo cho người dùng; mất kết nối thì báo riêng. */

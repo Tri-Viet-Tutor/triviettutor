@@ -43,7 +43,9 @@ export function AdminUsersPage() {
   return (
     <>
       <PortalPageHeader
+        icon="group"
         title="Người dùng"
+        description="Học viên, gia sư và quản trị viên của trung tâm."
         action={
           !creating && (
             <button type="button" onClick={() => setCreating(true)} className={`self-start ${PORTAL_BTN_PRIMARY}`}>

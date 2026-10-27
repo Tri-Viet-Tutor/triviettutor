@@ -28,18 +28,34 @@ export const CHECKOUT_BTN_SECONDARY =
   "flex h-11 shrink-0 items-center justify-center rounded-md border border-slate-300 px-5 text-[15px] font-semibold text-brand-navy transition-colors hover:border-brand-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:opacity-50";
 
 /** Thẻ nội dung */
-export const PORTAL_CARD = "rounded-2xl border border-slate-200 bg-white";
+export const PORTAL_CARD =
+  "rounded-2xl border border-brand-sandLine bg-white shadow-[0_1px_0_rgba(20,33,61,0.03),0_14px_34px_-22px_rgba(11,58,140,0.28)]";
 
 /** Màu nền của khu sau đăng nhập (các lỗ khuyết trên vé khóa học tô cùng màu này) */
-export const PORTAL_SURFACE = "bg-[#F6F8FD]";
+export const PORTAL_SURFACE = "bg-brand-sand";
 
 /** Nút chính cỡ vừa */
 export const PORTAL_BTN_PRIMARY =
-  "inline-flex h-10 items-center justify-center gap-1.5 rounded-md bg-brand-navy px-4 text-[14px] font-semibold text-white transition-colors hover:bg-brand-navyDeep disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+  "inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-brand-navy px-4 text-[14px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(11,58,140,0.7)] transition-[background-color,transform] hover:bg-brand-navyDeep active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
 
 /** Nút phụ cỡ vừa (viền xám) */
 export const PORTAL_BTN_SECONDARY =
-  "inline-flex h-10 items-center justify-center gap-1.5 rounded-md border border-slate-300 bg-white px-4 text-[14px] font-semibold text-brand-navy transition-colors hover:border-brand-navy disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+  "inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-brand-sandLine bg-white px-4 text-[14px] font-semibold text-brand-navy transition-colors hover:border-brand-navy/50 hover:bg-brand-tint disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+
+/** Nút nhấn mạnh màu cam thương hiệu (việc chính của trang: tạo mới, chốt…) */
+export const PORTAL_BTN_ACCENT =
+  "inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-brand-orange px-4 text-[14px] font-bold text-brand-navyDeep shadow-[0_6px_16px_-8px_rgba(222,139,0,0.9)] transition-[background-color,transform] hover:bg-brand-orangeHover active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+
+/** Nút nhỏ dạng chữ có nền khi rê chuột (thao tác phụ trong từng dòng) */
+export const PORTAL_BTN_GHOST =
+  "inline-flex h-9 items-center justify-center gap-1 rounded-lg px-3 text-[13.5px] font-semibold text-brand-navy transition-colors hover:bg-brand-tint disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+
+/** Nhãn nhỏ phía trên ô nhập trong khu sau đăng nhập */
+export const PORTAL_LABEL = "mb-1.5 block text-[13px] font-semibold text-brand-muted";
+
+/** Liên kết "xem thêm" kèm mũi tên: không gạch chân, rê chuột thì đổi màu và mũi tên nhích sang phải */
+export const PORTAL_MORE_LINK =
+  "group/more inline-flex items-center gap-0.5 rounded font-semibold text-brand-navy transition-colors hover:text-brand-orangeHover [&>.material-symbols-outlined]:transition-transform hover:[&>.material-symbols-outlined]:translate-x-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
 
 /** Liên kết / nút dạng chữ */
 export const PORTAL_TEXT_LINK =
@@ -47,7 +63,7 @@ export const PORTAL_TEXT_LINK =
 
 /** Ô nhập cỡ vừa (cao bằng nút) cho bộ lọc và các form nhỏ trong khu sau đăng nhập */
 export const PORTAL_INPUT =
-  "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-[14.5px] text-brand-ink outline-none transition-[border-color,box-shadow] placeholder:text-slate-400 focus:border-brand-navy focus:ring-1 focus:ring-brand-navy disabled:bg-slate-100 disabled:text-brand-muted";
+  "h-10 w-full rounded-xl border border-brand-sandLine bg-white px-3 text-[14.5px] text-brand-ink outline-none transition-[border-color,box-shadow] placeholder:text-slate-400 focus:border-brand-navy focus:ring-1 focus:ring-brand-navy disabled:bg-slate-100 disabled:text-brand-muted";
 
 /** Lớp Tailwind của ô nhập trong form xác thực (cũng dùng lại ở các khu sau đăng nhập) */
 export const AUTH_INPUT =
@@ -64,4 +80,4 @@ export const AUTH_TEXT_LINK =
   "font-semibold text-brand-navy underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
 
 /** Nút chính trong bảng (xuất ra để trang truyền `emptyAction` cùng kiểu) */
-export const TODAY_PANEL_CTA = `inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#1F63D8] px-5 text-[15px] font-bold text-white transition-colors hover:bg-brand-navy ${FOCUS_RING}`;
+export const TODAY_PANEL_CTA = `inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#1F63D8] px-4 text-[14px] font-bold text-white transition-colors hover:bg-brand-navy ${FOCUS_RING}`;

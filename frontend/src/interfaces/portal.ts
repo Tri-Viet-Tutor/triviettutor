@@ -139,15 +139,28 @@ export interface PortalGreetingProps {
   name: string;
   /** Dòng phụ dưới lời chào, ví dụ ngày hôm nay */
   description: string;
+  /** Vài con số nổi bật đặt bên phải lời chào */
+  stats?: { label: string; value: string; icon: string }[];
 }
 
 /** Props của PortalNav */
 export interface PortalNavProps {
   /** Các trang của khu; thanh dưới ở điện thoại chỉ vừa 5 mục, mục thừa đánh dấu `desktopOnly` */
   items: PortalNavItem[];
-  /** Tên khu, đọc cho trình đọc màn hình */
+  /** Tên khu, đọc cho trình đọc màn hình và hiện trên thanh bên */
   label: string;
-  /** Bấm "Đăng xuất" */
+  /** Trang tổng quan của khu (bấm logo) */
+  homeTo: string;
+}
+
+/** Props của AccountMenu */
+export interface AccountMenuProps {
+  fullName: string;
+  /** Tên vai trò, ví dụ "Quản trị viên" */
+  roleName: string;
+  email?: string;
+  /** Trang hồ sơ của khu */
+  profileTo: string;
   onLogout: () => void;
 }
 
@@ -159,6 +172,8 @@ export interface PortalPageHeaderProps {
   description?: string;
   /** Phần nằm bên phải tiêu đề (bộ lọc, nút…) */
   action?: ReactNode;
+  /** Biểu tượng Material Symbols đặt trước tiêu đề */
+  icon?: string;
 }
 
 /** Props của PortalLoading */
@@ -381,4 +396,29 @@ export interface ClassProgress {
   completed: number;
   /** Tổng số buổi của lớp, không tính buổi đã hủy */
   total: number;
+}
+
+/** Props của StatTile — ô số liệu nhỏ ở đầu các trang quản lý */
+export interface StatTileProps {
+  label: string;
+  value: string;
+  /** Biểu tượng Material Symbols */
+  icon: string;
+  /** Màu điểm nhấn của ô */
+  tone?: "navy" | "orange" | "green" | "red";
+  /** Dòng phụ nhỏ dưới con số */
+  hint?: string;
+}
+
+/** Props của PortalDialog */
+export interface PortalDialogProps {
+  open: boolean;
+  title: string;
+  /** Dòng mô tả dưới tiêu đề */
+  description?: string;
+  /** Đóng hộp thoại (bấm nút đóng, phím Esc hoặc nền mờ) */
+  onClose: () => void;
+  children: ReactNode;
+  /** Bề rộng tối đa, mặc định 560px */
+  widthClassName?: string;
 }

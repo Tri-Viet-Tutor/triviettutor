@@ -6,7 +6,7 @@ import { useNow } from "@/hooks/useNow";
 
 /** Liên kết dạng nút chính */
 const PRIMARY_LINK =
-  "inline-flex h-11 items-center justify-center rounded-md bg-brand-navy px-6 text-[15px] font-semibold text-white transition-colors hover:bg-brand-navyDeep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+  "inline-flex h-11 items-center justify-center rounded-xl bg-brand-navy px-6 text-[15px] font-semibold text-white transition-colors hover:bg-brand-navyDeep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
 
 /**
  * Trang Lịch học của học viên: các buổi sắp tới và đã qua, gom theo tháng.

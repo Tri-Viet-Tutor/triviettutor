@@ -9,6 +9,7 @@ import java.util.*;
 public interface EnrollmentRepository extends JpaRepository<Enrollment, Long>, JpaSpecificationExecutor<Enrollment> {
     boolean existsByStudentIdAndClassGroupIdAndStatus(Long studentId, Long classGroupId, EnrollmentStatus status);
     List<Enrollment> findByClassGroupIdAndStatusOrderByStudentId(Long classGroupId, EnrollmentStatus status);
+    long countByClassGroupIdAndStatus(Long classGroupId, EnrollmentStatus status);
     List<Enrollment> findByPaymentIdIn(Collection<Long> paymentIds);
     Optional<Enrollment> findByPaymentId(Long paymentId);
 }

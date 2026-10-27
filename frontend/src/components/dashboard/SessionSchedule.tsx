@@ -93,6 +93,7 @@ export function SessionSchedule({
   return (
     <>
       <PortalPageHeader
+        icon="calendar_month"
         title={title}
         action={sessions.length > 0 && <FilterTabs label="Lọc buổi" tabs={tabs} value={tab} onChange={changeTab} />}
       />
@@ -139,7 +140,7 @@ export function SessionSchedule({
               <button
                 type="button"
                 onClick={() => setVisible((count) => count + PAGE_SIZE)}
-                className="inline-flex h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-6 text-[14.5px] font-semibold text-brand-navy transition-colors hover:border-brand-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-brand-sandLine bg-white px-6 text-[14.5px] font-semibold text-brand-navy transition-colors hover:border-brand-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
               >
                 Xem thêm {Math.min(PAGE_SIZE, list.length - visible)} buổi
               </button>

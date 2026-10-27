@@ -7,6 +7,7 @@ import com.viettritutor.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.*;
 import java.util.*;
 
@@ -20,10 +21,12 @@ public class EnrollmentPaymentSupport {
     private final EnrollmentRepository enrollments;
     private final LearningScheduleRepository learning;
     private final ConflictValidationService conflicts;
+    private final PricingService pricing;
     private final Clock clock;
     private final PaymentIntentRepository intents;
 
-    public record Admission(Course course, List<Session> sessions, int enrollmentSize, LocalDate start, LocalDate end) {}
+    public record Admission(Course course, List<Session> sessions, int enrollmentSize, LocalDate start, LocalDate end,
+                            BigDecimal discountRate, BigDecimal expectedAmount) {}
 
     public ClassGroup lockClass(Long classId) {
         return classes.findForUpdate(classId).orElseThrow(() -> new BusinessException(ErrorCode.CLASS_NOT_FOUND));
@@ -103,7 +106,9 @@ public class EnrollmentPaymentSupport {
         }
         LocalDate start = original.stream().map(Session::getSessionDate).min(LocalDate::compareTo).orElseThrow();
         LocalDate end = original.stream().map(Session::getSessionDate).max(LocalDate::compareTo).orElseThrow();
-        return new Admission(course, List.copyOf(payable), (int) existing + 1, start, end);
+        BigDecimal discountRate = pricing.discount(classGroup.getClassType(), existing);
+        BigDecimal expectedAmount = pricing.estimate(course.getBasePrice1on1(), discountRate);
+        return new Admission(course, List.copyOf(payable), (int) existing + 1, start, end, discountRate, expectedAmount);
     }
 
     public boolean fullRefundRequired(ClassGroup classGroup) {

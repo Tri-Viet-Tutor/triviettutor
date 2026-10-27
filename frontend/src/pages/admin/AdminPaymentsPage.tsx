@@ -26,7 +26,11 @@ export function AdminPaymentsPage() {
   const payments = useQuery({ queryKey: ["admin-payments", status, page], queryFn: () => listPayments(status, page) });
   return (
     <div className="space-y-5">
-      <PortalPageHeader title="Thanh toán và hoàn tiền" />
+      <PortalPageHeader
+        icon="payments"
+        title="Thanh toán và hoàn tiền"
+        description="Giao dịch học phí qua VNPay hoặc ví và các lần hoàn tiền cho học viên."
+      />
       <label className="block max-w-sm text-sm">
         Trạng thái
         <select
@@ -57,7 +61,11 @@ export function AdminPaymentsPage() {
           <PaymentCard
             key={payment.paymentId}
             payment={payment}
-            onUpdated={() => void cache.invalidateQueries({ queryKey: ["admin-payments"] })}
+            onUpdated={() => {
+              void cache.invalidateQueries({ queryKey: ["admin-payments"] });
+              void cache.invalidateQueries({ queryKey: ["wallet"] });
+              void cache.invalidateQueries({ queryKey: ["wallet-history"] });
+            }}
           />
         ))}
       </div>

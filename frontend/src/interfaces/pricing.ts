@@ -1,4 +1,4 @@
-import type { SchedulePattern } from "@/interfaces/api";
+import type { DeliveryMode, GradeLevel, SchedulePattern, TuitionClass } from "@/interfaces/api";
 import type { PurchasableCourse } from "@/interfaces/checkout";
 import type { Course } from "@/interfaces/course";
 
@@ -38,7 +38,43 @@ export interface ShopFilters {
   maxFee: number;
 }
 
+/** Bộ lọc danh sách lớp đang mở (CourseShopSection) */
+export interface ClassShopFilters {
+  query: string;
+  subject: string;
+  grade: GradeLevel | "";
+  mode: DeliveryMode | "";
+  schedule: SchedulePattern | "";
+}
+
+/** Cách sắp xếp danh sách lớp đang mở */
+export type ClassShopSort = "DEFAULT" | "START_ASC" | "FEE_ASC" | "FEE_DESC";
+
+/** Props của ClassTicket */
+export interface ClassTicketProps {
+  item: TuitionClass;
+  /** Vị trí trong danh sách, để chọn màu cuống vé */
+  index: number;
+  /** Tài khoản hiện tại được đăng ký lớp không (chỉ học viên) */
+  canBuy: boolean;
+  onBuy: () => void;
+  surfaceClassName?: string;
+}
+
 // ── components/pricing ──
+/** Props của CourseOfferList */
+export interface CourseOfferListProps {
+  /** Lớp đang mở sau khi áp bộ lọc và sắp xếp của CourseShopSection */
+  classes: TuitionClass[];
+  filters: ClassShopFilters;
+  /** Tài khoản hiện tại được đăng ký lớp không (chỉ học viên) */
+  canBuy: boolean;
+  onBuy: (item: TuitionClass) => void;
+  surfaceClassName?: string;
+  /** Bấm "Xóa bộ lọc" khi không có khóa phù hợp */
+  onResetFilters: () => void;
+}
+
 /** Props của CartBar */
 export interface CartBarProps {
   /** Các khóa trong giỏ */
@@ -59,6 +95,7 @@ export interface CourseShopSectionProps {
 
 /** Props của CourseTicket */
 export interface CourseTicketProps {
+  detailTo: string;
   course: Course;
   /** Khóa đã nằm trong giỏ */
   inCart: boolean;

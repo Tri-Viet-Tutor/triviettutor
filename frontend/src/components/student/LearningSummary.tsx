@@ -69,7 +69,7 @@ export function LearningSummary({ sessions, upcomingCount, attendance, leaveTota
       <p className="mt-0.5 text-[13.5px] text-brand-muted">
         {recorded > 0 ? `${recorded} buổi được điểm danh gần nhất` : "Chưa có buổi nào được điểm danh"}
       </p>
-      <dl className="mt-4 grid grid-cols-3 gap-2 border-b border-slate-200 pb-5">
+      <dl className="mt-3 grid grid-cols-3 gap-2 border-b border-brand-sandLine pb-4">
         {columns.map((column) => (
           <div key={column.label}>
             <dt className="text-[14px] text-brand-muted">{column.label}</dt>

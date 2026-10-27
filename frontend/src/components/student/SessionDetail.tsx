@@ -10,7 +10,7 @@ import type { SessionDetailProps } from "@/interfaces/portal";
 
 /** Khung chung của hai nút "Vào lớp" và "Xin nghỉ" (màu thêm ở từng nút) */
 const LINK =
-  "inline-flex h-10 items-center justify-center gap-1.5 rounded-md px-4 text-[14px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+  "inline-flex h-10 items-center justify-center gap-1.5 rounded-xl px-4 text-[14px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
 
 /**
  * Chi tiết một buổi học: ngày giờ, ghi chú (học bù, dạy thay), điểm danh của tôi
@@ -24,11 +24,11 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
   // Học viên chỉ nhận về bản ghi của chính mình
   const record = attendance.data?.records[0];
   const recordStyle = record ? ATTENDANCE_STATUS[record.status] : null;
-  const canJoin = Boolean(session.meetingUrl) && session.status !== "CANCELLED" && session.status !== "COMPLETED";
+  const canJoin = session.status !== "CANCELLED" && session.status !== "COMPLETED";
   const canLeave = canRequestLeave(session, now);
 
   return (
-    <div className="border-t border-slate-200 bg-slate-50/70 px-4 py-4 sm:px-5">
+    <div className="border-t border-brand-sandLine bg-brand-sand/60/70 px-4 py-4 sm:px-5">
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2.5 text-[14.5px] sm:grid-cols-2">
         <div className="flex gap-2">
           <dt className="w-20 shrink-0 text-brand-muted">Ngày</dt>
@@ -85,16 +85,14 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
 
       {(canJoin || canLeave || hasPendingLeave) && (
         <div className="mt-4 flex flex-wrap items-center gap-2.5">
-          {canJoin && session.meetingUrl && (
-            <a
-              href={session.meetingUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+          {canJoin && (
+            <Link
+              to={`/classroom/${session.sessionId}`}
               className={`${LINK} bg-brand-orange text-brand-navyDeep hover:bg-brand-orangeHover`}
             >
               <Icon name="videocam" className="text-[19px]" />
-              Vào lớp trực tuyến
-            </a>
+              Vào phòng học trực tuyến
+            </Link>
           )}
           {hasPendingLeave ? (
             <StatusChip tone="amber" icon="hourglass_top">
@@ -104,7 +102,7 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
             canLeave && (
               <Link
                 to={`${ROUTES.studentLeave}?buoi=${session.sessionId}`}
-                className={`${LINK} border border-slate-300 bg-white text-brand-navy hover:border-brand-navy`}
+                className={`${LINK} border border-brand-sandLine bg-white text-brand-navy hover:border-brand-navy`}
               >
                 Xin nghỉ buổi này
               </Link>

@@ -13,12 +13,16 @@ export interface AuthUser {
 
 /** Dữ liệu các trang xác thực truyền cho nhau qua router state */
 export interface AuthLocationState {
+  /** Khóa đang xem trước khi đăng nhập; chỉ nhận slug thuộc COURSES. */
+  courseSlug?: string;
   /** Email điền sẵn */
   email?: string;
   /** Câu báo thành công hiện ở đầu trang kế tiếp */
   notice?: string;
   /** Đăng nhập / xác thực xong thì quay lại trang thanh toán thay vì vào trang của vai trò */
   resumeCheckout?: boolean;
+  /** Đường dẫn checkout nội bộ và query VNPay cần khôi phục sau đăng nhập. */
+  returnTo?: string;
 }
 
 // ── components/auth ──

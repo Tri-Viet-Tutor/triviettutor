@@ -8,19 +8,19 @@ import { formatTimeRange } from "@/utils/sessions";
 /** Điểm danh của tôi ở mấy buổi đã học gần đây nhất. */
 export function RecentAttendance({ items }: RecentAttendanceProps) {
   return (
-    <section className={`p-5 ${PORTAL_CARD}`} aria-labelledby="recent-attendance-title">
-      <h2 id="recent-attendance-title" className="text-[17px] font-bold text-brand-navy">
+    <section className={`p-4 ${PORTAL_CARD}`} aria-labelledby="recent-attendance-title">
+      <h2 id="recent-attendance-title" className="text-[16px] font-bold text-brand-navy">
         Điểm danh gần đây
       </h2>
       {items.length === 0 ? (
         <p className="mt-3 text-[14.5px] text-brand-muted">Chưa có buổi nào đã học.</p>
       ) : (
-        <ul className="mt-3 divide-y divide-slate-100">
+        <ul className="mt-3 divide-y divide-brand-sandLine">
           {items.map(({ session, record, isPending }) => {
             const style = record ? ATTENDANCE_STATUS[record.status] : null;
             const date = parseIsoDate(session.date);
             return (
-              <li key={session.sessionId} className="flex items-center justify-between gap-3 py-2.5">
+              <li key={session.sessionId} className="flex items-center justify-between gap-3 py-2">
                 <span className="min-w-0">
                   <span className="block text-[14.5px] font-semibold text-brand-ink">
                     {weekdayName(date)} {formatDayMonth(date)}

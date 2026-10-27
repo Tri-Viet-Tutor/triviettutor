@@ -66,7 +66,7 @@ export function AdminAttendancePanel({ session, now, nameOf }: AdminAttendancePa
       {/* Đã khóa: danh sách chỉ đọc, sửa từng dòng. Chưa khóa: dùng bộ điểm danh như gia sư */}
       {data?.locked ? (
         <>
-          <ul className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
+          <ul className="divide-y divide-brand-sandLine rounded-xl border border-brand-sandLine bg-white">
             {data.studentIds.map((studentId) => {
               const record = data.records.find((item) => item.studentId === studentId);
               const style = record ? ATTENDANCE_STATUS[record.status] : null;

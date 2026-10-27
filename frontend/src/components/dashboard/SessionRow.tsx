@@ -19,7 +19,7 @@ export function SessionRow({ session, open, onToggle, hasPendingLeave, badge, ch
         aria-expanded={open}
         aria-controls={detailId}
         onClick={onToggle}
-        className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-navy sm:gap-4 sm:px-5"
+        className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-brand-sand/60 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-navy sm:gap-4 sm:px-5"
       >
         <span className="w-[68px] shrink-0">
           <span className="block text-[13px] font-medium text-brand-muted">{dayLabel(date)}</span>

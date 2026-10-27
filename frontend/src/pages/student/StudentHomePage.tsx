@@ -56,8 +56,8 @@ export function StudentHomePage() {
       ) : sessionsQuery.isError ? (
         <PortalError message="Không tải được lịch học." onRetry={() => void sessionsQuery.refetch()} />
       ) : (
-        <div className="grid grid-cols-1 items-start gap-x-8 gap-y-7 lg:grid-cols-12">
-          <div className="space-y-7 lg:col-span-8">
+        <div className="grid grid-cols-1 items-start gap-x-5 gap-y-5 lg:grid-cols-12">
+          <div className="space-y-5 lg:col-span-8">
             <TodayPanel
               role="student"
               scheduleTo={ROUTES.studentSchedule}
@@ -90,7 +90,7 @@ export function StudentHomePage() {
             )}
           </div>
 
-          <div className="space-y-7 lg:col-span-4">
+          <div className="space-y-5 lg:col-span-4">
             <LearningSummary
               sessions={sessions}
               upcomingCount={upcomingCount}

@@ -128,7 +128,11 @@ export function AdminSessionsPage() {
 
   return (
     <>
-      <PortalPageHeader title="Buổi học" />
+      <PortalPageHeader
+        icon="calendar_month"
+        title="Buổi học"
+        description="Tra cứu mọi buổi học, điểm danh, link lớp và xử lý hủy / học bù / dạy thay."
+      />
 
       {linkedId !== null && (
         <section aria-label="Buổi đang xem" className="mb-6">

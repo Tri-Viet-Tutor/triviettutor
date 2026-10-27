@@ -3,4 +3,6 @@ target/
 .idea
 bin/
 *.log
-.env
+.env*
+**/.env*
+src/test/

@@ -96,7 +96,7 @@ export function AttendanceEditor({ sessionId, editable, readOnlyNote, asAdmin = 
   if (locked) {
     return (
       <div>
-        <ul className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
+        <ul className="divide-y divide-brand-sandLine rounded-xl border border-brand-sandLine bg-white">
           {data.studentIds.map((studentId) => {
             const record = data.records.find((item) => item.studentId === studentId);
             const style = record ? ATTENDANCE_STATUS[record.status] : null;
@@ -124,7 +124,7 @@ export function AttendanceEditor({ sessionId, editable, readOnlyNote, asAdmin = 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <ul className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
+      <ul className="divide-y divide-brand-sandLine rounded-xl border border-brand-sandLine bg-white">
         {data.studentIds.map((studentId) => {
           const draft = drafts[studentId] ?? { status: "", note: "" };
           return (
@@ -146,7 +146,7 @@ export function AttendanceEditor({ sessionId, editable, readOnlyNote, asAdmin = 
                         className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-navy ${
                           selected
                             ? "border-brand-navy bg-brand-navy text-white"
-                            : "border-slate-300 bg-white text-brand-ink hover:border-brand-navy"
+                            : "border-brand-sandLine bg-white text-brand-ink hover:border-brand-navy"
                         }`}
                       >
                         {ATTENDANCE_STATUS[status].label}
@@ -173,7 +173,7 @@ export function AttendanceEditor({ sessionId, editable, readOnlyNote, asAdmin = 
       </ul>
 
       {asAdmin && (
-        <div className="space-y-2.5 rounded-xl border border-slate-200 bg-white px-3.5 py-3">
+        <div className="space-y-2.5 rounded-xl border border-brand-sandLine bg-white px-3.5 py-3">
           <label className="flex items-start gap-2.5 text-[14.5px] text-brand-ink">
             <input
               type="checkbox"

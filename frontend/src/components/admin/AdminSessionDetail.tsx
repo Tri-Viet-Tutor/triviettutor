@@ -42,7 +42,7 @@ export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
   }
 
   return (
-    <div className="space-y-5 border-t border-slate-200 bg-slate-50/70 px-4 py-4 sm:px-5">
+    <div className="space-y-5 border-t border-brand-sandLine bg-brand-sand/60/70 px-4 py-4 sm:px-5">
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2.5 text-[14.5px] sm:grid-cols-2">
         <div className="flex gap-2">
           <dt className="w-24 shrink-0 text-brand-muted">Mã buổi</dt>

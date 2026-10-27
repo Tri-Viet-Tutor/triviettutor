@@ -1,5 +1,17 @@
 # Logical Data Model (Mô hình Dữ liệu Logic)
 
+## Bổ sung schema ví học viên — 24/10/2026
+
+Contract triển khai ví sử dụng các bảng `payments/payment_intents/enrollments/refunds` hiện có của backend; các mô tả `payment_transactions` ở phần thiết kế ban đầu bên dưới không được dùng để tạo thêm một nguồn số dư.
+
+| Bảng bổ sung | PK / FK và ràng buộc |
+| --- | --- |
+| wallets | id PK, student_id FK users UNIQUE, balance nguyên VND không âm, created_at. |
+| wallet_topup_intents | id PK, student_id FK users, amount, status, reference UNIQUE, provider_transaction_no UNIQUE, return_url, created_at/expires_at/paid_at. |
+| wallet_transactions | id PK, wallet_id FK wallets, type, amount dương, balance_after không âm, description, created_at; đúng một FK nguồn topup_id/payment_id/refund_id, mỗi FK UNIQUE. |
+
+Payment method thêm WALLET. Giao dịch ghi sổ và số dư cùng transaction dưới khóa chủ ví. Trạng thái EXPIRED của nạp được tính khi đọc; khoản thu hợp lệ đến muộn vẫn phải ghi nhận. Chi tiết trường/ràng buộc/API: [contract ví](../02-System-Architecture/06-Student-Wallet-and-VNPay.md).
+
 Tài liệu này chi tiết hóa **Mô hình Dữ liệu Logic (Logical Data Model)** cho hệ thống **VietTriTutor**.
 Mô hình logic chuyển hóa các khái niệm nghiệp vụ từ `Conceptual Model` thành **cấu trúc quan hệ chuẩn hóa (Relational Entities)**, chuẩn hóa mức **3NF (Third Normal Form)**, xác định các Khóa chính (Primary Key), Khóa ngoại (Foreign Key), các thuộc tính logic, ràng buộc toàn vẹn (Integrity Constraints) và các kiểu liệt kê (Enumerations).
 

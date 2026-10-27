@@ -12,11 +12,17 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      port: 5173,
+      host: env.VITE_DEV_SERVER_HOST || undefined,
+      port: env.VITE_DEV_SERVER_PORT ? Number(env.VITE_DEV_SERVER_PORT) : undefined,
+      strictPort: true,
+      watch: {
+        usePolling: env.VITE_USE_POLLING === "true",
+      },
       proxy: {
         "/api": {
           target: env.VITE_API_PROXY_TARGET || "http://localhost:8080",
           changeOrigin: true,
+          rewrite: (path) => path,
         },
       },
     },
