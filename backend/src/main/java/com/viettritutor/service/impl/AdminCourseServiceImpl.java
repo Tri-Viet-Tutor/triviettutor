@@ -9,6 +9,7 @@ import com.viettritutor.entity.Course;
 import com.viettritutor.enums.GradeLevel;
 import com.viettritutor.repository.CourseRepository;
 import com.viettritutor.service.AdminCourseService;
+import com.viettritutor.service.SubjectService;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -24,6 +25,7 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class AdminCourseServiceImpl implements AdminCourseService {
     private final CourseRepository courseRepository;
+    private final SubjectService subjects;
 
     @Override
     @Transactional
@@ -80,7 +82,9 @@ public class AdminCourseServiceImpl implements AdminCourseService {
 
     private void apply(Course course, CourseRequest request) {
         course.setName(request.getName().trim());
-        course.setSubject(request.getSubject().trim().toUpperCase(Locale.ROOT));
+        var subject = subjects.resolve(request.getSubject());
+        course.setSubject(subject.getName());
+        course.setSubjectId(subject.getId());
         course.setGradeLevel(request.getGradeLevel());
         course.setBasePrice1on1(request.getBasePrice1on1());
         course.setTotalSessions(request.getTotalSessions());

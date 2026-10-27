@@ -22,6 +22,12 @@ public class Payment {
     @Column(name = "intent_id", nullable = false, unique = true)
     private Long intentId;
 
+    @Column(name = "order_id")
+    private Long orderId;
+
+    @Column(name = "order_item_id")
+    private Long orderItemId;
+
     @Column(name = "student_id", nullable = false)
     private Long studentId;
 
