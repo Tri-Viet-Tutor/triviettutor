@@ -112,50 +112,7 @@ do {
         }
     }
 
-    # Ham kiem tra va khoi dong Docker neu chua chay
-    function Ensure-DockerRunning {
-        try {
-            $null = docker info 2>&1
-            if ($LASTEXITCODE -eq 0) { return $true }
-        } catch {}
-
-        Write-Host " - Docker chua chay. Dang khoi dong Docker Desktop..." -ForegroundColor Cyan
-
-        $dockerExe = "C:\Program Files\Docker\Docker\Docker Desktop.exe"
-        if (-not (Test-Path $dockerExe)) {
-            $regPath = (Get-ItemProperty 'HKLM:\Software\Microsoft\Windows\CurrentVersion\App Paths\Docker Desktop.exe' -ErrorAction SilentlyContinue).'(default)'
-            if ($regPath -and (Test-Path $regPath)) {
-                $dockerExe = $regPath
-            }
-        }
-
-        if (Test-Path $dockerExe) {
-            Start-Process -FilePath $dockerExe
-        } else {
-            Start-Process "docker" -ArgumentList "desktop" -ErrorAction SilentlyContinue
-        }
-
-        Write-Host " - Dang cho Docker Desktop khoi dong..." -ForegroundColor Yellow
-        $timeout = 60
-        $waited = 0
-        while ($waited -lt $timeout) {
-            Start-Sleep -Seconds 3
-            $waited += 3
-            try {
-                $null = docker info 2>&1
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Host " - Docker Desktop da san sang ($waited giay)!" -ForegroundColor Green
-                    return $true
-                }
-            } catch {}
-            Write-Host "   ...dang cho Docker san sang ($waited/$timeout giay)" -ForegroundColor DarkGray
-        }
-
-        Write-Host " - [CANH BAO] Docker Desktop mat nhieu thoi gian hon du kien de khoi dong." -ForegroundColor Yellow
-        return $false
-    }
-
-    # 3. Kiem tra Database (PC vs Docker fallback)
+    # 3. Kiem tra Database (PC vs Docker)
     Write-Host "`n[3/6] Dang kiem tra Database PostgreSQL..." -ForegroundColor Yellow
     $dbTest = Test-NetConnection -ComputerName "127.0.0.1" -Port 5432 -WarningAction SilentlyContinue -InformationLevel Quiet
     if ($dbTest) {
@@ -166,15 +123,27 @@ do {
             if ($LASTEXITCODE -eq 0) { $dockerAvailable = $true }
         } catch { $dockerAvailable = $false }
     } else {
-        $dockerAvailable = Ensure-DockerRunning
-        if ($dockerAvailable) {
-            Write-Host " - Khoi dong PostgreSQL qua Docker Compose..." -ForegroundColor Cyan
-            docker compose up -d postgres
-            Start-Sleep -Seconds 3
-            Write-Host " - PostgreSQL container san sang!" -ForegroundColor Green
-        } else {
-            Write-Host " - [LOI] Khong tim thay PostgreSQL tren PC va khong the khoi dong Docker!" -ForegroundColor Red
+        # Kiem tra xem Docker daemon co dang hoat dong khong
+        $dockerRunning = $false
+        try {
+            $null = docker info 2>&1
+            if ($LASTEXITCODE -eq 0) { $dockerRunning = $true }
+        } catch { $dockerRunning = $false }
+
+        if (-not $dockerRunning) {
+            Write-Host "`n=======================================================" -ForegroundColor Red
+            Write-Host "[LOI] Khong tim thay PostgreSQL tren PC va Docker chua duoc mo!" -ForegroundColor Red
+            Write-Host "-> Vui long khoi dong Docker Desktop truoc khi chay script nay." -ForegroundColor Yellow
+            Write-Host "=======================================================" -ForegroundColor Red
+            Read-Host "`nNhan Enter de thoat"
+            exit 1
         }
+
+        $dockerAvailable = $true
+        Write-Host " - Khoi dong PostgreSQL qua Docker Compose..." -ForegroundColor Cyan
+        docker compose up -d postgres
+        Start-Sleep -Seconds 3
+        Write-Host " - PostgreSQL container san sang!" -ForegroundColor Green
     }
 
     # 4. Khoi dong Backend (Spring Boot :8080)
