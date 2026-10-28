@@ -47,7 +47,13 @@ export function StudentEnrollmentsPage() {
     mutationFn: () => cancelEnrollment((cancelling as EnrollmentResponse).enrollmentId, reason.trim()),
     onSuccess: (result) => {
       setCancelling(null);
-      setNotice(result.status === "REFUNDED" ? "Đã hủy ghi danh. Học phí sẽ được hoàn theo quy định." : "Đã hủy ghi danh lớp học.");
+      setNotice(
+        result.status === "REFUNDED"
+          ? "Đã hủy ghi danh. Học phí sẽ được hoàn theo quy định."
+          : result.status === "ACTIVE"
+            ? "Đã gửi yêu cầu hoàn tiền qua VNPay. Lớp sẽ được hủy khi VNPay xác nhận hoàn tiền."
+            : "Đã hủy ghi danh lớp học.",
+      );
       void refreshMine();
     },
     onError: (err) => setError(portalErrorMessage(err, "Chưa hủy được ghi danh. Vui lòng thử lại.")),
