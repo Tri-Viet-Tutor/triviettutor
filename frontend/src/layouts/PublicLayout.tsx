@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { PublicFooter } from "@/components/layout/PublicFooter";
+import { ChatWidget } from "@/components/assistant/ChatWidget";
 
 /** Khung của các trang công khai: menu trên cùng, nội dung trang, chân trang. */
 export function PublicLayout() {
@@ -11,6 +12,7 @@ export function PublicLayout() {
         <Outlet />
       </div>
       <PublicFooter />
+      <ChatWidget placement="public" />
     </div>
   );
 }

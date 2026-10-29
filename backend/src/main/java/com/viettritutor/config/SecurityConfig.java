@@ -63,6 +63,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/ipn").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/meetings/webhook").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/assistant/chat").permitAll()
                         .requestMatchers("/error").permitAll()
                         // Swagger / OpenAPI docs (dev-friendly)
                         .requestMatchers(
