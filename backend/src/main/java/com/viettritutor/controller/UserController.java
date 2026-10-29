@@ -3,6 +3,8 @@ package com.viettritutor.controller;
 import com.viettritutor.common.api.ApiResponse;
 import com.viettritutor.common.api.PageResponse;
 import com.viettritutor.dto.user.*;
+import com.viettritutor.entity.User;
+import com.viettritutor.security.CurrentUser;
 import com.viettritutor.service.AdminUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -51,6 +53,23 @@ public class UserController {
                 .body(ApiResponse.ok(
                         adminUserService.createTutor(request)
                 ));
+    }
+
+    @PatchMapping("/{userId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+            summary = "Lock or unlock a user account",
+            description = "Admin only. A locked user cannot log in (password or Google) and existing tokens stop working. "
+                    + "An admin cannot lock their own account."
+    )
+    public ApiResponse<AdminUserResponse> updateStatus(
+            @PathVariable Long userId,
+            @Valid @RequestBody UpdateUserStatusRequest request,
+            @CurrentUser User admin
+    ) {
+        return ApiResponse.ok(
+                adminUserService.updateStatus(admin.getId(), userId, request.getLocked())
+        );
     }
 
     @PutMapping("/{userId}/tutor-profile")

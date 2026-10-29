@@ -10,4 +10,5 @@ public interface AdminUserService {
     PageResponse<AdminUserResponse> getUsers(String role, String search, int page, int size);
     MeResponse createTutor(CreateTutorRequest request);
     MeResponse updateTutorProfile(Long userId, UpdateTutorProfileRequest request);
+    AdminUserResponse updateStatus(Long adminId, Long userId, boolean locked);
 }

@@ -93,6 +93,18 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     @Transactional
+    public AdminUserResponse updateStatus(Long adminId, Long userId, boolean locked) {
+        if (locked && userId.equals(adminId)) {
+            throw new BusinessException(ErrorCode.CANNOT_LOCK_SELF);
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        user.setLocked(locked);
+        return AdminUserResponse.from(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
     public MeResponse updateTutorProfile(Long userId, UpdateTutorProfileRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));

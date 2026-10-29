@@ -56,6 +56,14 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private boolean enabled = false;
 
+    /**
+     * Locked by an administrator (FR-AUTH-03). Independent of {@link #enabled}:
+     * verifying email or resetting the password never unlocks the account.
+     */
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean locked = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -80,7 +88,7 @@ public class User implements UserDetails {
     public boolean isAccountNonExpired() { return true; }
 
     @Override
-    public boolean isAccountNonLocked() { return true; }
+    public boolean isAccountNonLocked() { return !locked; }
 
     @Override
     public boolean isCredentialsNonExpired() { return true; }

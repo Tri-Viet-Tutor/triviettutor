@@ -23,16 +23,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
-import jakarta.servlet.http.HttpServletRequest;
-
-import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -56,10 +54,16 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
 
-    @Value("${app.frontend-url}")
+    @Value("${app.frontend-url:http://localhost:5173}")
     private String configuredFrontendUrl;
 
     private static final SecureRandom RANDOM = new SecureRandom();
+
+    /** Wrong OTP entries allowed per code before a resend is required. */
+    static final int MAX_OTP_ATTEMPTS = 5;
+
+    /** Minimum seconds between two OTP emails to the same address. */
+    static final long OTP_RESEND_COOLDOWN_SECONDS = 60;
 
     @Override
     @Transactional(readOnly = true)
@@ -67,6 +71,8 @@ public class AuthServiceImpl implements AuthService {
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+        } catch (LockedException ex) {
+            throw new BusinessException(ErrorCode.ACCOUNT_LOCKED);
         } catch (DisabledException ex) {
             throw new BusinessException(ErrorCode.ACCOUNT_NOT_VERIFIED);
         }
@@ -74,6 +80,9 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+        if (user.isLocked()) {
+            throw new BusinessException(ErrorCode.ACCOUNT_LOCKED);
+        }
         if (!user.isEnabled()) {
             throw new BusinessException(ErrorCode.ACCOUNT_NOT_VERIFIED);
         }
@@ -87,6 +96,7 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             User existing = userRepository.findByEmail(request.getEmail()).orElse(null);
             if (existing != null && !existing.isEnabled()) {
+                ensureResendAllowed(existing.getEmail());
                 existing.setPassword(passwordEncoder.encode(request.getPassword()));
                 existing.setFullName(request.getFullName());
                 userRepository.save(existing);
@@ -117,8 +127,12 @@ public class AuthServiceImpl implements AuthService {
                 .build();
     }
 
+    /**
+     * Failed attempts must persist even though the method then throws, so business
+     * errors do not roll back this transaction (only reads precede each throw).
+     */
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = BusinessException.class)
     public AuthResponse verifyEmail(VerifyEmailRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -131,12 +145,24 @@ public class AuthServiceImpl implements AuthService {
                 .findTopByEmailAndVerifiedFalseOrderByCreatedAtDesc(request.getEmail())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_OTP));
 
+        if (verification.getFailedAttempts() >= MAX_OTP_ATTEMPTS) {
+            throw new BusinessException(ErrorCode.OTP_ATTEMPTS_EXCEEDED);
+        }
+
         if (verification.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new BusinessException(ErrorCode.OTP_EXPIRED);
         }
 
-        if (!verification.getOtpCode().equals(request.getOtp().trim())) {
-            throw new BusinessException(ErrorCode.INVALID_OTP);
+        if (!otpMatches(verification.getOtpCode(), request.getOtp())) {
+            verification.setFailedAttempts(verification.getFailedAttempts() + 1);
+            emailVerificationRepository.save(verification);
+            throw new BusinessException(verification.getFailedAttempts() >= MAX_OTP_ATTEMPTS
+                    ? ErrorCode.OTP_ATTEMPTS_EXCEEDED
+                    : ErrorCode.INVALID_OTP);
+        }
+
+        if (user.isLocked()) {
+            throw new BusinessException(ErrorCode.ACCOUNT_LOCKED);
         }
 
         verification.setVerified(true);
@@ -146,6 +172,25 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
 
         return buildAuthResponse(user);
+    }
+
+    private static boolean otpMatches(String expected, String submitted) {
+        if (submitted == null) {
+            return false;
+        }
+        return MessageDigest.isEqual(
+                expected.getBytes(StandardCharsets.UTF_8),
+                submitted.trim().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** At most one OTP email per address per cooldown window (resend and re-register paths). */
+    private void ensureResendAllowed(String email) {
+        emailVerificationRepository.findTopByEmailOrderByCreatedAtDesc(email)
+                .map(EmailVerification::getCreatedAt)
+                .filter(lastSent -> lastSent.isAfter(LocalDateTime.now().minusSeconds(OTP_RESEND_COOLDOWN_SECONDS)))
+                .ifPresent(lastSent -> {
+                    throw new BusinessException(ErrorCode.OTP_RESEND_TOO_SOON);
+                });
     }
 
     @Override
@@ -158,6 +203,7 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(ErrorCode.ACCOUNT_ALREADY_VERIFIED);
         }
 
+        ensureResendAllowed(user.getEmail());
         sendNewOtp(user);
 
         return RegisterResponse.builder()
@@ -215,39 +261,23 @@ public class AuthServiceImpl implements AuthService {
                     .build();
             passwordResetTokenRepository.save(resetToken);
 
-            String baseUrl = resolveBaseUrl(request.getFrontendUrl());
-            String resetLink = baseUrl + "/reset-password?token=" + token;
+            String resetLink = frontendBaseUrl() + "/reset-password?token=" + token;
             emailService.sendPasswordResetEmail(user.getEmail(), resetLink);
         });
     }
 
-    private String resolveBaseUrl(String clientProvidedUrl) {
-        // 1. Client explicitly provided URL (e.g. window.location.origin)
-        if (clientProvidedUrl != null && !clientProvidedUrl.isBlank()) {
-            return clientProvidedUrl.trim().replaceAll("/+$", "");
+    /**
+     * The reset link host always comes from server configuration (app.frontend-url),
+     * never from the request body or Origin/Referer headers, so an attacker cannot
+     * make the emailed link point at a host they control.
+     * If several origins are configured (comma separated), the first one is used.
+     */
+    private String frontendBaseUrl() {
+        String first = configuredFrontendUrl == null ? "" : configuredFrontendUrl.split(",")[0].trim();
+        if (first.isEmpty()) {
+            throw new BusinessException(ErrorCode.EMAIL_SEND_FAILED);
         }
-        // 2. Request Origin / Referer header if available from current request
-        try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            if (attributes != null) {
-                HttpServletRequest currentRequest = attributes.getRequest();
-                String origin = currentRequest.getHeader("Origin");
-                if (origin != null && !origin.isBlank()) {
-                    return origin.trim().replaceAll("/+$", "");
-                }
-                String referer = currentRequest.getHeader("Referer");
-                if (referer != null && !referer.isBlank()) {
-                    URI uri = URI.create(referer);
-                    return uri.getScheme() + "://" + uri.getAuthority();
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        // 3. Configured frontend URL from environment variable
-        if (configuredFrontendUrl != null && !configuredFrontendUrl.isBlank()) {
-            return configuredFrontendUrl.trim().replaceAll("/+$", "");
-        }
-        throw new BusinessException(ErrorCode.EMAIL_SEND_FAILED);
+        return first.replaceAll("/+$", "");
     }
 
     @Override
