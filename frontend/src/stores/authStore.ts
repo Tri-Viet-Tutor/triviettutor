@@ -27,7 +27,13 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
-        queryClient.clear();
+        try {
+          queryClient.clear();
+          window.localStorage.removeItem("viettritutor-auth");
+          window.sessionStorage.clear();
+        } catch {
+          // Bo qua loi storage
+        }
         set({ token: null, user: null, isAuthenticated: false });
       },
     }),
