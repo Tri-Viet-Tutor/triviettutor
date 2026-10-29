@@ -257,10 +257,16 @@ export function AdminClassesPage() {
                       </StatusChip>
                       <div className="flex flex-wrap gap-1">
                         {item.status === "FAILED_TO_OPEN" ? (
-                          <button type="button" onClick={() => setStatusTarget({ item, mode: "reopen" })} className={PORTAL_BTN_GHOST}>
-                            <Icon name="restart_alt" className="text-[18px]" />
-                            Mở lại
-                          </button>
+                          <>
+                            <button type="button" onClick={() => setStatusTarget({ item, mode: "reopen" })} className={PORTAL_BTN_GHOST}>
+                              <Icon name="restart_alt" className="text-[18px]" />
+                              Mở lại
+                            </button>
+                            <button type="button" onClick={() => setStatusTarget({ item, mode: "status" })} className={PORTAL_BTN_GHOST}>
+                              <Icon name="cancel" className="text-[18px]" />
+                              Hủy lớp
+                            </button>
+                          </>
                         ) : (
                           item.status !== "COMPLETED" &&
                           item.status !== "CANCELLED" && (
