@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { AntMascot } from "@/components/dashboard/AntMascot";
 import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING } from "@/constants/classNames";
 import { apiErrorMessage } from "@/services/api";
@@ -61,8 +62,7 @@ export function ChatWidget({ placement }: { placement: "public" | "portal" }) {
     send(input);
   }
 
-  const position =
-    placement === "public" ? "left-4 bottom-4 sm:left-5 sm:bottom-5" : "right-4 bottom-20 sm:right-5 lg:bottom-6";
+  const position = placement === "public" ? "left-4 bottom-4 sm:left-5 sm:bottom-5" : "right-4 bottom-20 sm:right-5 lg:bottom-6";
 
   return (
     <div className={`fixed z-50 ${position}`}>
@@ -80,7 +80,12 @@ export function ChatWidget({ placement }: { placement: "public" | "portal" }) {
                 {isAuthenticated ? "Hỏi về lớp, học phí, quy định hoặc lịch học của bạn" : "Hỏi về khóa học, lớp đang mở, học phí"}
               </p>
             </div>
-            <button type="button" onClick={() => setOpen(false)} aria-label="Đóng trợ lý" className={`rounded-full p-1 hover:bg-white/15 ${FOCUS_RING}`}>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Đóng trợ lý"
+              className={`rounded-full p-1 hover:bg-white/15 ${FOCUS_RING}`}
+            >
               <Icon name="close" />
             </button>
           </header>
@@ -154,16 +159,36 @@ export function ChatWidget({ placement }: { placement: "public" | "portal" }) {
         </section>
       )}
 
+      {/* Chú kiến linh vật làm nút mở trợ lý: nhún nhảy, thỉnh thoảng nói "Hỏi mình nhé!" */}
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-label={open ? "Đóng trợ lý tư vấn" : "Mở trợ lý tư vấn"}
-        className={`flex h-14 w-14 items-center justify-center rounded-full bg-brand-navy text-white shadow-lg transition hover:scale-105 ${
-          placement === "portal" ? "ml-auto" : ""
-        } ${FOCUS_RING}`}
+        className={`chat-pet group relative block h-[88px] w-[85px] rounded-2xl ${placement === "portal" ? "ml-auto" : ""} ${FOCUS_RING}`}
       >
-        <Icon name={open ? "close" : "chat"} className="text-[28px]" />
+        {!open && (
+          <span
+            aria-hidden="true"
+            className={`chat-pet-bubble absolute bottom-full mb-1 whitespace-nowrap rounded-2xl bg-white px-3 py-1.5 text-xs font-bold text-brand-navy shadow-md ring-1 ring-brand-sandLine ${
+              placement === "portal" ? "right-2 origin-bottom-right" : "left-2 origin-bottom-left"
+            }`}
+          >
+            Hỏi mình nhé!
+          </span>
+        )}
+        <AntMascot
+          variant="leaf"
+          className="chat-pet-body h-full w-full drop-shadow-md transition-transform duration-200 group-hover:scale-110"
+        />
+        {open && (
+          <span
+            aria-hidden="true"
+            className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-brand-navy text-white shadow"
+          >
+            <Icon name="close" className="text-[16px]" />
+          </span>
+        )}
       </button>
     </div>
   );
