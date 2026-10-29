@@ -45,8 +45,8 @@ public class MeetingServiceImpl implements MeetingService {
 
     /** The classroom opens this long before the session starts ... */
     static final Duration JOIN_OPENS_BEFORE_START = Duration.ofMinutes(15);
-    /** ... and closes this long after the session ends. */
-    static final Duration JOIN_CLOSES_AFTER_END = Duration.ZERO;
+    /** ... and stays open this long after the session ends so participants can rejoin. */
+    static final Duration JOIN_CLOSES_AFTER_END = Duration.ofMinutes(15);
 
     @Value("${livekit.url:ws://localhost:7880}")
     private String livekitUrl;
@@ -83,7 +83,7 @@ public class MeetingServiceImpl implements MeetingService {
 
         Long classGroupId = session.getClassGroupId();
         String role = validateAndResolveRole(session, classGroupId, currentUser);
-        requireJoinable(session);
+        requireJoinable(session, "ADMIN".equals(role));
         ClassGroup classGroup = classGroupId != null ? classGroupRepository.findById(classGroupId).orElse(null) : null;
 
         boolean isTutor = "TUTOR".equals(role);
@@ -245,13 +245,16 @@ public class MeetingServiceImpl implements MeetingService {
         return session.getActualTutorId() != null ? session.getActualTutorId() : session.getScheduledTutorId();
     }
 
-    private void requireJoinable(Session session) {
-        if (session.getStatus() == SessionStatus.CANCELLED || session.getStatus() == SessionStatus.COMPLETED) {
+    private void requireJoinable(Session session, boolean admin) {
+        boolean open = withinJoinWindow(session);
+        // A session may finish (COMPLETED) right at its end; participants can still rejoin during the grace period.
+        if (session.getStatus() == SessionStatus.CANCELLED || (session.getStatus() == SessionStatus.COMPLETED && !open)) {
             throw new BusinessException(ErrorCode.MEETING_NOT_AVAILABLE, "The session is cancelled or completed");
         }
-        if (!withinJoinWindow(session)) {
+        // Admins may observe a live session outside the window.
+        if (!admin && !open) {
             throw new BusinessException(ErrorCode.MEETING_NOT_AVAILABLE,
-                    "The classroom opens 15 minutes before the session starts and closes when it ends");
+                    "The classroom opens 15 minutes before the session starts and closes 15 minutes after it ends");
         }
     }
 

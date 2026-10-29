@@ -8,7 +8,7 @@ import { AuthNotice } from "@/components/auth/AuthNotice";
 import { Icon } from "@/components/ui/Icon";
 import { AUTH_LABEL, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_TEXT_LINK } from "@/constants/classNames";
 import { ROUTES } from "@/constants/routes";
-import { useHasLiveMakeup, useRefreshAdmin, useUserDirectory } from "@/hooks/useAdminData";
+import { useCanOfferMakeup, useRefreshAdmin, useUserDirectory } from "@/hooks/useAdminData";
 import { cancelSession, setMeetingUrl } from "@/services/admin";
 import { parseIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
@@ -36,8 +36,7 @@ export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
   const cancelled = session.status === "CANCELLED";
   // Buổi đã hủy cần được học bù để lớp đủ buổi; buổi bù bị hủy thì xếp lại bù cho buổi gốc
   const makeupTargetId = session.originalSessionId ?? session.sessionId;
-  const hasLiveMakeup = useHasLiveMakeup(makeupTargetId, session.classGroupId, cancelled);
-  const canMakeup = cancelled && hasLiveMakeup === false;
+  const canMakeup = useCanOfferMakeup(makeupTargetId, session.classGroupId, cancelled) === true;
   const started = sessionStart(session).getTime() <= now.getTime();
   // Chỉ cho lưu khi link đã đổi và không để trống
   const urlChanged = url.trim() !== (session.meetingUrl ?? "") && url.trim() !== "";

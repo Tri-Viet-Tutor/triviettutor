@@ -61,6 +61,7 @@ class SessionReschedulingServiceTest {
     @Mock private TutorAvailabilityRepository availabilityRepository;
     @Mock private ConflictValidationService conflictService;
     @Mock private EntityManager entityManager;
+    @Mock private PayrollGuard payrollGuard;
 
     private SessionReschedulingService service;
     private TutorAssignmentService assignmentService;
@@ -76,8 +77,9 @@ class SessionReschedulingServiceTest {
     @BeforeEach
     void setUp() {
         SessionOperationSupport operations = new SessionOperationSupport(classRepository, sessionRepository,
-                userRepository, leaveRepository, changeRepository, Optional.empty(), entityManager, FIXED_CLOCK);
-        service = new SessionReschedulingServiceImpl(sessionRepository, attendanceRecordRepository, leaveRepository,
+                userRepository, leaveRepository, changeRepository, Optional.of(payrollGuard), entityManager, FIXED_CLOCK);
+        service = new SessionReschedulingServiceImpl(sessionRepository, attendanceRecordRepository, assignmentRepository,
+                leaveRepository,
                 learningScheduleRepository, conflictService, operations, FIXED_CLOCK);
         assignmentService = new TutorAssignmentServiceImpl(classRepository, userRepository, assignmentRepository,
                 availabilityRepository, learningScheduleRepository, sessionRepository, conflictService, operations,
@@ -141,7 +143,7 @@ class SessionReschedulingServiceTest {
     // ── makeup ───────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("Makeup for a pending tutor leave creates a fresh session without the original meeting link")
+    @DisplayName("Makeup for a pending tutor leave creates a fresh session keeping the admin-set https link")
     void makeup_withPendingLeave_createsReplacementAndApproves() {
         original.setStatus(SessionStatus.PENDING_RESCHEDULE);
         LeaveRequest leave = request(7L, tutor, LeaveRequestStatus.PENDING);
@@ -152,7 +154,7 @@ class SessionReschedulingServiceTest {
         assertThat(response.sessionId()).isEqualTo(900L);
         assertThat(response.originalSessionId()).isEqualTo(500L);
         assertThat(response.status()).isEqualTo(SessionStatus.SCHEDULED);
-        assertThat(response.meetingUrl()).isNull();
+        assertThat(response.meetingUrl()).isEqualTo("https://meet.example.com/original");
         assertThat(original.getStatus()).isEqualTo(SessionStatus.CANCELLED);
         assertThat(leave.getStatus()).isEqualTo(LeaveRequestStatus.APPROVED);
         assertThat(leave.getResolution()).isEqualTo(LeaveResolution.MAKEUP);
@@ -178,6 +180,62 @@ class SessionReschedulingServiceTest {
         assertThat(change.getLeaveRequestId()).isNull();
         assertThat(change.getReason()).isNotBlank();
         verify(leaveRepository, never()).findById(any());
+    }
+
+    @Test
+    @DisplayName("A non-https meeting value (internal classroom path) is not copied to the makeup")
+    void makeup_doesNotCopyInternalMeetingPath() {
+        original.setStatus(SessionStatus.CANCELLED);
+        original.setMeetingUrl("/classroom/500");
+
+        assertThat(service.makeup(500L, makeup(null, 29), admin).meetingUrl()).isNull();
+    }
+
+    @Test
+    @DisplayName("After a reassignment the makeup of a cancelled session goes to the class's current primary tutor")
+    void makeup_followsCurrentPrimaryTutor() {
+        original.setStatus(SessionStatus.CANCELLED);
+        when(assignmentRepository.findByClassGroupIdAndStatus(100L, AssignmentStatus.ACTIVE)).thenReturn(Optional.of(
+                TutorAssignment.builder().id(51L).classGroupId(100L).tutorId(20L).status(AssignmentStatus.ACTIVE).build()));
+
+        SessionResponse response = service.makeup(500L, makeup(null, 29), admin);
+
+        assertThat(response.actualTutorId()).isEqualTo(20L);
+        assertThat(response.scheduledTutorId()).isEqualTo(20L);
+        verify(conflictService).assertTutorAvailable(eq(20L), anyList(), any());
+        verify(userRepository).findForUpdate(20L);
+        verify(userRepository, never()).findForUpdate(10L);
+    }
+
+    @Test
+    @DisplayName("A session given to a substitute keeps that substitute for its makeup")
+    void makeup_keepsSubstituteWhenOverridden() {
+        original.setStatus(SessionStatus.CANCELLED);
+        original.setActualTutorId(20L);
+        original.setActualTutorOverridden(true);
+        when(assignmentRepository.findByClassGroupIdAndStatus(100L, AssignmentStatus.ACTIVE)).thenReturn(Optional.of(
+                TutorAssignment.builder().id(51L).classGroupId(100L).tutorId(10L).status(AssignmentStatus.ACTIVE).build()));
+
+        SessionResponse response = service.makeup(500L, makeup(null, 29), admin);
+
+        assertThat(response.actualTutorId()).isEqualTo(20L);
+        assertThat(response.scheduledTutorId()).isEqualTo(10L);
+        verify(conflictService).assertTutorAvailable(eq(20L), anyList(), any());
+    }
+
+    @Test
+    @DisplayName("A makeup cannot cancel an original that already has attendance")
+    void makeup_whenOriginalWasTaught_isRejected() {
+        original.setStatus(SessionStatus.IN_SESSION);
+        LeaveRequest leave = request(7L, tutor, LeaveRequestStatus.PENDING);
+        givenPending(leave);
+        when(attendanceRecordRepository.existsBySessionId(500L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.makeup(500L, makeup(7L, 29), admin))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.SESSION_ALREADY_TAUGHT);
+        assertThat(original.getStatus()).isEqualTo(SessionStatus.IN_SESSION);
+        assertThat(leave.getStatus()).isEqualTo(LeaveRequestStatus.PENDING);
     }
 
     @Test
@@ -220,10 +278,34 @@ class SessionReschedulingServiceTest {
         assertThat(cancelledMakeup.getStatus()).isEqualTo(SessionStatus.SCHEDULED);
         assertThat(cancelledMakeup.getSessionDate()).isEqualTo(LocalDate.of(2026, 10, 30));
         assertThat(cancelledMakeup.getStartTime()).isEqualTo(LocalTime.of(18, 0));
-        assertThat(cancelledMakeup.getMeetingUrl()).isNull();
+        assertThat(cancelledMakeup.getMeetingUrl()).isEqualTo("https://meet.example.com/original");
         assertThat(saved).containsExactly(cancelledMakeup);
         verify(conflictService).assertTutorAvailable(eq(10L), anyList(), eq(Set.of(500L, 900L)));
         verify(entityManager).refresh(cancelledMakeup, LockModeType.PESSIMISTIC_WRITE);
+        ArgumentCaptor<SessionChange> changes = ArgumentCaptor.forClass(SessionChange.class);
+        verify(changeRepository, times(2)).save(changes.capture());
+        SessionChange reused = changes.getAllValues().get(1);
+        assertThat(reused.getSessionId()).isEqualTo(900L);
+        assertThat(reused.getAction()).isEqualTo(SessionChangeType.MAKEUP);
+        assertThat(reused.getPreviousStatus()).isEqualTo(SessionStatus.CANCELLED);
+        assertThat(reused.getNewStatus()).isEqualTo(SessionStatus.SCHEDULED);
+    }
+
+    @Test
+    @DisplayName("A cancelled makeup dated in a finalized payroll month is not reused")
+    void makeup_afterCancelledMakeupInFinalizedPayroll_isRejected() {
+        original.setStatus(SessionStatus.CANCELLED);
+        Session cancelledMakeup = Session.builder().id(900L).classGroupId(100L).sessionNumber(3)
+                .sessionDate(LocalDate.of(2026, 9, 28)).startTime(LocalTime.of(8, 0)).endTime(LocalTime.of(10, 0))
+                .status(SessionStatus.CANCELLED).scheduledTutorId(10L).actualTutorId(10L).originalSession(original).build();
+        when(sessionRepository.findByOriginalSessionId(500L)).thenReturn(Optional.of(cancelledMakeup));
+        doThrow(new BusinessException(ErrorCode.PAYROLL_FINALIZED)).when(payrollGuard).assertSessionEditable(900L);
+
+        assertThatThrownBy(() -> service.makeup(500L, makeup(null, 30), admin))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.PAYROLL_FINALIZED);
+        assertThat(cancelledMakeup.getSessionDate()).isEqualTo(LocalDate.of(2026, 9, 28));
+        verify(sessionRepository, never()).saveAndFlush(any());
     }
 
     @Test

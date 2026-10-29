@@ -216,16 +216,44 @@ class MeetingServiceTest {
     @DisplayName("Cancelled and completed sessions cannot be joined")
     void closedSessionsAreRefused() {
         when(sessionRepository.findById(101L)).thenReturn(Optional.of(session));
-        for (SessionStatus status : List.of(SessionStatus.CANCELLED, SessionStatus.COMPLETED)) {
-            session.setStatus(status);
-            BusinessException ex = assertThrows(BusinessException.class, () ->
-                    meetingService.generateTokenForSession(101L, tutorUser));
-            assertEquals(ErrorCode.MEETING_NOT_AVAILABLE, ex.getErrorCode());
+        session.setStatus(SessionStatus.CANCELLED);
+        for (User user : List.of(tutorUser, adminUser)) {
+            assertEquals(ErrorCode.MEETING_NOT_AVAILABLE, assertThrows(BusinessException.class, () ->
+                    meetingService.generateTokenForSession(101L, user)).getErrorCode());
+        }
+        session.setStatus(SessionStatus.COMPLETED);
+        useClock(clockAt(20, 15));
+        for (User user : List.of(tutorUser, adminUser)) {
+            assertEquals(ErrorCode.MEETING_NOT_AVAILABLE, assertThrows(BusinessException.class, () ->
+                    meetingService.generateTokenForSession(101L, user)).getErrorCode());
         }
     }
 
     @Test
-    @DisplayName("The classroom opens 15 minutes before start and closes at the session end")
+    @DisplayName("A session completed at its end can still be rejoined during the 15-minute grace period")
+    void completedSessionCanBeRejoinedDuringGrace() {
+        session.setStatus(SessionStatus.COMPLETED);
+        when(sessionRepository.findById(101L)).thenReturn(Optional.of(session));
+        when(classGroupRepository.findById(20L)).thenReturn(Optional.of(classGroup));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(tutorUser));
+        useClock(clockAt(20, 5));
+
+        assertEquals("TUTOR", meetingService.generateTokenForSession(101L, tutorUser).role());
+    }
+
+    @Test
+    @DisplayName("Admins may observe a live session outside the join window")
+    void adminIsExemptFromJoinWindow() {
+        when(sessionRepository.findById(101L)).thenReturn(Optional.of(session));
+        when(classGroupRepository.findById(20L)).thenReturn(Optional.of(classGroup));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(tutorUser));
+        useClock(clockAt(9, 0));
+
+        assertEquals("ADMIN", meetingService.generateTokenForSession(101L, adminUser).role());
+    }
+
+    @Test
+    @DisplayName("The classroom opens 15 minutes before start and closes 15 minutes after the session end")
     void joinWindowIsEnforced() {
         when(sessionRepository.findById(101L)).thenReturn(Optional.of(session));
         when(classGroupRepository.findById(20L)).thenReturn(Optional.of(classGroup));
@@ -236,9 +264,9 @@ class MeetingServiceTest {
                 meetingService.generateTokenForSession(101L, tutorUser)).getErrorCode());
         useClock(clockAt(17, 45));
         assertEquals("TUTOR", meetingService.generateTokenForSession(101L, tutorUser).role());
-        useClock(clockAt(19, 59));
+        useClock(clockAt(20, 14));
         assertEquals("TUTOR", meetingService.generateTokenForSession(101L, tutorUser).role());
-        useClock(clockAt(20, 0));
+        useClock(clockAt(20, 15));
         assertEquals(ErrorCode.MEETING_NOT_AVAILABLE, assertThrows(BusinessException.class, () ->
                 meetingService.generateTokenForSession(101L, tutorUser)).getErrorCode());
     }

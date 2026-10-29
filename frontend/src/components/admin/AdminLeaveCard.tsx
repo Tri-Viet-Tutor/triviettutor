@@ -7,7 +7,7 @@ import { StatusChip } from "@/components/dashboard/StatusChip";
 import { AUTH_LABEL, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT, PORTAL_TEXT_LINK } from "@/constants/classNames";
 import { LEAVE_RESOLUTION, LEAVE_STATUS, SESSION_STATUS } from "@/constants/labels";
 import { ROUTES } from "@/constants/routes";
-import { adminKeys, useAdminSession, useHasLiveMakeup, useRefreshAdmin, useUserDirectory } from "@/hooks/useAdminData";
+import { adminKeys, useAdminSession, useCanOfferMakeup, useRefreshAdmin, useUserDirectory } from "@/hooks/useAdminData";
 import type { AdminLeaveRequestsQuery, Role } from "@/interfaces/api";
 import { assignSubstitute, cancelSession, fetchAdminLeaveRequests, rejectLeaveRequest } from "@/services/admin";
 import { formatClockTime, formatDate, parseIsoDate } from "@/utils/date";
@@ -64,8 +64,7 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
     request.resolution === "CANCEL" &&
     session?.status === "CANCELLED" &&
     session.originalSessionId === null;
-  const hasLiveMakeup = useHasLiveMakeup(request.sessionId, session?.classGroupId ?? 0, cancelledWithoutMakeup);
-  const canMakeupCancelled = cancelledWithoutMakeup && hasLiveMakeup === false;
+  const canMakeupCancelled = useCanOfferMakeup(request.sessionId, session?.classGroupId ?? 0, cancelledWithoutMakeup) === true;
 
   /** Mở form của một cách xử lý, xóa lỗi cũ của các form khác */
   function open(next: LeaveCardAction) {

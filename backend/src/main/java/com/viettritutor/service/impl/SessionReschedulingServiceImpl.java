@@ -10,7 +10,9 @@ import com.viettritutor.dto.schedule.SessionResponse;
 import com.viettritutor.entity.LearningSchedule;
 import com.viettritutor.entity.LeaveRequest;
 import com.viettritutor.entity.Session;
+import com.viettritutor.entity.TutorAssignment;
 import com.viettritutor.entity.User;
+import com.viettritutor.enums.AssignmentStatus;
 import com.viettritutor.enums.ClassType;
 import com.viettritutor.enums.LeaveRequestStatus;
 import com.viettritutor.enums.LeaveResolution;
@@ -20,6 +22,7 @@ import com.viettritutor.repository.AttendanceRecordRepository;
 import com.viettritutor.repository.LearningScheduleRepository;
 import com.viettritutor.repository.LeaveRequestRepository;
 import com.viettritutor.repository.SessionRepository;
+import com.viettritutor.repository.TutorAssignmentRepository;
 import com.viettritutor.service.ConflictValidationService;
 import com.viettritutor.service.SessionOperationSupport;
 import com.viettritutor.service.SessionReschedulingService;
@@ -38,6 +41,7 @@ import java.util.Set;
 public class SessionReschedulingServiceImpl implements SessionReschedulingService {
     private final SessionRepository sessionRepository;
     private final AttendanceRecordRepository attendanceRecordRepository;
+    private final TutorAssignmentRepository tutorAssignmentRepository;
     private final LeaveRequestRepository leaveRepository;
     private final LearningScheduleRepository learningScheduleRepository;
     private final ConflictValidationService conflictService;
@@ -55,7 +59,14 @@ public class SessionReschedulingServiceImpl implements SessionReschedulingServic
         }
         var context = operations.load(sessionId);
         Session original = context.session();
-        Long tutorId = operations.teacher(original);
+        Long sessionTeacherId = operations.teacher(original);
+        // A cancelled original keeps the tutor it had; unless it was given to a substitute, the makeup follows the
+        // class's current primary tutor so a reassignment is honoured.
+        Long primaryTutorId = tutorAssignmentRepository
+                .findByClassGroupIdAndStatus(original.getClassGroupId(), AssignmentStatus.ACTIVE)
+                .map(TutorAssignment::getTutorId).orElse(null);
+        Long tutorId = !original.isActualTutorOverridden() && primaryTutorId != null ? primaryTutorId : sessionTeacherId;
+        Long scheduledTutorId = primaryTutorId != null ? primaryTutorId : original.getScheduledTutorId();
         List<LearningSchedule> roster = learningScheduleRepository
                 .findActiveRoster(original.getClassGroupId(), original.getSessionDate(), input.makeupDate());
         List<Long> people = new ArrayList<>(roster.stream().map(LearningSchedule::getStudentId).toList());
@@ -73,12 +84,16 @@ public class SessionReschedulingServiceImpl implements SessionReschedulingServic
             }
         } else if (!cancelledRequest) {
             operations.requirePending(request);
-            if ("ROLE_TUTOR".equals(request.getRequesterRole()) && !request.getRequesterId().equals(tutorId)) {
+            if ("ROLE_TUTOR".equals(request.getRequesterRole()) && !request.getRequesterId().equals(sessionTeacherId)) {
                 throw new BusinessException(ErrorCode.LEAVE_RESOLUTION_NOT_ALLOWED);
             }
         }
         if (original.getOriginalSession() != null || roster.isEmpty()) {
             throw new BusinessException(ErrorCode.LEAVE_RESOLUTION_NOT_ALLOWED);
+        }
+        // Making up cancels the original, which must not wipe a session that was (partly) taught.
+        if (original.getStatus() != SessionStatus.CANCELLED && hasTeachingEvidence(original)) {
+            throw new BusinessException(ErrorCode.SESSION_ALREADY_TAUGHT);
         }
         if (request != null && "ROLE_STUDENT".equals(request.getRequesterRole())
                 && context.classGroup().getClassType() == ClassType.GROUP) {
@@ -87,10 +102,12 @@ public class SessionReschedulingServiceImpl implements SessionReschedulingServic
         }
         // One makeup row per original (uq_sessions_original_makeup): a cancelled makeup is rescheduled in place.
         Session replacement = sessionRepository.findByOriginalSessionId(sessionId).orElse(null);
+        SessionOperationSupport.Snapshot replacementBefore = null;
         if (replacement != null) {
             if (replacement.getStatus() != SessionStatus.CANCELLED) {
                 throw new BusinessException(ErrorCode.MAKEUP_ALREADY_EXISTS);
             }
+            // Also refuses (PAYROLL_FINALIZED) when the cancelled makeup's old date is in finalized payroll.
             operations.lockSession(replacement);
             if (replacement.getStatus() != SessionStatus.CANCELLED) {
                 throw new BusinessException(ErrorCode.MAKEUP_ALREADY_EXISTS);
@@ -98,26 +115,26 @@ public class SessionReschedulingServiceImpl implements SessionReschedulingServic
             if (replacement.isAttendanceRosterCaptured() || hasTeachingEvidence(replacement)) {
                 throw new BusinessException(ErrorCode.SESSION_ALREADY_TAUGHT);
             }
+            replacementBefore = operations.snapshot(replacement);
             replacement.setSessionDate(input.makeupDate());
             replacement.setStartTime(input.startTime());
             replacement.setEndTime(input.endTime());
             replacement.setStatus(SessionStatus.SCHEDULED);
-            replacement.setScheduledTutorId(original.getScheduledTutorId());
+            replacement.setScheduledTutorId(scheduledTutorId);
             replacement.setActualTutorId(tutorId);
             replacement.setActualTutorOverridden(original.isActualTutorOverridden());
-            replacement.setMeetingUrl(null);
+            replacement.setMeetingUrl(externalMeetingUrl(original));
             replacement.setAttendanceLocked(false);
             replacement.setAttendanceLockedAt(null);
             replacement.setAttendanceAutoProcessed(false);
             replacement.setAttendanceNeedsReview(false);
         } else {
-            // The makeup gets its own classroom; never reuse the original's meeting link.
             replacement = Session.builder().classGroupId(original.getClassGroupId())
                     .sessionNumber(original.getSessionNumber()).sessionDate(input.makeupDate())
                     .startTime(input.startTime()).endTime(input.endTime()).status(SessionStatus.SCHEDULED)
-                    .scheduledTutorId(original.getScheduledTutorId()).actualTutorId(tutorId)
+                    .scheduledTutorId(scheduledTutorId).actualTutorId(tutorId)
                     .actualTutorOverridden(original.isActualTutorOverridden()).originalSession(original)
-                    .topicId(original.getTopicId()).build();
+                    .meetingUrl(externalMeetingUrl(original)).topicId(original.getTopicId()).build();
         }
         Set<Long> excluded = replacement.getId() == null ? Set.of(sessionId) : Set.of(sessionId, replacement.getId());
         String reason = request != null ? request.getReason() : "Xếp buổi bù cho buổi đã hủy";
@@ -143,6 +160,10 @@ public class SessionReschedulingServiceImpl implements SessionReschedulingServic
         if (cancelledRequest) operations.approve(request, LeaveResolution.MAKEUP, admin, reason, replacement.getId());
         operations.audit(original, before, SessionChangeType.MAKEUP, admin, reason,
                 request != null ? request.getId() : null, replacement.getId());
+        if (replacementBefore != null) {
+            // The reused makeup row was rescheduled: record that on its own history too.
+            operations.audit(replacement, replacementBefore, SessionChangeType.MAKEUP, admin, reason, null, replacement.getId());
+        }
         return SessionResponse.from(replacement);
     }
 
@@ -207,6 +228,12 @@ public class SessionReschedulingServiceImpl implements SessionReschedulingServic
         }
         operations.audit(session, before, SessionChangeType.CANCEL, admin, input.reason(), input.leaveRequestId(), null);
         return SessionResponse.from(session);
+    }
+
+    /** Only an admin-set external (https) link carries over; internal classroom paths are never stored. */
+    private static String externalMeetingUrl(Session original) {
+        String url = original.getMeetingUrl();
+        return url != null && url.startsWith("https://") ? url : null;
     }
 
     private boolean hasTeachingEvidence(Session session) {
