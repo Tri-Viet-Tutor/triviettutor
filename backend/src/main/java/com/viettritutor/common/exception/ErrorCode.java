@@ -150,7 +150,12 @@ public enum ErrorCode {
     INVALID_SUBMISSION_FILTER (HttpStatus.BAD_REQUEST, "The submission list supports SUBMITTED or GRADED"),
     INVALID_HOMEWORK_SCORE (HttpStatus.BAD_REQUEST, "Score must not exceed maxScore"),
     GRADING_REASON_REQUIRED (HttpStatus.BAD_REQUEST, "An audit reason is required to revise a grade"),
-    INVALID_STATUS_TRANSITION (HttpStatus.UNPROCESSABLE_ENTITY, "This status transition is not allowed");
+    INVALID_STATUS_TRANSITION (HttpStatus.UNPROCESSABLE_ENTITY, "This status transition is not allowed"),
+    AVATAR_NOT_FOUND (HttpStatus.NOT_FOUND, "Avatar not found"),
+
+    // ── Assistant chatbot ─────────────────────────────────────────
+    ASSISTANT_RATE_LIMITED (HttpStatus.TOO_MANY_REQUESTS, "Too many assistant questions; try again later"),
+    ASSISTANT_UNAVAILABLE (HttpStatus.SERVICE_UNAVAILABLE, "The assistant is not available right now");
 
     private final HttpStatus httpStatus;
     private final String defaultMessage;
