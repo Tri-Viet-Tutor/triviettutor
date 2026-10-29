@@ -11,7 +11,7 @@ This board represents the central state of all work orders organized by **Flows 
 | **`FLOW-AUDIT`** | Codebase Gap Analysis & Backlog Mapping | 1 | 1 / 1 | Completed | **DONE** |
 | **`FLOW-01-COURSE-CLASS`** | Class Lifecycle & Automated Deadline Evaluation | 1 | 0 / 1 | Step 1 (`TASK-001`) | **READY** |
 | **`FLOW-02-ENROLLMENT-PAYMENT`**| Student Checkout & Conflict Pre-Validation | 1 | 0 / 1 | Step 2 (`TASK-002`) | **READY** |
-| **`FLOW-03-TUTOR-ASSIGNMENT`** | Tutor Assignment & Hard Overlap Engine | 1 | 0 / 1 | Step 3 (`TASK-003`) | **READY** |
+| **`FLOW-03-TUTOR-ASSIGNMENT`** | Tutor Assignment & Hard Overlap Engine | 1 | 1 / 1 | Completed | **DONE** |
 | **`FLOW-04-OPERATIONS-ATTENDANCE`**| 24h Attendance Auto-Lock & Substitute Tracking | 1 | 0 / 1 | Step 4 (`TASK-004`) | **READY** |
 | **`FLOW-05-PAYROLL`** | Monthly Payroll Settlement & Mutex Locking | 1 | 0 / 1 | Step 1 (`TASK-005`) | **READY** |
 | **`FLOW-EXT-MOBILE`** | Mobile Client Session Schedule Integration | 1 | 0 / 1 | Step 1 (`TASK-006`) | **READY** |
@@ -23,7 +23,6 @@ This board represents the central state of all work orders organized by **Flows 
 ### Backlog (Pending Execution)
 - [`TASK-001`](backlog/TASK-001-FLOW-01-automated-class-deadline-scheduler.md): Automated Group Class Registration Deadline Evaluation & State Transitions (`backend-dev`)
 - [`TASK-002`](backlog/TASK-002-FLOW-02-vnpay-sandbox-checkout-e2e-verification.md): VNPay & Mock Checkout Flow Hard Conflict Pre-Validation (`backend-dev`)
-- [`TASK-003`](backlog/TASK-003-FLOW-03-tutor-assignment-overlap-validation.md): Strict Tutor Conflict Engine & Slot Overlap Validation (`backend-dev`)
 - [`TASK-004`](backlog/TASK-004-FLOW-04-attendance-lock-and-substitute-reporting.md): 24-Hour Attendance Auto-Lock Job & Substitute Tutor Compensation Tagging (`backend-dev`)
 - [`TASK-005`](backlog/TASK-005-FLOW-05-payroll-mutex-and-monthly-settlement.md): Monthly Tutor Payroll Finalization Mutex Guard & Calculation Precision (`backend-dev`)
 - [`TASK-006`](backlog/TASK-006-FLOW-EXT-mobile-api-client-and-session-view.md): Mobile App API Integration for Session Schedule & Attendance Overview (`frontend-dev`)
@@ -36,6 +35,7 @@ This board represents the central state of all work orders organized by **Flows 
 
 ### Done (Signed-Off Deliverables)
 - [`FLOW-AUDIT`](GAP_ANALYSIS.md): Comprehensive Codebase Audit across backend, frontend, mobile, and database migrations.
+- [`TASK-003`](done/TASK-003-FLOW-03-tutor-assignment-overlap-validation.md): Strict Tutor Conflict Engine & Slot Overlap Validation, plus reassign/makeup/meeting follow-ups (`backend-dev`)
 
 ---
 
