@@ -90,9 +90,9 @@ class PayrollControllerTest {
         assertEquals(1,line(p,f.substitute().getId()).path("validSessions").asInt());
         assertEquals(4250000,line(p,f.substitute().getId()).path("totalPay").asLong());
         assertEquals(3000000,line(p,f.idle().getId()).path("totalPay").asLong());
-        // Disabled tutors without lessons draw no base salary.
-        for(var item:p.path("lines"))assertNotEquals(f.disabled().getId().longValue(),item.path("tutorId").asLong());
-        assertEquals(13850000,p.path("totalPayroll").asLong());
+        // No disabled-at timestamp exists, so past and current months keep a disabled tutor's base salary.
+        assertEquals(1000000,line(p,f.disabled().getId()).path("totalPay").asLong());
+        assertEquals(14850000,p.path("totalPayroll").asLong());
         assertEquals(0,periods.count());assertEquals(0,lines.count());assertEquals(0,mutex.count());
         assertEquals(0,data(call("GET","/tutor/payroll",null,tutor,null),200).path("totalElements").asInt());
     }
@@ -105,7 +105,7 @@ class PayrollControllerTest {
         assertEquals(saved,data(call("POST",path()+"/finalize",null,admin,"period-one"),200));
         assertEquals(saved,data(call("POST",path()+"/finalize",null,admin,"another-key"),200));
         call("POST","/admin/payroll/2029/12/finalize",null,admin,"another-key").andExpect(status().isConflict());
-        assertEquals(1,periods.count());assertEquals(3,lines.count());
+        assertEquals(1,periods.count());assertEquals(4,lines.count());
         var mine=data(call("GET","/tutor/payroll",null,tutor,null),200);
         assertEquals(1,mine.path("totalElements").asInt());assertEquals(8400000,mine.path("content").get(0).path("totalPay").asLong());
         assertFalse(mine.toString().contains("totalPayroll"));
@@ -168,9 +168,26 @@ class PayrollControllerTest {
     }
     @Test void tutorsCreatedAfterMonthAreExcludedAndMissingPaidProfileBlocks()throws Exception{
         jdbc.update("update users set created_at=? where id=?",LocalDateTime.of(2030,2,1,0,0),f.idle().getId());
-        assertEquals(2,get().path("lines").size());
+        assertEquals(3,get().path("lines").size());
         profiles.deleteById(f.tutor().getId());profiles.flush();
         call("POST",path()+"/finalize",null,admin,"key").andExpect(status().isUnprocessableEntity());
+    }
+    @Test void chainedActualTutorCorrectionsDoNotCountIntermediateTutorAsSubstitutedOut()throws Exception{
+        Long id=f.completed().getFirst();
+        data(call("PATCH","/admin/sessions/"+id+"/actual-tutor",Map.of("tutorId",f.idle().getId(),"reason","First guess"),admin,null),200);
+        data(call("PATCH","/admin/sessions/"+id+"/actual-tutor",Map.of("tutorId",f.substitute().getId(),"reason","Actually taught by substitute"),admin,null),200);
+        var p=get();
+        var idle=line(p,f.idle().getId());
+        assertEquals(0,idle.path("substitutedOutSessions").asInt());assertEquals(0,idle.path("unfinalizedSessions").asInt());
+        assertEquals(2,line(p,f.tutor().getId()).path("substitutedOutSessions").asInt());
+        assertEquals(1,line(p,f.substitute().getId()).path("unfinalizedSessions").asInt());
+    }
+    @Test void disabledTutorsDrawNoBaseSalaryInFutureMonths()throws Exception{
+        var current=data(call("GET","/admin/payroll/2030/2",null,admin,null),200);
+        assertEquals(1000000,line(current,f.disabled().getId()).path("totalPay").asLong());
+        var future=data(call("GET","/admin/payroll/2030/3",null,admin,null),200);
+        for(var item:future.path("lines"))assertNotEquals(f.disabled().getId().longValue(),item.path("tutorId").asLong());
+        assertEquals(3000000,line(future,f.idle().getId()).path("totalPay").asLong());
     }
     @Test void disabledTutorWhoTaughtInMonthIsStillPaidAndDoesNotBlock()throws Exception{
         fixtures.lesson(f.classId(),f.month().atDay(12),12,f.disabled(),f.disabled(),f.student(),f.admin(),true);
@@ -246,7 +263,7 @@ class PayrollControllerTest {
             var two=pool.submit(()->{gate.await();return data(call("POST",path()+"/finalize",null,admin,"same-key"),200);});
             gate.countDown();assertEquals(one.get(30,TimeUnit.SECONDS),two.get(30,TimeUnit.SECONDS));
         }
-        assertEquals(1,periods.count());assertEquals(3,lines.count());
+        assertEquals(1,periods.count());assertEquals(4,lines.count());
     }
     @Test @Transactional(propagation=Propagation.NOT_SUPPORTED) @DirtiesContext(methodMode=DirtiesContext.MethodMode.AFTER_METHOD)
     void concurrentUnlockAndFinalizeCannotCommitInconsistentPayroll()throws Exception{

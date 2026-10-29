@@ -537,6 +537,8 @@ export interface UpdateMeRequest {
 /** dto.user.AdminUserResponse — GET /admin/users */
 export interface AdminUserResponse extends UserInfo {
   createdAt: IsoDateTime;
+  /** Tài khoản đang hoạt động (đã kích hoạt, chưa bị vô hiệu hóa) */
+  enabled: boolean;
 }
 
 /** Tham số của GET /admin/users (page từ 0, size 1 – 100) */

@@ -71,7 +71,7 @@ export interface AdminSessionDetailProps {
 export interface AdminActualTutorFormProps {
   session: SessionResponse;
   /** Danh sách gia sư để chọn */
-  tutors: { id: number; fullName: string }[];
+  tutors: { id: number; fullName: string; enabled?: boolean }[];
   /** Đóng form */
   onDone: () => void;
 }

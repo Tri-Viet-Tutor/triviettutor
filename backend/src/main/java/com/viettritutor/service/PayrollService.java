@@ -39,7 +39,7 @@ public class PayrollService {
         YearMonth period=period(year,month);
         return periods.findByYearAndMonth(year,month).map(this::snapshot)
                 .orElseGet(() -> preview(period,profiles.findPayrollEligible(period.plusMonths(1).atDay(1).atStartOfDay(),
-                                period.atDay(1),period.atEndOfMonth()),
+                                period.atDay(1),period.atEndOfMonth(),includeDisabled(period)),
                         sessions.findBySessionDateBetweenOrderBySessionDateAscStartTimeAscIdAsc(period.atDay(1),period.atEndOfMonth())));
     }
 
@@ -62,7 +62,7 @@ public class PayrollService {
         var lessons=sessions.findPayrollSessionsForUpdate(monthKey.atDay(1),monthKey.atEndOfMonth());
         lessons.forEach(s -> entityManager.refresh(s,LockModeType.PESSIMISTIC_WRITE));
         var tutors=profiles.findPayrollEligibleForUpdate(monthKey.plusMonths(1).atDay(1).atStartOfDay(),
-                monthKey.atDay(1),monthKey.atEndOfMonth());
+                monthKey.atDay(1),monthKey.atEndOfMonth(),includeDisabled(monthKey));
         tutors.forEach(p -> entityManager.refresh(p,LockModeType.PESSIMISTIC_WRITE));
         PayrollResponse preview=preview(monthKey,tutors,lessons);
         if(!preview.getBlockingSessionIds().isEmpty())
@@ -92,6 +92,11 @@ public class PayrollService {
         Map<Long,PayrollPeriod> periodMap=periods.findAllById(found.stream().map(PayrollLine::getPeriodId).distinct().toList())
                 .stream().collect(Collectors.toMap(PayrollPeriod::getId,p->p));
         return PageResponse.from(found.map(line -> response(line,periodMap.get(line.getPeriodId()))));
+    }
+
+    /** Disabled tutors keep base salary for past and current periods; see TutorProfileRepository.PAYROLL_ELIGIBLE. */
+    private boolean includeDisabled(YearMonth period) {
+        return !period.isAfter(YearMonth.now(clock));
     }
 
     private void claimKey(String key,PayrollPeriod saved) {

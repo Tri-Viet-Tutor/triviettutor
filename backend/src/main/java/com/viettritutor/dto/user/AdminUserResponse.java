@@ -13,6 +13,7 @@ public class AdminUserResponse {
     private String email;
     private String fullName;
     private String role;
+    private boolean enabled;
     private LocalDateTime createdAt;
 
     public static AdminUserResponse from(User user) {
@@ -21,6 +22,7 @@ public class AdminUserResponse {
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .role(user.getRole())
+                .enabled(user.isEnabled())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

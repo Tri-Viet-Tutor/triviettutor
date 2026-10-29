@@ -64,7 +64,7 @@ class PayrollHttpTest {
             call("GET","/api/v1/tutor/payroll",null,role,null,role==null||role.equals("invalid")?401:403);
         assertEquals(0,call("GET","/api/v1/tutor/payroll",null,"tutor",null,200).path("totalElements").asInt());
         var preview=call("GET",period,null,"admin",null,200);
-        assertEquals("DRAFT",preview.path("status").asText());assertEquals(13850000,preview.path("totalPayroll").asLong());
+        assertEquals("DRAFT",preview.path("status").asText());assertEquals(14850000,preview.path("totalPayroll").asLong());
         assertEquals(0,periods.count());
         for(String bad:List.of("0/1","9999/1","2030/13","2030/0","x/1"))
             call("GET","/api/v1/admin/payroll/"+bad,null,"admin",null,400);

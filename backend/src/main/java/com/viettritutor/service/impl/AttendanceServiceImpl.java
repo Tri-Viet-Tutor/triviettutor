@@ -167,8 +167,15 @@ public class AttendanceServiceImpl implements AttendanceService {
         Session session = lock(sessionId);
         if (session.isAttendanceAutoProcessed() || !deadlinePassed(session)) return false;
         if (payrollGuard.map(guard -> guard.isDateFinalized(session.getSessionDate())).orElse(false)) {
-            // Finalized payroll is immutable: stop retrying this session instead of failing every run.
+            // Finalized payroll is immutable: lock and stop retrying this session instead of failing every run.
+            boolean previousLocked = session.isAttendanceLocked();
             session.setAttendanceAutoProcessed(true);
+            session.setAttendanceLocked(true);
+            if (session.getAttendanceLockedAt() == null) session.setAttendanceLockedAt(OffsetDateTime.now(clock));
+            if (!previousLocked) {
+                auditSession(session, false, session.getStatus(), AttendanceChangeType.AUTO_LOCK, null,
+                        "Attendance editing deadline reached; payroll period already finalized");
+            }
             return false;
         }
         requirePayrollEditable(session);

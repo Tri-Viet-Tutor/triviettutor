@@ -139,7 +139,7 @@ class AttendanceEditWindowTest {
     }
 
     @Test
-    @DisplayName("autoLock marks a session in a finalized payroll month as processed instead of throwing")
+    @DisplayName("autoLock locks a session in a finalized payroll month and marks it processed instead of throwing")
     void autoLockSkipsFinalizedMonth() {
         Session session = completedSession(30);
         session.setStatus(SessionStatus.IN_SESSION);
@@ -150,9 +150,12 @@ class AttendanceEditWindowTest {
 
         assertThat(locked).isFalse();
         assertThat(session.isAttendanceAutoProcessed()).isTrue();
-        assertThat(session.isAttendanceLocked()).isFalse();
+        assertThat(session.isAttendanceLocked()).isTrue();
+        assertThat(session.getStatus()).isEqualTo(SessionStatus.IN_SESSION);
         verify(payrollGuard, never()).assertSessionEditable(any());
-        verify(changeRepository, never()).save(any());
+        ArgumentCaptor<AttendanceChange> change = ArgumentCaptor.forClass(AttendanceChange.class);
+        verify(changeRepository).save(change.capture());
+        assertThat(change.getValue().getAction()).isEqualTo(AttendanceChangeType.AUTO_LOCK);
     }
 
     @Test

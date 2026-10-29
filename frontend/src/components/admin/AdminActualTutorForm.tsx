@@ -18,7 +18,8 @@ export function AdminActualTutorForm({ session, tutors, onDone }: AdminActualTut
   const refresh = useRefreshAdmin();
   const [tutorId, setTutorId] = useState("");
   const current = teacherOf(session);
-  const options = tutors.filter((tutor) => tutor.id !== current);
+  // Chỉ gia sư đang hoạt động (backend cũng từ chối tài khoản bị vô hiệu hóa), trừ người đang dạy buổi này
+  const options = tutors.filter((tutor) => tutor.id !== current && tutor.enabled !== false);
 
   const change = useMutation({
     mutationFn: (reason: string) => changeActualTutor(session.sessionId, { tutorId: Number(tutorId), reason }),

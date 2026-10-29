@@ -51,7 +51,7 @@ dependencies:
 
 ### Completion Notes (2026-10-29, branch `fix/flows/attendance-payroll`)
 - `PayrollService` applies BR-02.40 using `DefaultTeachingQuery` (valid = `COMPLETED`, locked, fully recorded, teaching confirmed by the actual tutor); finalization takes the `PayrollMutex` row lock and stores a frozen snapshot (status `FINALIZED`) returned by later reads.
-- Draft payroll excludes disabled tutors unless they actually taught a lesson in the month; finalized snapshots are unchanged.
+- Disabled tutors draw no base salary only in future periods (no disabled-at timestamp exists, so past and current draft months keep them); a disabled tutor who taught in the month is always paid. Finalized snapshots are unchanged.
 - Each line returns `reconciliation` (sessions per group), shown on the tutor and admin payroll pages.
 - Tests: `PayrollMutexTest`, `PayrollControllerTest` (incl. concurrent finalize), `PayrollHttpTest`.
 
