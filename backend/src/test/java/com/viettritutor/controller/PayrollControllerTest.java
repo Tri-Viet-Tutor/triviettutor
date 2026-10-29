@@ -90,8 +90,9 @@ class PayrollControllerTest {
         assertEquals(1,line(p,f.substitute().getId()).path("validSessions").asInt());
         assertEquals(4250000,line(p,f.substitute().getId()).path("totalPay").asLong());
         assertEquals(3000000,line(p,f.idle().getId()).path("totalPay").asLong());
-        assertEquals(1000000,line(p,f.disabled().getId()).path("totalPay").asLong());
-        assertEquals(14850000,p.path("totalPayroll").asLong());
+        // Disabled tutors without lessons draw no base salary.
+        for(var item:p.path("lines"))assertNotEquals(f.disabled().getId().longValue(),item.path("tutorId").asLong());
+        assertEquals(13850000,p.path("totalPayroll").asLong());
         assertEquals(0,periods.count());assertEquals(0,lines.count());assertEquals(0,mutex.count());
         assertEquals(0,data(call("GET","/tutor/payroll",null,tutor,null),200).path("totalElements").asInt());
     }
@@ -104,7 +105,7 @@ class PayrollControllerTest {
         assertEquals(saved,data(call("POST",path()+"/finalize",null,admin,"period-one"),200));
         assertEquals(saved,data(call("POST",path()+"/finalize",null,admin,"another-key"),200));
         call("POST","/admin/payroll/2029/12/finalize",null,admin,"another-key").andExpect(status().isConflict());
-        assertEquals(1,periods.count());assertEquals(4,lines.count());
+        assertEquals(1,periods.count());assertEquals(3,lines.count());
         var mine=data(call("GET","/tutor/payroll",null,tutor,null),200);
         assertEquals(1,mine.path("totalElements").asInt());assertEquals(8400000,mine.path("content").get(0).path("totalPay").asLong());
         assertFalse(mine.toString().contains("totalPayroll"));
@@ -167,9 +168,38 @@ class PayrollControllerTest {
     }
     @Test void tutorsCreatedAfterMonthAreExcludedAndMissingPaidProfileBlocks()throws Exception{
         jdbc.update("update users set created_at=? where id=?",LocalDateTime.of(2030,2,1,0,0),f.idle().getId());
-        assertEquals(3,get().path("lines").size());
+        assertEquals(2,get().path("lines").size());
         profiles.deleteById(f.tutor().getId());profiles.flush();
         call("POST",path()+"/finalize",null,admin,"key").andExpect(status().isUnprocessableEntity());
+    }
+    @Test void disabledTutorWhoTaughtInMonthIsStillPaidAndDoesNotBlock()throws Exception{
+        fixtures.lesson(f.classId(),f.month().atDay(12),12,f.disabled(),f.disabled(),f.student(),f.admin(),true);
+        var p=get();
+        assertTrue(p.path("canFinalize").asBoolean());
+        var l=line(p,f.disabled().getId());
+        assertEquals(1,l.path("validSessions").asInt());assertEquals(1100000,l.path("totalPay").asLong());
+    }
+    @Test void adminCorrectsActualTutorWhichResetsEvidenceAndIsBlockedOnceFinalized()throws Exception{
+        Long id=f.completed().getFirst();
+        var body=Map.of("tutorId",f.idle().getId(),"reason","Scheduled tutor did not show up");
+        call("PATCH","/admin/sessions/"+id+"/actual-tutor",body,tutor,null).andExpect(status().isForbidden());
+        call("PATCH","/admin/sessions/"+id+"/actual-tutor",Map.of("tutorId",f.idle().getId()),admin,null)
+                .andExpect(status().isBadRequest());
+        call("PATCH","/admin/sessions/"+id+"/actual-tutor",Map.of("tutorId",f.disabled().getId(),"reason","x"),admin,null)
+                .andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.errorCode").value("TUTOR_DISABLED"));
+        var updated=data(call("PATCH","/admin/sessions/"+id+"/actual-tutor",body,admin,null),200);
+        assertEquals(f.idle().getId().longValue(),updated.path("actualTutorId").asLong());
+        Session s=sessions.findById(id).orElseThrow();
+        assertNull(s.getTeachingConfirmedAt());assertTrue(s.isAttendanceNeedsReview());
+        assertFalse(get().path("canFinalize").asBoolean());
+        assertEquals(1,line(get(),f.idle().getId()).path("unfinalizedSessions").asInt());
+        // Restore evidence so the month can be finalized, then the change is refused.
+        s.setActualTutorId(f.tutor().getId());s.setTaughtByTutorId(f.tutor().getId());
+        s.setTeachingConfirmedAt(OffsetDateTime.now());s.setAttendanceNeedsReview(false);
+        s.setStatus(SessionStatus.COMPLETED);s.setAttendanceLocked(true);sessions.flush();
+        finalizePay();
+        call("PATCH","/admin/sessions/"+id+"/actual-tutor",body,admin,null)
+                .andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.errorCode").value("PAYROLL_FINALIZED"));
     }
     @Test void makeupIsPaidInMonthActuallyTaughtAndOriginalCancellationIsNotDeducted()throws Exception{
         var old=fixtures.lesson(f.classId(),f.month().minusMonths(1).atEndOfMonth(),12,f.tutor(),f.tutor(),f.student(),f.admin(),false);
@@ -216,7 +246,7 @@ class PayrollControllerTest {
             var two=pool.submit(()->{gate.await();return data(call("POST",path()+"/finalize",null,admin,"same-key"),200);});
             gate.countDown();assertEquals(one.get(30,TimeUnit.SECONDS),two.get(30,TimeUnit.SECONDS));
         }
-        assertEquals(1,periods.count());assertEquals(4,lines.count());
+        assertEquals(1,periods.count());assertEquals(3,lines.count());
     }
     @Test @Transactional(propagation=Propagation.NOT_SUPPORTED) @DirtiesContext(methodMode=DirtiesContext.MethodMode.AFTER_METHOD)
     void concurrentUnlockAndFinalizeCannotCommitInconsistentPayroll()throws Exception{

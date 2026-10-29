@@ -121,6 +121,29 @@ public class AttendanceServiceImpl implements AttendanceService {
         AttendanceRecord record = records.findById(recordId)
                 .filter(item -> item.getSessionId().equals(sessionId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.ATTENDANCE_NOT_FOUND));
+        return applyCorrection(session, record, input, admin);
+    }
+
+    @Override
+    @Transactional
+    public AttendanceRecordResponse correctStudent(Long sessionId, Long studentId, AttendanceCorrection input, User admin) {
+        operations.requireAdmin(admin);
+        Session session = lock(sessionId);
+        requirePayrollEditable(session);
+        requireRecordableState(session);
+        if (!effectivelyLocked(session)) throw new BusinessException(ErrorCode.ATTENDANCE_NOT_LOCKED);
+        if (!rosterIds(session).contains(studentId)) throw new BusinessException(ErrorCode.ATTENDANCE_STUDENT_NOT_ENROLLED);
+        // A locked session may never have had a submission; freeze its roster before the first record.
+        captureRoster(session);
+        AttendanceRecord record = records.findBySessionIdOrderByStudentId(sessionId).stream()
+                .filter(item -> item.getStudentId().equals(studentId)).findFirst()
+                .orElseGet(() -> AttendanceRecord.builder().sessionId(sessionId).studentId(studentId).build());
+        return applyCorrection(session, record, input, admin);
+    }
+
+    private AttendanceRecordResponse applyCorrection(Session session, AttendanceRecord record, AttendanceCorrection input,
+                                                     User admin) {
+        requireReason(input.reason());
         validateArrival(session, input.status(), input.arrivedAt());
         validateExcused(session, record.getStudentId(), input.status(), admin, input.reason());
         boolean previousLocked = session.isAttendanceLocked();
@@ -143,6 +166,11 @@ public class AttendanceServiceImpl implements AttendanceService {
     public boolean autoLock(Long sessionId) {
         Session session = lock(sessionId);
         if (session.isAttendanceAutoProcessed() || !deadlinePassed(session)) return false;
+        if (payrollGuard.map(guard -> guard.isDateFinalized(session.getSessionDate())).orElse(false)) {
+            // Finalized payroll is immutable: stop retrying this session instead of failing every run.
+            session.setAttendanceAutoProcessed(true);
+            return false;
+        }
         requirePayrollEditable(session);
         boolean previousLocked = session.isAttendanceLocked();
         SessionStatus previousStatus = session.getStatus();
@@ -192,7 +220,8 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     private void requireRecordable(Session session) {
         requireRecordableState(session);
-        if (session.getStatus() == SessionStatus.COMPLETED || clock.instant().isBefore(start(session).toInstant())) {
+        // COMPLETED stays editable: callers enforce the lock and the tutor's end+24h deadline (BR-04.33).
+        if (clock.instant().isBefore(start(session).toInstant())) {
             throw new BusinessException(ErrorCode.SESSION_NOT_IN_PROGRESS);
         }
     }

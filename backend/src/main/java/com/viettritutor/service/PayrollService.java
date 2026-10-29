@@ -38,7 +38,8 @@ public class PayrollService {
         requireRole(actor,"ROLE_ADMIN");
         YearMonth period=period(year,month);
         return periods.findByYearAndMonth(year,month).map(this::snapshot)
-                .orElseGet(() -> preview(period,profiles.findPayrollEligible(period.plusMonths(1).atDay(1).atStartOfDay()),
+                .orElseGet(() -> preview(period,profiles.findPayrollEligible(period.plusMonths(1).atDay(1).atStartOfDay(),
+                                period.atDay(1),period.atEndOfMonth()),
                         sessions.findBySessionDateBetweenOrderBySessionDateAscStartTimeAscIdAsc(period.atDay(1),period.atEndOfMonth())));
     }
 
@@ -60,7 +61,8 @@ public class PayrollService {
         // Do not acquire class/user locks here, which would invert their lock order.
         var lessons=sessions.findPayrollSessionsForUpdate(monthKey.atDay(1),monthKey.atEndOfMonth());
         lessons.forEach(s -> entityManager.refresh(s,LockModeType.PESSIMISTIC_WRITE));
-        var tutors=profiles.findPayrollEligibleForUpdate(monthKey.plusMonths(1).atDay(1).atStartOfDay());
+        var tutors=profiles.findPayrollEligibleForUpdate(monthKey.plusMonths(1).atDay(1).atStartOfDay(),
+                monthKey.atDay(1),monthKey.atEndOfMonth());
         tutors.forEach(p -> entityManager.refresh(p,LockModeType.PESSIMISTIC_WRITE));
         PayrollResponse preview=preview(monthKey,tutors,lessons);
         if(!preview.getBlockingSessionIds().isEmpty())

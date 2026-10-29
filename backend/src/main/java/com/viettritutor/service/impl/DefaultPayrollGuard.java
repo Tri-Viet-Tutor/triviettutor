@@ -30,8 +30,12 @@ public class DefaultPayrollGuard implements PayrollGuard {
 
     @Override
     public void assertDateEditable(LocalDate date) {
-        if (periods.existsByYearAndMonth(date.getYear(),date.getMonthValue()))
-            throw new BusinessException(ErrorCode.PAYROLL_FINALIZED);
+        if (isDateFinalized(date)) throw new BusinessException(ErrorCode.PAYROLL_FINALIZED);
+    }
+
+    @Override
+    public boolean isDateFinalized(LocalDate date) {
+        return periods.existsByYearAndMonth(date.getYear(),date.getMonthValue());
     }
 
     @Override

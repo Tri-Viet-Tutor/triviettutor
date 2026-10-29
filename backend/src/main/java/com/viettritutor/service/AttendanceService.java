@@ -12,5 +12,7 @@ public interface AttendanceService {
     AttendanceResponse submit(Long sessionId, AttendanceSubmission input, User actor);
     AttendanceResponse setLock(Long sessionId, AttendanceLockInput input, User admin);
     AttendanceRecordResponse correct(Long sessionId, Long recordId, AttendanceCorrection input, User admin);
+    /** Corrects a locked session's record for a roster student, creating it when the student was never recorded. */
+    AttendanceRecordResponse correctStudent(Long sessionId, Long studentId, AttendanceCorrection input, User admin);
     boolean autoLock(Long sessionId);
 }
