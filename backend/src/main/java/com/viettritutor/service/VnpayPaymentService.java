@@ -10,6 +10,7 @@ import jakarta.persistence.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.MultiValueMap;
 
 import java.math.BigDecimal;
@@ -32,6 +33,8 @@ public class VnpayPaymentService {
     private final VnpayProperties properties;
     private final VnpaySignature signature;
     private final VnpayReturnUrl returns;
+    private final VnpayApiClient gateway;
+    private final TransactionTemplate transaction;
     private final EntityManager entityManager;
     private final Clock clock;
 
@@ -79,7 +82,52 @@ public class VnpayPaymentService {
         Map<String, String> fields = signature.verified(input);
         var found = intents.findByVnpayReference(fields.get("vnp_TxnRef"));
         if (found.isEmpty()) return new VnpayIpnResponse("01", "Order not found");
-        PaymentIntent intent = found.get();
+        return settle(found.get(), fields);
+    }
+
+    /**
+     * Recovers a tuition payment whose IPN never reached this backend. Asks VNPay querydr for the signed
+     * transaction result and, only when it reports a completed payment, settles it through the same code as the IPN.
+     * A pending or unknown result leaves the intent untouched; failures stay the IPN's responsibility.
+     */
+    public PaymentIntentDetailResponse reconcile(Long id, User student) {
+        support.student(student);
+        PaymentIntent intent = find(id);
+        support.owner(intent.getStudentId(), student);
+        Optional<Payment> prior = payments.findByIntentId(id);
+        if (intent.getVnpayReference() == null || (prior.isPresent() && prior.get().getPaidAt() != null)) {
+            return transaction.execute(ignored -> response(find(id)));
+        }
+        properties.requireEnabled();
+        if (properties.getServerIp() == null || !properties.getServerIp().matches("[0-9a-fA-F:.]{7,45}")) {
+            throw new BusinessException(ErrorCode.PAYMENT_GATEWAY_DISABLED);
+        }
+        Map<String, String> query = new LinkedHashMap<>();
+        query.put("vnp_RequestId", UUID.randomUUID().toString().replace("-", ""));
+        query.put("vnp_Version", "2.1.0");
+        query.put("vnp_Command", "querydr");
+        query.put("vnp_TmnCode", properties.getTmnCode());
+        query.put("vnp_TxnRef", intent.getVnpayReference());
+        query.put("vnp_OrderInfo", "Reconcile tuition " + intent.getId());
+        query.put("vnp_TransactionDate", date(intent.getVnpayCreatedAt()));
+        query.put("vnp_CreateDate", date(OffsetDateTime.now(clock)));
+        query.put("vnp_IpAddr", properties.getServerIp());
+        String data = VnpayApiClient.join(query, List.of("vnp_RequestId", "vnp_Version", "vnp_Command", "vnp_TmnCode",
+                "vnp_TxnRef", "vnp_TransactionDate", "vnp_CreateDate", "vnp_IpAddr", "vnp_OrderInfo"));
+        // The gateway call stays outside the database transaction so no lock is held while waiting on VNPay.
+        Map<String, String> result = gateway.exchange(query, data, "querydr");
+        if (!intent.getVnpayReference().equals(result.get("vnp_TxnRef"))) throw new BusinessException(ErrorCode.PAYMENT_GATEWAY_ERROR);
+        boolean paid = "00".equals(result.get("vnp_ResponseCode")) && "00".equals(result.get("vnp_TransactionStatus"))
+                && "01".equals(result.get("vnp_TransactionType"));
+        if (paid) {
+            VnpayIpnResponse outcome = transaction.execute(ignored -> settle(find(id), result));
+            if (outcome != null && "04".equals(outcome.code())) throw new BusinessException(ErrorCode.INVALID_PAYMENT_SIGNATURE);
+        }
+        return transaction.execute(ignored -> response(find(id)));
+    }
+
+    // Shared by the IPN and querydr reconciliation; the caller has already authenticated the fields.
+    private VnpayIpnResponse settle(PaymentIntent intent, Map<String, String> fields) {
         ClassGroup group = lock(intent);
         if (!cents(intent.getAmount()).equals(fields.get("vnp_Amount"))) return new VnpayIpnResponse("04", "Invalid amount");
         String responseCode = fields.get("vnp_ResponseCode");
@@ -133,7 +181,9 @@ public class VnpayPaymentService {
         if (admission != null) {
             Enrollment enrollment = enrollments.saveAndFlush(Enrollment.builder().studentId(intent.getStudentId())
                     .classGroupId(group.getId()).paymentId(payment.getId()).feeCharged(intent.getAmount())
-                    .discountRate(admission.discountRate()).enrollmentSizeAtTime(admission.enrollmentSize())
+                    // Record the rate behind the charged amount; intents created before V23 fall back to today's rate.
+                    .discountRate(intent.getDiscountRate() != null ? intent.getDiscountRate() : admission.discountRate())
+                    .enrollmentSizeAtTime(admission.enrollmentSize())
                     .status(EnrollmentStatus.ACTIVE).enrolledAt(OffsetDateTime.now(clock)).build());
             learning.activate(enrollment.getId(), intent.getStudentId(), group.getId(), admission.start(), admission.end());
         }
@@ -176,7 +226,7 @@ public class VnpayPaymentService {
         Payment payment = payments.findByIntentId(intent.getId()).orElse(null);
         Enrollment enrollment = payment == null ? null : enrollments.findByPaymentId(payment.getId()).orElse(null);
         return new PaymentIntentDetailResponse(PaymentIntentResponse.from(intent, clock), intent.getCancelledAt() != null,
-                payment == null ? null : reads.response(payment), enrollment == null ? null : EnrollmentResponse.from(enrollment));
+                payment == null ? null : reads.response(payment), enrollment == null ? null : reads.enrollment(enrollment));
     }
 
     private PaymentIntent find(Long id) {
