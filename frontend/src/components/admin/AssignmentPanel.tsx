@@ -32,9 +32,11 @@ export function AssignmentPanel({ classId, currentTutorId }: AssignmentPanelProp
     setReassigning(null);
     void refresh();
   };
-  /** Backend chặn vì trùng lịch: tải lại danh sách để thấy các buổi trùng mới nhất */
+  /** Backend chặn vì trùng lịch: đóng form đổi gia sư (lỗi hiện ở đầu danh sách) và tải lại để thấy các buổi trùng mới nhất */
   const reloadOnConflict = (error: Error) => {
-    if (getApiError(error).errorCode === "SCHEDULE_CONFLICT") void query.refetch();
+    if (getApiError(error).errorCode !== "SCHEDULE_CONFLICT") return;
+    setReassigning(null);
+    void query.refetch();
   };
   const assign = useMutation({
     mutationFn: (tutorId: number) => assignTutor(classId, tutorId),
@@ -67,6 +69,10 @@ export function AssignmentPanel({ classId, currentTutorId }: AssignmentPanelProp
         </AuthNotice>
       )}
       {assign.error && <AuthNotice tone="error">{portalErrorMessage(assign.error, "Chưa phân công được. Vui lòng thử lại.")}</AuthNotice>}
+      {/* Lỗi đổi gia sư khi form đã đóng (bị chặn vì trùng lịch) */}
+      {reassign.error && reassigning === null && (
+        <AuthNotice tone="error">{portalErrorMessage(reassign.error, "Chưa đổi được gia sư. Vui lòng thử lại.")}</AuthNotice>
+      )}
 
       <ul className="space-y-2.5">
         {query.data.map((tutor) => {
@@ -144,6 +150,7 @@ export function AssignmentPanel({ classId, currentTutorId }: AssignmentPanelProp
                     label="Lý do đổi gia sư"
                     submitLabel={`Đổi sang ${tutor.tutorName}`}
                     isPending={reassign.isPending}
+                    canSubmit={tutor.available}
                     error={reassign.error}
                     errorFallback="Chưa đổi được gia sư. Vui lòng thử lại."
                     onSubmit={(reason) => reassign.mutate({ tutorId: tutor.tutorId, reason })}

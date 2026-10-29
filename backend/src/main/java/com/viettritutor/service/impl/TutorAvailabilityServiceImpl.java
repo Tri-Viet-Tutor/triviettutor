@@ -40,22 +40,21 @@ public class TutorAvailabilityServiceImpl implements TutorAvailabilityService {
         User tutor = userRepository.findForUpdate(currentUser.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         requireTutor(tutor);
+        LocalDate today = LocalDate.now(clock);
+        List<TutorAvailability> saved = availabilityRepository.findByTutorIdOrderByAvailableDateAscStartTimeAsc(tutor.getId());
+        // Past slots are kept only if already saved; any other past slot (e.g. added for "today" and saved after
+        // midnight, or re-sent by a stale tab) is silently dropped, so a past slot is never added.
         List<AvailabilityRequest.Slot> slots = request.slots().stream()
+                .filter(slot -> !slot.availableDate().isBefore(today) || saved.stream().anyMatch(existing ->
+                        existing.getAvailableDate().equals(slot.availableDate())
+                                && existing.getStartTime().equals(slot.startTime())
+                                && existing.getEndTime().equals(slot.endTime())))
                 .sorted(Comparator.comparing(AvailabilityRequest.Slot::availableDate)
                         .thenComparing(AvailabilityRequest.Slot::startTime)).toList();
-        LocalDate today = LocalDate.now(clock);
-        // Past slots may be re-sent as already saved, but never added.
-        List<TutorAvailability> saved = availabilityRepository.findByTutorIdOrderByAvailableDateAscStartTimeAsc(tutor.getId());
         for (int index = 0; index < slots.size(); index++) {
             var slot = slots.get(index);
             if (!slot.startTime().isBefore(slot.endTime())) {
                 throw new BusinessException(ErrorCode.INVALID_AVAILABILITY, "Availability startTime must precede endTime");
-            }
-            if (slot.availableDate().isBefore(today) && saved.stream().noneMatch(existing ->
-                    existing.getAvailableDate().equals(slot.availableDate())
-                            && existing.getStartTime().equals(slot.startTime())
-                            && existing.getEndTime().equals(slot.endTime()))) {
-                throw new BusinessException(ErrorCode.INVALID_AVAILABILITY, "Availability date must not be in the past");
             }
             if (index > 0) {
                 var previous = slots.get(index - 1);

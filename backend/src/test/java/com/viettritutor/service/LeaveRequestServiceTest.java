@@ -17,6 +17,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -103,6 +104,19 @@ class LeaveRequestServiceTest {
         return LeaveRequest.builder().id(id).sessionId(500L).requesterId(requesterId).requesterRole("ROLE_STUDENT")
                 .reason("Sick").requestedAt(OffsetDateTime.now(FIXED_CLOCK)).affectsSession(affectsSession)
                 .sessionStatusBefore(SessionStatus.SCHEDULED).status(LeaveRequestStatus.PENDING).build();
+    }
+
+    /** The session row is locked before the request is read and its status checked (and never via the strict load). */
+    private InOrder verifyLockedBeforeRequestRead(Session session, LeaveRequest request) {
+        InOrder order = inOrder(operations);
+        order.verify(operations).requireAdmin(admin);
+        order.verify(operations).loadAny(500L);
+        order.verify(operations).lockSessionRow(session);
+        order.verify(operations).request(7L, 500L);
+        order.verify(operations).requirePending(request);
+        verify(operations, never()).load(any());
+        verify(operations, never()).lockSession(any());
+        return order;
     }
 
     @Test
@@ -220,6 +234,12 @@ class LeaveRequestServiceTest {
 
         LeaveRequestResponse response = leaveService.reject(7L, "  No reason  ", admin);
 
+        InOrder order = verifyLockedBeforeRequestRead(session, request);
+        order.verify(operations).requireOpenClass(oneOnOne);
+        order.verify(operations).requireEditable(session);
+        order.verify(operations).pending(500L);
+        order.verify(operations).audit(eq(session), any(), eq(SessionChangeType.REJECT_LEAVE), eq(admin), any(), eq(7L), any());
+
         assertThat(response.status()).isEqualTo(LeaveRequestStatus.REJECTED);
         assertThat(response.resolvedBy()).isEqualTo(1L);
         assertThat(response.resolutionReason()).isEqualTo("No reason");
@@ -310,6 +330,8 @@ class LeaveRequestServiceTest {
 
         LeaveRequestResponse response = leaveService.reject(7L, "Too late", admin);
 
+        verifyLockedBeforeRequestRead(session, request);
+
         assertThat(response.status()).isEqualTo(LeaveRequestStatus.REJECTED);
         assertThat(response.isLateNotice()).isTrue();
         assertThat(session.getStatus()).isEqualTo(SessionStatus.SCHEDULED);
@@ -329,6 +351,8 @@ class LeaveRequestServiceTest {
         when(operations.request(7L, 500L)).thenReturn(request);
 
         LeaveRequestResponse response = leaveService.reject(7L, "Session already taught", admin);
+
+        verifyLockedBeforeRequestRead(session, request);
 
         assertThat(response.status()).isEqualTo(LeaveRequestStatus.REJECTED);
         assertThat(session.getStatus()).isEqualTo(SessionStatus.COMPLETED);
@@ -350,6 +374,7 @@ class LeaveRequestServiceTest {
         assertThatThrownBy(() -> leaveService.reject(7L, "No", admin))
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.PAYROLL_FINALIZED);
+        verifyLockedBeforeRequestRead(session, request).verify(operations).requireEditable(session);
         assertThat(request.getStatus()).isEqualTo(LeaveRequestStatus.PENDING);
         assertThat(session.getStatus()).isEqualTo(SessionStatus.PENDING_RESCHEDULE);
     }
@@ -367,6 +392,7 @@ class LeaveRequestServiceTest {
         assertThatThrownBy(() -> leaveService.reject(7L, "No", admin))
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.LEAVE_REQUEST_ALREADY_RESOLVED);
+        verifyLockedBeforeRequestRead(session, request);
         verify(operations, never()).audit(any(), any(), any(), any(), any(), any(), any());
     }
 

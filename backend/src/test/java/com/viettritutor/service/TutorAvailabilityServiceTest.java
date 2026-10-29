@@ -109,16 +109,32 @@ class TutorAvailabilityServiceTest {
     }
 
     @Test
-    @DisplayName("A new slot dated before today is rejected")
-    void replace_whenNewSlotInPast_rejects() {
+    @DisplayName("A past slot that was not saved before is dropped silently; the rest of the save goes through")
+    void replace_whenNewSlotInPast_dropsIt() {
         givenSaved();
+        when(availabilityRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThatThrownBy(() -> availabilityService.replaceAvailability(tutor, new AvailabilityRequest(List.of(
-                slot("2026-10-24", "08:00", "10:00")))))
-                .isInstanceOf(BusinessException.class)
-                .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.INVALID_AVAILABILITY);
+        // 24/10 is yesterday in Vietnam (e.g. added for "today" and saved after midnight)
+        List<AvailabilityResponse> result = availabilityService.replaceAvailability(tutor, new AvailabilityRequest(List.of(
+                slot("2026-10-24", "08:00", "10:00"),
+                slot("2026-11-02", "18:00", "20:00"))));
 
-        verify(availabilityRepository, never()).deleteByTutorId(any());
+        assertThat(result).extracting(AvailabilityResponse::availableDate).containsExactly(LocalDate.of(2026, 11, 2));
+        verify(availabilityRepository).deleteByTutorId(10L);
+    }
+
+    @Test
+    @DisplayName("A dropped past slot is not checked for overlap or bad hours, so it cannot block the save")
+    void replace_whenDroppedPastSlotIsInvalid_stillSaves() {
+        givenSaved();
+        when(availabilityRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<AvailabilityResponse> result = availabilityService.replaceAvailability(tutor, new AvailabilityRequest(List.of(
+                slot("2026-10-24", "08:00", "10:00"),
+                slot("2026-10-24", "09:00", "11:00"),
+                slot("2026-10-23", "12:00", "12:00"))));
+
+        assertThat(result).isEmpty();
     }
 
     @Test
@@ -135,14 +151,16 @@ class TutorAvailabilityServiceTest {
     }
 
     @Test
-    @DisplayName("Changing the hours of a past slot counts as a new past slot")
-    void replace_whenPastSlotChanged_rejects() {
+    @DisplayName("Changing the hours of a past slot counts as a new past slot and is dropped, never added")
+    void replace_whenPastSlotChanged_dropsIt() {
         givenSaved(saved("2026-10-20", "18:00", "20:00"));
+        when(availabilityRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThatThrownBy(() -> availabilityService.replaceAvailability(tutor, new AvailabilityRequest(List.of(
-                slot("2026-10-20", "18:00", "21:00")))))
-                .isInstanceOf(BusinessException.class)
-                .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.INVALID_AVAILABILITY);
+        List<AvailabilityResponse> result = availabilityService.replaceAvailability(tutor, new AvailabilityRequest(List.of(
+                slot("2026-10-20", "18:00", "21:00"),
+                slot("2026-10-25", "18:00", "20:00"))));
+
+        assertThat(result).extracting(AvailabilityResponse::availableDate).containsExactly(LocalDate.of(2026, 10, 25));
     }
 
     @Test
@@ -159,19 +177,20 @@ class TutorAvailabilityServiceTest {
     }
 
     @Test
-    @DisplayName("Overlap is found regardless of the order the slots were sent in, even across a shorter slot")
-    void replace_whenUnsortedSlotsOverlap_rejects() {
+    @DisplayName("Overlap is found whatever order the slots are sent in, including a slot inside another")
+    void replace_whenOverlapSentOutOfOrder_rejects() {
         givenSaved();
 
         assertThatThrownBy(() -> availabilityService.replaceAvailability(tutor, new AvailabilityRequest(List.of(
                 slot("2026-11-02", "13:00", "14:00"),
                 slot("2026-11-03", "08:00", "12:00"),
-                slot("2026-11-02", "08:00", "12:00"),
-                slot("2026-11-02", "09:00", "09:30"),
-                slot("2026-11-02", "11:30", "12:30")))))
+                slot("2026-11-02", "11:30", "12:30"),
+                slot("2026-11-02", "08:00", "10:00"),
+                slot("2026-11-02", "12:00", "12:15")))))
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.INVALID_AVAILABILITY);
 
+        verify(availabilityRepository, never()).deleteByTutorId(any());
         verify(availabilityRepository, never()).saveAll(anyList());
     }
 
