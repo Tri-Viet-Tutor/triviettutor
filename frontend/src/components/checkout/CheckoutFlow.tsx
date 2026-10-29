@@ -266,17 +266,18 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
     void cache.invalidateQueries({ queryKey: ["tuition-classes"] });
   }
   const paymentError = start.error ?? resume.error ?? payWallet.error ?? cancel.error ?? recheck.error ?? returned.error ?? detail.error;
+  // Same cases the backend reconcile can still settle: nothing paid yet, or only a failed VNPay result recorded
   const canRecheck =
     Boolean(intentId) &&
-    paymentMethod === "VNPAY" &&
-    !state?.payment &&
-    (state?.intent.status === "PENDING" || state?.intent.status === "EXPIRED");
+    (state?.payment
+      ? state.payment.method === "VNPAY" && state.payment.status === "FAILED"
+      : paymentMethod === "VNPAY" && (state?.intent.status === "PENDING" || state?.intent.status === "EXPIRED"));
   const paid = state?.payment;
   const outcome =
     paid?.status === "REQUIRES_REFUND"
       ? "VNPay đã ghi nhận thanh toán. Yêu cầu cần hoàn tiền; trung tâm sẽ xử lý."
       : paid?.status === "FAILED"
-        ? "Thanh toán không thành công. Bạn có thể tạo yêu cầu mới."
+        ? "Thanh toán không thành công. Bạn có thể tạo yêu cầu mới, hoặc bấm “Kiểm tra lại” nếu tài khoản đã bị trừ tiền."
         : paid?.status === "REFUNDED"
           ? "Học phí đã được hoàn lại."
           : paid?.status === "PARTIALLY_REFUNDED"

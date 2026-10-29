@@ -180,7 +180,6 @@ class EnrollmentPaymentFlowTest {
         long id = started(student, group);
         Map<String, String> result = querydr(id, "00");
         when(gateway.exchange(anyMap(), anyString(), eq("querydr"))).thenReturn(result);
-        reconcile(id, other, 403);
         JsonNode detail = reconcile(id, student, 200);
         assertThat(detail.path("intent").path("status").asText()).isEqualTo("COMPLETED");
         assertThat(detail.path("enrollment").path("status").asText()).isEqualTo("ACTIVE");
@@ -197,19 +196,47 @@ class EnrollmentPaymentFlowTest {
         assertThat(enrollments.findAll().stream().filter(e -> e.getPaymentId().equals(payment.getId()))).hasSize(1);
     }
 
-    @Test void reconcileLeavesUnfinishedOrMismatchedResultsUntouched() throws Exception {
+    @Test void reconcileByAnotherStudentIsForbiddenAndNeverQueriesVnpay() throws Exception {
+        ClassGroup group = newClass(ClassType.ONE_ON_ONE, "100000");
+        long id = started(student, group);
+        http.perform(post("/api/v1/payment-intents/" + id + "/reconcile").header("Authorization", token(other))
+                        .header("Origin", "https://frontend.test.invalid"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.errorCode").value("ACCESS_DENIED"));
+        verifyNoInteractions(gateway);
+        assertThat(payments.findByIntentId(id)).isEmpty();
+    }
+
+    @Test void paidQuerydrWithWrongAmountIsRejectedWithoutEnrollment() throws Exception {
+        ClassGroup group = newClass(ClassType.ONE_ON_ONE, "100000");
+        long id = started(student, group);
+        Map<String, String> wrongAmount = querydr(id, "00");
+        wrongAmount.put("vnp_Amount", "1");
+        when(gateway.exchange(anyMap(), anyString(), eq("querydr"))).thenReturn(wrongAmount);
+        http.perform(post("/api/v1/payment-intents/" + id + "/reconcile").header("Authorization", token(student))
+                        .header("Origin", "https://frontend.test.invalid"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errorCode").value("INVALID_PAYMENT_SIGNATURE"));
+        assertThat(payments.findByIntentId(id)).isEmpty();
+        assertThat(enrollments.findAll().stream().filter(e -> e.getStudentId().equals(student.getId()))).isEmpty();
+        assertThat(intents.findById(id).orElseThrow().getStatus()).isEqualTo(PaymentIntentStatus.PENDING);
+    }
+
+    @Test void reconcileLeavesUnfinishedResultsUntouchedAndIsThrottledPerIntent() throws Exception {
         ClassGroup group = newClass(ClassType.ONE_ON_ONE, "100000");
         long id = started(student, group);
         when(gateway.exchange(anyMap(), anyString(), eq("querydr"))).thenReturn(querydr(id, "01"));
         assertThat(reconcile(id, student, 200).path("intent").path("status").asText()).isEqualTo("PENDING");
-        Map<String, String> wrongAmount = querydr(id, "00");
-        wrongAmount.put("vnp_Amount", "1");
-        when(gateway.exchange(anyMap(), anyString(), eq("querydr"))).thenReturn(wrongAmount);
-        reconcile(id, student, 400);
+        // Within the cooldown a repeated click reads the current state without asking VNPay again.
+        when(gateway.exchange(anyMap(), anyString(), eq("querydr"))).thenReturn(querydr(id, "00"));
+        assertThat(reconcile(id, student, 200).path("intent").path("status").asText()).isEqualTo("PENDING");
+        verify(gateway, times(1)).exchange(anyMap(), anyString(), eq("querydr"));
+        clock.value = clock.value.plus(VnpayPaymentService.RECONCILE_COOLDOWN);
         when(gateway.exchange(anyMap(), anyString(), eq("querydr"))).thenThrow(new BusinessException(ErrorCode.PAYMENT_GATEWAY_ERROR));
         reconcile(id, student, 502);
         assertThat(payments.findByIntentId(id)).isEmpty();
         assertThat(intents.findById(id).orElseThrow().getStatus()).isEqualTo(PaymentIntentStatus.PENDING);
+        clock.value = clock.value.plus(VnpayPaymentService.RECONCILE_COOLDOWN);
+        doReturn(querydr(id, "00")).when(gateway).exchange(anyMap(), anyString(), eq("querydr"));
+        assertThat(reconcile(id, student, 200).path("enrollment").path("status").asText()).isEqualTo("ACTIVE");
     }
 
     @Test void ipnRecordsTheQuotedDiscountRateEvenIfTheClassGrewMeanwhile() throws Exception {

@@ -18,12 +18,14 @@ import java.time.*;
 import java.time.format.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
 public class VnpayPaymentService {
     public static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("uuuuMMddHHmmss").withResolverStyle(ResolverStyle.STRICT);
     public static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+    static final Duration RECONCILE_COOLDOWN = Duration.ofSeconds(30);
     private final PaymentIntentRepository intents;
     private final PaymentRepository payments;
     private final EnrollmentRepository enrollments;
@@ -37,6 +39,8 @@ public class VnpayPaymentService {
     private final TransactionTemplate transaction;
     private final EntityManager entityManager;
     private final Clock clock;
+    // Per-intent querydr throttle; in-memory is enough because it only limits load on VNPay, never correctness.
+    private final Map<Long, Instant> lastReconcile = new ConcurrentHashMap<>();
 
     @Transactional
     public VnpayCheckoutResponse checkout(Long intentId, User student, String origin, String clientIp) {
@@ -102,6 +106,7 @@ public class VnpayPaymentService {
         if (properties.getServerIp() == null || !properties.getServerIp().matches("[0-9a-fA-F:.]{7,45}")) {
             throw new BusinessException(ErrorCode.PAYMENT_GATEWAY_DISABLED);
         }
+        if (!reconcileAllowed(id)) return transaction.execute(ignored -> response(find(id)));
         Map<String, String> query = new LinkedHashMap<>();
         query.put("vnp_RequestId", UUID.randomUUID().toString().replace("-", ""));
         query.put("vnp_Version", "2.1.0");
@@ -124,6 +129,19 @@ public class VnpayPaymentService {
             if (outcome != null && "04".equals(outcome.code())) throw new BusinessException(ErrorCode.INVALID_PAYMENT_SIGNATURE);
         }
         return transaction.execute(ignored -> response(find(id)));
+    }
+
+    /** At most one querydr per intent per cooldown window; repeated clicks just read the current state. */
+    private boolean reconcileAllowed(Long intentId) {
+        Instant now = clock.instant();
+        lastReconcile.values().removeIf(at -> !now.isBefore(at.plus(RECONCILE_COOLDOWN)));
+        boolean[] allowed = {false};
+        lastReconcile.compute(intentId, (key, at) -> {
+            if (at != null && now.isBefore(at.plus(RECONCILE_COOLDOWN))) return at;
+            allowed[0] = true;
+            return now;
+        });
+        return allowed[0];
     }
 
     // Shared by the IPN and querydr reconciliation; the caller has already authenticated the fields.

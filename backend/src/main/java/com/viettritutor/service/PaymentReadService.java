@@ -25,6 +25,7 @@ public class PaymentReadService {
     private final RefundRepository refunds;
     private final EnrollmentPaymentSupport support;
     private final ClassGroupRepository classes;
+    private final MockPaymentPolicy mockPolicy;
     private final Clock clock;
 
     public PaymentResponse detail(Long paymentId, User actor) {
@@ -86,15 +87,28 @@ public class PaymentReadService {
         Map<Long, Refund> latestRefund = paymentIds.isEmpty() ? Map.of() : refunds.findByPaymentIdIn(paymentIds).stream()
                 .collect(Collectors.toMap(Refund::getPaymentId, refund -> refund,
                         (a, b) -> a.getId() > b.getId() ? a : b));
+        Map<Long, Payment> paymentById = paymentIds.isEmpty() ? Map.of() : payments.findAllById(paymentIds).stream()
+                .collect(Collectors.toMap(Payment::getId, payment -> payment));
         Map<Long, Boolean> fullRefund = new HashMap<>();
         return rows.stream().map(enrollment -> {
             Refund refund = latestRefund.get(enrollment.getPaymentId());
-            // Same rule the cancel endpoint enforces (BR-02.32); a refund in flight already settles the enrollment.
+            // Same rules the cancel endpoint enforces (BR-02.32 and the refund provider checks in
+            // EnrollmentRefundService.settle / VnpayRefundTransactions.prepare); a refund in flight already settles it.
             boolean cancellable = enrollment.getStatus() == EnrollmentStatus.ACTIVE && refund == null
+                    && refundableBySelf(paymentById.get(enrollment.getPaymentId()))
                     && fullRefund.computeIfAbsent(enrollment.getClassGroupId(), id -> classes.findById(id)
                             .map(support::fullRefundRequired).orElse(false));
             return EnrollmentResponse.from(enrollment, refund == null ? null : refund.getStatus(), cancellable);
         }).toList();
+    }
+
+    private boolean refundableBySelf(Payment payment) {
+        if (payment == null || payment.getStatus() != PaymentStatus.COMPLETED || payment.getRefundedAmount().signum() != 0) return false;
+        return switch (payment.getMethod()) {
+            case "WALLET", "VNPAY" -> true;
+            case "MOCK" -> mockPolicy.isEnabled();
+            default -> false;
+        };
     }
 
     private PageResponse<EnrollmentResponse> list(Long studentId, Long classId, EnrollmentStatus status, int page, int size) {

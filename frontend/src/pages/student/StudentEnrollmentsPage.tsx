@@ -212,6 +212,13 @@ export function StudentEnrollmentsPage() {
                     </p>
                   )}
 
+                  {item.status === "ACTIVE" && item.refundStatus === "COMPLETED" && (
+                    <p className="flex items-center gap-1.5 rounded-xl bg-sky-50 px-3 py-2.5 text-[13.5px] font-medium text-sky-800">
+                      <Icon name="info" className="text-[18px]" />
+                      Đã hoàn tiền một phần. Bạn vẫn tiếp tục học lớp này.
+                    </p>
+                  )}
+
                   {item.status !== "ACTIVE" && item.cancellationReason && (
                     <p className="text-[13.5px] text-brand-muted">
                       Lý do hủy: <span className="text-brand-ink">{item.cancellationReason}</span>
@@ -241,7 +248,9 @@ export function StudentEnrollmentsPage() {
                             Hủy ghi danh
                           </button>
                         ) : (
-                          !item.refundStatus && <span className="self-center px-2 text-[12.5px]">Liên hệ admin để hủy</span>
+                          (!item.refundStatus || item.refundStatus === "COMPLETED") && (
+                            <span className="self-center px-2 text-[12.5px]">Liên hệ admin để hủy</span>
+                          )
                         )}
                       </>
                     )}
