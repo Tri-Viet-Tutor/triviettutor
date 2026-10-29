@@ -86,15 +86,13 @@ public class VietTriTutorApplication {
         System.err.println("\n" + "=".repeat(75));
         System.err.println("KHOI DONG BACKEND THAT BAI! (BACKEND STARTUP ERROR)");
         System.err.println("=".repeat(75));
-
         if (rootMsg.contains("Schema-validation") || rootName.contains("SchemaManagementException")) {
             System.err.println("LOAI LOI: LECH SCHEMA DATABASE (DATABASE SCHEMA MISMATCH)");
             System.err.println("CHI TIET: " + rootMsg);
             System.err.println("GOI Y KHAC PHUC:");
-            System.err.println("   - Database tren Supabase dang thieu cot hoac bang ma Java Entity yeu cau.");
-            System.err.println("   - Kiem tra xem Flyway migration moi nhat da duoc ap dung len DB chua.");
+            System.err.println("   - Database dang thieu cot hoac bang ma Java Entity yeu cau.");
+            System.err.println("   - Tao file migration Flyway moi (hoac them cot vao DB) de dong bo voi Entity.");
         } else if (rootMsg.contains("password authentication failed") || rootMsg.contains("FATAL: password")) {
-            System.err.println("LOAI LOI: SAI MAT KHAU HOAC TAI KHOAN DATABASE");
             System.err.println("CHI TIET: " + rootMsg);
             System.err.println("GOI Y KHAC PHUC:");
             System.err.println("   - Kiem tra DB_USERNAME va DB_PASSWORD trong file backend/.env.");
