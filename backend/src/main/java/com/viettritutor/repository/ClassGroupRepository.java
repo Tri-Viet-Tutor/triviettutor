@@ -16,4 +16,7 @@ public interface ClassGroupRepository extends JpaRepository<ClassGroup, Long>, J
     Optional<ClassGroup> findForUpdate(@Param("id") Long id);
 
     List<ClassGroup> findByStatusAndClassType(ClassStatus status, ClassType classType);
+
+    @Query("select c.id from ClassGroup c where c.status = :status order by c.id")
+    List<Long> findIdsByStatus(@Param("status") ClassStatus status);
 }

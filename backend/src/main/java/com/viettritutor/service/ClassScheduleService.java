@@ -21,6 +21,7 @@ public class ClassScheduleService {
     private final ConflictValidationService conflicts;
     private final SessionOperationSupport operations;
     private final ClassAuditService audit;
+    private final AttendanceRecordRepository attendance;
     private final Clock clock;
     private final Optional<PayrollGuard> payrollGuard;
 
@@ -94,7 +95,8 @@ public class ClassScheduleService {
     public void cancelSessions(ClassGroup c, User actor, String reason) {
         for (Session s : sessions.findClassSessionsForUpdate(c.getId())) {
             if (s.getStatus() == SessionStatus.CANCELLED) continue;
-            if (s.getStatus() != SessionStatus.SCHEDULED && s.getStatus() != SessionStatus.PENDING_RESCHEDULE) {
+            if (s.getStatus() != SessionStatus.SCHEDULED && s.getStatus() != SessionStatus.PENDING_RESCHEDULE
+                    && !untaughtInSession(s)) {
                 throw new BusinessException(ErrorCode.SESSION_NOT_EDITABLE);
             }
             operations.lockSession(s);
@@ -105,5 +107,11 @@ public class ClassScheduleService {
             }
             operations.audit(s, before, SessionChangeType.CANCEL, actor, reason, null, null);
         }
+    }
+
+    /** An IN_SESSION session with no attendance and no teaching confirmation never actually happened. */
+    private boolean untaughtInSession(Session s) {
+        return s.getStatus() == SessionStatus.IN_SESSION && s.getTeachingConfirmedAt() == null
+                && s.getTeachingConfirmedBy() == null && !attendance.existsBySessionId(s.getId());
     }
 }

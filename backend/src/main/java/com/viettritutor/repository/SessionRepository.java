@@ -74,12 +74,16 @@ public interface SessionRepository extends JpaRepository<Session, Long>, JpaSpec
 
     @Query("""
             select s from Session s where s.status = :status and s.sessionDate <= :date
-            and not exists (
-                select c.id from ClassGroup c where c.id = s.classGroupId and c.course is not null
-                and c.status not in (com.viettritutor.enums.ClassStatus.ASSIGNED, com.viettritutor.enums.ClassStatus.IN_PROGRESS)
+            and coalesce(s.actualTutorId, s.scheduledTutorId) is not null
+            and exists (
+                select c.id from ClassGroup c where c.id = s.classGroupId
+                and c.status in (com.viettritutor.enums.ClassStatus.ASSIGNED, com.viettritutor.enums.ClassStatus.IN_PROGRESS)
             )
             """)
     List<Session> findByStatusAndSessionDateLessThanEqual(@Param("status") SessionStatus status, @Param("date") LocalDate date);
+
+    @Query("select s.id from Session s where s.status = :status and s.sessionDate <= :date order by s.id")
+    List<Long> findIdsByStatusOnOrBefore(@Param("status") SessionStatus status, @Param("date") LocalDate date);
 
     @Query("select distinct s.classGroupId from Session s")
     List<Long> findDistinctClassGroupIds();
