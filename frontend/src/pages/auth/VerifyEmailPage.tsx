@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ROUTES } from "@/constants/routes";
+import { COURSES } from "@/constants/courses";
+import { ROUTES, courseDetailPath } from "@/constants/routes";
 import { AUTH_INPUT, AUTH_LABEL, AUTH_TEXT_LINK } from "@/constants/classNames";
 import { AuthHeading } from "@/components/auth/AuthHeading";
 import { AuthSubmitButton } from "@/components/auth/AuthSubmitButton";
@@ -19,6 +20,7 @@ export function VerifyEmailPage() {
   const navigate = useNavigate();
   const state = useLocation().state as AuthLocationState | null;
 
+  const course = COURSES.find((item) => item.id === state?.courseSlug);
   const [email, setEmail] = useState(() => state?.email ?? readPendingEmail());
   // Chưa biết email (mở thẳng trang này) thì hỏi email trước
   const [emailLocked, setEmailLocked] = useState(() => Boolean(state?.email ?? readPendingEmail()));
@@ -78,8 +80,12 @@ export function VerifyEmailPage() {
           key={email}
           email={email}
           onChangeEmail={() => setEmailLocked(false)}
-          onVerified={(response) => navigate(resumeCheckout ? ROUTES.checkout : getRoleHome(response.user.role), { replace: true })}
-          loginState={{ resumeCheckout }}
+          onVerified={(response) =>
+            navigate(course ? courseDetailPath(course.id) : resumeCheckout ? ROUTES.checkout : getRoleHome(response.user.role), {
+              replace: true,
+            })
+          }
+          loginState={{ resumeCheckout, courseSlug: course?.id }}
         />
       </div>
       {backToLogin}

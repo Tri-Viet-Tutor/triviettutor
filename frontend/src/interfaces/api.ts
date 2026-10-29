@@ -232,6 +232,8 @@ export interface CourseResponse {
 
 /** Một lớp đang mở đăng ký — phần tử của GET /catalog/classes */
 export interface CatalogClassResponse {
+  courseId?: number;
+  full?: boolean;
   id: number;
   /** Ví dụ "MATH-G10-MWF-M-001" */
   classCode: string;
@@ -307,6 +309,48 @@ export interface MeetingTokenResponse {
   courseTitle: string;
   sessionNumber: number;
   tutorName: string | null;
+}
+
+export interface MeetingSessionLogDto {
+  id?: string;
+  sessionId?: string;
+  roomName?: string;
+  classGroupId?: number;
+  scheduleId?: number;
+  hostUserId?: number;
+  startTime?: string;
+  endTime?: string;
+  durationSeconds?: number;
+  status?: string;
+  maxParticipants?: number;
+  totalParticipantsCount?: number;
+}
+
+export interface MeetingParticipantLogDto {
+  id?: string;
+  sessionId?: string;
+  roomName?: string;
+  userId?: number;
+  userRole?: string;
+  participantIdentity?: string;
+  participantName?: string;
+  joinedAt?: string;
+  leftAt?: string;
+  durationSeconds?: number;
+  disconnectReason?: string;
+  eventHistory?: Array<{
+    event: string;
+    timestamp: string;
+    details?: Record<string, any>;
+  }>;
+}
+
+export interface MeetingSessionLogsResponse {
+  sessionId: number;
+  roomName: string;
+  sessionLog: MeetingSessionLogDto | null;
+  participantLogs: MeetingParticipantLogDto[];
+  totalParticipants: number;
 }
 
 /** Tham số lọc của GET /me/sessions */
@@ -630,7 +674,7 @@ export type PaymentStatus = "COMPLETED" | "FAILED" | "REQUIRES_REFUND" | "PARTIA
 export interface TuitionClass extends CatalogClassResponse {
   status: ClassStatus;
   reservedStudents: number;
-  sessions?: { id: number; date: string; startTime: string; endTime: string }[];
+  sessions?: { id: number; sessionNumber?: number; date: string; startTime: string; endTime: string; status?: SessionStatus }[];
 }
 
 /** Yêu cầu thanh toán — giữ chỗ trong lớp tới `expiresAt` */

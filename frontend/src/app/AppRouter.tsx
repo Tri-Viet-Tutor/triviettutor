@@ -20,6 +20,7 @@ import { ResetPasswordPage } from "@/pages/auth/ResetPasswordPage";
 import { HomePage } from "@/pages/public/HomePage";
 import { SubjectsPage } from "@/pages/public/SubjectsPage";
 import { SearchPage } from "@/pages/public/SearchPage";
+import { CourseDetailPage } from "@/pages/public/CourseDetailPage";
 import { PricingPage } from "@/pages/public/PricingPage";
 import { ContactPage } from "@/pages/public/ContactPage";
 import { CheckoutPage } from "@/pages/public/CheckoutPage";
@@ -83,6 +84,7 @@ export function AppRouter() {
           <Route path={ROUTES.subjects} element={<SubjectsPage />} />
           <Route path={ROUTES.tutorSearch} element={<SearchPage />} />
           <Route path={ROUTES.pricing} element={<PricingPage />} />
+          <Route path={ROUTES.courseDetail} element={<CourseDetailPage />} />
           <Route path={ROUTES.pricingLegacy} element={<Navigate to={ROUTES.pricing} replace />} />
           <Route path={ROUTES.checkout} element={<CheckoutPage />} />
           <Route path={ROUTES.contact} element={<ContactPage />} />
@@ -137,6 +139,7 @@ export function AppRouter() {
               <Route path={ROUTES.student} element={<StudentHomePage />} />
               <Route path={ROUTES.studentSchedule} element={<StudentSchedulePage />} />
               <Route path={ROUTES.studentCatalog} element={<StudentCatalogPage />} />
+              <Route path={ROUTES.studentCourseDetail} element={<CourseDetailPage variant="student" />} />
               <Route path={ROUTES.studentCatalogLegacy} element={<LegacyRedirect to={ROUTES.studentCatalog} />} />
               <Route path={ROUTES.studentCheckout} element={<StudentCheckoutPage />} />
               <Route path={ROUTES.studentWallet} element={<StudentWalletPage />} />

@@ -15,11 +15,11 @@ It manages courses, class scheduling, student enrollments, tutor assignments, at
 | State       | Zustand (auth session)                                                     |
 | Forms       | React Hook Form + Zod                                                      |
 | Backend     | Spring Boot 3, Java 21, Spring Web, Spring Data JPA, Spring Security      |
-| Database    | PostgreSQL 16                                                              |
+| Database    | PostgreSQL on Supabase Cloud (shared team database)                        |
 | Migration   | Flyway                                                                     |
 | API Docs    | springdoc-openapi (Swagger UI @ `/swagger-ui.html`)                        |
 | Auth        | JWT (Bearer token)                                                         |
-| Dev Infra   | Docker Compose (PostgreSQL + pgAdmin)                                      |
+| Dev Infra   | Docker Compose (frontend + backend + LiveKit; DB on Supabase)              |
 
 ---
 
@@ -31,8 +31,8 @@ triviettutor/
 ├── frontend/               # React + Vite + TypeScript SPA
 ├── backend/                # Spring Boot 3 REST API
 ├── db/                     # Seed data for local database
-├── docker-compose.yml      # Local dev database (PostgreSQL + pgAdmin)
-├── .env.example            # Backend environment variable template
+├── docker-compose.yml      # Frontend + backend + LiveKit containers (DB is Supabase)
+├── .env.example            # Environment template for Docker and the backend
 └── README.md
 ```
 
@@ -52,9 +52,18 @@ context, and HTTP API compatibility tests and build the application JAR.
 
 ### Prerequisites
 
-- **Java 21** (e.g., Temurin / OpenJDK)
-- **Node.js 22.23.2** + npm 10.9.8
-- **Docker Desktop** (for local database)
+- **Docker Desktop** (runs frontend, backend and LiveKit)
+- Access to the team's Supabase project (`fwoxupsupabpepgveqhr`) and its database password
+- For running without Docker: **Java 21** and **Node.js 22.23.2** + npm 10.9.8
+
+There is no local PostgreSQL. Every teammate connects to the same Supabase database,
+so data created by one person is visible to everyone.
+
+```
+Docker Compose (your machine)            Internet (TLS)
+  frontend :5173 ──► backend :8080 ──────────────────► Supabase PostgreSQL
+                     backend ──► livekit :7880          MongoDB Atlas (meeting logs)
+```
 
 ### 1. Clone the repository
 
@@ -63,43 +72,58 @@ git clone <repository-url>
 cd triviettutor
 ```
 
-### 2. Start the database
+### 2. Create `.env` from the template
 
 ```bash
-docker compose up -d
-```
-
-PostgreSQL is available at `localhost:5432`  
-pgAdmin UI is available at `http://localhost:5050`
-
-### 3. Configure backend environment
-
-```bash
-# Copy the example and fill in your values
 cp .env.example .env
+# or on Windows: ./scripts/init-docker-env.ps1   (also generates JWT_SECRET)
 ```
 
-Set `DB_PASSWORD` and `JWT_SECRET` in `.env`.
+Fill in `.env` (it is git-ignored, never commit it):
 
-### 4. Run the backend
+| Variable      | Where to get it |
+|---------------|-----------------|
+| `DB_URL`      | Supabase Dashboard → **Connect** → **Session pooler**, port `5432`. Format: `jdbc:postgresql://<pooler-host>:5432/postgres?sslmode=require` |
+| `DB_USERNAME` | `postgres.fwoxupsupabpepgveqhr` (session pooler user) |
+| `DB_PASSWORD` | Database password, shared privately by the team lead |
+| `JWT_SECRET`  | Any random string of 32+ bytes (`openssl rand -hex 32`); use the same value as the team if tokens must be shared |
+| `MONGODB_URI` | MongoDB Atlas connection string (meeting history). Required in Docker |
+
+Use the **session pooler**, not the direct host `db.<ref>.supabase.co` (IPv6 only, usually
+unreachable from Docker Desktop) and not the transaction pooler on port `6543` (breaks
+prepared statements). Keep `DB_POOL_SIZE` small (default `5`) because everyone shares the
+pooler's connection limit.
+
+### 3. Start everything
 
 ```bash
-cd backend
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+docker compose up -d --build
 ```
 
-API: `http://localhost:8080/api/v1`  
-Swagger UI: `http://localhost:8080/swagger-ui.html`
+- App: `http://localhost:5173`
+- API: `http://localhost:8080/api/v1`
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- LiveKit: `ws://localhost:7880`
 
-### 5. Run the frontend
+Check the backend log with `docker compose logs -f backend`. After changing `.env`, run
+`docker compose up -d --force-recreate backend frontend`.
 
-```bash
-cd frontend
-npm install
-npm run dev
+### 4. Database schema (migrations)
+
+The `supabase` profile does not run Flyway on startup, so one person applies shared
+migrations deliberately instead of every container racing to change the schema:
+
+```powershell
+./scripts/migrate-database.ps1 -Action Info      # show applied/pending migrations
+./scripts/migrate-database.ps1 -Action Migrate   # apply pending migrations
 ```
 
-App: `http://localhost:5173`
+### Running without Docker
+
+```powershell
+./scripts/start-backend.ps1 -Profile supabase    # reads the same root .env
+cd frontend; npm install; npm run dev
+```
 
 ---
 
@@ -155,7 +179,7 @@ The merchant secret belongs only in an ignored backend `.env` file or the backen
 ./scripts/start-backend.ps1 -Profile supabase
 ```
 
-For Docker, use `.env.docker` in both scripts and recreate the backend container after changes.
+For Docker, use the same root `.env` and recreate the backend container after changes.
 Checkout redirects to the real VNPay Sandbox page. Enrollment is confirmed by signed IPN callbacks;
 the browser return alone cannot enroll a student. A public HTTPS backend registered with VNPay is
 required for end-to-end settlement. Team members sharing one merchant must use the same IPN backend

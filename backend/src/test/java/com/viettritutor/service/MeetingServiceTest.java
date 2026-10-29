@@ -2,6 +2,9 @@ package com.viettritutor.service;
 
 import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.common.exception.ErrorCode;
+import com.viettritutor.document.MeetingParticipantLog;
+import com.viettritutor.document.MeetingSessionLog;
+import com.viettritutor.dto.meeting.MeetingSessionLogsResponse;
 import com.viettritutor.dto.meeting.MeetingTokenResponse;
 import com.viettritutor.entity.ClassGroup;
 import com.viettritutor.entity.Course;
@@ -11,6 +14,8 @@ import com.viettritutor.enums.AssignmentStatus;
 import com.viettritutor.enums.EnrollmentStatus;
 import com.viettritutor.enums.SessionStatus;
 import com.viettritutor.repository.*;
+import com.viettritutor.repository.mongo.MeetingParticipantLogRepository;
+import com.viettritutor.repository.mongo.MeetingSessionLogRepository;
 import com.viettritutor.service.impl.MeetingServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,8 +26,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -50,6 +57,12 @@ class MeetingServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private MeetingSessionLogRepository meetingSessionLogRepository;
+
+    @Mock
+    private MeetingParticipantLogRepository meetingParticipantLogRepository;
+
     @InjectMocks
     private MeetingServiceImpl meetingService;
 
@@ -66,6 +79,8 @@ class MeetingServiceTest {
         ReflectionTestUtils.setField(meetingService, "livekitUrl", "ws://localhost:7880");
         ReflectionTestUtils.setField(meetingService, "livekitApiKey", "devkey");
         ReflectionTestUtils.setField(meetingService, "livekitApiSecret", "secret123456789012345678901234567890");
+        ReflectionTestUtils.setField(meetingService, "meetingSessionLogRepository", meetingSessionLogRepository);
+        ReflectionTestUtils.setField(meetingService, "meetingParticipantLogRepository", meetingParticipantLogRepository);
 
         adminUser = User.builder().id(1L).email("admin@vtt.vn").role("ROLE_ADMIN").fullName("Admin").build();
         tutorUser = User.builder().id(2L).email("tutor@vtt.vn").role("ROLE_TUTOR").fullName("Thầy Hoàng").build();
@@ -176,5 +191,59 @@ class MeetingServiceTest {
                 meetingService.generateTokenForSession(999L, tutorUser));
 
         assertEquals(ErrorCode.SESSION_NOT_FOUND, ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("Admin successfully retrieves MongoDB meeting session and participant logs")
+    void adminCanGetSessionMeetingLogs() {
+        when(sessionRepository.findById(101L)).thenReturn(Optional.of(session));
+        MeetingSessionLog mockLog = MeetingSessionLog.builder()
+                .sessionId("classroom-session-101")
+                .roomName("classroom-session-101")
+                .status("ACTIVE")
+                .startTime(Instant.now())
+                .build();
+        when(meetingSessionLogRepository.findBySessionId("classroom-session-101")).thenReturn(Optional.of(mockLog));
+        when(meetingParticipantLogRepository.findBySessionId("classroom-session-101")).thenReturn(List.of(
+                MeetingParticipantLog.builder().sessionId("classroom-session-101").userId(2L).userRole("TUTOR").build(),
+                MeetingParticipantLog.builder().sessionId("classroom-session-101").userId(3L).userRole("STUDENT").build()
+        ));
+
+        MeetingSessionLogsResponse response = meetingService.getSessionMeetingLogs(101L, adminUser);
+
+        assertNotNull(response);
+        assertEquals(101L, response.sessionId());
+        assertEquals("classroom-session-101", response.roomName());
+        assertNotNull(response.sessionLog());
+        assertEquals(2, response.totalParticipants());
+    }
+
+    @Test
+    @DisplayName("Student cannot retrieve session meeting logs (ACCESS_DENIED)")
+    void studentCannotGetMeetingLogs() {
+        when(sessionRepository.findById(101L)).thenReturn(Optional.of(session));
+
+        BusinessException ex = assertThrows(BusinessException.class, () ->
+                meetingService.getSessionMeetingLogs(101L, studentUser));
+
+        assertEquals(ErrorCode.ACCESS_DENIED, ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("Webhook missing auth header throws ACCESS_DENIED")
+    void webhookMissingAuthHeaderThrows() {
+        BusinessException ex = assertThrows(BusinessException.class, () ->
+                meetingService.handleWebhook("{}", null));
+
+        assertEquals(ErrorCode.ACCESS_DENIED, ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("Webhook invalid token throws ACCESS_DENIED")
+    void webhookInvalidTokenThrows() {
+        BusinessException ex = assertThrows(BusinessException.class, () ->
+                meetingService.handleWebhook("{}", "Bearer invalid_token"));
+
+        assertEquals(ErrorCode.ACCESS_DENIED, ex.getErrorCode());
     }
 }

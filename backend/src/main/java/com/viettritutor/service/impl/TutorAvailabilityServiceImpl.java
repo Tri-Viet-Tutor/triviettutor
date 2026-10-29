@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 
@@ -22,6 +24,7 @@ import java.util.List;
 public class TutorAvailabilityServiceImpl implements TutorAvailabilityService {
     private final TutorAvailabilityRepository availabilityRepository;
     private final UserRepository userRepository;
+    private final Clock clock;
 
     @Override
     @Transactional(readOnly = true)
@@ -40,10 +43,19 @@ public class TutorAvailabilityServiceImpl implements TutorAvailabilityService {
         List<AvailabilityRequest.Slot> slots = request.slots().stream()
                 .sorted(Comparator.comparing(AvailabilityRequest.Slot::availableDate)
                         .thenComparing(AvailabilityRequest.Slot::startTime)).toList();
+        LocalDate today = LocalDate.now(clock);
+        // Past slots may be re-sent as already saved, but never added.
+        List<TutorAvailability> saved = availabilityRepository.findByTutorIdOrderByAvailableDateAscStartTimeAsc(tutor.getId());
         for (int index = 0; index < slots.size(); index++) {
             var slot = slots.get(index);
             if (!slot.startTime().isBefore(slot.endTime())) {
                 throw new BusinessException(ErrorCode.INVALID_AVAILABILITY, "Availability startTime must precede endTime");
+            }
+            if (slot.availableDate().isBefore(today) && saved.stream().noneMatch(existing ->
+                    existing.getAvailableDate().equals(slot.availableDate())
+                            && existing.getStartTime().equals(slot.startTime())
+                            && existing.getEndTime().equals(slot.endTime()))) {
+                throw new BusinessException(ErrorCode.INVALID_AVAILABILITY, "Availability date must not be in the past");
             }
             if (index > 0) {
                 var previous = slots.get(index - 1);

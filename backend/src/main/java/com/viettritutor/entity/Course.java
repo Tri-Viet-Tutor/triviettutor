@@ -26,6 +26,9 @@ public class Course {
     @Column(nullable = false, length = 100)
     private String subject;
 
+    @Column(name = "subject_id", nullable = false)
+    private Long subjectId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "grade_level", nullable = false, length = 20)
     private GradeLevel gradeLevel;

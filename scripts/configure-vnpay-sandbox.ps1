@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'vnpay-environment.ps1')
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $targetPath = [System.IO.Path]::GetFullPath($EnvironmentFile)
-if (-not (Test-Path -LiteralPath $targetPath -PathType Leaf)) { throw 'Initialize .env or .env.docker first; see the setup guide.' }
+if (-not (Test-Path -LiteralPath $targetPath -PathType Leaf)) { throw 'Initialize .env first (cp .env.example .env); see the setup guide.' }
 $existing = Read-VnpayEnvironment -Path $targetPath
 $missing = [System.Collections.Generic.List[string]]::new()
 foreach ($line in [System.IO.File]::ReadAllLines((Join-Path $projectRoot '.env.vnpay.example'))) {

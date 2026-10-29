@@ -62,6 +62,19 @@ export interface ClassTicketProps {
 }
 
 // ── components/pricing ──
+/** Props của CourseOfferList */
+export interface CourseOfferListProps {
+  /** Lớp đang mở sau khi áp bộ lọc và sắp xếp của CourseShopSection */
+  classes: TuitionClass[];
+  filters: ClassShopFilters;
+  /** Tài khoản hiện tại được đăng ký lớp không (chỉ học viên) */
+  canBuy: boolean;
+  onBuy: (item: TuitionClass) => void;
+  surfaceClassName?: string;
+  /** Bấm "Xóa bộ lọc" khi không có khóa phù hợp */
+  onResetFilters: () => void;
+}
+
 /** Props của CartBar */
 export interface CartBarProps {
   /** Các khóa trong giỏ */
@@ -82,6 +95,7 @@ export interface CourseShopSectionProps {
 
 /** Props của CourseTicket */
 export interface CourseTicketProps {
+  detailTo: string;
   course: Course;
   /** Khóa đã nằm trong giỏ */
   inCart: boolean;

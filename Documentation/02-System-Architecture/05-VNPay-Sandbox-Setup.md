@@ -47,7 +47,7 @@ Giữ secrets trong `.env` riêng hoặc secret store của host backend. Chỉ 
 
 ### Dùng backend Sandbox chung (khuyến nghị để demo nhóm)
 
-Một backend public HTTPS + một database + một bộ merchant nhận IPN. Mọi frontend của nhóm trỏ `VITE_API_BASE_URL` về backend này (kèm `/api/v1`); backend cho phép từng origin frontend trong CORS. Với Vite, đặt biến trong `frontend/.env.local` rồi restart frontend. Với Docker, đặt biến trong `.env.docker` rồi tạo lại container frontend. Frontend dùng backend chung không cần biết merchant secret hoặc database password. URL IPN đăng ký với VNPay phải là `VNPAY_PUBLIC_BACKEND_URL` + `/api/v1/payments/vnpay/ipn`, truy cập không qua login/protection. Backend nhận IPN phải sử dụng cùng database chứa intent và cùng merchant/secret đã ký URL pay.
+Một backend public HTTPS + một database + một bộ merchant nhận IPN. Mọi frontend của nhóm trỏ `VITE_API_BASE_URL` về backend này (kèm `/api/v1`); backend cho phép từng origin frontend trong CORS. Với Vite, đặt biến trong `frontend/.env.local` rồi restart frontend. Với Docker, đặt biến trong `.env` ở thư mục gốc rồi tạo lại container frontend. Frontend dùng backend chung không cần biết merchant secret hoặc database password. URL IPN đăng ký với VNPay phải là `VNPAY_PUBLIC_BACKEND_URL` + `/api/v1/payments/vnpay/ipn`, truy cập không qua login/protection. Backend nhận IPN phải sử dụng cùng database chứa intent và cùng merchant/secret đã ký URL pay.
 
 Không chia sẻ một merchant rồi thay IPN lần lượt về các máy dùng database khác nhau. Trình duyệt có thể quay về localhost của thành viên qua Return URL nhưng IPN phải tới đúng backend chung. Một origin frontend mới chỉ có hiệu lực sau khi cập nhật CORS và khởi động lại backend.
 
@@ -101,12 +101,12 @@ Mỗi thành viên dùng merchant test riêng và URL HTTPS public riêng (host 
 ./scripts/check-vnpay-sandbox.ps1 -EnvironmentFile .env
 ./scripts/start-backend.ps1 -Profile supabase
 
-# Docker: database local, KHÔNG tự dùng dữ liệu đã seed trên Supabase
+# Docker: backend trong container dùng chung database Supabase (cấu hình trong .env)
 ./scripts/init-docker-env.ps1
-./scripts/configure-vnpay-sandbox.ps1 -EnvironmentFile .env.docker
+./scripts/configure-vnpay-sandbox.ps1 -EnvironmentFile .env
 # Điền credential rồi kiểm tra và tạo lại container để nhận biến mới:
-./scripts/check-vnpay-sandbox.ps1 -EnvironmentFile .env.docker
-docker compose --env-file .env.docker up -d --build backend frontend
+./scripts/check-vnpay-sandbox.ps1 -EnvironmentFile .env
+docker compose up -d --build backend frontend
 ```
 
 Script khởi tạo chỉ bổ sung biến thiếu từ template, không ghi đè secrets đã có, không tự tạo credential merchant và không tự bật thanh toán khi chưa có credential. `check-vnpay-sandbox.ps1 -CheckIpn` kiểm tra endpoint public phản hồi acknowledgement VNPay cho request không có chữ ký; không tạo giao dịch. Kiểm tra này không thay cho xác nhận URL đã được VNPay đăng ký.
@@ -147,7 +147,7 @@ Mở backend để warm-up trước, chạy frontend bằng cấu hình backend 
 
 Hoàn tất trong thời hạn intent (mặc định 5 phút). Sau khi VNPay trả về, kiểm tra trạng thái đã được backend xác nhận, lớp xuất hiện trong lớp đã đăng ký và lịch học được tạo. Đối chiếu database: đúng một Payment COMPLETED, một Enrollment và bộ LearningSchedule tương ứng; gọi lại callback không nhân đôi. Nếu phiên thanh toán cũ đã hết hạn/hủy, tạo yêu cầu mới trong ứng dụng. Không tự sửa chữ ký/response code hoặc ghi Payment COMPLETED bằng SQL để làm bằng chứng nghiệm thu.
 
-- Kiểm tra template cả `.env` và `.env.docker`, importer PowerShell, cấu hình Docker và lỗi startup không lộ secret.
+- Kiểm tra template `.env`, importer PowerShell, cấu hình Docker và lỗi startup không lộ secret.
 - Test checkout giữ chỗ, retry cùng intent, khác chủ sở hữu, lớp đầy/trùng lịch, intent hết hạn/hủy.
 - Test Return không settle; IPN chữ ký/số tiền sai, parameter trùng, IPN lặp, thất bại, thành công đến trễ và REQUIRES_REFUND; callback hợp lệ tạo đúng một payment/enrollment/schedule.
 - Test refund thành công, timeout, sai chữ ký/amount/reference, querydr type 01 không hoàn tất refund, không cho retry PENDING.

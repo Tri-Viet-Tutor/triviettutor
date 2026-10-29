@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { ClassTicket } from "@/components/pricing/ClassTicket";
+import { CourseOfferList } from "@/components/pricing/CourseOfferList";
 import { Icon } from "@/components/ui/Icon";
 import { CONTAINER, FOCUS_RING, PORTAL_SURFACE } from "@/constants/classNames";
 import { DELIVERY_MODE_OPTIONS, GRADE_OPTIONS, SCHEDULE_PATTERN_OPTIONS } from "@/constants/classOptions";
@@ -9,7 +10,7 @@ import { PURCHASE_STEPS } from "@/constants/pricing";
 import { ROUTES } from "@/constants/routes";
 import type { DeliveryMode, GradeLevel, SchedulePattern, TuitionClass } from "@/interfaces/api";
 import type { ClassShopFilters, ClassShopSort, CourseShopSectionProps } from "@/interfaces/pricing";
-import { listTuitionClasses } from "@/services/tuitionPaymentService";
+import { listCatalogCourses, listTuitionClasses } from "@/services/tuitionPaymentService";
 import { useAuthStore } from "@/stores/authStore";
 import { normalizeText } from "@/utils/text";
 
@@ -74,7 +75,16 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
   });
   const classes = useMemo(() => catalog.data?.content ?? [], [catalog.data]);
 
-  const subjects = useMemo(() => [...new Set(classes.map((item) => item.subject))].sort(), [classes]);
+  // Khu học viên hiện thẻ khóa đang bán, nên bộ lọc môn lấy cả môn của các khóa (cùng khóa cache với CourseOfferList)
+  const courses = useQuery({
+    queryKey: ["catalog-courses", user?.id],
+    queryFn: () => listCatalogCourses({ size: CATALOG_LIMIT }),
+    enabled: Boolean(user) && inStudentArea,
+  });
+  const subjects = useMemo(
+    () => [...new Set([...classes.map((item) => item.subject), ...(courses.data?.content ?? []).map((course) => course.subject)])].sort(),
+    [classes, courses.data],
+  );
   const results = useMemo(() => sortClasses(filterClasses(classes, filters), sort), [classes, filters, sort]);
   const hasFilters = JSON.stringify(filters) !== JSON.stringify(DEFAULT_FILTERS);
 
@@ -114,7 +124,7 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
                 type="search"
                 value={filters.query}
                 onChange={(event) => updateFilters({ query: event.target.value })}
-                placeholder="Tên khóa, mã lớp hoặc môn học"
+                placeholder={inStudentArea ? "Tên khóa học hoặc môn học" : "Tên khóa, mã lớp hoặc môn học"}
                 className="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-[15.5px] text-brand-ink outline-none placeholder:text-slate-400 focus:ring-0"
               />
               {filters.query && (
@@ -228,90 +238,116 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
               </label>
             </aside>
 
-            <div>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p aria-live="polite" className="text-[14.5px] text-brand-muted">
-                  <strong className="text-[18px] font-bold text-brand-navy">{results.length}</strong> lớp đang mở
-                </p>
-                <label className="flex items-center gap-2.5 text-[14px] text-brand-muted">
-                  Sắp xếp
-                  <select
-                    value={sort}
-                    onChange={(event) => setSort(event.target.value as ClassShopSort)}
-                    className="h-10 rounded-md border border-slate-300 bg-white pl-3 pr-9 text-[14.5px] font-semibold text-brand-ink outline-none focus:border-brand-navy focus:ring-1 focus:ring-brand-navy"
-                  >
-                    {SORT_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+            {inStudentArea ? (
+              <div>
+                {!isStudent && (
+                  <p className="mb-4 rounded-lg bg-brand-orange/15 px-4 py-3 text-[14px] text-brand-navyDeep">
+                    Bạn đang xem bằng tài khoản không phải học viên — chỉ tài khoản học viên mới đăng ký được lớp.
+                  </p>
+                )}
+                {catalog.isError && (
+                  <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-[14px] text-red-800">
+                    Không tải được danh sách lớp.{" "}
+                    <button type="button" onClick={() => void catalog.refetch()} className="font-semibold underline">
+                      Thử lại
+                    </button>
+                  </p>
+                )}
+                <CourseOfferList
+                  classes={results}
+                  filters={filters}
+                  canBuy={isStudent}
+                  onBuy={buy}
+                  surfaceClassName={PORTAL_SURFACE}
+                  onResetFilters={() => updateFilters(DEFAULT_FILTERS)}
+                />
               </div>
-
-              {!isStudent && (
-                <p className="mt-4 rounded-lg bg-brand-orange/15 px-4 py-3 text-[14px] text-brand-navyDeep">
-                  Bạn đang xem bằng tài khoản không phải học viên — chỉ tài khoản học viên mới đăng ký được lớp.
-                </p>
-              )}
-
-              {catalog.isPending && <p className="mt-6 text-brand-muted">Đang tải các lớp đang mở…</p>}
-
-              {catalog.isError && (
-                <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-6 py-6 text-center text-[14.5px] text-red-800">
-                  Không tải được danh sách lớp.{" "}
-                  <button type="button" onClick={() => void catalog.refetch()} className="font-semibold underline">
-                    Thử lại
-                  </button>
+            ) : (
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p aria-live="polite" className="text-[14.5px] text-brand-muted">
+                    <strong className="text-[18px] font-bold text-brand-navy">{results.length}</strong> lớp đang mở
+                  </p>
+                  <label className="flex items-center gap-2.5 text-[14px] text-brand-muted">
+                    Sắp xếp
+                    <select
+                      value={sort}
+                      onChange={(event) => setSort(event.target.value as ClassShopSort)}
+                      className="h-10 rounded-md border border-slate-300 bg-white pl-3 pr-9 text-[14.5px] font-semibold text-brand-ink outline-none focus:border-brand-navy focus:ring-1 focus:ring-brand-navy"
+                    >
+                      {SORT_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
-              )}
 
-              {catalog.isSuccess &&
-                (results.length > 0 ? (
-                  <ul className="mt-4 space-y-4">
-                    {results.slice(0, visibleCount).map((item, index) => (
-                      <li key={item.id}>
-                        <ClassTicket
-                          item={item}
-                          index={index}
-                          canBuy={isStudent}
-                          onBuy={() => buy(item)}
-                          surfaceClassName={inStudentArea ? PORTAL_SURFACE : undefined}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="mt-4 rounded-2xl border border-dashed border-brand-navy/30 px-6 py-12 text-center">
-                    <Icon name="search_off" className="text-[44px] text-brand-navy/40" />
-                    <p className="mt-2 text-[17px] font-bold text-brand-navy">
-                      {classes.length === 0 ? "Hiện chưa có lớp nào mở đăng ký" : "Không có lớp phù hợp"}
-                    </p>
-                    {hasFilters && (
-                      <button
-                        type="button"
-                        onClick={() => updateFilters(DEFAULT_FILTERS)}
-                        className={`mt-4 inline-flex h-10 items-center rounded-md bg-brand-navy px-5 text-[14.5px] font-semibold text-white transition-colors hover:bg-brand-navyDeep ${FOCUS_RING}`}
-                      >
-                        Xóa bộ lọc
-                      </button>
-                    )}
+                {!isStudent && (
+                  <p className="mt-4 rounded-lg bg-brand-orange/15 px-4 py-3 text-[14px] text-brand-navyDeep">
+                    Bạn đang xem bằng tài khoản không phải học viên — chỉ tài khoản học viên mới đăng ký được lớp.
+                  </p>
+                )}
+
+                {catalog.isPending && <p className="mt-6 text-brand-muted">Đang tải các lớp đang mở…</p>}
+
+                {catalog.isError && (
+                  <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-6 py-6 text-center text-[14.5px] text-red-800">
+                    Không tải được danh sách lớp.{" "}
+                    <button type="button" onClick={() => void catalog.refetch()} className="font-semibold underline">
+                      Thử lại
+                    </button>
                   </div>
-                ))}
+                )}
 
-              {results.length > visibleCount && (
-                <div className="mt-6 text-center">
-                  <button
-                    type="button"
-                    onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
-                    className={`inline-flex h-11 items-center gap-2 rounded-md border border-brand-navy px-6 text-[14.5px] font-semibold text-brand-navy transition-colors hover:bg-brand-navy hover:text-white ${FOCUS_RING}`}
-                  >
-                    Xem thêm {Math.min(PAGE_SIZE, results.length - visibleCount)} lớp
-                    <Icon name="expand_more" className="text-[19px]" />
-                  </button>
-                </div>
-              )}
-            </div>
+                {catalog.isSuccess &&
+                  (results.length > 0 ? (
+                    <ul className="mt-4 space-y-4">
+                      {results.slice(0, visibleCount).map((item, index) => (
+                        <li key={item.id}>
+                          <ClassTicket
+                            item={item}
+                            index={index}
+                            canBuy={isStudent}
+                            onBuy={() => buy(item)}
+                            surfaceClassName={inStudentArea ? PORTAL_SURFACE : undefined}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="mt-4 rounded-2xl border border-dashed border-brand-navy/30 px-6 py-12 text-center">
+                      <Icon name="search_off" className="text-[44px] text-brand-navy/40" />
+                      <p className="mt-2 text-[17px] font-bold text-brand-navy">
+                        {classes.length === 0 ? "Hiện chưa có lớp nào mở đăng ký" : "Không có lớp phù hợp"}
+                      </p>
+                      {hasFilters && (
+                        <button
+                          type="button"
+                          onClick={() => updateFilters(DEFAULT_FILTERS)}
+                          className={`mt-4 inline-flex h-10 items-center rounded-md bg-brand-navy px-5 text-[14.5px] font-semibold text-white transition-colors hover:bg-brand-navyDeep ${FOCUS_RING}`}
+                        >
+                          Xóa bộ lọc
+                        </button>
+                      )}
+                    </div>
+                  ))}
+
+                {results.length > visibleCount && (
+                  <div className="mt-6 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+                      className={`inline-flex h-11 items-center gap-2 rounded-md border border-brand-navy px-6 text-[14.5px] font-semibold text-brand-navy transition-colors hover:bg-brand-navy hover:text-white ${FOCUS_RING}`}
+                    >
+                      Xem thêm {Math.min(PAGE_SIZE, results.length - visibleCount)} lớp
+                      <Icon name="expand_more" className="text-[19px]" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -1,40 +1,40 @@
+
 package com.viettritutor.dto.user;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Builder;
-import lombok.Data;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Data
-@Builder
-public class MeResponse {
-    private Long id;
-    private String email;
-    private String fullName;
-    private String role;
-    private LocalDateTime createdAt;
+public record MeResponse(
+        Long id,
+        String email,
+        String fullName,
+        String role,
+        LocalDateTime createdAt,
 
-    @JsonInclude(JsonInclude.Include.ALWAYS)
-    private Profile profile;
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        @Schema(oneOf = {
+                StudentProfileResponse.class,
+                TutorProfileResponse.class
+        })
+        Profile profile
+) {
 
-    @Schema(oneOf = {StudentProfileResponse.class, TutorProfileResponse.class})
     public interface Profile {
     }
 
-    @Data
-    @Builder
-    public static class StudentProfileResponse implements Profile {
-        private String phone;
-        private String address;
+    public record StudentProfileResponse(
+            String phone,
+            String address
+    ) implements Profile {
     }
 
-    @Data
-    @Builder
-    public static class TutorProfileResponse implements Profile {
-        private BigDecimal baseSalary;
-        private BigDecimal sessionRate;
-        private String bio;
+    public record TutorProfileResponse(
+            BigDecimal baseSalary,
+            BigDecimal sessionRate,
+            String bio
+    ) implements Profile {
     }
 }
