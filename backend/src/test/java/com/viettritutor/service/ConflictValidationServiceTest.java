@@ -227,6 +227,51 @@ class ConflictValidationServiceTest {
             List<ScheduleConflictResponse> conflicts = conflictService.checkTutor(TUTOR_ID, null);
             assertThat(conflicts).isEmpty();
         }
+
+        @Test
+        @DisplayName("A commitment that fully contains the requested session is a conflict")
+        void containedSession_detectsCollision() {
+            Session existing = createSession(1L, 10L, TEST_DATE,
+                    LocalTime.of(8, 0), LocalTime.of(12, 0), SessionStatus.SCHEDULED);
+            when(sessionRepository.findTutorCommitments(eq(TUTOR_ID), eq(TEST_DATE), eq(TEST_DATE)))
+                    .thenReturn(List.of(existing));
+
+            Session requested = createSession(2L, 20L, TEST_DATE,
+                    LocalTime.of(9, 0), LocalTime.of(10, 0), SessionStatus.SCHEDULED);
+
+            assertThat(conflictService.checkTutor(TUTOR_ID, List.of(requested)))
+                    .extracting(ScheduleConflictResponse::conflictSessionId).containsExactly(1L);
+        }
+
+        @Test
+        @DisplayName("The tutor's own copy of a requested session (e.g. current primary) is not a conflict with itself")
+        void sameSessionInCommitments_isNotAConflict() {
+            Session requested = createSession(2L, 20L, TEST_DATE,
+                    LocalTime.of(18, 0), LocalTime.of(20, 0), SessionStatus.SCHEDULED);
+            Session sameRow = createSession(2L, 20L, TEST_DATE,
+                    LocalTime.of(18, 0), LocalTime.of(20, 0), SessionStatus.SCHEDULED);
+            when(sessionRepository.findTutorCommitments(eq(TUTOR_ID), eq(TEST_DATE), eq(TEST_DATE)))
+                    .thenReturn(List.of(sameRow));
+
+            assertThat(conflictService.checkTutor(TUTOR_ID, List.of(requested))).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Commitments are read for the whole date range of the requested sessions")
+        void multiDateRequest_queriesWholeRange() {
+            LocalDate later = TEST_DATE.plusDays(9);
+            Session first = createSession(2L, 20L, TEST_DATE,
+                    LocalTime.of(8, 0), LocalTime.of(10, 0), SessionStatus.SCHEDULED);
+            Session last = createSession(3L, 20L, later,
+                    LocalTime.of(8, 0), LocalTime.of(10, 0), SessionStatus.PENDING_RESCHEDULE);
+            Session existing = createSession(1L, 10L, later,
+                    LocalTime.of(9, 59), LocalTime.of(11, 0), SessionStatus.SCHEDULED);
+            when(sessionRepository.findTutorCommitments(eq(TUTOR_ID), eq(TEST_DATE), eq(later)))
+                    .thenReturn(List.of(existing));
+
+            assertThat(conflictService.checkTutor(TUTOR_ID, List.of(last, first)))
+                    .extracting(ScheduleConflictResponse::requestedSessionId).containsExactly(3L);
+        }
     }
 
     @Nested

@@ -28,19 +28,38 @@ public class SessionOperationSupport {
     public record Snapshot(SessionStatus status, Long scheduledTutorId, Long actualTutorId) {}
 
     public Context load(Long sessionId) {
+        Context context = loadAny(sessionId);
+        requireOpenClass(context.classGroup());
+        return context;
+    }
+
+    /** Locks the class like {@link #load} but also accepts closed classes; callers check editability themselves. */
+    public Context loadAny(Long sessionId) {
         Long classId = sessionRepository.findClassGroupId(sessionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));
         ClassGroup classGroup = classRepository.findForUpdate(classId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CLASS_NOT_FOUND));
-        if (Set.of(ClassStatus.COMPLETED, ClassStatus.CANCELLED, ClassStatus.FAILED_TO_OPEN).contains(classGroup.getStatus())) {
-            throw new BusinessException(ErrorCode.SESSION_NOT_EDITABLE);
-        }
         return new Context(classGroup, sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND)));
     }
 
+    public void requireOpenClass(ClassGroup classGroup) {
+        if (Set.of(ClassStatus.COMPLETED, ClassStatus.CANCELLED, ClassStatus.FAILED_TO_OPEN).contains(classGroup.getStatus())) {
+            throw new BusinessException(ErrorCode.SESSION_NOT_EDITABLE);
+        }
+    }
+
     public void lockSession(Session session) {
+        lockSessionRow(session);
+        requireEditable(session);
+    }
+
+    /** Takes the session row lock without requiring the session to be editable. */
+    public void lockSessionRow(Session session) {
         entityManager.refresh(session, LockModeType.PESSIMISTIC_WRITE);
+    }
+
+    public void requireEditable(Session session) {
         if (session.getStatus() == SessionStatus.COMPLETED) {
             throw new BusinessException(ErrorCode.SESSION_NOT_EDITABLE);
         }

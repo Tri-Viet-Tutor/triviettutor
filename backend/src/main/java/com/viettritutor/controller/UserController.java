@@ -14,7 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/admin/users")
 @RequiredArgsConstructor
 @Tag(name = "Users", description = "User management")
 public class UserController {
@@ -38,7 +38,7 @@ public class UserController {
         );
     }
 
-    @PostMapping("/users/tutors")
+    @PostMapping("/tutors")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(
             summary = "Create a tutor account",
@@ -53,7 +53,7 @@ public class UserController {
                 ));
     }
 
-    @PutMapping("/users/{userId}/tutor-profile")
+    @PutMapping("/{userId}/tutor-profile")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(
             summary = "Update a tutor profile",

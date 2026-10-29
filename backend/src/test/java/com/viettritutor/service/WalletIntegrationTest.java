@@ -85,6 +85,7 @@ class WalletIntegrationTest {
     @Autowired MutableClock clock;
     @Autowired UserRepository users;
     @Autowired CourseRepository courses;
+    @Autowired SubjectService subjects;
     @Autowired ClassGroupRepository classes;
     @Autowired SessionRepository sessions;
     @Autowired PaymentRepository payments;
@@ -111,7 +112,7 @@ class WalletIntegrationTest {
             .fullName("Wallet test").password(UUID.randomUUID().toString()).role("ROLE_"+role).enabled(true).build());
     }
     ClassGroup newClass(int hour) {
-        Course course = courses.saveAndFlush(Course.builder().name("Wallet fixture").subject("MATH")
+        Course course = courses.saveAndFlush(Course.builder().name("Wallet fixture").subject("MATH").subjectId(subjects.resolve("MATH").getId())
             .gradeLevel(GradeLevel.GRADE_11).basePrice1on1(new BigDecimal("100000"))
             .totalSessions(2).durationMinutes(120).active(true).build());
         LocalDate start = LocalDate.now(clock).plusWeeks(2);

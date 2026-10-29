@@ -118,10 +118,17 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         operations.requireAdmin(admin);
         Long sessionId = leaveRepository.findSessionId(requestId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LEAVE_REQUEST_NOT_FOUND));
-        Session session = operations.load(sessionId).session();
-        operations.lockSession(session);
+        var context = operations.loadAny(sessionId);
+        Session session = context.session();
+        operations.lockSessionRow(session);
         LeaveRequest request = operations.request(requestId, sessionId);
         operations.requirePending(request);
+        // A request that never changed the session (late or group student notice) only gets a decision, so it
+        // can still be rejected after the session has been taught or the class has closed.
+        if (request.isAffectsSession()) {
+            operations.requireOpenClass(context.classGroup());
+            operations.requireEditable(session);
+        }
         var before = operations.snapshot(session);
         request.setStatus(LeaveRequestStatus.REJECTED);
         request.setResolvedBy(admin.getId());

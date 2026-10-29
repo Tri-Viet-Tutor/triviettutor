@@ -343,7 +343,7 @@ export interface MeetingParticipantLogDto {
   eventHistory?: Array<{
     event: string;
     timestamp: string;
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
   }>;
 }
 
