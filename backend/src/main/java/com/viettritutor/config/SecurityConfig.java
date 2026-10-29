@@ -48,7 +48,7 @@ public class SecurityConfig {
         return http
                 .cors(cors -> {})
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler((request, response, exception) -> {
@@ -65,6 +65,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/ipn").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/meetings/webhook").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/assistant/chat").permitAll()
                         .requestMatchers("/error").permitAll()
                         // Swagger / OpenAPI docs (dev-friendly)
                         .requestMatchers(

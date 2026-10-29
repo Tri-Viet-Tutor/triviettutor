@@ -114,12 +114,12 @@ public class TutorRatingServiceImpl implements TutorRatingService {
     public TutorRatingSummaryResponse getTutorRatingSummary(Long tutorId) {
         findTutorById(tutorId);
 
-        BigDecimal average = tutorRatingRepository.findAverageRatingByTutorId(tutorId);
+        Double average = tutorRatingRepository.findAverageRatingByTutorId(tutorId);
         long total = tutorRatingRepository.countByTutor_Id(tutorId);
 
         BigDecimal averageRating = average == null
                 ? BigDecimal.ZERO
-                : average.setScale(2, RoundingMode.HALF_UP);
+                : BigDecimal.valueOf(average).setScale(2, RoundingMode.HALF_UP);
 
         return new TutorRatingSummaryResponse(tutorId, averageRating, total);
     }

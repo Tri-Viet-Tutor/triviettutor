@@ -36,6 +36,12 @@ public class User implements UserDetails {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(name = "avatar")
+    private byte[] avatar;
+
+    @Column(name = "avatar_content_type", length = 50)
+    private String avatarContentType;
+
     @Column
     private String password;
 

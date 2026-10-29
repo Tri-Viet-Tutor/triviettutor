@@ -83,6 +83,7 @@ public class AdminUserServiceImpl implements AdminUserService {
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
+                null,
                 user.getRole(),
                 user.getCreatedAt(),
                 new MeResponse.TutorProfileResponse(
@@ -131,6 +132,7 @@ public class AdminUserServiceImpl implements AdminUserService {
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
+                null,
                 user.getRole(),
                 user.getCreatedAt(),
                 new MeResponse.TutorProfileResponse(
