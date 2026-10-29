@@ -61,7 +61,7 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   ATTENDANCE_NOT_FOUND: "Không tìm thấy bản ghi điểm danh.",
   PAYROLL_FINALIZED: "Buổi này đã nằm trong bảng lương đã chốt nên không sửa được.",
   // Lịch rảnh, phân công
-  INVALID_AVAILABILITY: "Khung giờ rảnh chưa hợp lệ (giờ bắt đầu phải trước giờ kết thúc và không chồng nhau).",
+  INVALID_AVAILABILITY: "Khung giờ rảnh chưa hợp lệ (giờ bắt đầu phải trước giờ kết thúc và các khung không chồng nhau).",
   SCHEDULE_CONFLICT: "Gia sư này bị trùng lịch dạy ở lớp khác.",
   INVALID_TUTOR: "Người được chọn không phải gia sư.",
   USER_NOT_TUTOR: "Người dùng này không phải gia sư.",

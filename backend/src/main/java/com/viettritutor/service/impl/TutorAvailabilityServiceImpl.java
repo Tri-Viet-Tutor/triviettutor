@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 
@@ -22,6 +24,7 @@ import java.util.List;
 public class TutorAvailabilityServiceImpl implements TutorAvailabilityService {
     private final TutorAvailabilityRepository availabilityRepository;
     private final UserRepository userRepository;
+    private final Clock clock;
 
     @Override
     @Transactional(readOnly = true)
@@ -37,7 +40,15 @@ public class TutorAvailabilityServiceImpl implements TutorAvailabilityService {
         User tutor = userRepository.findForUpdate(currentUser.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         requireTutor(tutor);
+        LocalDate today = LocalDate.now(clock);
+        List<TutorAvailability> saved = availabilityRepository.findByTutorIdOrderByAvailableDateAscStartTimeAsc(tutor.getId());
+        // Past slots are kept only if already saved; any other past slot (e.g. added for "today" and saved after
+        // midnight, or re-sent by a stale tab) is silently dropped, so a past slot is never added.
         List<AvailabilityRequest.Slot> slots = request.slots().stream()
+                .filter(slot -> !slot.availableDate().isBefore(today) || saved.stream().anyMatch(existing ->
+                        existing.getAvailableDate().equals(slot.availableDate())
+                                && existing.getStartTime().equals(slot.startTime())
+                                && existing.getEndTime().equals(slot.endTime())))
                 .sorted(Comparator.comparing(AvailabilityRequest.Slot::availableDate)
                         .thenComparing(AvailabilityRequest.Slot::startTime)).toList();
         for (int index = 0; index < slots.size(); index++) {

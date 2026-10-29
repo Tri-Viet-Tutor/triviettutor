@@ -1,5 +1,16 @@
 # Test-only origins; override through TEST_FRONTEND_ORIGIN when needed.
 spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-client-id
+            client-secret: test-client-secret
+            scope:
+              - openid
+              - profile
+              - email
   data:
     mongodb:
       uri: ${TEST_MONGODB_URI:mongodb://localhost:27017/test}
