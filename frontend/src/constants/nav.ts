@@ -21,6 +21,7 @@ export const STUDENT_NAV: PortalNavItem[] = [
   { to: ROUTES.student, label: "Tổng quan", icon: "home", end: true },
   { to: ROUTES.studentSchedule, label: "Lịch học", icon: "calendar_month" },
   { to: ROUTES.studentEnrollments, label: "Lớp của tôi", shortLabel: "Lớp", icon: "local_library" },
+  { to: ROUTES.studentHomeworks, label: "Bài tập", icon: "assignment" },
   { to: ROUTES.studentCatalog, label: "Khóa học đang mở", shortLabel: "Khóa học", icon: "storefront" },
   { to: ROUTES.studentLeave, label: "Xin nghỉ", icon: "event_busy" },
   { to: ROUTES.studentWallet, label: "Ví của tôi", shortLabel: "Ví", icon: "account_balance_wallet" },
@@ -30,6 +31,7 @@ export const STUDENT_NAV: PortalNavItem[] = [
 export const TUTOR_NAV: PortalNavItem[] = [
   { to: ROUTES.tutor, label: "Tổng quan", icon: "home", end: true },
   { to: ROUTES.tutorSessions, label: "Lịch dạy", icon: "calendar_month" },
+  { to: ROUTES.tutorHomeworks, label: "Bài tập", icon: "assignment" },
   { to: ROUTES.tutorAvailability, label: "Lịch rảnh", icon: "event_available" },
   { to: ROUTES.tutorLeave, label: "Xin nghỉ", icon: "event_busy" },
   { to: ROUTES.tutorPayroll, label: "Thu nhập", icon: "account_balance_wallet" },

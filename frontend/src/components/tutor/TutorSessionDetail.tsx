@@ -76,6 +76,12 @@ export function TutorSessionDetail({ session, now, tutorId, hasPendingLeave }: T
             Vào phòng học trực tuyến
           </Link>
         )}
+        {isTeacher && session.status !== "CANCELLED" && (
+          <Link to={`${ROUTES.tutorHomeworkNew}?buoi=${session.sessionId}`} className={PORTAL_BTN_SECONDARY}>
+            <Icon name="assignment_add" className="text-[19px]" />
+            Giao bài tập
+          </Link>
+        )}
         {isTeacher &&
           (hasPendingLeave ? (
             <StatusChip tone="amber" icon="hourglass_top">

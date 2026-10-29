@@ -81,6 +81,12 @@ public class GlobalExceptionHandler {
                         .build());
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUploadTooLarge() {
+        return ResponseEntity.status(ErrorCode.ATTACHMENT_TOO_LARGE.getHttpStatus())
+                .body(ApiResponse.error(ErrorCode.ATTACHMENT_TOO_LARGE.getDefaultMessage(), ErrorCode.ATTACHMENT_TOO_LARGE.name()));
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleUnreadableRequest() {
         return ResponseEntity.badRequest()

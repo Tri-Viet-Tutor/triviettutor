@@ -5,10 +5,15 @@ import com.viettritutor.common.exception.*;
 import com.viettritutor.dto.learning.*;
 import com.viettritutor.entity.*;
 import com.viettritutor.enums.HomeworkStatus;
+import com.viettritutor.enums.LearningScheduleStatus;
 import com.viettritutor.repository.HomeworkRepository;
+import com.viettritutor.repository.HomeworkSubmissionRepository;
+import com.viettritutor.repository.LearningScheduleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
 import java.util.Objects;
 import java.time.OffsetDateTime;
 import com.viettritutor.enums.SubmissionStatus;
@@ -18,8 +23,13 @@ import org.springframework.data.domain.PageRequest;
 @RequiredArgsConstructor
 public class HomeworkService {
     private final HomeworkRepository homeworks;
+    private final HomeworkSubmissionRepository submissions;
+    private final LearningScheduleRepository learning;
     private final HomeworkAccessService access;
+    private final HomeworkQuestionService questions;
     private final LearningAuditService audit;
+    private final NotificationService notifications;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public HomeworkResponse create(Long sessionId, HomeworkRequest input, User actor) {
@@ -27,11 +37,14 @@ public class HomeworkService {
         access.requireWriter(s, actor);
         access.requireSessionOpen(s);
         access.requireFuture(input.getDueAt());
+        var drafts = input.getQuestions() == null ? List.<HomeworkQuestion>of() : questions.build(input.getQuestions());
+        questions.requireTotal(drafts, input.getMaxScore());
         Homework h = Homework.builder().sessionId(sessionId).status(HomeworkStatus.DRAFT)
+                .allowLateSubmission(!Boolean.FALSE.equals(input.getAllowLateSubmission()))
                 .createdBy(actor.getId()).createdAt(access.now()).updatedAt(access.now()).build();
         apply(h, input);
         homeworks.saveAndFlush(h);
-        var response = HomeworkResponse.from(h, true);
+        var response = HomeworkResponse.from(h, true, questions.responses(questions.replace(h.getId(), drafts), true));
         audit.homework(h.getId(), actor, "CREATE", null, response);
         return response;
     }
@@ -47,17 +60,26 @@ public class HomeworkService {
         access.requireBeforeDeadline(h);
         access.requireFuture(input.getDueAt());
         String url = access.resourceUrl(input.getResourceUrl());
+        var current = questions.of(id);
+        var drafts = input.getQuestions() == null ? null : questions.build(input.getQuestions());
+        questions.requireTotal(drafts == null ? current : drafts, input.getMaxScore());
+        // Once published, students may already be working: content and answer key are frozen and
+        // the window can only grow. The password and late policy stay adjustable.
         if (h.getStatus() == HomeworkStatus.PUBLISHED &&
                 (!Objects.equals(h.getTitle(), input.getTitle().trim())
                  || !Objects.equals(h.getInstructions(), input.getInstructions().trim())
                  || !Objects.equals(h.getResourceUrl(), url)
                  || input.getDueAt().toInstant().isBefore(h.getDueAt().toInstant())
-                 || input.getMaxScore().compareTo(h.getMaxScore()) < 0))
+                 || input.getMaxScore().compareTo(h.getMaxScore()) < 0
+                 || opensLater(h.getOpenAt(), input.getOpenAt())
+                 || (drafts != null && !questions.sameContent(current, drafts))))
             throw new BusinessException(ErrorCode.HOMEWORK_PUBLISHED_EDIT_RESTRICTED);
-        var before = HomeworkResponse.from(h, true);
+        var before = HomeworkResponse.from(h, true, questions.responses(current, true));
         apply(h, input);
+        if (input.getAllowLateSubmission() != null) h.setAllowLateSubmission(input.getAllowLateSubmission());
+        if (drafts != null && h.getStatus() == HomeworkStatus.DRAFT) current = questions.replace(id, drafts);
         homeworks.flush();
-        var response = HomeworkResponse.from(h, true);
+        var response = HomeworkResponse.from(h, true, questions.responses(current, true));
         audit.homework(id, actor, "UPDATE", before, response);
         return response;
     }
@@ -83,14 +105,19 @@ public class HomeworkService {
         homeworks.flush();
         var response = HomeworkResponse.from(h, true);
         audit.homework(id, actor, "STATUS", before, response);
+        if (target == HomeworkStatus.PUBLISHED) notifyStudents(context.session(), h);
         return response;
     }
 
+    /** Students see the questions only after starting, so the password actually guards them. */
     @Transactional(readOnly = true)
     public HomeworkResponse get(Long id, User actor) {
         var context = access.find(id);
         access.requireVisible(context, actor);
-        return HomeworkResponse.from(context.homework(), !access.isStudent(actor));
+        Homework h = context.homework();
+        if (!access.isStudent(actor)) return HomeworkResponse.from(h, true, questions.responses(questions.of(id), true));
+        boolean started = submissions.findByHomeworkIdAndStudentId(id, actor.getId()).isPresent();
+        return HomeworkResponse.from(h, false, started ? questions.responses(questions.of(id), false) : null);
     }
 
     @Transactional(readOnly = true)
@@ -115,12 +142,44 @@ public class HomeworkService {
                         row.getHomework(), row.getSession(), row.getSubmission(), actor.getId())));
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<TutorHomeworkResponse> listForTutor(int page, int size, User actor) {
+        access.pageable(page, size);
+        return PageResponse.from(homeworks.findTutorHomeworks(actor.getId(), PageRequest.of(page, size))
+                .map(TutorHomeworkResponse::from));
+    }
+
     private void apply(Homework h, HomeworkRequest input) {
+        if (input.getOpenAt() != null && !input.getOpenAt().toInstant().isBefore(input.getDueAt().toInstant()))
+            throw new BusinessException(ErrorCode.HOMEWORK_INVALID_OPEN_TIME);
         h.setTitle(input.getTitle().trim());
         h.setInstructions(input.getInstructions().trim());
         h.setResourceUrl(access.resourceUrl(input.getResourceUrl()));
+        h.setOpenAt(input.getOpenAt());
         h.setDueAt(input.getDueAt());
         h.setMaxScore(input.getMaxScore());
+        if (input.getAccessPassword() != null) {
+            String password = input.getAccessPassword().trim();
+            if (!password.isEmpty() && password.length() < 4) throw new BusinessException(ErrorCode.HOMEWORK_WEAK_PASSWORD);
+            h.setAccessPasswordHash(password.isEmpty() ? null : passwordEncoder.encode(password));
+        }
         h.setUpdatedAt(access.now());
+    }
+
+    private static boolean opensLater(OffsetDateTime current, OffsetDateTime requested) {
+        return requested != null && (current == null || requested.toInstant().isAfter(current.toInstant()));
+    }
+
+    private void notifyStudents(Session session, Homework h) {
+        String message = "Hạn nộp " + notifications.formatTime(h.getDueAt())
+                + (h.getOpenAt() != null && h.getOpenAt().toInstant().isAfter(h.getPublishedAt().toInstant())
+                        ? ", mở làm bài từ " + notifications.formatTime(h.getOpenAt()) : "")
+                + (h.getAccessPasswordHash() != null ? ". Cần mật khẩu do gia sư cung cấp để làm bài." : ".");
+        learning.findByClassGroupIdAndStatusOrderByStudentIdAscIdAsc(session.getClassGroupId(), LearningScheduleStatus.ACTIVE)
+                .stream()
+                .filter(row -> !row.getStartDate().isAfter(session.getSessionDate()) && !row.getEndDate().isBefore(session.getSessionDate()))
+                .map(LearningSchedule::getStudentId).distinct()
+                .forEach(studentId -> notifications.send(studentId, "HOMEWORK_PUBLISHED", "Bài tập mới: " + h.getTitle(),
+                        message, "/student/homeworks/" + h.getId()));
     }
 }

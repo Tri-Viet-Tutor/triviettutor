@@ -54,9 +54,13 @@ public class HomeworkAccessService {
     public boolean isAdmin(User user) { return "ROLE_ADMIN".equals(user.getRole()); }
     public boolean isStudent(User user) { return "ROLE_STUDENT".equals(user.getRole()); }
 
+    /** The tutor who currently teaches the session (a substitute takes precedence). */
+    public Long tutorOf(Session s) {
+        return s.getActualTutorId() != null ? s.getActualTutorId() : s.getScheduledTutorId();
+    }
+
     public void requireWriter(Session s, User actor) {
-        Long tutor = s.getActualTutorId() != null ? s.getActualTutorId() : s.getScheduledTutorId();
-        if (!isAdmin(actor) && (!"ROLE_TUTOR".equals(actor.getRole()) || !Objects.equals(tutor, actor.getId())))
+        if (!isAdmin(actor) && (!"ROLE_TUTOR".equals(actor.getRole()) || !Objects.equals(tutorOf(s), actor.getId())))
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
     }
 
@@ -87,11 +91,21 @@ public class HomeworkAccessService {
             throw new BusinessException(ErrorCode.HOMEWORK_DEADLINE_PASSED);
     }
 
+    /** Student work is accepted from openAt while PUBLISHED; after dueAt only when late work is allowed. */
     public void requireAccepting(Context context) {
         requireSessionOpen(context.session());
-        if (context.homework().getStatus() != HomeworkStatus.PUBLISHED)
+        Homework h = context.homework();
+        if (h.getStatus() != HomeworkStatus.PUBLISHED)
             throw new BusinessException(ErrorCode.HOMEWORK_NOT_ACCEPTING);
-        requireBeforeDeadline(context.homework());
+        if (h.getOpenAt() != null && clock.instant().isBefore(h.getOpenAt().toInstant()))
+            throw new BusinessException(ErrorCode.HOMEWORK_NOT_OPEN);
+        if (!h.isAllowLateSubmission()) requireBeforeDeadline(h);
+    }
+
+    /** Seconds past dueAt (at least 1 once the deadline is reached), or null when on time. */
+    public Long lateSeconds(Homework h) {
+        Instant now = clock.instant(), due = h.getDueAt().toInstant();
+        return now.isBefore(due) ? null : Math.max(1, Duration.between(due, now).getSeconds());
     }
 
     public void requireVersion(long current, Long provided) {

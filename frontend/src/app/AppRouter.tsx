@@ -54,6 +54,9 @@ import { TutorSchedulePage } from "@/pages/tutor/TutorSchedulePage";
 import { TutorAvailabilityPage } from "@/pages/tutor/TutorAvailabilityPage";
 import { TutorLeavePage } from "@/pages/tutor/TutorLeavePage";
 import { TutorPayrollPage } from "@/pages/tutor/TutorPayrollPage";
+import { TutorHomeworksPage } from "@/pages/tutor/TutorHomeworksPage";
+import { TutorHomeworkNewPage } from "@/pages/tutor/TutorHomeworkNewPage";
+import { TutorHomeworkDetailPage } from "@/pages/tutor/TutorHomeworkDetailPage";
 
 // Trang học viên
 import { StudentHomePage } from "@/pages/student/StudentHomePage";
@@ -63,6 +66,8 @@ import { StudentCheckoutPage } from "@/pages/student/StudentCheckoutPage";
 import { StudentWalletPage } from "@/pages/student/StudentWalletPage";
 import { StudentLeavePage } from "@/pages/student/StudentLeavePage";
 import { StudentEnrollmentsPage } from "@/pages/student/StudentEnrollmentsPage";
+import { StudentHomeworksPage } from "@/pages/student/StudentHomeworksPage";
+import { StudentHomeworkPage } from "@/pages/student/StudentHomeworkPage";
 import { ProfilePage } from "@/pages/dashboard/ProfilePage";
 
 // Phòng học trực tuyến LiveKit
@@ -127,6 +132,9 @@ export function AppRouter() {
               <Route path={ROUTES.tutorAvailability} element={<TutorAvailabilityPage />} />
               <Route path={ROUTES.tutorLeave} element={<TutorLeavePage />} />
               <Route path={ROUTES.tutorPayroll} element={<TutorPayrollPage />} />
+              <Route path={ROUTES.tutorHomeworks} element={<TutorHomeworksPage />} />
+              <Route path={ROUTES.tutorHomeworkNew} element={<TutorHomeworkNewPage />} />
+              <Route path={ROUTES.tutorHomeworkDetail} element={<TutorHomeworkDetailPage />} />
               <Route path={ROUTES.tutorProfile} element={<ProfilePage />} />
             </Route>
           </Route>
@@ -145,6 +153,8 @@ export function AppRouter() {
               <Route path={ROUTES.studentWallet} element={<StudentWalletPage />} />
               <Route path={ROUTES.studentLeave} element={<StudentLeavePage />} />
               <Route path={ROUTES.studentEnrollments} element={<StudentEnrollmentsPage />} />
+              <Route path={ROUTES.studentHomeworks} element={<StudentHomeworksPage />} />
+              <Route path={ROUTES.studentHomeworkDetail} element={<StudentHomeworkPage />} />
               <Route path={ROUTES.studentProfile} element={<ProfilePage />} />
             </Route>
           </Route>

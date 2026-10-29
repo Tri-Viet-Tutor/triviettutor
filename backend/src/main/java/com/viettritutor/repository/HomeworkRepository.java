@@ -56,6 +56,31 @@ public interface HomeworkRepository extends JpaRepository<Homework, Long> {
             @Param("status") SubmissionStatus status, @Param("from") OffsetDateTime from,
             @Param("to") OffsetDateTime to, Pageable pageable);
 
+    interface TutorHomeworkView {
+        Homework getHomework();
+        Session getSession();
+        long getSubmittedCount();
+        long getGradedCount();
+    }
+
+    // The effective tutor (substitute first) owns the homework, matching HomeworkAccessService.requireWriter.
+    @Query(value = """
+            select h as homework, session as session,
+            (select count(s.id) from HomeworkSubmission s where s.homeworkId = h.id
+                and s.status = com.viettritutor.enums.SubmissionStatus.SUBMITTED) as submittedCount,
+            (select count(s.id) from HomeworkSubmission s where s.homeworkId = h.id
+                and s.status = com.viettritutor.enums.SubmissionStatus.GRADED) as gradedCount
+            from Homework h
+            join Session session on session.id = h.sessionId
+            where coalesce(session.actualTutorId, session.scheduledTutorId) = :tutorId
+            order by h.dueAt desc, h.id desc
+            """, countQuery = """
+            select count(h.id) from Homework h
+            join Session session on session.id = h.sessionId
+            where coalesce(session.actualTutorId, session.scheduledTutorId) = :tutorId
+            """)
+    Page<TutorHomeworkView> findTutorHomeworks(@Param("tutorId") Long tutorId, Pageable pageable);
+
     @Query("select h.sessionId from Homework h where h.id = :id")
     Optional<Long> findSessionId(@Param("id") Long id);
     @Lock(LockModeType.PESSIMISTIC_WRITE)

@@ -5,6 +5,7 @@ import { FOCUS_RING as FOCUS, PORTAL_SURFACE } from "@/constants/classNames";
 import { ROLE_NAME } from "@/constants/labels";
 import { ROUTES } from "@/constants/routes";
 import { AccountMenu } from "@/components/dashboard/AccountMenu";
+import { NotificationBell } from "@/components/dashboard/NotificationBell";
 import { PortalNav } from "@/components/dashboard/PortalNav";
 import { ChatWidget } from "@/components/assistant/ChatWidget";
 import { formatLongDate } from "@/utils/sessions";
@@ -52,13 +53,16 @@ export function PortalLayout({ areaLabel, homeTo, profileTo, navItems }: PortalL
               {formatLongDate(startOfToday())}
             </p>
 
-            <AccountMenu
-              fullName={user?.fullName ?? ""}
-              roleName={roleName}
-              email={user?.email}
-              profileTo={profileTo}
-              onLogout={handleLogout}
-            />
+            <div className="flex items-center gap-2.5">
+              <NotificationBell />
+              <AccountMenu
+                fullName={user?.fullName ?? ""}
+                roleName={roleName}
+                email={user?.email}
+                profileTo={profileTo}
+                onLogout={handleLogout}
+              />
+            </div>
           </div>
         </header>
 

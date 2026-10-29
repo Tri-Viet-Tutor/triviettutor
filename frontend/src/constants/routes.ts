@@ -42,6 +42,10 @@ export const ROUTES = {
   tutorProfile: "/tutor/profile",
   /** Thu nhập theo tháng */
   tutorPayroll: "/tutor/payroll",
+  /** Bài tập / bài kiểm tra: danh sách, tạo mới (?buoi=<mã buổi>), soạn + chấm một bài */
+  tutorHomeworks: "/tutor/homeworks",
+  tutorHomeworkNew: "/tutor/homeworks/new",
+  tutorHomeworkDetail: "/tutor/homeworks/:homeworkId",
   /** Khu học viên: tổng quan, lịch học, mua khóa học + thanh toán, xin nghỉ, hồ sơ */
   student: "/student",
   studentSchedule: "/student/schedule",
@@ -52,6 +56,9 @@ export const ROUTES = {
   studentCheckout: "/student/checkout",
   studentWallet: "/student/wallet",
   studentLeave: "/student/leave",
+  /** Bài tập của các lớp đang học, và trang làm một bài (nhập mật khẩu, làm, nộp, xem điểm) */
+  studentHomeworks: "/student/homeworks",
+  studentHomeworkDetail: "/student/homeworks/:homeworkId",
   /** Các lớp đã đóng học phí */
   studentEnrollments: "/student/classes",
   studentProfile: "/student/profile",
@@ -59,6 +66,11 @@ export const ROUTES = {
   classroom: "/classroom/:sessionId",
   forbidden: "/403",
 } as const;
+
+/** Trang một bài tập của gia sư hoặc học viên */
+export function homeworkPath(homeworkId: number, role: "tutor" | "student"): string {
+  return (role === "tutor" ? ROUTES.tutorHomeworkDetail : ROUTES.studentHomeworkDetail).replace(":homeworkId", String(homeworkId));
+}
 
 export function courseDetailPath(slug: string, student = false): string {
   return (student ? ROUTES.studentCourseDetail : ROUTES.courseDetail).replace(":courseSlug", encodeURIComponent(slug));

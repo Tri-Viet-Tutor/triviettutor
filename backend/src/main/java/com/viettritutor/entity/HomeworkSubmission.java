@@ -36,6 +36,12 @@ public class HomeworkSubmission {
     private OffsetDateTime updatedAt;
     @Column(name = "submitted_at")
     private OffsetDateTime submittedAt;
+    @Column(name = "late_seconds")
+    private Long lateSeconds;
+    @Column(name = "auto_score", precision = 10, scale = 2)
+    private BigDecimal autoScore;
+    @Column(name = "auto_graded", nullable = false)
+    private boolean autoGraded;
     @Column(precision = 10, scale = 2)
     private BigDecimal score;
     @Column(length = 5000)
