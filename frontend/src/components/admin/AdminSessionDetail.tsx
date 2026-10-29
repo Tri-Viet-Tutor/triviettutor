@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
+import { AdminActualTutorForm } from "@/components/admin/AdminActualTutorForm";
 import { AdminAttendancePanel } from "@/components/admin/AdminAttendancePanel";
 import { ReasonForm } from "@/components/admin/ReasonForm";
 import { AuthNotice } from "@/components/auth/AuthNotice";
@@ -16,11 +17,13 @@ import type { AdminSessionDetailProps } from "@/interfaces/admin";
 
 export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
   const refresh = useRefreshAdmin();
-  const { nameOf } = useUserDirectory();
+  const { nameOf, tutors } = useUserDirectory();
 
   const tutorLabel = (tutorId: number) => [nameOf(tutorId), `(#${tutorId})`].filter(Boolean).join(" ");
   const [url, setUrl] = useState(session.meetingUrl ?? "");
   const [cancelOpen, setCancelOpen] = useState(false);
+  // Form đổi gia sư thực dạy đang mở?
+  const [tutorOpen, setTutorOpen] = useState(false);
 
   const saveUrl = useMutation({ mutationFn: () => setMeetingUrl(session.sessionId, url.trim()), onSuccess: () => void refresh() });
   const cancel = useMutation({
@@ -109,7 +112,21 @@ export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
         <section aria-label="Điểm danh">
           <h3 className="mb-2.5 text-[15.5px] font-bold text-brand-navy">Điểm danh</h3>
           {started ? (
-            <AdminAttendancePanel session={session} now={now} nameOf={nameOf} />
+            <div className="space-y-3">
+              <AdminAttendancePanel session={session} now={now} nameOf={nameOf} />
+              {tutorOpen ? (
+                <AdminActualTutorForm session={session} tutors={tutors} onDone={() => setTutorOpen(false)} />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setTutorOpen(true)}
+                  className={`inline-flex items-center gap-1 text-[14px] ${PORTAL_TEXT_LINK}`}
+                >
+                  <Icon name="swap_horiz" className="text-[18px]" />
+                  Đổi gia sư thực dạy
+                </button>
+              )}
+            </div>
           ) : (
             <p className="text-[14.5px] text-brand-muted">Buổi học chưa bắt đầu nên chưa điểm danh được.</p>
           )}

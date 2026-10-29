@@ -67,6 +67,15 @@ export interface AdminSessionDetailProps {
   now: Date;
 }
 
+/** Props của AdminActualTutorForm */
+export interface AdminActualTutorFormProps {
+  session: SessionResponse;
+  /** Danh sách gia sư để chọn */
+  tutors: { id: number; fullName: string }[];
+  /** Đóng form */
+  onDone: () => void;
+}
+
 /** Props của AdminTodoPanel */
 export interface AdminTodoPanelProps {
   /** Tên gọi của quản trị viên, dùng trong câu nói của chú kiến */

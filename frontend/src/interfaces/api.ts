@@ -853,12 +853,52 @@ export interface PayrollLineResponse {
   /** Buổi được tính lương */
   validSessions: number;
   cancelledSessions: number;
-  /** Buổi đã có người dạy thay */
+  /** Buổi của gia sư này nhưng do gia sư khác dạy thay (được dạy thay) */
   substitutedOutSessions: number;
   /** Buổi chưa chốt (chưa khóa điểm danh / chưa xác nhận đã dạy) */
   unfinalizedSessions: number;
   sessionPay: number;
   totalPay: number;
+  /** Đối soát từng buổi của tháng (backend luôn trả kèm) */
+  reconciliation?: TeachingPeriodSummary | null;
+}
+
+/** dto.attendance.TeachingSessionResponse — một buổi trong bảng đối soát lương */
+export interface TeachingSessionResponse {
+  sessionId: number;
+  classGroupId: number;
+  originalSessionId: number | null;
+  date: IsoDate;
+  startTime: IsoTime;
+  endTime: IsoTime;
+  status: SessionStatus;
+  scheduledTutorId: number | null;
+  actualTutorId: number | null;
+  taughtByTutorId: number | null;
+  teachingConfirmedBy: number | null;
+  teachingConfirmedAt: IsoDateTime | null;
+  attendanceLocked: boolean;
+  needsAdminReview: boolean;
+  cancellationReason: string | null;
+  scheduledTutorAtCancellation: number | null;
+  actualTutorAtCancellation: number | null;
+}
+
+/** dto.attendance.TeachingPeriodSummary — các buổi của một gia sư trong tháng, chia theo nhóm */
+export interface TeachingPeriodSummary {
+  tutorId: number;
+  /** "2026-10" */
+  month: string;
+  completed: TeachingSessionResponse[];
+  cancelled: TeachingSessionResponse[];
+  substitutedOut: TeachingSessionResponse[];
+  unfinalized: TeachingSessionResponse[];
+}
+
+/** dto.attendance.ActualTutorChange — PATCH /admin/sessions/{sessionId}/actual-tutor */
+export interface ActualTutorChange {
+  tutorId: number;
+  reason: string;
 }
 
 /** dto.payroll.PayrollResponse — GET /admin/payroll/{year}/{month} */
