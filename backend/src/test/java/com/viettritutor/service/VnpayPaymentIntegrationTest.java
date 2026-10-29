@@ -66,6 +66,7 @@ class VnpayPaymentIntegrationTest {
     @Autowired MutableClock clock;
     @Autowired UserRepository users;
     @Autowired CourseRepository courses;
+    @Autowired SubjectService subjects;
     @Autowired ClassGroupRepository classes;
     @Autowired SessionRepository sessions;
     @Autowired PaymentIntentRepository intents;
@@ -86,7 +87,7 @@ class VnpayPaymentIntegrationTest {
                 .fullName("Sandbox test").password(UUID.randomUUID().toString()).role("ROLE_"+role).enabled(true).build());
     }
     ClassGroup newClass() {
-        Course course = courses.saveAndFlush(Course.builder().name("Sandbox fixture").subject("MATH")
+        Course course = courses.saveAndFlush(Course.builder().name("Sandbox fixture").subject("MATH").subjectId(subjects.resolve("MATH").getId())
                 .gradeLevel(GradeLevel.GRADE_11).basePrice1on1(new BigDecimal("100000"))
                 .totalSessions(2).durationMinutes(120).active(true).build());
         LocalDate start = LocalDate.now(clock).plusWeeks(2).with(java.time.temporal.TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY));
@@ -244,7 +245,7 @@ class VnpayPaymentIntegrationTest {
     }
 
     ClassGroup newGroupClass(BigDecimal basePrice) {
-        Course course = courses.saveAndFlush(Course.builder().name("Group fixture").subject("MATH")
+        Course course = courses.saveAndFlush(Course.builder().name("Group fixture").subject("MATH").subjectId(subjects.resolve("MATH").getId())
                 .gradeLevel(GradeLevel.GRADE_11).basePrice1on1(basePrice)
                 .totalSessions(2).durationMinutes(120).active(true).build());
         LocalDate start = LocalDate.now(clock).plusWeeks(3).with(java.time.temporal.TemporalAdjusters.nextOrSame(DayOfWeek.TUESDAY));
