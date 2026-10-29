@@ -109,6 +109,25 @@ class AccountLockControllerTest {
     }
 
     @Test
+    void tutorCreatedByAdminCanLogInImmediately() throws Exception {
+        User admin = createUser("create-admin@example.test", "ROLE_ADMIN");
+
+        mvc.perform(post("/api/v1/admin/users/tutors").header("Authorization", bearer(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"New.Tutor@example.test","password":"tutorPass123","fullName":"New Tutor",
+                                 "baseSalary":5000000,"sessionRate":200000}
+                                """))
+                .andExpect(status().isCreated());
+
+        mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"new.tutor@example.test\",\"password\":\"tutorPass123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.data.user.role").value("ROLE_TUTOR"));
+    }
+
+    @Test
     void passwordResetDoesNotUnlockAccount() throws Exception {
         User student = createUser("reset-locked@example.test", "ROLE_STUDENT");
         student.setLocked(true);

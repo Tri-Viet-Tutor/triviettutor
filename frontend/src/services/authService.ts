@@ -76,6 +76,9 @@ export function backendOrigin(): string {
   return window.location.origin;
 }
 
+/** Chỉ hiện nút Google khi VITE_GOOGLE_LOGIN_ENABLED=true (backend đã có GOOGLE_CLIENT_ID / SECRET thật) */
+export const GOOGLE_LOGIN_ENABLED = import.meta.env.VITE_GOOGLE_LOGIN_ENABLED === "true";
+
 /** Địa chỉ bắt đầu đăng nhập Google của Spring Security; xong backend chuyển về /oauth2/success#token=… */
 export function googleLoginUrl(): string {
   return `${backendOrigin()}/oauth2/authorization/google`;

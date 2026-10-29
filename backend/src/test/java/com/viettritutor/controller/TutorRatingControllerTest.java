@@ -82,12 +82,21 @@ class TutorRatingControllerTest {
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.errorCode").value("RATING_NOT_ELIGIBLE"));
 
-        // Cancelled enrollment or a terminated assignment does not count.
+        // A cancelled enrollment does not count.
         teach(tutor, student, 601L, EnrollmentStatus.CANCELLED, AssignmentStatus.ACTIVE);
-        teach(tutor, student, 602L, EnrollmentStatus.ACTIVE, AssignmentStatus.TERMINATED);
         mvc.perform(rate(tutor, student, "{\"rating\":5}"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.errorCode").value("RATING_NOT_ELIGIBLE"));
+    }
+
+    @Test
+    void replacedTutorWithTerminatedAssignmentCanStillBeRated() throws Exception {
+        User tutor = createUser("former-tutor@example.test", "ROLE_TUTOR");
+        User student = createUser("former-student@example.test", "ROLE_STUDENT");
+        teach(tutor, student, 602L, EnrollmentStatus.ACTIVE, AssignmentStatus.TERMINATED);
+
+        mvc.perform(rate(tutor, student, "{\"rating\":4}"))
+                .andExpect(status().isCreated());
     }
 
     @Test

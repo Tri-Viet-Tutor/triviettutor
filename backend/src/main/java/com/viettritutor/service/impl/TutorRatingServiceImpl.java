@@ -7,7 +7,6 @@ import com.viettritutor.dto.rating.TutorRatingResponse;
 import com.viettritutor.dto.rating.TutorRatingSummaryResponse;
 import com.viettritutor.entity.TutorRating;
 import com.viettritutor.entity.User;
-import com.viettritutor.enums.AssignmentStatus;
 import com.viettritutor.enums.EnrollmentStatus;
 import com.viettritutor.repository.EnrollmentRepository;
 import com.viettritutor.repository.TutorRatingRepository;
@@ -49,10 +48,10 @@ public class TutorRatingServiceImpl implements TutorRatingService {
         }
 
         // Only students actually taught by this tutor may rate: an ACTIVE enrollment in a
-        // class where the tutor holds the ACTIVE assignment. Enrollments stay ACTIVE after
-        // the class completes, so finished classes are covered too.
+        // class the tutor is or was assigned to (a replaced tutor still taught the class).
+        // Enrollments stay ACTIVE after the class completes, so finished classes count too.
         boolean taught = enrollmentRepository.existsStudentTaughtByTutor(
-                student.getId(), tutorId, EnrollmentStatus.ACTIVE, AssignmentStatus.ACTIVE);
+                student.getId(), tutorId, EnrollmentStatus.ACTIVE);
         if (!taught) {
             throw new BusinessException(ErrorCode.RATING_NOT_ELIGIBLE);
         }

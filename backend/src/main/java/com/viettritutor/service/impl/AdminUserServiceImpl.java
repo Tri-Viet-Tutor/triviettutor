@@ -63,6 +63,8 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName().trim())
                 .role("ROLE_TUTOR")
+                // Admin-created accounts are usable immediately; no email OTP step.
+                .enabled(true)
                 .build();
         try {
             userRepository.saveAndFlush(user);

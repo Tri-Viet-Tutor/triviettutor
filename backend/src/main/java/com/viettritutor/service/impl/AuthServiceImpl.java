@@ -154,11 +154,10 @@ public class AuthServiceImpl implements AuthService {
         }
 
         if (!otpMatches(verification.getOtpCode(), request.getOtp())) {
-            verification.setFailedAttempts(verification.getFailedAttempts() + 1);
-            emailVerificationRepository.save(verification);
-            throw new BusinessException(verification.getFailedAttempts() >= MAX_OTP_ATTEMPTS
-                    ? ErrorCode.OTP_ATTEMPTS_EXCEEDED
-                    : ErrorCode.INVALID_OTP);
+            // Atomic conditional UPDATE: concurrent guesses cannot exceed the limit.
+            int updated = emailVerificationRepository.incrementFailedAttempts(verification.getId(), MAX_OTP_ATTEMPTS);
+            boolean exhausted = updated == 0 || verification.getFailedAttempts() + 1 >= MAX_OTP_ATTEMPTS;
+            throw new BusinessException(exhausted ? ErrorCode.OTP_ATTEMPTS_EXCEEDED : ErrorCode.INVALID_OTP);
         }
 
         if (user.isLocked()) {

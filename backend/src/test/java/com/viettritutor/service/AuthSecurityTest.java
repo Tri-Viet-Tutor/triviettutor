@@ -91,15 +91,30 @@ class AuthSecurityTest {
         when(emailVerificationRepository.findTopByEmailAndVerifiedFalseOrderByCreatedAtDesc(user.getEmail()))
                 .thenReturn(Optional.of(code));
 
+        when(emailVerificationRepository.incrementFailedAttempts(9L, 5)).thenReturn(1);
+
         assertCode(ErrorCode.INVALID_OTP, () -> authService.verifyEmail(otpRequest(user, "000000")));
-        assertEquals(4, code.getFailedAttempts());
+        code.setFailedAttempts(4);
         assertCode(ErrorCode.OTP_ATTEMPTS_EXCEEDED, () -> authService.verifyEmail(otpRequest(user, "000001")));
-        assertEquals(5, code.getFailedAttempts());
+        verify(emailVerificationRepository, times(2)).incrementFailedAttempts(9L, 5);
 
         // Even the correct code is refused now; a resend is required.
+        code.setFailedAttempts(5);
         assertCode(ErrorCode.OTP_ATTEMPTS_EXCEEDED, () -> authService.verifyEmail(otpRequest(user, "123456")));
         assertFalse(user.isEnabled());
-        verify(emailVerificationRepository, times(2)).save(code);
+        verify(emailVerificationRepository, never()).save(any());
+    }
+
+    @Test
+    void concurrentGuessThatLosesTheRaceIsReportedAsExceeded() {
+        User user = unverifiedUser();
+        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+        when(emailVerificationRepository.findTopByEmailAndVerifiedFalseOrderByCreatedAtDesc(user.getEmail()))
+                .thenReturn(Optional.of(otp("123456", 1, LocalDateTime.now().minusMinutes(1))));
+        // Another request already used the remaining attempts: the conditional UPDATE matches no row.
+        when(emailVerificationRepository.incrementFailedAttempts(9L, 5)).thenReturn(0);
+
+        assertCode(ErrorCode.OTP_ATTEMPTS_EXCEEDED, () -> authService.verifyEmail(otpRequest(user, "000000")));
     }
 
     @Test
