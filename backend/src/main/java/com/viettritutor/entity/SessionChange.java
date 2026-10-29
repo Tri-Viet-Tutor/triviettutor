@@ -27,7 +27,8 @@ public class SessionChange {
     @Column(nullable = false, length = 20)
     private SessionChangeType action;
 
-    @Column(name = "actor_id", nullable = false)
+    // NULL only for automated CANCEL changes (V24 chk_session_changes_actor).
+    @Column(name = "actor_id")
     private Long actorId;
 
     @Column(nullable = false, length = 1000)

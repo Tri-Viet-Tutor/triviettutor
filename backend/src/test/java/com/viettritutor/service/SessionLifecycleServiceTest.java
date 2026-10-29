@@ -1,9 +1,10 @@
 package com.viettritutor.service;
 
+import com.viettritutor.common.exception.BusinessException;
+import com.viettritutor.common.exception.ErrorCode;
 import com.viettritutor.entity.ClassGroup;
 import com.viettritutor.entity.LeaveRequest;
 import com.viettritutor.entity.Session;
-import com.viettritutor.entity.User;
 import com.viettritutor.enums.ClassStatus;
 import com.viettritutor.enums.ClassType;
 import com.viettritutor.enums.LeaveResolution;
@@ -11,7 +12,6 @@ import com.viettritutor.enums.SessionChangeType;
 import com.viettritutor.enums.SessionStatus;
 import com.viettritutor.repository.ClassGroupRepository;
 import com.viettritutor.repository.SessionRepository;
-import com.viettritutor.repository.UserRepository;
 import com.viettritutor.service.impl.SessionLifecycleServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +36,6 @@ class SessionLifecycleServiceTest {
     /** 12:00 on 04/10/2026 in Vietnam */
     private static final Clock CLOCK = Clock.fixed(
             Instant.parse("2026-10-04T05:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
-    private static final Long ADMIN_ID = 1L;
 
     @Mock
     private SessionRepository repository;
@@ -53,21 +52,18 @@ class SessionLifecycleServiceTest {
     @Mock
     private SessionOperationSupport operations;
     @Mock
-    private UserRepository userRepository;
+    private ClassScheduleService classSchedule;
+    @Mock
+    private PayrollGuard payrollGuard;
 
     private SessionLifecycleService service;
-    private final User admin = User.builder().id(ADMIN_ID).role("ROLE_ADMIN").build();
 
     @BeforeEach
     void setUp() {
         service = new SessionLifecycleServiceImpl(
                 repository, CLOCK, Optional.of(classLifecycle), eventPublisher,
                 classGroupRepository, Optional.of(classAuditService), classQueryService, operations,
-                userRepository, new TransactionTemplate(mock(PlatformTransactionManager.class)));
-    }
-
-    private void adminExists() {
-        when(userRepository.findFirstByRoleOrderByIdAsc("ROLE_ADMIN")).thenReturn(Optional.of(admin));
+                classSchedule, Optional.of(payrollGuard), new TransactionTemplate(mock(PlatformTransactionManager.class)));
     }
 
     // ---------------------------------------------------------------- session advancement
@@ -110,7 +106,6 @@ class SessionLifecycleServiceTest {
 
     @Test
     void assignedClassMovesToInProgressWhenFirstOriginalSessionStarted() {
-        adminExists();
         ClassGroup assigned = groupClass(10L, ClassStatus.ASSIGNED, LocalDate.of(2026, 10, 1));
         when(classGroupRepository.findIdsByStatus(ClassStatus.ASSIGNED)).thenReturn(List.of(10L));
         when(classGroupRepository.findForUpdate(10L)).thenReturn(Optional.of(assigned));
@@ -123,7 +118,7 @@ class SessionLifecycleServiceTest {
         assertThat(started).isEqualTo(1);
         assertThat(assigned.getStatus()).isEqualTo(ClassStatus.IN_PROGRESS);
         verify(classGroupRepository).save(assigned);
-        verify(classAuditService).record(eq(10L), eq(ADMIN_ID), eq("STATUS"),
+        verify(classAuditService).record(eq(10L), isNull(), eq("AUTO_STATUS"),
                 argThat(details -> details instanceof Map<?, ?> map
                         && "IN_PROGRESS".equals(map.get("to")) && Boolean.TRUE.equals(map.get("automated"))));
     }
@@ -162,7 +157,6 @@ class SessionLifecycleServiceTest {
 
     @Test
     void classStartContinuesWithOtherClassesWhenOneFails() {
-        adminExists();
         ClassGroup assigned = groupClass(11L, ClassStatus.ASSIGNED, LocalDate.of(2026, 10, 1));
         when(classGroupRepository.findIdsByStatus(ClassStatus.ASSIGNED)).thenReturn(List.of(10L, 11L));
         when(classGroupRepository.findForUpdate(10L)).thenThrow(new IllegalStateException("lock timeout"));
@@ -178,14 +172,13 @@ class SessionLifecycleServiceTest {
 
     @Test
     void pendingRescheduleSessionIsCancelledAtStartWithLeaveResolvedAndAudited() {
-        adminExists();
         ClassGroup group = groupClass(10L, ClassStatus.IN_PROGRESS, LocalDate.of(2026, 9, 1));
         Session pending = session(5L, 3, LocalDate.of(2026, 10, 4), LocalTime.of(8, 0), SessionStatus.PENDING_RESCHEDULE);
         LeaveRequest groupNotice = LeaveRequest.builder().id(70L).sessionId(5L).affectsSession(false).build();
         LeaveRequest tutorLeave = LeaveRequest.builder().id(71L).sessionId(5L).affectsSession(true).build();
         var before = new SessionOperationSupport.Snapshot(SessionStatus.PENDING_RESCHEDULE, 9L, 9L);
-        when(repository.findIdsByStatusOnOrBefore(SessionStatus.PENDING_RESCHEDULE, LocalDate.of(2026, 10, 4)))
-                .thenReturn(List.of(5L));
+        when(repository.findByStatusAndSessionDateLessThanEqualOrderByIdAsc(
+                SessionStatus.PENDING_RESCHEDULE, LocalDate.of(2026, 10, 4))).thenReturn(List.of(pending));
         when(operations.loadAny(5L)).thenReturn(new SessionOperationSupport.Context(group, pending));
         when(operations.hasStarted(pending)).thenReturn(true);
         when(operations.snapshot(pending)).thenReturn(before);
@@ -197,36 +190,40 @@ class SessionLifecycleServiceTest {
         assertThat(pending.getStatus()).isEqualTo(SessionStatus.CANCELLED);
         verify(operations).lockSessionRow(pending);
         verify(operations).requireEditable(pending);
-        verify(operations).approve(eq(groupNotice), eq(LeaveResolution.CANCEL), eq(admin), anyString(), isNull());
-        verify(operations).approve(eq(tutorLeave), eq(LeaveResolution.CANCEL), eq(admin), anyString(), isNull());
-        verify(operations).audit(eq(pending), eq(before), eq(SessionChangeType.CANCEL), eq(admin),
-                anyString(), eq(71L), isNull());
+        verify(operations).approveAsSystem(eq(groupNotice), eq(LeaveResolution.CANCEL), anyString());
+        verify(operations).approveAsSystem(eq(tutorLeave), eq(LeaveResolution.CANCEL), anyString());
+        verify(operations).auditAsSystem(eq(pending), eq(before), eq(SessionChangeType.CANCEL), anyString(), eq(71L));
     }
 
     @Test
     void pendingRescheduleSessionThatHasNotStartedIsLeftAlone() {
-        adminExists();
         ClassGroup group = groupClass(10L, ClassStatus.IN_PROGRESS, LocalDate.of(2026, 9, 1));
         Session pending = session(5L, 3, LocalDate.of(2026, 10, 4), LocalTime.of(14, 0), SessionStatus.PENDING_RESCHEDULE);
-        when(repository.findIdsByStatusOnOrBefore(eq(SessionStatus.PENDING_RESCHEDULE), any())).thenReturn(List.of(5L));
+        when(repository.findByStatusAndSessionDateLessThanEqualOrderByIdAsc(eq(SessionStatus.PENDING_RESCHEDULE), any()))
+                .thenReturn(List.of(pending));
         when(operations.loadAny(5L)).thenReturn(new SessionOperationSupport.Context(group, pending));
         when(operations.hasStarted(pending)).thenReturn(false);
 
         assertThat(service.resolveExpiredPendingReschedules()).isZero();
 
         assertThat(pending.getStatus()).isEqualTo(SessionStatus.PENDING_RESCHEDULE);
-        verify(operations, never()).approve(any(), any(), any(), any(), any());
-        verify(operations, never()).audit(any(), any(), any(), any(), any(), any(), any());
+        verify(operations, never()).approveAsSystem(any(), any(), any());
+        verify(operations, never()).auditAsSystem(any(), any(), any(), any(), any());
     }
 
     @Test
-    void pendingRescheduleResolutionNeedsAnAuditActor() {
-        when(userRepository.findFirstByRoleOrderByIdAsc("ROLE_ADMIN")).thenReturn(Optional.empty());
+    void pendingRescheduleInFinalizedPayrollMonthIsSkippedQuietly() {
+        Session blocked = session(5L, 3, LocalDate.of(2026, 9, 30), LocalTime.of(8, 0), SessionStatus.PENDING_RESCHEDULE);
+        when(repository.findByStatusAndSessionDateLessThanEqualOrderByIdAsc(eq(SessionStatus.PENDING_RESCHEDULE), any()))
+                .thenReturn(List.of(blocked));
+        doThrow(new BusinessException(ErrorCode.PAYROLL_FINALIZED))
+                .when(payrollGuard).assertDateEditable(LocalDate.of(2026, 9, 30));
 
         assertThat(service.resolveExpiredPendingReschedules()).isZero();
+        assertThat(service.resolveExpiredPendingReschedules()).isZero();
 
+        assertThat(blocked.getStatus()).isEqualTo(SessionStatus.PENDING_RESCHEDULE);
         verifyNoInteractions(operations);
-        verify(repository, never()).findIdsByStatusOnOrBefore(any(), any());
     }
 
     // ---------------------------------------------------------------- completion
@@ -273,31 +270,25 @@ class SessionLifecycleServiceTest {
 
     @Test
     void deadlineEvaluation_zeroEnrollments_transitionsToCancelledCancelsSessionsAndAudits() {
-        adminExists();
         // Today is 2026-10-04. Deadline 2026-10-02 has passed.
         ClassGroup group = groupClass(100L, ClassStatus.ENROLLING, LocalDate.of(2026, 10, 2));
-        Session s1 = session(101L, 1, LocalDate.of(2026, 10, 5), LocalTime.of(8, 0), SessionStatus.SCHEDULED);
-        Session s2 = session(102L, 2, LocalDate.of(2026, 10, 7), LocalTime.of(8, 0), SessionStatus.SCHEDULED);
         enrolling(group);
         when(classQueryService.students(100L)).thenReturn(0L);
-        when(repository.findByClassGroupIdOrderBySessionNumberAsc(100L)).thenReturn(List.of(s1, s2));
 
         int transitioned = service.evaluateRegistrationDeadlines();
 
         assertThat(transitioned).isEqualTo(1);
         assertThat(group.getStatus()).isEqualTo(ClassStatus.CANCELLED);
-        assertThat(s1.getStatus()).isEqualTo(SessionStatus.CANCELLED);
-        assertThat(s2.getStatus()).isEqualTo(SessionStatus.CANCELLED);
+        verify(classSchedule).cancelClass(eq(group), isNull(), eq("0 enrollments at deadline"));
         verify(classGroupRepository).save(group);
-        verify(repository).saveAll(List.of(s1, s2));
-        verify(classAuditService).record(eq(100L), eq(ADMIN_ID), eq("CANCELLED"),
+        verify(classAuditService).record(eq(100L), isNull(), eq("AUTO_STATUS"),
                 argThat(details -> details instanceof Map<?, ?> map
+                        && "CANCELLED".equals(map.get("to")) && Boolean.TRUE.equals(map.get("automated"))
                         && "0 enrollments at deadline".equals(map.get("reason"))));
     }
 
     @Test
     void deadlineEvaluation_oneEnrollment_transitionsToFailedToOpenAndEmitsAudit() {
-        adminExists();
         ClassGroup group = groupClass(200L, ClassStatus.ENROLLING, LocalDate.of(2026, 10, 2));
         enrolling(group);
         when(classQueryService.students(200L)).thenReturn(1L);
@@ -307,19 +298,9 @@ class SessionLifecycleServiceTest {
         assertThat(transitioned).isEqualTo(1);
         assertThat(group.getStatus()).isEqualTo(ClassStatus.FAILED_TO_OPEN);
         verify(classGroupRepository).save(group);
-        verify(classAuditService).record(eq(200L), eq(ADMIN_ID), eq("FAILED_TO_OPEN"), anyMap());
-    }
-
-    @Test
-    void deadlineEvaluation_withoutAdminAccountStillTransitionsButSkipsAudit() {
-        ClassGroup group = groupClass(200L, ClassStatus.ENROLLING, LocalDate.of(2026, 10, 2));
-        enrolling(group);
-        when(classQueryService.students(200L)).thenReturn(1L);
-
-        assertThat(service.evaluateRegistrationDeadlines()).isEqualTo(1);
-
-        assertThat(group.getStatus()).isEqualTo(ClassStatus.FAILED_TO_OPEN);
-        verifyNoInteractions(classAuditService);
+        verify(classAuditService).record(eq(200L), isNull(), eq("AUTO_STATUS"),
+                argThat(details -> details instanceof Map<?, ?> map
+                        && "FAILED_TO_OPEN".equals(map.get("to")) && Boolean.TRUE.equals(map.get("automated"))));
     }
 
     @Test
@@ -337,17 +318,15 @@ class SessionLifecycleServiceTest {
 
     @Test
     void deadlineEvaluation_oneOnOneWithoutStudent_isCancelled() {
-        adminExists();
         ClassGroup oneOnOne = groupClass(310L, ClassStatus.ENROLLING, LocalDate.of(2026, 10, 2));
         oneOnOne.setClassType(ClassType.ONE_ON_ONE);
         enrolling(oneOnOne);
         when(classQueryService.students(310L)).thenReturn(0L);
-        when(repository.findByClassGroupIdOrderBySessionNumberAsc(310L)).thenReturn(List.of());
 
         assertThat(service.evaluateRegistrationDeadlines()).isEqualTo(1);
 
         assertThat(oneOnOne.getStatus()).isEqualTo(ClassStatus.CANCELLED);
-        verify(classAuditService).record(eq(310L), eq(ADMIN_ID), eq("CANCELLED"), anyMap());
+        verify(classAuditService).record(eq(310L), isNull(), eq("AUTO_STATUS"), anyMap());
     }
 
     @Test

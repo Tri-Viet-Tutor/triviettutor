@@ -22,6 +22,7 @@ public class ClassScheduleService {
     private final SessionOperationSupport operations;
     private final ClassAuditService audit;
     private final AttendanceRecordRepository attendance;
+    private final TutorAssignmentRepository assignments;
     private final Clock clock;
     private final Optional<PayrollGuard> payrollGuard;
 
@@ -92,6 +93,21 @@ public class ClassScheduleService {
         c.setEnrollmentDeadline(validDeadline);
     }
 
+    /**
+     * Cancels a class's open sessions and terminates its ACTIVE tutor assignment. Caller holds the class lock
+     * and sets the class status. A null actor means an automated (system) cancellation.
+     */
+    public void cancelClass(ClassGroup c, User actor, String reason) {
+        cancelSessions(c, actor, reason);
+        assignments.findByClassGroupIdAndStatus(c.getId(), AssignmentStatus.ACTIVE).ifPresent(a -> {
+            a.setStatus(AssignmentStatus.TERMINATED);
+            a.setTerminatedBy(actor == null ? null : actor.getId());
+            a.setTerminatedAt(OffsetDateTime.now(clock));
+            a.setTerminationReason(reason);
+        });
+    }
+
+    /** A null actor means an automated (system) cancellation. */
     public void cancelSessions(ClassGroup c, User actor, String reason) {
         for (Session s : sessions.findClassSessionsForUpdate(c.getId())) {
             if (s.getStatus() == SessionStatus.CANCELLED) continue;
@@ -103,9 +119,11 @@ public class ClassScheduleService {
             var before = operations.snapshot(s);
             s.setStatus(SessionStatus.CANCELLED);
             for (var leave : operations.pending(s.getId())) {
-                operations.approve(leave, LeaveResolution.CANCEL, actor, reason, null);
+                if (actor == null) operations.approveAsSystem(leave, LeaveResolution.CANCEL, reason);
+                else operations.approve(leave, LeaveResolution.CANCEL, actor, reason, null);
             }
-            operations.audit(s, before, SessionChangeType.CANCEL, actor, reason, null, null);
+            if (actor == null) operations.auditAsSystem(s, before, SessionChangeType.CANCEL, reason, null);
+            else operations.audit(s, before, SessionChangeType.CANCEL, actor, reason, null, null);
         }
     }
 

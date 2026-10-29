@@ -1,9 +1,9 @@
 package com.viettritutor.service.impl;
 
+import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.entity.ClassGroup;
 import com.viettritutor.entity.LeaveRequest;
 import com.viettritutor.entity.Session;
-import com.viettritutor.entity.User;
 import com.viettritutor.enums.ClassStatus;
 import com.viettritutor.enums.ClassType;
 import com.viettritutor.enums.LeaveResolution;
@@ -11,11 +11,12 @@ import com.viettritutor.enums.SessionChangeType;
 import com.viettritutor.enums.SessionStatus;
 import com.viettritutor.repository.ClassGroupRepository;
 import com.viettritutor.repository.SessionRepository;
-import com.viettritutor.repository.UserRepository;
 import com.viettritutor.service.ClassAuditService;
 import com.viettritutor.service.ClassLifecycle;
 import com.viettritutor.service.ClassQueryService;
+import com.viettritutor.service.ClassScheduleService;
 import com.viettritutor.service.ClassTeachingCompletedEvent;
+import com.viettritutor.service.PayrollGuard;
 import com.viettritutor.service.SessionLifecycleService;
 import com.viettritutor.service.SessionOperationSupport;
 import lombok.RequiredArgsConstructor;
@@ -29,9 +30,12 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -43,6 +47,9 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
 
     static final String EXPIRED_PENDING_REASON =
             "Automatically cancelled: no makeup or substitute was arranged before the session started";
+    static final String EMPTY_CLASS_REASON = "0 enrollments at deadline";
+    /** Class audit action for automated transitions; the only class change allowed without an actor (V24). */
+    static final String AUTO_STATUS = "AUTO_STATUS";
 
     private final SessionRepository sessionRepository;
     private final Clock clock;
@@ -52,16 +59,18 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
     private final Optional<ClassAuditService> classAuditService;
     private final ClassQueryService classQueryService;
     private final SessionOperationSupport operations;
-    private final UserRepository userRepository;
+    private final ClassScheduleService classSchedule;
+    private final Optional<PayrollGuard> payrollGuard;
     private final TransactionTemplate transaction;
+    /** Sessions already reported as blocked by a finalized payroll period, so each is warned about once. */
+    private final Set<Long> payrollBlockedSessions = ConcurrentHashMap.newKeySet();
 
     /** BR-04: an ASSIGNED class becomes IN_PROGRESS once its first original session has started. */
     @Override
     public int advanceStartedClasses() {
         LocalDateTime now = LocalDateTime.now(clock);
-        Optional<User> actor = systemActor();
         return forEachInOwnTransaction("advanceStartedClasses",
-                classGroupRepository.findIdsByStatus(ClassStatus.ASSIGNED), id -> startClass(id, now, actor));
+                classGroupRepository.findIdsByStatus(ClassStatus.ASSIGNED), id -> startClass(id, now));
     }
 
     @Override
@@ -84,14 +93,12 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
     /** BR-03 §5.2: a session still waiting for a reschedule decision when it starts is cancelled. */
     @Override
     public int resolveExpiredPendingReschedules() {
-        Optional<User> actor = systemActor();
-        if (actor.isEmpty()) {
-            log.warn("No admin account exists to record automatic cancellation of expired PENDING_RESCHEDULE sessions");
-            return 0;
-        }
-        return forEachInOwnTransaction("resolveExpiredPendingReschedules",
-                sessionRepository.findIdsByStatusOnOrBefore(SessionStatus.PENDING_RESCHEDULE, LocalDate.now(clock)),
-                id -> cancelExpiredPending(id, actor.get()));
+        List<Long> ids = sessionRepository.findByStatusAndSessionDateLessThanEqualOrderByIdAsc(
+                        SessionStatus.PENDING_RESCHEDULE, LocalDate.now(clock)).stream()
+                .filter(this::payrollEditable)
+                .map(Session::getId)
+                .toList();
+        return forEachInOwnTransaction("resolveExpiredPendingReschedules", ids, this::cancelExpiredPending);
     }
 
     @Override
@@ -129,12 +136,11 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
     @Override
     public int evaluateRegistrationDeadlines() {
         LocalDate today = LocalDate.now(clock);
-        Optional<User> actor = systemActor();
         return forEachInOwnTransaction("evaluateRegistrationDeadlines",
-                classGroupRepository.findIdsByStatus(ClassStatus.ENROLLING), id -> evaluateDeadline(id, today, actor));
+                classGroupRepository.findIdsByStatus(ClassStatus.ENROLLING), id -> evaluateDeadline(id, today));
     }
 
-    private boolean startClass(Long classGroupId, LocalDateTime now, Optional<User> actor) {
+    private boolean startClass(Long classGroupId, LocalDateTime now) {
         ClassGroup classGroup = classGroupRepository.findForUpdate(classGroupId).orElse(null);
         if (classGroup == null || classGroup.getStatus() != ClassStatus.ASSIGNED) {
             return false;
@@ -147,16 +153,12 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
         }
         classGroup.setStatus(ClassStatus.IN_PROGRESS);
         classGroupRepository.save(classGroup);
-        audit(classGroupId, actor, "STATUS", Map.of(
-                "from", ClassStatus.ASSIGNED.name(),
-                "to", ClassStatus.IN_PROGRESS.name(),
-                "reason", "First session started",
-                "automated", true));
+        audit(classGroupId, ClassStatus.ASSIGNED, ClassStatus.IN_PROGRESS, Map.of("reason", "First session started"));
         log.info("Class {} moved to IN_PROGRESS: first session started", classGroupId);
         return true;
     }
 
-    private boolean cancelExpiredPending(Long sessionId, User actor) {
+    private boolean cancelExpiredPending(Long sessionId) {
         var context = operations.loadAny(sessionId);
         Session session = context.session();
         operations.lockSessionRow(session);
@@ -168,16 +170,16 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
         session.setStatus(SessionStatus.CANCELLED);
         List<LeaveRequest> pending = operations.pending(sessionId);
         for (LeaveRequest leave : pending) {
-            operations.approve(leave, LeaveResolution.CANCEL, actor, EXPIRED_PENDING_REASON, null);
+            operations.approveAsSystem(leave, LeaveResolution.CANCEL, EXPIRED_PENDING_REASON);
         }
         Long requestId = pending.stream().filter(LeaveRequest::isAffectsSession)
                 .map(LeaveRequest::getId).findFirst().orElse(null);
-        operations.audit(session, before, SessionChangeType.CANCEL, actor, EXPIRED_PENDING_REASON, requestId, null);
+        operations.auditAsSystem(session, before, SessionChangeType.CANCEL, EXPIRED_PENDING_REASON, requestId);
         log.info("Session {} auto-cancelled: still PENDING_RESCHEDULE at its start time", sessionId);
         return true;
     }
 
-    private boolean evaluateDeadline(Long classGroupId, LocalDate today, Optional<User> actor) {
+    private boolean evaluateDeadline(Long classGroupId, LocalDate today) {
         ClassGroup classGroup = classGroupRepository.findForUpdate(classGroupId).orElse(null);
         if (classGroup == null || classGroup.getStatus() != ClassStatus.ENROLLING) {
             return false;
@@ -189,7 +191,7 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
 
         long students = classQueryService.students(classGroupId);
         if (students == 0) {
-            cancelEmptyClass(classGroup, deadline, actor);
+            cancelEmptyClass(classGroup, deadline);
             return true;
         }
         if (students == 1 && classGroup.getClassType() == ClassType.GROUP) {
@@ -197,7 +199,7 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
             classGroupRepository.save(classGroup);
             log.warn("Class {} failed to open: registration deadline {} crossed with only 1 enrollment. Admin remediation required (reopen, refund, or convert).",
                     classGroupId, deadline);
-            audit(classGroupId, actor, "FAILED_TO_OPEN", Map.of(
+            audit(classGroupId, ClassStatus.ENROLLING, ClassStatus.FAILED_TO_OPEN, Map.of(
                     "reason", "Only 1 enrollment after deadline",
                     "deadline", deadline.toString(),
                     "enrolledCount", 1));
@@ -209,22 +211,13 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
         return false;
     }
 
-    private void cancelEmptyClass(ClassGroup classGroup, LocalDate deadline, Optional<User> actor) {
+    private void cancelEmptyClass(ClassGroup classGroup, LocalDate deadline) {
+        // Same path as the manual cancel: session changes are audited and no ACTIVE assignment remains.
+        classSchedule.cancelClass(classGroup, null, EMPTY_CLASS_REASON);
         classGroup.setStatus(ClassStatus.CANCELLED);
-        List<Session> sessions = sessionRepository.findByClassGroupIdOrderBySessionNumberAsc(classGroup.getId());
-        boolean hasChanges = false;
-        for (Session s : sessions) {
-            if (s.getStatus() == SessionStatus.SCHEDULED || s.getStatus() == SessionStatus.PENDING_RESCHEDULE) {
-                s.setStatus(SessionStatus.CANCELLED);
-                hasChanges = true;
-            }
-        }
-        if (hasChanges) {
-            sessionRepository.saveAll(sessions);
-        }
         classGroupRepository.save(classGroup);
-        audit(classGroup.getId(), actor, "CANCELLED", Map.of(
-                "reason", "0 enrollments at deadline",
+        audit(classGroup.getId(), ClassStatus.ENROLLING, ClassStatus.CANCELLED, Map.of(
+                "reason", EMPTY_CLASS_REASON,
                 "deadline", deadline.toString(),
                 "enrolledCount", 0));
         log.info("Class {} auto-cancelled: 0 enrollments reached after registration deadline {}",
@@ -250,20 +243,35 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
     }
 
     /**
-     * Audit tables require a real actor, so automated changes are attributed to the oldest admin
-     * account (the seeded system administrator) and flagged as automated in their details.
+     * Sessions in a finalized payroll month can no longer be edited; skip them instead of failing
+     * (and logging at ERROR) on every run.
      */
-    private Optional<User> systemActor() {
-        return userRepository.findFirstByRoleOrderByIdAsc("ROLE_ADMIN");
+    private boolean payrollEditable(Session session) {
+        if (payrollGuard.isEmpty()) {
+            return true;
+        }
+        try {
+            payrollGuard.get().assertDateEditable(session.getSessionDate());
+            payrollBlockedSessions.remove(session.getId());
+            return true;
+        } catch (BusinessException ex) {
+            if (payrollBlockedSessions.add(session.getId())) {
+                log.warn("Session {} is still PENDING_RESCHEDULE but its payroll month is finalized; skipping automatic cancellation",
+                        session.getId());
+            }
+            return false;
+        }
     }
 
-    private void audit(Long classGroupId, Optional<User> actor, String action, Map<String, Object> details) {
+    /** Automated class transitions have no human actor and are always flagged automated=true. */
+    private void audit(Long classGroupId, ClassStatus from, ClassStatus to, Map<String, Object> extra) {
         classAuditService.ifPresent(audit -> {
-            if (actor.isEmpty()) {
-                log.warn("No admin account exists to record automatic {} change of class {}", action, classGroupId);
-                return;
-            }
-            audit.record(classGroupId, actor.get().getId(), action, details);
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("from", from.name());
+            details.put("to", to.name());
+            details.putAll(extra);
+            details.put("automated", true);
+            audit.record(classGroupId, null, AUTO_STATUS, details);
         });
     }
 

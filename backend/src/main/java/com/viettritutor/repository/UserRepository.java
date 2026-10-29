@@ -46,8 +46,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByRoleOrderByIdAsc(String role);
 
-    Optional<User> findFirstByRoleOrderByIdAsc(String role);
-
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from User u where u.id = :id")
     Optional<User> findForUpdate(@Param("id") Long id);

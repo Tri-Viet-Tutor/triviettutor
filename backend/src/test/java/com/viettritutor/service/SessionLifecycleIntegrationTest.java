@@ -62,6 +62,7 @@ class SessionLifecycleIntegrationTest {
     @Autowired SessionChangeRepository sessionChanges;
     @Autowired LeaveRequestRepository leaves;
     @Autowired AttendanceRecordRepository attendance;
+    @Autowired TutorAssignmentRepository assignments;
     @Autowired jakarta.persistence.EntityManager em;
 
     User admin;
@@ -95,7 +96,9 @@ class SessionLifecycleIntegrationTest {
         assertEquals(ClassStatus.IN_PROGRESS, classes.findById(assigned.getId()).orElseThrow().getStatus());
         var audit = classChanges.findAll().stream().filter(c -> c.getClassGroupId().equals(assigned.getId())).toList();
         assertEquals(1, audit.size());
-        assertEquals(systemActorId(), audit.getFirst().getActorId());
+        assertNull(audit.getFirst().getActorId());
+        assertEquals("AUTO_STATUS", audit.getFirst().getAction());
+        assertTrue(audit.getFirst().getDetails().contains("\"automated\":true"));
         assertEquals(SessionStatus.IN_SESSION, sessions.findById(started.getId()).orElseThrow().getStatus());
         assertEquals(SessionStatus.SCHEDULED, sessions.findById(future.getId()).orElseThrow().getStatus());
         assertEquals(SessionStatus.SCHEDULED, sessions.findById(failedSession.getId()).orElseThrow().getStatus());
@@ -121,19 +124,23 @@ class SessionLifecycleIntegrationTest {
         LeaveRequest resolved = leaves.findById(leave.getId()).orElseThrow();
         assertEquals(LeaveRequestStatus.APPROVED, resolved.getStatus());
         assertEquals(LeaveResolution.CANCEL, resolved.getResolution());
-        assertEquals(systemActorId(), resolved.getResolvedBy());
+        assertNull(resolved.getResolvedBy());
         var change = sessionChanges.findAll().stream().filter(c -> c.getSessionId().equals(pending.getId())).toList();
         assertEquals(1, change.size());
         assertEquals(SessionChangeType.CANCEL, change.getFirst().getAction());
         assertEquals(leave.getId(), change.getFirst().getLeaveRequestId());
         assertEquals(SessionStatus.PENDING_RESCHEDULE, change.getFirst().getPreviousStatus());
+        assertNull(change.getFirst().getActorId());
     }
 
     @Test
     void emptyClassIsCancelledAtDeadlineWithAudit() {
         ClassGroup empty = classGroup(ClassStatus.ENROLLING, TODAY.plusDays(2));
         empty.setEnrollmentDeadline(TODAY.minusDays(1));
-        Session upcoming = session(empty, 1, TODAY.plusDays(2), SessionStatus.SCHEDULED, null);
+        Session upcoming = session(empty, 1, TODAY.plusDays(2), SessionStatus.SCHEDULED, tutor.getId());
+        TutorAssignment assignment = assignments.saveAndFlush(TutorAssignment.builder().classGroupId(empty.getId())
+                .tutorId(tutor.getId()).status(AssignmentStatus.ACTIVE).assignedBy(admin.getId())
+                .assignedAt(OffsetDateTime.now()).build());
 
         assertEquals(1, lifecycle.evaluateRegistrationDeadlines());
         em.flush();
@@ -143,8 +150,16 @@ class SessionLifecycleIntegrationTest {
         assertEquals(SessionStatus.CANCELLED, sessions.findById(upcoming.getId()).orElseThrow().getStatus());
         var audit = classChanges.findAll().stream().filter(c -> c.getClassGroupId().equals(empty.getId())).toList();
         assertEquals(1, audit.size());
-        assertEquals("CANCELLED", audit.getFirst().getAction());
-        assertEquals(systemActorId(), audit.getFirst().getActorId());
+        assertEquals("AUTO_STATUS", audit.getFirst().getAction());
+        assertNull(audit.getFirst().getActorId());
+        assertTrue(audit.getFirst().getDetails().contains("0 enrollments at deadline"));
+        var sessionAudit = sessionChanges.findAll().stream().filter(c -> c.getSessionId().equals(upcoming.getId())).toList();
+        assertEquals(1, sessionAudit.size());
+        assertNull(sessionAudit.getFirst().getActorId());
+        var terminated = assignments.findById(assignment.getId()).orElseThrow();
+        assertEquals(AssignmentStatus.TERMINATED, terminated.getStatus());
+        assertNull(terminated.getTerminatedBy());
+        assertTrue(assignments.findByClassGroupIdAndStatus(empty.getId(), AssignmentStatus.ACTIVE).isEmpty());
     }
 
     @Test
@@ -167,10 +182,6 @@ class SessionLifecycleIntegrationTest {
         var ex = assertThrows(BusinessException.class,
                 () -> classService.changeStatus(enrolling.getId(), status(ClassStatus.CANCELLED), admin));
         assertEquals(ErrorCode.SESSION_NOT_EDITABLE, ex.getErrorCode());
-    }
-
-    private Long systemActorId() {
-        return users.findFirstByRoleOrderByIdAsc("ROLE_ADMIN").orElseThrow().getId();
     }
 
     private ChangeClassStatusRequest status(ClassStatus target) {
