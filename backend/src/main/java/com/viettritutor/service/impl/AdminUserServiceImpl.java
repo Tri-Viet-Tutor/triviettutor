@@ -83,7 +83,11 @@ public class AdminUserServiceImpl implements AdminUserService {
                 user.getFullName(),
                 user.getRole(),
                 user.getCreatedAt(),
-                null
+                new MeResponse.TutorProfileResponse(
+                        profile.getBaseSalary(),
+                        profile.getSessionRate(),
+                        profile.getBio()
+                )
         );
     }
 
