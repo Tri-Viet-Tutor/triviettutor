@@ -16,6 +16,7 @@ import com.viettritutor.enums.LeaveRequestStatus;
 import com.viettritutor.enums.LeaveResolution;
 import com.viettritutor.enums.SessionChangeType;
 import com.viettritutor.enums.SessionStatus;
+import com.viettritutor.repository.AttendanceRecordRepository;
 import com.viettritutor.repository.LearningScheduleRepository;
 import com.viettritutor.repository.LeaveRequestRepository;
 import com.viettritutor.repository.SessionRepository;
@@ -36,6 +37,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class SessionReschedulingServiceImpl implements SessionReschedulingService {
     private final SessionRepository sessionRepository;
+    private final AttendanceRecordRepository attendanceRecordRepository;
     private final LeaveRequestRepository leaveRepository;
     private final LearningScheduleRepository learningScheduleRepository;
     private final ConflictValidationService conflictService;
@@ -60,42 +62,75 @@ public class SessionReschedulingServiceImpl implements SessionReschedulingServic
         people.add(tutorId);
         operations.requireTutor(operations.lockPeople(people).get(tutorId));
         operations.lockSession(original);
-        LeaveRequest request = operations.request(input.leaveRequestId(), sessionId);
-        boolean cancelledRequest = request.getStatus() == LeaveRequestStatus.APPROVED
+        // Without a leave request an admin may only make up a session that is already cancelled.
+        LeaveRequest request = input.leaveRequestId() == null ? null : operations.request(input.leaveRequestId(), sessionId);
+        boolean cancelledRequest = request != null && request.getStatus() == LeaveRequestStatus.APPROVED
                 && request.getResolution() == LeaveResolution.CANCEL && original.getStatus() == SessionStatus.CANCELLED;
-        if (!cancelledRequest) {
+        if (request == null) {
+            if (original.getStatus() != SessionStatus.CANCELLED) {
+                throw new BusinessException(ErrorCode.LEAVE_RESOLUTION_NOT_ALLOWED,
+                        "Only a cancelled session can be made up without a leave request");
+            }
+        } else if (!cancelledRequest) {
             operations.requirePending(request);
-        }
-        if (!cancelledRequest && "ROLE_TUTOR".equals(request.getRequesterRole())
-                && !request.getRequesterId().equals(tutorId)) {
-            throw new BusinessException(ErrorCode.LEAVE_RESOLUTION_NOT_ALLOWED);
+            if ("ROLE_TUTOR".equals(request.getRequesterRole()) && !request.getRequesterId().equals(tutorId)) {
+                throw new BusinessException(ErrorCode.LEAVE_RESOLUTION_NOT_ALLOWED);
+            }
         }
         if (original.getOriginalSession() != null || roster.isEmpty()) {
             throw new BusinessException(ErrorCode.LEAVE_RESOLUTION_NOT_ALLOWED);
         }
-        if ("ROLE_STUDENT".equals(request.getRequesterRole()) && context.classGroup().getClassType() == ClassType.GROUP) {
+        if (request != null && "ROLE_STUDENT".equals(request.getRequesterRole())
+                && context.classGroup().getClassType() == ClassType.GROUP) {
             throw new BusinessException(ErrorCode.LEAVE_RESOLUTION_NOT_ALLOWED,
                     "An individual group student leave cannot reschedule the class");
         }
-        if (sessionRepository.findByOriginalSessionId(sessionId).isPresent()) {
-            throw new BusinessException(ErrorCode.MAKEUP_ALREADY_EXISTS);
+        // One makeup row per original (uq_sessions_original_makeup): a cancelled makeup is rescheduled in place.
+        Session replacement = sessionRepository.findByOriginalSessionId(sessionId).orElse(null);
+        if (replacement != null) {
+            if (replacement.getStatus() != SessionStatus.CANCELLED) {
+                throw new BusinessException(ErrorCode.MAKEUP_ALREADY_EXISTS);
+            }
+            operations.lockSession(replacement);
+            if (replacement.getStatus() != SessionStatus.CANCELLED) {
+                throw new BusinessException(ErrorCode.MAKEUP_ALREADY_EXISTS);
+            }
+            if (replacement.isAttendanceRosterCaptured() || hasTeachingEvidence(replacement)) {
+                throw new BusinessException(ErrorCode.SESSION_ALREADY_TAUGHT);
+            }
+            replacement.setSessionDate(input.makeupDate());
+            replacement.setStartTime(input.startTime());
+            replacement.setEndTime(input.endTime());
+            replacement.setStatus(SessionStatus.SCHEDULED);
+            replacement.setScheduledTutorId(original.getScheduledTutorId());
+            replacement.setActualTutorId(tutorId);
+            replacement.setActualTutorOverridden(original.isActualTutorOverridden());
+            replacement.setMeetingUrl(null);
+            replacement.setAttendanceLocked(false);
+            replacement.setAttendanceLockedAt(null);
+            replacement.setAttendanceAutoProcessed(false);
+            replacement.setAttendanceNeedsReview(false);
+        } else {
+            // The makeup gets its own classroom; never reuse the original's meeting link.
+            replacement = Session.builder().classGroupId(original.getClassGroupId())
+                    .sessionNumber(original.getSessionNumber()).sessionDate(input.makeupDate())
+                    .startTime(input.startTime()).endTime(input.endTime()).status(SessionStatus.SCHEDULED)
+                    .scheduledTutorId(original.getScheduledTutorId()).actualTutorId(tutorId)
+                    .actualTutorOverridden(original.isActualTutorOverridden()).originalSession(original)
+                    .topicId(original.getTopicId()).build();
         }
+        Set<Long> excluded = replacement.getId() == null ? Set.of(sessionId) : Set.of(sessionId, replacement.getId());
+        String reason = request != null ? request.getReason() : "Xếp buổi bù cho buổi đã hủy";
         var before = operations.snapshot(original);
-        Session replacement = Session.builder().classGroupId(original.getClassGroupId())
-                .sessionNumber(original.getSessionNumber()).sessionDate(input.makeupDate())
-                .startTime(input.startTime()).endTime(input.endTime()).status(SessionStatus.SCHEDULED)
-                .scheduledTutorId(original.getScheduledTutorId()).actualTutorId(tutorId)
-                .actualTutorOverridden(original.isActualTutorOverridden()).originalSession(original)
-                .meetingUrl(original.getMeetingUrl()).topicId(original.getTopicId()).build();
         // Keep paid students able to see a makeup outside the original schedule dates.
         for (LearningSchedule schedule : roster) {
             if (input.makeupDate().isBefore(schedule.getStartDate())) schedule.setStartDate(input.makeupDate());
             if (input.makeupDate().isAfter(schedule.getEndDate())) schedule.setEndDate(input.makeupDate());
         }
         learningScheduleRepository.flush();
-        conflictService.assertTutorAvailable(tutorId, List.of(replacement), Set.of(sessionId));
+        conflictService.assertTutorAvailable(tutorId, List.of(replacement), excluded);
         for (Long studentId : roster.stream().map(LearningSchedule::getStudentId).distinct().toList()) {
-            var conflicts = conflictService.checkStudent(studentId, List.of(replacement), Set.of(sessionId));
+            var conflicts = conflictService.checkStudent(studentId, List.of(replacement), excluded);
             if (!conflicts.isEmpty()) {
                 throw new ScheduleConflictException(ErrorCode.STUDENT_SCHEDULE_CONFLICT, conflicts);
             }
@@ -103,10 +138,11 @@ public class SessionReschedulingServiceImpl implements SessionReschedulingServic
         replacement = sessionRepository.saveAndFlush(replacement);
         original.setStatus(SessionStatus.CANCELLED);
         for (LeaveRequest pending : operations.pending(sessionId)) {
-            operations.approve(pending, LeaveResolution.MAKEUP, admin, request.getReason(), replacement.getId());
+            operations.approve(pending, LeaveResolution.MAKEUP, admin, reason, replacement.getId());
         }
-        if (cancelledRequest) operations.approve(request, LeaveResolution.MAKEUP, admin, request.getReason(), replacement.getId());
-        operations.audit(original, before, SessionChangeType.MAKEUP, admin, request.getReason(), request.getId(), replacement.getId());
+        if (cancelledRequest) operations.approve(request, LeaveResolution.MAKEUP, admin, reason, replacement.getId());
+        operations.audit(original, before, SessionChangeType.MAKEUP, admin, reason,
+                request != null ? request.getId() : null, replacement.getId());
         return SessionResponse.from(replacement);
     }
 
@@ -152,6 +188,10 @@ public class SessionReschedulingServiceImpl implements SessionReschedulingServic
         if (session.getStatus() == SessionStatus.CANCELLED) {
             throw new BusinessException(ErrorCode.SESSION_ALREADY_CANCELLED);
         }
+        // A session with attendance or a teaching confirmation was (at least partly) taught; keep it.
+        if (hasTeachingEvidence(session)) {
+            throw new BusinessException(ErrorCode.SESSION_ALREADY_TAUGHT);
+        }
         if (input.leaveRequestId() != null) {
             LeaveRequest request = operations.request(input.leaveRequestId(), sessionId);
             operations.requirePending(request);
@@ -167,5 +207,9 @@ public class SessionReschedulingServiceImpl implements SessionReschedulingServic
         }
         operations.audit(session, before, SessionChangeType.CANCEL, admin, input.reason(), input.leaveRequestId(), null);
         return SessionResponse.from(session);
+    }
+
+    private boolean hasTeachingEvidence(Session session) {
+        return session.getTeachingConfirmedAt() != null || attendanceRecordRepository.existsBySessionId(session.getId());
     }
 }

@@ -10,8 +10,7 @@ import com.viettritutor.entity.ClassGroup;
 import com.viettritutor.entity.Course;
 import com.viettritutor.entity.Session;
 import com.viettritutor.entity.User;
-import com.viettritutor.enums.AssignmentStatus;
-import com.viettritutor.enums.EnrollmentStatus;
+import com.viettritutor.enums.LearningScheduleStatus;
 import com.viettritutor.enums.SessionStatus;
 import com.viettritutor.repository.*;
 import com.viettritutor.repository.mongo.MeetingParticipantLogRepository;
@@ -21,12 +20,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -63,8 +64,32 @@ class MeetingServiceTest {
     @Mock
     private MeetingParticipantLogRepository meetingParticipantLogRepository;
 
-    @InjectMocks
     private MeetingServiceImpl meetingService;
+
+    /** 17:55 on 2 Nov 2026 in Vietnam, five minutes before the 18:00 session. */
+    private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+    private static final LocalDate SESSION_DATE = LocalDate.of(2026, 11, 2);
+
+    private static Clock clockAt(int hour, int minute) {
+        return Clock.fixed(LocalDateTime.of(SESSION_DATE, LocalTime.of(hour, minute)).atZone(ZONE).toInstant(), ZONE);
+    }
+
+    private void useClock(Clock clock) {
+        meetingService = new MeetingServiceImpl(sessionRepository, classGroupRepository, enrollmentRepository,
+                learningScheduleRepository, tutorAssignmentRepository, userRepository, clock);
+        ReflectionTestUtils.setField(meetingService, "livekitUrl", "ws://localhost:7880");
+        ReflectionTestUtils.setField(meetingService, "livekitApiKey", "devkey");
+        ReflectionTestUtils.setField(meetingService, "livekitApiSecret", "secret123456789012345678901234567890");
+        ReflectionTestUtils.setField(meetingService, "meetingSessionLogRepository", meetingSessionLogRepository);
+        ReflectionTestUtils.setField(meetingService, "meetingParticipantLogRepository", meetingParticipantLogRepository);
+    }
+
+    private void givenStudentCovered(Long studentId, boolean covered) {
+        when(learningScheduleRepository
+                .existsByStudentIdAndClassGroupIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                        studentId, 20L, LearningScheduleStatus.ACTIVE, SESSION_DATE, SESSION_DATE))
+                .thenReturn(covered);
+    }
 
     private User adminUser;
     private User tutorUser;
@@ -76,11 +101,7 @@ class MeetingServiceTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(meetingService, "livekitUrl", "ws://localhost:7880");
-        ReflectionTestUtils.setField(meetingService, "livekitApiKey", "devkey");
-        ReflectionTestUtils.setField(meetingService, "livekitApiSecret", "secret123456789012345678901234567890");
-        ReflectionTestUtils.setField(meetingService, "meetingSessionLogRepository", meetingSessionLogRepository);
-        ReflectionTestUtils.setField(meetingService, "meetingParticipantLogRepository", meetingParticipantLogRepository);
+        useClock(clockAt(17, 55));
 
         adminUser = User.builder().id(1L).email("admin@vtt.vn").role("ROLE_ADMIN").fullName("Admin").build();
         tutorUser = User.builder().id(2L).email("tutor@vtt.vn").role("ROLE_TUTOR").fullName("Thầy Hoàng").build();
@@ -94,7 +115,7 @@ class MeetingServiceTest {
                 .id(101L)
                 .classGroupId(20L)
                 .sessionNumber(1)
-                .sessionDate(LocalDate.now().plusDays(1))
+                .sessionDate(SESSION_DATE)
                 .startTime(LocalTime.of(18, 0))
                 .endTime(LocalTime.of(20, 0))
                 .status(SessionStatus.SCHEDULED)
@@ -127,8 +148,7 @@ class MeetingServiceTest {
     void studentCanGenerateToken() {
         when(sessionRepository.findById(101L)).thenReturn(Optional.of(session));
         when(classGroupRepository.findById(20L)).thenReturn(Optional.of(classGroup));
-        when(enrollmentRepository.existsByStudentIdAndClassGroupIdAndStatus(3L, 20L, EnrollmentStatus.ACTIVE))
-                .thenReturn(true);
+        givenStudentCovered(3L, true);
         when(userRepository.findById(2L)).thenReturn(Optional.of(tutorUser));
 
         MeetingTokenResponse res = meetingService.generateTokenForSession(101L, studentUser);
@@ -155,11 +175,7 @@ class MeetingServiceTest {
     @DisplayName("Outsider student not enrolled in class is denied with 403 ACCESS_DENIED")
     void nonEnrolledStudentThrowsAccessDenied() {
         when(sessionRepository.findById(101L)).thenReturn(Optional.of(session));
-        when(classGroupRepository.findById(20L)).thenReturn(Optional.of(classGroup));
-        when(enrollmentRepository.existsByStudentIdAndClassGroupIdAndStatus(99L, 20L, EnrollmentStatus.ACTIVE))
-                .thenReturn(false);
-        when(learningScheduleRepository.existsByStudentIdAndClassGroupIdAndStatus(eq(99L), eq(20L), any()))
-                .thenReturn(false);
+        givenStudentCovered(99L, false);
 
         BusinessException ex = assertThrows(BusinessException.class, () ->
                 meetingService.generateTokenForSession(101L, outsiderStudent));
@@ -172,14 +188,72 @@ class MeetingServiceTest {
     void unassignedTutorThrowsAccessDenied() {
         User otherTutor = User.builder().id(88L).email("other@vtt.vn").role("ROLE_TUTOR").build();
         when(sessionRepository.findById(101L)).thenReturn(Optional.of(session));
-        when(classGroupRepository.findById(20L)).thenReturn(Optional.of(classGroup));
-        when(tutorAssignmentRepository.findByClassGroupIdAndStatus(20L, AssignmentStatus.ACTIVE))
-                .thenReturn(Optional.empty());
 
         BusinessException ex = assertThrows(BusinessException.class, () ->
                 meetingService.generateTokenForSession(101L, otherTutor));
 
         assertEquals(ErrorCode.ACCESS_DENIED, ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("Substitute tutor gets the TUTOR role and the replaced primary tutor is refused")
+    void substituteTutorJoinsAndReplacedTutorIsRefused() {
+        User substitute = User.builder().id(77L).email("sub@vtt.vn").role("ROLE_TUTOR").fullName("Cô Lan").build();
+        session.setActualTutorId(77L);
+        session.setActualTutorOverridden(true);
+        when(sessionRepository.findById(101L)).thenReturn(Optional.of(session));
+        when(classGroupRepository.findById(20L)).thenReturn(Optional.of(classGroup));
+        when(userRepository.findById(77L)).thenReturn(Optional.of(substitute));
+
+        assertEquals("TUTOR", meetingService.generateTokenForSession(101L, substitute).role());
+        BusinessException ex = assertThrows(BusinessException.class, () ->
+                meetingService.generateTokenForSession(101L, tutorUser));
+        assertEquals(ErrorCode.ACCESS_DENIED, ex.getErrorCode());
+        verifyNoInteractions(tutorAssignmentRepository);
+    }
+
+    @Test
+    @DisplayName("Cancelled and completed sessions cannot be joined")
+    void closedSessionsAreRefused() {
+        when(sessionRepository.findById(101L)).thenReturn(Optional.of(session));
+        for (SessionStatus status : List.of(SessionStatus.CANCELLED, SessionStatus.COMPLETED)) {
+            session.setStatus(status);
+            BusinessException ex = assertThrows(BusinessException.class, () ->
+                    meetingService.generateTokenForSession(101L, tutorUser));
+            assertEquals(ErrorCode.MEETING_NOT_AVAILABLE, ex.getErrorCode());
+        }
+    }
+
+    @Test
+    @DisplayName("The classroom opens 15 minutes before start and closes at the session end")
+    void joinWindowIsEnforced() {
+        when(sessionRepository.findById(101L)).thenReturn(Optional.of(session));
+        when(classGroupRepository.findById(20L)).thenReturn(Optional.of(classGroup));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(tutorUser));
+
+        useClock(clockAt(17, 44));
+        assertEquals(ErrorCode.MEETING_NOT_AVAILABLE, assertThrows(BusinessException.class, () ->
+                meetingService.generateTokenForSession(101L, tutorUser)).getErrorCode());
+        useClock(clockAt(17, 45));
+        assertEquals("TUTOR", meetingService.generateTokenForSession(101L, tutorUser).role());
+        useClock(clockAt(19, 59));
+        assertEquals("TUTOR", meetingService.generateTokenForSession(101L, tutorUser).role());
+        useClock(clockAt(20, 0));
+        assertEquals(ErrorCode.MEETING_NOT_AVAILABLE, assertThrows(BusinessException.class, () ->
+                meetingService.generateTokenForSession(101L, tutorUser)).getErrorCode());
+    }
+
+    @Test
+    @DisplayName("Token generation never writes an internal path into the session meeting URL")
+    void tokenDoesNotOverwriteMeetingUrl() {
+        when(sessionRepository.findById(101L)).thenReturn(Optional.of(session));
+        when(classGroupRepository.findById(20L)).thenReturn(Optional.of(classGroup));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(tutorUser));
+
+        meetingService.generateTokenForSession(101L, tutorUser);
+
+        assertNull(session.getMeetingUrl());
+        verify(sessionRepository, never()).save(any());
     }
 
     @Test

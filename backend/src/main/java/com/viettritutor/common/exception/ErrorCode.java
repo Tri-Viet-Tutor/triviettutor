@@ -50,6 +50,8 @@ public enum ErrorCode {
     SESSION_ALREADY_CANCELLED (HttpStatus.CONFLICT, "This session has already been cancelled"),
     MAKEUP_ALREADY_EXISTS     (HttpStatus.CONFLICT, "This session already has a makeup session"),
     INVALID_MAKEUP_TIME       (HttpStatus.BAD_REQUEST, "Makeup must start in the future and end after its start time"),
+    SESSION_ALREADY_TAUGHT    (HttpStatus.UNPROCESSABLE_ENTITY, "This session already has attendance or a teaching confirmation"),
+    MEETING_NOT_AVAILABLE     (HttpStatus.UNPROCESSABLE_ENTITY, "The classroom is not open for this session right now"),
     INVALID_PAYROLL_PERIOD (HttpStatus.BAD_REQUEST, "Invalid payroll year or month"),
     INVALID_PAYROLL_KEY (HttpStatus.BAD_REQUEST, "Provide Idempotency-Key with 1-100 letters, digits or . _ : -"),
     PAYROLL_KEY_CONFLICT (HttpStatus.CONFLICT, "This idempotency key belongs to another payroll period"),
