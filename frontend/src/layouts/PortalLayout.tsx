@@ -6,6 +6,7 @@ import { ROLE_NAME } from "@/constants/labels";
 import { ROUTES } from "@/constants/routes";
 import { AccountMenu } from "@/components/dashboard/AccountMenu";
 import { PortalNav } from "@/components/dashboard/PortalNav";
+import { ChatWidget } from "@/components/assistant/ChatWidget";
 import { formatLongDate } from "@/utils/sessions";
 import { startOfToday } from "@/utils/date";
 import { useAuthStore } from "@/stores/authStore";
@@ -68,6 +69,7 @@ export function PortalLayout({ areaLabel, homeTo, profileTo, navItems }: PortalL
           </main>
         </div>
       </div>
+      <ChatWidget placement="portal" />
     </div>
   );
 }

@@ -118,6 +118,8 @@ export type ErrorCode =
   | "REFUND_ALREADY_SETTLED"
   // Không nằm trong enum ErrorCode nhưng backend vẫn trả về:
   | "VALIDATION_ERROR"
+  | "ASSISTANT_RATE_LIMITED"
+  | "ASSISTANT_UNAVAILABLE"
   | "INTERNAL_ERROR";
 
 // ── Người dùng & đăng nhập (dto.auth, entity.User) ───────────────────────────
@@ -341,7 +343,7 @@ export interface MeetingParticipantLogDto {
   eventHistory?: Array<{
     event: string;
     timestamp: string;
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
   }>;
 }
 

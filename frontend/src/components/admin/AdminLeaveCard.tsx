@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ReasonForm } from "@/components/admin/ReasonForm";
@@ -7,9 +7,9 @@ import { StatusChip } from "@/components/dashboard/StatusChip";
 import { AUTH_LABEL, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT, PORTAL_TEXT_LINK } from "@/constants/classNames";
 import { LEAVE_RESOLUTION, LEAVE_STATUS, SESSION_STATUS } from "@/constants/labels";
 import { ROUTES } from "@/constants/routes";
-import { useAdminSession, useRefreshAdmin, useUserDirectory } from "@/hooks/useAdminData";
-import type { Role } from "@/interfaces/api";
-import { assignSubstitute, cancelSession, createMakeup, rejectLeaveRequest } from "@/services/admin";
+import { adminKeys, useAdminSession, useRefreshAdmin, useUserDirectory } from "@/hooks/useAdminData";
+import type { AdminLeaveRequestsQuery, Role } from "@/interfaces/api";
+import { assignSubstitute, cancelSession, createMakeup, fetchAdminLeaveRequests, rejectLeaveRequest } from "@/services/admin";
 import { formatClockTime, formatDate, parseIsoDate, startOfToday, toIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 import { formatLongDate, formatTimeRange, teacherOf } from "@/utils/sessions";
@@ -56,6 +56,18 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
   const status = LEAVE_STATUS[request.status];
   const requestedAt = new Date(request.requestedAt);
   const fromTutor = request.requesterRole === "ROLE_TUTOR";
+  // Đơn học viên báo đủ sớm làm buổi chờ xếp lại (chỉ lớp 1-1): xem buổi có đơn gia sư nào đang chờ không
+  const studentReschedules =
+    !fromTutor && request.status === "PENDING" && !request.isLateNotice && session?.status === "PENDING_RESCHEDULE";
+  const sessionPendingQuery: AdminLeaveRequestsQuery = { sessionId: request.sessionId, status: "PENDING", page: 0, size: 100 };
+  const sessionPending = useQuery({
+    queryKey: adminKeys.leaveRequests(sessionPendingQuery),
+    queryFn: () => fetchAdminLeaveRequests(sessionPendingQuery),
+    enabled: studentReschedules,
+  });
+  // Xếp bù / hủy buổi được với đơn gia sư, hoặc đơn học viên lớp 1-1 khi buổi không còn đơn gia sư nào chờ (lúc đó xử lý ở đơn gia sư)
+  const canReschedule =
+    fromTutor || (studentReschedules && sessionPending.data?.content.every((other) => other.requesterRole !== "ROLE_TUTOR") === true);
   const pending = request.status === "PENDING";
   // Không cho chọn chính người đang dạy buổi đó làm người dạy thay
   const currentTeacher = session ? teacherOf(session) : null;
@@ -129,11 +141,13 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
           )}
           {action === null && (
             <div className="flex flex-wrap gap-2">
-              {fromTutor && (
+              {canReschedule && (
                 <>
-                  <button type="button" onClick={() => open("substitute")} className={PORTAL_BTN_PRIMARY}>
-                    Phân người dạy thay
-                  </button>
+                  {fromTutor && (
+                    <button type="button" onClick={() => open("substitute")} className={PORTAL_BTN_PRIMARY}>
+                      Phân người dạy thay
+                    </button>
+                  )}
                   <button type="button" onClick={() => open("makeup")} className={PORTAL_BTN_SECONDARY}>
                     Xếp buổi học bù
                   </button>
