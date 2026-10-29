@@ -1,4 +1,4 @@
--- V21: Admin account lock (FR-AUTH-03) and email OTP brute-force protection.
+-- V25: Admin account lock (FR-AUTH-03) and email OTP brute-force protection.
 -- `locked` is independent of `enabled` (email verified), so a password reset never unlocks.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS locked BOOLEAN NOT NULL DEFAULT FALSE;
 
