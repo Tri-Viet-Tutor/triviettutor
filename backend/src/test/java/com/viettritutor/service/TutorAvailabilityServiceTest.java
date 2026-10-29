@@ -157,4 +157,70 @@ class TutorAvailabilityServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.ACCESS_DENIED);
     }
+
+    @Test
+    @DisplayName("Overlap is found regardless of the order the slots were sent in, even across a shorter slot")
+    void replace_whenUnsortedSlotsOverlap_rejects() {
+        givenSaved();
+
+        assertThatThrownBy(() -> availabilityService.replaceAvailability(tutor, new AvailabilityRequest(List.of(
+                slot("2026-11-02", "13:00", "14:00"),
+                slot("2026-11-03", "08:00", "12:00"),
+                slot("2026-11-02", "08:00", "12:00"),
+                slot("2026-11-02", "09:00", "09:30"),
+                slot("2026-11-02", "11:30", "12:30")))))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.INVALID_AVAILABILITY);
+
+        verify(availabilityRepository, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("The two evening slots 18:00-20:00 and 19:30-21:30 overlap by 30 minutes and are rejected")
+    void replace_whenEveningSlotsOverlap_rejects() {
+        givenSaved();
+
+        assertThatThrownBy(() -> availabilityService.replaceAvailability(tutor, new AvailabilityRequest(List.of(
+                slot("2026-11-02", "19:30", "21:30"),
+                slot("2026-11-02", "18:00", "20:00")))))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.INVALID_AVAILABILITY);
+    }
+
+    @Test
+    @DisplayName("An exact duplicate slot is rejected as an overlap")
+    void replace_whenDuplicateSlot_rejects() {
+        givenSaved();
+
+        assertThatThrownBy(() -> availabilityService.replaceAvailability(tutor, new AvailabilityRequest(List.of(
+                slot("2026-11-02", "18:00", "20:00"),
+                slot("2026-11-02", "18:00", "20:00")))))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.INVALID_AVAILABILITY);
+    }
+
+    @Test
+    @DisplayName("Back-to-back slots and the same hours on different dates are not overlaps")
+    void replace_whenSlotsTouchOrDifferentDates_saves() {
+        givenSaved();
+        when(availabilityRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<AvailabilityResponse> result = availabilityService.replaceAvailability(tutor, new AvailabilityRequest(List.of(
+                slot("2026-11-02", "08:00", "10:00"),
+                slot("2026-11-02", "10:00", "12:00"),
+                slot("2026-11-03", "08:00", "10:00"))));
+
+        assertThat(result).hasSize(3);
+        verify(availabilityRepository).deleteByTutorId(10L);
+    }
+
+    @Test
+    @DisplayName("An empty list clears the tutor's availability")
+    void replace_whenEmpty_clearsAll() {
+        givenSaved(saved("2026-11-02", "18:00", "20:00"));
+        when(availabilityRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertThat(availabilityService.replaceAvailability(tutor, new AvailabilityRequest(List.of()))).isEmpty();
+        verify(availabilityRepository).deleteByTutorId(10L);
+    }
 }

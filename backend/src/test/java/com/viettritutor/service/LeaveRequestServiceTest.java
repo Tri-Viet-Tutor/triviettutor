@@ -16,8 +16,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.time.*;
 import java.util.List;
@@ -27,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -208,7 +213,7 @@ class LeaveRequestServiceTest {
         session.setStatus(SessionStatus.PENDING_RESCHEDULE);
         LeaveRequest request = pendingRequest(7L, 30L, true);
         when(leaveRepository.findSessionId(7L)).thenReturn(Optional.of(500L));
-        when(operations.load(500L)).thenReturn(new SessionOperationSupport.Context(oneOnOne, session));
+        when(operations.loadAny(500L)).thenReturn(new SessionOperationSupport.Context(oneOnOne, session));
         when(operations.request(7L, 500L)).thenReturn(request);
         when(operations.pending(500L)).thenReturn(List.of());
         when(operations.restoredStatus(session, SessionStatus.SCHEDULED)).thenReturn(SessionStatus.SCHEDULED);
@@ -228,7 +233,7 @@ class LeaveRequestServiceTest {
         Session session = session(oneOnOne, LocalDateTime.of(2026, 10, 27, 18, 0), 10L);
         session.setStatus(SessionStatus.PENDING_RESCHEDULE);
         when(leaveRepository.findSessionId(7L)).thenReturn(Optional.of(500L));
-        when(operations.load(500L)).thenReturn(new SessionOperationSupport.Context(oneOnOne, session));
+        when(operations.loadAny(500L)).thenReturn(new SessionOperationSupport.Context(oneOnOne, session));
         when(operations.request(7L, 500L)).thenReturn(pendingRequest(7L, 30L, true));
         when(operations.pending(500L)).thenReturn(List.of(pendingRequest(8L, 10L, true)));
 
@@ -246,5 +251,163 @@ class LeaveRequestServiceTest {
         assertThatThrownBy(() -> leaveService.reject(99L, "No", admin))
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.LEAVE_REQUEST_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("A tutor's late leave (< 24h) is flagged late but still puts the session into PENDING_RESCHEDULE")
+    void submit_tutorLate_isLateNoticeAndAffectsSession() {
+        Session session = session(group, LocalDateTime.of(2026, 10, 26, 8, 0), 10L);
+        givenSession(group, session, List.of());
+        givenSaved();
+
+        LeaveRequestResponse response = leaveService.submit(500L, "Sick", tutor);
+
+        assertThat(response.isLateNotice()).isTrue();
+        assertThat(response.sessionNewStatus()).isEqualTo(SessionStatus.PENDING_RESCHEDULE);
+        assertThat(session.getStatus()).isEqualTo(SessionStatus.PENDING_RESCHEDULE);
+    }
+
+    @Test
+    @DisplayName("A tutor's leave at least 24h ahead is on time and puts the session into PENDING_RESCHEDULE")
+    void submit_tutorOnTime_affectsSession() {
+        Session session = session(group, LocalDateTime.of(2026, 10, 30, 18, 0), 10L);
+        givenSession(group, session, List.of());
+        givenSaved();
+
+        LeaveRequestResponse response = leaveService.submit(500L, "Busy", tutor);
+
+        assertThat(response.isLateNotice()).isFalse();
+        assertThat(session.getStatus()).isEqualTo(SessionStatus.PENDING_RESCHEDULE);
+    }
+
+    @Test
+    @DisplayName("The 24h deadline is measured in Vietnam time: exactly 24h ahead is on time, one minute less is late")
+    void submit_deadlineBoundary_usesApplicationZone() {
+        // Clock is 17:00 on 25/10 in Vietnam (10:00 UTC); 17:00 on 26/10 is exactly 24h later
+        Session onTime = session(oneOnOne, LocalDateTime.of(2026, 10, 26, 17, 0), 10L);
+        givenSession(oneOnOne, onTime, List.of());
+        givenEnrolled(oneOnOne);
+        givenSaved();
+        assertThat(leaveService.submit(500L, "Sick", student).isLateNotice()).isFalse();
+        assertThat(onTime.getStatus()).isEqualTo(SessionStatus.PENDING_RESCHEDULE);
+
+        // 23h59m ahead in Vietnam time; read as UTC it would be about 31h ahead and wrongly count as on time
+        Session late = session(oneOnOne, LocalDateTime.of(2026, 10, 26, 16, 59), 10L);
+        givenSession(oneOnOne, late, List.of());
+        assertThat(leaveService.submit(500L, "Sick", student).isLateNotice()).isTrue();
+        assertThat(late.getStatus()).isEqualTo(SessionStatus.SCHEDULED);
+    }
+
+    @Test
+    @DisplayName("Rejecting a late student request marks it REJECTED and leaves the session untouched")
+    void reject_lateStudentRequest_keepsSession() {
+        Session session = session(oneOnOne, LocalDateTime.of(2026, 10, 26, 8, 0), 10L);
+        LeaveRequest request = pendingRequest(7L, 30L, false);
+        request.setLateNotice(true);
+        when(leaveRepository.findSessionId(7L)).thenReturn(Optional.of(500L));
+        when(operations.loadAny(500L)).thenReturn(new SessionOperationSupport.Context(oneOnOne, session));
+        when(operations.request(7L, 500L)).thenReturn(request);
+
+        LeaveRequestResponse response = leaveService.reject(7L, "Too late", admin);
+
+        assertThat(response.status()).isEqualTo(LeaveRequestStatus.REJECTED);
+        assertThat(response.isLateNotice()).isTrue();
+        assertThat(session.getStatus()).isEqualTo(SessionStatus.SCHEDULED);
+        verify(operations, never()).restoredStatus(any(), any());
+        verify(operations).audit(eq(session), any(), eq(SessionChangeType.REJECT_LEAVE), eq(admin), eq("Too late"), eq(7L), any());
+    }
+
+    @Test
+    @DisplayName("A late student request stays rejectable after its session was taught or the class closed")
+    void reject_requestNotAffectingSession_allowedAfterSessionCompleted() {
+        Session session = session(oneOnOne, LocalDateTime.of(2026, 10, 24, 8, 0), 10L);
+        session.setStatus(SessionStatus.COMPLETED);
+        oneOnOne.setStatus(ClassStatus.COMPLETED);
+        LeaveRequest request = pendingRequest(7L, 30L, false);
+        when(leaveRepository.findSessionId(7L)).thenReturn(Optional.of(500L));
+        when(operations.loadAny(500L)).thenReturn(new SessionOperationSupport.Context(oneOnOne, session));
+        when(operations.request(7L, 500L)).thenReturn(request);
+
+        LeaveRequestResponse response = leaveService.reject(7L, "Session already taught", admin);
+
+        assertThat(response.status()).isEqualTo(LeaveRequestStatus.REJECTED);
+        assertThat(session.getStatus()).isEqualTo(SessionStatus.COMPLETED);
+        verify(operations, never()).requireEditable(any());
+        verify(operations, never()).requireOpenClass(any());
+    }
+
+    @Test
+    @DisplayName("A request that changed the session still requires an editable session to be rejected")
+    void reject_affectingRequest_requiresEditableSession() {
+        Session session = session(oneOnOne, LocalDateTime.of(2026, 10, 27, 18, 0), 10L);
+        session.setStatus(SessionStatus.PENDING_RESCHEDULE);
+        LeaveRequest request = pendingRequest(7L, 10L, true);
+        when(leaveRepository.findSessionId(7L)).thenReturn(Optional.of(500L));
+        when(operations.loadAny(500L)).thenReturn(new SessionOperationSupport.Context(oneOnOne, session));
+        when(operations.request(7L, 500L)).thenReturn(request);
+        doThrow(new BusinessException(ErrorCode.PAYROLL_FINALIZED)).when(operations).requireEditable(session);
+
+        assertThatThrownBy(() -> leaveService.reject(7L, "No", admin))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.PAYROLL_FINALIZED);
+        assertThat(request.getStatus()).isEqualTo(LeaveRequestStatus.PENDING);
+        assertThat(session.getStatus()).isEqualTo(SessionStatus.PENDING_RESCHEDULE);
+    }
+
+    @Test
+    @DisplayName("An already resolved request cannot be rejected again")
+    void reject_alreadyResolved_conflict() {
+        Session session = session(oneOnOne, LocalDateTime.of(2026, 10, 27, 18, 0), 10L);
+        LeaveRequest request = pendingRequest(7L, 30L, false);
+        when(leaveRepository.findSessionId(7L)).thenReturn(Optional.of(500L));
+        when(operations.loadAny(500L)).thenReturn(new SessionOperationSupport.Context(oneOnOne, session));
+        when(operations.request(7L, 500L)).thenReturn(request);
+        doThrow(new BusinessException(ErrorCode.LEAVE_REQUEST_ALREADY_RESOLVED)).when(operations).requirePending(request);
+
+        assertThatThrownBy(() -> leaveService.reject(7L, "No", admin))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.LEAVE_REQUEST_ALREADY_RESOLVED);
+        verify(operations, never()).audit(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Only admins can reject; nothing is loaded for anyone else")
+    void reject_nonAdmin_isDenied() {
+        doThrow(new BusinessException(ErrorCode.ACCESS_DENIED)).when(operations).requireAdmin(tutor);
+
+        assertThatThrownBy(() -> leaveService.reject(7L, "No", tutor))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.ACCESS_DENIED);
+        verifyNoInteractions(leaveRepository);
+    }
+
+    @Test
+    @DisplayName("Admins list every request with filters and the current session status, newest first")
+    void admin_listsRequestsWithSessionStatus() {
+        LeaveRequest late = pendingRequest(7L, 30L, false);
+        late.setLateNotice(true);
+        Session session = session(oneOnOne, LocalDateTime.of(2026, 10, 26, 8, 0), 10L);
+        when(leaveRepository.search(eq(LeaveRequestStatus.PENDING), isNull(), eq(500L), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(late)));
+        when(sessionRepository.findAllById(List.of(500L))).thenReturn(List.of(session));
+
+        var page = leaveService.admin(admin, LeaveRequestStatus.PENDING, null, 500L, 0, 20);
+
+        assertThat(page.getContent()).singleElement().satisfies(item -> {
+            assertThat(item.isLateNotice()).isTrue();
+            assertThat(item.sessionNewStatus()).isEqualTo(SessionStatus.SCHEDULED);
+        });
+        verify(operations).requireAdmin(admin);
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(leaveRepository).search(any(), any(), any(), pageable.capture());
+        assertThat(pageable.getValue().getSort().getOrderFor("requestedAt").isDescending()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Admins cannot use the personal leave list")
+    void mine_admin_isDenied() {
+        assertThatThrownBy(() -> leaveService.mine(admin, null, 0, 20))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.ACCESS_DENIED);
     }
 }

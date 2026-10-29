@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/Icon";
 import { PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD } from "@/constants/classNames";
 import { adminKeys, useRefreshAdmin } from "@/hooks/useAdminData";
 import { assignTutor, fetchAvailableTutors, reassignTutor } from "@/services/admin";
+import { getApiError } from "@/services/api";
 import { formatDate, parseIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 import type { AssignmentPanelProps } from "@/interfaces/admin";
@@ -31,13 +32,19 @@ export function AssignmentPanel({ classId, currentTutorId }: AssignmentPanelProp
     setReassigning(null);
     void refresh();
   };
+  /** Backend chặn vì trùng lịch: tải lại danh sách để thấy các buổi trùng mới nhất */
+  const reloadOnConflict = (error: Error) => {
+    if (getApiError(error).errorCode === "SCHEDULE_CONFLICT") void query.refetch();
+  };
   const assign = useMutation({
     mutationFn: (tutorId: number) => assignTutor(classId, tutorId),
     onSuccess: (result) => finish(result.tutorName),
+    onError: reloadOnConflict,
   });
   const reassign = useMutation({
     mutationFn: ({ tutorId, reason }: { tutorId: number; reason: string }) => reassignTutor(classId, tutorId, reason),
     onSuccess: (result) => finish(result.tutorName),
+    onError: reloadOnConflict,
   });
 
   if (query.isPending) return <PortalLoading label="Đang tải gia sư gợi ý" />;
@@ -90,9 +97,11 @@ export function AssignmentPanel({ classId, currentTutorId }: AssignmentPanelProp
                 {!isCurrent &&
                   reassigning !== tutor.tutorId &&
                   (currentTutorId === null ? (
+                    // Gia sư trùng lịch thì backend sẽ chặn, nên khóa nút luôn
                     <button
                       type="button"
-                      disabled={assign.isPending}
+                      disabled={assign.isPending || !tutor.available}
+                      title={tutor.available ? undefined : "Gia sư này trùng lịch với lớp nên không phân công được"}
                       onClick={() => assign.mutate(tutor.tutorId)}
                       className={PORTAL_BTN_PRIMARY}
                     >
@@ -101,6 +110,8 @@ export function AssignmentPanel({ classId, currentTutorId }: AssignmentPanelProp
                   ) : (
                     <button
                       type="button"
+                      disabled={!tutor.available}
+                      title={tutor.available ? undefined : "Gia sư này trùng lịch với lớp nên không đổi sang được"}
                       onClick={() => {
                         reassign.reset();
                         setReassigning(tutor.tutorId);
