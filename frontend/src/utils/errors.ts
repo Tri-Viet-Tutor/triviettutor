@@ -48,6 +48,8 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   SESSION_ALREADY_CANCELLED: "Buổi học này đã bị hủy từ trước.",
   MAKEUP_ALREADY_EXISTS: "Buổi này đã có buổi học bù.",
   INVALID_MAKEUP_TIME: "Buổi học bù phải ở tương lai và giờ kết thúc sau giờ bắt đầu.",
+  SESSION_ALREADY_TAUGHT: "Buổi này đã có điểm danh hoặc xác nhận dạy nên không hủy hay dùng lại được.",
+  MEETING_NOT_AVAILABLE: "Phòng học chỉ mở từ 15 phút trước giờ học đến khi buổi học kết thúc (buổi đã hủy hoặc đã xong thì không vào được).",
   STUDENT_SCHEDULE_CONFLICT: "Giờ này trùng lịch học khác của học viên trong lớp.",
   // Điểm danh
   ATTENDANCE_LOCKED: "Điểm danh đã khóa nên không sửa được nữa.",

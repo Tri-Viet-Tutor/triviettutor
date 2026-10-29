@@ -37,6 +37,16 @@ export function useAdminSession(sessionId: number | null) {
   });
 }
 
+/**
+ * Buổi gốc đã hủy có còn buổi học bù "sống" (chưa bị hủy) không: tra các buổi của lớp.
+ * Trả `undefined` khi đang tải hoặc không bật.
+ */
+export function useHasLiveMakeup(originalSessionId: number, classGroupId: number, enabled: boolean): boolean | undefined {
+  const sessions = useAdminSessions({ classGroupId, page: 0, size: 100 }, enabled);
+  if (!enabled || !sessions.data) return undefined;
+  return sessions.data.content.some((item) => item.originalSessionId === originalSessionId && item.status !== "CANCELLED");
+}
+
 /** Danh sách đơn xin nghỉ theo bộ lọc */
 export function useAdminLeaveRequests(query: AdminLeaveRequestsQuery) {
   return useQuery({

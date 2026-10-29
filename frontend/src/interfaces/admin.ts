@@ -60,6 +60,20 @@ export interface AdminLeaveCardProps {
   request: LeaveRequestResponse;
 }
 
+/** Props của MakeupForm */
+export interface MakeupFormProps {
+  /** Tiền tố id cho các ô nhập */
+  idPrefix: string;
+  /** Buổi gốc cần học bù */
+  sessionId: number;
+  /** Đơn xin nghỉ đang xử lý; bỏ trống khi xếp bù cho buổi đã hủy */
+  leaveRequestId?: number;
+  /** Dòng giải thích dưới các ô nhập */
+  note: string;
+  onDone: () => void;
+  onCancel: () => void;
+}
+
 /** Props của AdminSessionDetail */
 export interface AdminSessionDetailProps {
   session: SessionResponse;
