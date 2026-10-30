@@ -166,12 +166,13 @@ export function teacherOf(session: SessionResponse): number | null {
 const ATTENDANCE_EDIT_HOURS = 24;
 
 /**
- * Buổi đang ở trạng thái ghi điểm danh được: đã bắt đầu, có người dạy, chưa hoàn tất,
- * không bị hủy / chờ xếp lại lịch. (Hạn 24 giờ của gia sư kiểm tra riêng bằng `attendanceDeadlinePassed`.)
+ * Buổi đang ở trạng thái ghi điểm danh được: đã bắt đầu, có người dạy, không bị hủy / chờ xếp lại lịch.
+ * Buổi đã hoàn tất vẫn sửa được cho tới khi khóa (BR-04.33); hạn 24 giờ của gia sư kiểm tra riêng
+ * bằng `attendanceDeadlinePassed`, trạng thái khóa nằm trong dữ liệu điểm danh.
  */
 export function isRecordable(session: SessionResponse, now: Date): boolean {
   return (
-    (session.status === "SCHEDULED" || session.status === "IN_SESSION") &&
+    (session.status === "SCHEDULED" || session.status === "IN_SESSION" || session.status === "COMPLETED") &&
     teacherOf(session) !== null &&
     sessionStart(session).getTime() <= now.getTime()
   );
@@ -182,9 +183,13 @@ export function attendanceDeadlinePassed(session: SessionResponse, now: Date): b
   return now.getTime() >= sessionEnd(session).getTime() + ATTENDANCE_EDIT_HOURS * HOUR_MS;
 }
 
-/** Buổi mà gia sư `tutorId` cần điểm danh ngay: mình là người dạy, còn ghi được và chưa quá hạn */
+/** Buổi mà gia sư `tutorId` cần điểm danh ngay: mình là người dạy, chưa hoàn tất, còn ghi được và chưa quá hạn */
 export function needsAttendance(session: SessionResponse, tutorId: number | undefined, now: Date): boolean {
   return (
-    teacherOf(session) === tutorId && !session.attendanceLocked && isRecordable(session, now) && !attendanceDeadlinePassed(session, now)
+    teacherOf(session) === tutorId &&
+    session.status !== "COMPLETED" &&
+    !session.attendanceLocked &&
+    isRecordable(session, now) &&
+    !attendanceDeadlinePassed(session, now)
   );
 }

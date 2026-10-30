@@ -122,6 +122,8 @@ public enum ErrorCode {
     ATTENDANCE_NOT_LOCKED     (HttpStatus.UNPROCESSABLE_ENTITY, "Use the attendance submission API while attendance is unlocked"),
     ATTENDANCE_SESSION_NOT_ENDED (HttpStatus.UNPROCESSABLE_ENTITY, "Attendance cannot be finalized before the session ends"),
     ATTENDANCE_EXCUSED_NOT_ALLOWED (HttpStatus.UNPROCESSABLE_ENTITY, "Excused attendance requires approved student leave with at least 24 hours notice"),
+    ACTUAL_TUTOR_CHANGE_NOT_ALLOWED (HttpStatus.UNPROCESSABLE_ENTITY, "The actual tutor can only be corrected for a started, active session"),
+    TUTOR_DISABLED            (HttpStatus.UNPROCESSABLE_ENTITY, "The selected tutor account is disabled"),
 
     // ── Class lifecycle ───────────────────────────────────────────────────────
     INVALID_CLASS_CONFIGURATION (HttpStatus.BAD_REQUEST, "Invalid class dates, schedule, or course duration"),

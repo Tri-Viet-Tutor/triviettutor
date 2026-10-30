@@ -54,8 +54,8 @@ class AttendanceLockJobTest {
         @Test
         @DisplayName("Returns 0 when no lock candidates exist")
         void run_whenNoCandidates_returnsZero() {
-            LocalDate today = LocalDate.now(CLOCK);
-            when(sessionRepository.findAttendanceLockCandidates(eq(today), eq(0L), any(PageRequest.class)))
+            LocalDateTime cutoff = LocalDateTime.now(CLOCK).minusHours(24);
+            when(sessionRepository.findAttendanceLockCandidates(eq(cutoff.toLocalDate()), eq(cutoff.toLocalTime()), eq(0L), any(PageRequest.class)))
                     .thenReturn(List.of());
 
             int count = job.run();
@@ -67,8 +67,8 @@ class AttendanceLockJobTest {
         @Test
         @DisplayName("Locks candidates and returns count of successfully auto-locked sessions")
         void run_whenCandidatesFound_autoLocksAndReturnsCount() {
-            LocalDate today = LocalDate.now(CLOCK);
-            when(sessionRepository.findAttendanceLockCandidates(eq(today), eq(0L), any(PageRequest.class)))
+            LocalDateTime cutoff = LocalDateTime.now(CLOCK).minusHours(24);
+            when(sessionRepository.findAttendanceLockCandidates(eq(cutoff.toLocalDate()), eq(cutoff.toLocalTime()), eq(0L), any(PageRequest.class)))
                     .thenReturn(List.of(101L, 102L, 103L));
             when(attendanceService.autoLock(101L)).thenReturn(true);
             when(attendanceService.autoLock(102L)).thenReturn(false); // e.g. deadline not passed yet
@@ -85,8 +85,8 @@ class AttendanceLockJobTest {
         @Test
         @DisplayName("Resilient against individual session exceptions and continues processing")
         void run_whenSessionThrows_continuesNextCandidates() {
-            LocalDate today = LocalDate.now(CLOCK);
-            when(sessionRepository.findAttendanceLockCandidates(eq(today), eq(0L), any(PageRequest.class)))
+            LocalDateTime cutoff = LocalDateTime.now(CLOCK).minusHours(24);
+            when(sessionRepository.findAttendanceLockCandidates(eq(cutoff.toLocalDate()), eq(cutoff.toLocalTime()), eq(0L), any(PageRequest.class)))
                     .thenReturn(List.of(201L, 202L));
             when(attendanceService.autoLock(201L)).thenThrow(new RuntimeException("Pessimistic lock timeout"));
             when(attendanceService.autoLock(202L)).thenReturn(true);
@@ -101,16 +101,16 @@ class AttendanceLockJobTest {
         @Test
         @DisplayName("Paginates through batches when batch size is 200")
         void run_paginatesAcrossFullBatches() {
-            LocalDate today = LocalDate.now(CLOCK);
+            LocalDateTime cutoff = LocalDateTime.now(CLOCK).minusHours(24);
             List<Long> batch1 = new ArrayList<>();
             for (long i = 1; i <= 200; i++) {
                 batch1.add(i);
             }
             List<Long> batch2 = List.of(201L, 202L);
 
-            when(sessionRepository.findAttendanceLockCandidates(eq(today), eq(0L), eq(PageRequest.of(0, 200))))
+            when(sessionRepository.findAttendanceLockCandidates(eq(cutoff.toLocalDate()), eq(cutoff.toLocalTime()), eq(0L), eq(PageRequest.of(0, 200))))
                     .thenReturn(batch1);
-            when(sessionRepository.findAttendanceLockCandidates(eq(today), eq(200L), eq(PageRequest.of(0, 200))))
+            when(sessionRepository.findAttendanceLockCandidates(eq(cutoff.toLocalDate()), eq(cutoff.toLocalTime()), eq(200L), eq(PageRequest.of(0, 200))))
                     .thenReturn(batch2);
 
             when(attendanceService.autoLock(anyLong())).thenReturn(true);
@@ -118,8 +118,8 @@ class AttendanceLockJobTest {
             int count = job.run();
 
             assertThat(count).isEqualTo(202);
-            verify(sessionRepository).findAttendanceLockCandidates(eq(today), eq(0L), eq(PageRequest.of(0, 200)));
-            verify(sessionRepository).findAttendanceLockCandidates(eq(today), eq(200L), eq(PageRequest.of(0, 200)));
+            verify(sessionRepository).findAttendanceLockCandidates(eq(cutoff.toLocalDate()), eq(cutoff.toLocalTime()), eq(0L), eq(PageRequest.of(0, 200)));
+            verify(sessionRepository).findAttendanceLockCandidates(eq(cutoff.toLocalDate()), eq(cutoff.toLocalTime()), eq(200L), eq(PageRequest.of(0, 200)));
         }
     }
 

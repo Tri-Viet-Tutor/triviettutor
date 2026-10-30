@@ -28,14 +28,9 @@ export function TutorSessionDetail({ session, now, tutorId, hasPendingLeave }: T
   // Tôi là người dạy thật sự (gia sư chính hoặc người dạy thay)
   const isTeacher = teacherOf(session) === tutorId;
   const started = sessionStart(session).getTime() <= now.getTime();
-  // Còn ghi / sửa điểm danh được: buổi đang diễn ra và chưa quá 24 giờ sau khi kết thúc
+  // Còn ghi / sửa điểm danh được (kể cả buổi đã hoàn tất) cho tới 24 giờ sau khi kết thúc, nếu chưa bị khóa
   const editable = isRecordable(session, now) && !attendanceDeadlinePassed(session, now);
-  const readOnlyNote =
-    session.status === "COMPLETED"
-      ? "Buổi học đã hoàn tất."
-      : attendanceDeadlinePassed(session, now)
-        ? "Đã quá 24 giờ sau buổi học nên không sửa được nữa."
-        : undefined;
+  const readOnlyNote = attendanceDeadlinePassed(session, now) ? "Đã quá 24 giờ sau buổi học nên không sửa được nữa." : undefined;
 
   return (
     <div className="border-t border-brand-sandLine bg-brand-sand/60/70 px-4 py-4 sm:px-5">

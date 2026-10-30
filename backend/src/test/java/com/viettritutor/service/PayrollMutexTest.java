@@ -197,7 +197,7 @@ class PayrollMutexTest {
         void get_preview_calculatesTotalSalaryAccurately() {
             YearMonth period = YearMonth.of(2026, 9);
             when(periodRepository.findByYearAndMonth(2026, 9)).thenReturn(Optional.empty());
-            when(profileRepository.findPayrollEligible(any(LocalDateTime.class))).thenReturn(List.of(tutorProfile));
+            when(profileRepository.findPayrollEligible(any(LocalDateTime.class), any(LocalDate.class), any(LocalDate.class), anyBoolean())).thenReturn(List.of(tutorProfile));
 
             // 8 completed sessions
             List<TeachingSessionResponse> completed = new ArrayList<>();
@@ -241,7 +241,7 @@ class PayrollMutexTest {
             subProfile.setSessionRate(new BigDecimal("250000"));
 
             when(periodRepository.findByYearAndMonth(2026, 9)).thenReturn(Optional.empty());
-            when(profileRepository.findPayrollEligible(any(LocalDateTime.class))).thenReturn(List.of(tutorProfile, subProfile));
+            when(profileRepository.findPayrollEligible(any(LocalDateTime.class), any(LocalDate.class), any(LocalDate.class), anyBoolean())).thenReturn(List.of(tutorProfile, subProfile));
 
             // Original tutor has 0 completed, 1 substitutedOut
             TeachingSessionResponse subbedOut = new TeachingSessionResponse(
@@ -283,7 +283,7 @@ class PayrollMutexTest {
             when(keyRepository.findById("idemp-key-101")).thenReturn(Optional.empty());
             when(periodRepository.findByYearAndMonth(2026, 9)).thenReturn(Optional.empty());
             when(sessionRepository.findPayrollSessionsForUpdate(period.atDay(1), period.atEndOfMonth())).thenReturn(List.of());
-            when(profileRepository.findPayrollEligibleForUpdate(any(LocalDateTime.class))).thenReturn(List.of(tutorProfile));
+            when(profileRepository.findPayrollEligibleForUpdate(any(LocalDateTime.class), any(LocalDate.class), any(LocalDate.class), anyBoolean())).thenReturn(List.of(tutorProfile));
 
             TeachingPeriodSummary summary = new TeachingPeriodSummary(10L, period, List.of(), List.of(), List.of(), List.of());
             when(teachingQuery.periodSummary(10L, period)).thenReturn(summary);
@@ -349,7 +349,7 @@ class PayrollMutexTest {
             Session scheduledSession = Session.builder().id(501L).status(SessionStatus.SCHEDULED).build();
             when(sessionRepository.findPayrollSessionsForUpdate(period.atDay(1), period.atEndOfMonth()))
                     .thenReturn(List.of(scheduledSession));
-            when(profileRepository.findPayrollEligibleForUpdate(any(LocalDateTime.class))).thenReturn(List.of(tutorProfile));
+            when(profileRepository.findPayrollEligibleForUpdate(any(LocalDateTime.class), any(LocalDate.class), any(LocalDate.class), anyBoolean())).thenReturn(List.of(tutorProfile));
 
             TeachingPeriodSummary summary = new TeachingPeriodSummary(10L, period, List.of(), List.of(), List.of(), List.of());
             when(teachingQuery.periodSummary(10L, period)).thenReturn(summary);
