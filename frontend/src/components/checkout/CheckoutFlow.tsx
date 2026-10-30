@@ -558,7 +558,7 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
                     <span className="block text-sm">
                       Khai giảng {group.startDate} · Còn {group.spotsLeft} chỗ
                     </span>
-                    <span className="block font-semibold">Học phí {formatVnd(group.basePrice1on1)}</span>
+                    <span className="block font-semibold">Học phí dự kiến {formatVnd(group.estimatedFee)}</span>
                   </button>
                 ))}
               </div>
