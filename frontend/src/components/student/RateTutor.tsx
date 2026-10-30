@@ -1,51 +1,15 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useState } from "react";
 import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { Icon } from "@/components/ui/Icon";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT } from "@/constants/classNames";
 import { subjectLabel } from "@/constants/management";
-import { useMyEnrollments } from "@/hooks/useManagementData";
-import type { TuitionClass } from "@/interfaces/api";
+import type { StudentTutor } from "@/hooks/useRatingData";
 import { createRating, deleteRating, fetchMyRating, updateRating } from "@/services/ratingService";
-import { getTuitionClass } from "@/services/tuitionPaymentService";
 import { portalErrorMessage } from "@/utils/errors";
 
 const STAR_HINT = ["", "Chưa hài lòng", "Tạm được", "Bình thường", "Tốt", "Rất tốt"];
-
-export interface StudentTutor {
-  id: number;
-  name: string;
-  classes: TuitionClass[];
-}
-
-/** Gia sư của các lớp học viên đang học (GET /enrollments/my → GET /catalog/classes/{id}), gom theo gia sư */
-export function useStudentTutors() {
-  const enrollments = useMyEnrollments();
-  const classIds = [...new Set((enrollments.data?.content ?? []).filter((item) => item.status === "ACTIVE").map((item) => item.classGroupId))];
-  const classes = useQueries({
-    queries: classIds.map((id) => ({ queryKey: ["catalog-class", id], queryFn: () => getTuitionClass(id), staleTime: 5 * 60_000, retry: false })),
-  });
-  const byTutor = new Map<number, StudentTutor>();
-  for (const query of classes) {
-    const item = query.data;
-    if (!item?.tutorId) continue;
-    const entry = byTutor.get(item.tutorId) ?? { id: item.tutorId, name: item.tutorName ?? "Gia sư", classes: [] };
-    entry.classes.push(item);
-    byTutor.set(item.tutorId, entry);
-  }
-  return {
-    tutors: [...byTutor.values()],
-    isPending: enrollments.isPending || classes.some((query) => query.isPending),
-    isError: enrollments.isError,
-    refetch: () => void enrollments.refetch(),
-  };
-}
-
-/** Đánh giá của tôi cho một gia sư (null: chưa đánh giá) */
-export function useMyRating(tutorId: number) {
-  return useQuery({ queryKey: ["my-rating", tutorId], queryFn: () => fetchMyRating(tutorId), retry: false });
-}
 
 /** Chọn số sao 1-5; rê chuột xem trước */
 function StarPicker({ value, onChange }: { value: number; onChange: (value: number) => void }) {

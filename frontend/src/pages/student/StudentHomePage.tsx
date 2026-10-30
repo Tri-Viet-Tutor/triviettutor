@@ -1,6 +1,7 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { RateTutorDialog, type StudentTutor, useMyRating, useStudentTutors } from "@/components/student/RateTutor";
+import { RateTutorDialog } from "@/components/student/RateTutor";
+import { type StudentTutor, useMyRating, useStudentTutors } from "@/hooks/useRatingData";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { Link } from "react-router-dom";
 import { PORTAL_CARD, PORTAL_MORE_LINK } from "@/constants/classNames";

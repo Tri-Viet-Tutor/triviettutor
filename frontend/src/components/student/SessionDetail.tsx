@@ -18,7 +18,8 @@ import {
   sessionStart,
   teacherOf,
 } from "@/utils/sessions";
-import { RateTutorDialog, type StudentTutor, useStudentTutors } from "@/components/student/RateTutor";
+import { RateTutorDialog } from "@/components/student/RateTutor";
+import { type StudentTutor, useStudentTutors } from "@/hooks/useRatingData";
 import type { SessionDetailProps } from "@/interfaces/portal";
 import { displayCode } from "@/utils/classes";
 
