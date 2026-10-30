@@ -163,6 +163,15 @@ public enum ErrorCode {
     GRADING_REASON_REQUIRED (HttpStatus.BAD_REQUEST, "An audit reason is required to revise a grade"),
     INVALID_STATUS_TRANSITION (HttpStatus.UNPROCESSABLE_ENTITY, "This status transition is not allowed"),
     AVATAR_NOT_FOUND (HttpStatus.NOT_FOUND, "Avatar not found"),
+    INVALID_AVATAR (HttpStatus.BAD_REQUEST, "Avatar must be a valid PNG or JPEG image"),
+    AVATAR_TOO_LARGE (HttpStatus.BAD_REQUEST, "Avatar must not exceed 2 MB"),
+
+    // ── Generic web errors ───────────────────────────────────────
+    RESOURCE_NOT_FOUND (HttpStatus.NOT_FOUND, "The requested resource does not exist"),
+    METHOD_NOT_ALLOWED (HttpStatus.METHOD_NOT_ALLOWED, "This HTTP method is not supported for this resource"),
+    MISSING_REQUEST_PART (HttpStatus.BAD_REQUEST, "A required request parameter or file is missing"),
+    FILE_TOO_LARGE (HttpStatus.PAYLOAD_TOO_LARGE, "The uploaded file is too large"),
+    UNSUPPORTED_MEDIA_TYPE (HttpStatus.UNSUPPORTED_MEDIA_TYPE, "This Content-Type is not supported for this resource"),
 
     // ── Assistant chatbot ─────────────────────────────────────────
     ASSISTANT_RATE_LIMITED (HttpStatus.TOO_MANY_REQUESTS, "Too many assistant questions; try again later"),
