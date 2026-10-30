@@ -83,6 +83,10 @@ public class SessionOperationSupport {
         if (!"ROLE_TUTOR".equals(tutor.getRole())) {
             throw new BusinessException(ErrorCode.INVALID_TUTOR);
         }
+        // A locked account cannot sign in, so it must not be given sessions to teach.
+        if (tutor.isLocked()) {
+            throw new BusinessException(ErrorCode.INVALID_TUTOR, "The selected tutor account is locked");
+        }
     }
 
     public Long teacher(Session session) {

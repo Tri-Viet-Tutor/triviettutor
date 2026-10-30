@@ -73,6 +73,19 @@ class SessionOperationSupportTest {
                 .status(SessionStatus.SCHEDULED).build();
     }
 
+    @Test
+    void requireTutorRejectsNonTutorAndLockedTutor() {
+        assertThatThrownBy(() -> operations.requireTutor(com.viettritutor.entity.User.builder().id(1L).role("ROLE_STUDENT").build()))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        ex -> assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.INVALID_TUTOR));
+        assertThatThrownBy(() -> operations.requireTutor(com.viettritutor.entity.User.builder().id(2L).role("ROLE_TUTOR").locked(true).build()))
+                .isInstanceOfSatisfying(BusinessException.class, ex -> {
+                    assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.INVALID_TUTOR);
+                    assertThat(ex.getMessage()).isEqualTo("The selected tutor account is locked");
+                });
+        operations.requireTutor(com.viettritutor.entity.User.builder().id(3L).role("ROLE_TUTOR").build());
+    }
+
     private void givenSessionInClass() {
         when(sessionRepository.findClassGroupId(500L)).thenReturn(Optional.of(100L));
         when(classRepository.findForUpdate(100L)).thenReturn(Optional.of(classGroup));
