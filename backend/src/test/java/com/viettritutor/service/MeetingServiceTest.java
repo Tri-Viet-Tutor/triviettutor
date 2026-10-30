@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Clock;
@@ -321,6 +322,19 @@ class MeetingServiceTest {
     }
 
     @Test
+    @DisplayName("Meeting logs answer MEETING_LOGS_UNAVAILABLE instead of a 500 when MongoDB is down")
+    void meetingLogsUnavailableWhenMongoDown() {
+        when(sessionRepository.findById(101L)).thenReturn(Optional.of(session));
+        when(meetingSessionLogRepository.findBySessionId("classroom-session-101"))
+                .thenThrow(new DataAccessResourceFailureException("Timed out while waiting for a server"));
+
+        BusinessException ex = assertThrows(BusinessException.class, () ->
+                meetingService.getSessionMeetingLogs(101L, adminUser));
+
+        assertEquals(ErrorCode.MEETING_LOGS_UNAVAILABLE, ex.getErrorCode());
+    }
+
+    @Test
     @DisplayName("Student cannot retrieve session meeting logs (ACCESS_DENIED)")
     void studentCannotGetMeetingLogs() {
         when(sessionRepository.findById(101L)).thenReturn(Optional.of(session));
@@ -347,5 +361,7 @@ class MeetingServiceTest {
                 meetingService.handleWebhook("{}", "Bearer invalid_token"));
 
         assertEquals(ErrorCode.ACCESS_DENIED, ex.getErrorCode());
+        // The verifier's internal error text is logged, never returned to the caller.
+        assertEquals("Invalid webhook signature", ex.getMessage());
     }
 }
