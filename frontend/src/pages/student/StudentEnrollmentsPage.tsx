@@ -7,6 +7,7 @@ import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
 import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/PortalState";
 import { StatTile } from "@/components/dashboard/StatTile";
 import { StatusChip } from "@/components/dashboard/StatusChip";
+import { TutorRatingBadge, TutorRatingDialog } from "@/components/student/TutorRatingDialog";
 import { Icon } from "@/components/ui/Icon";
 import {
   AUTH_ERROR,
@@ -25,7 +26,7 @@ import { cancelEnrollment } from "@/services/managementService";
 import { formatVnd } from "@/utils/currency";
 import { formatDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
-import { formatTimeRange, nextSession, splitSessions } from "@/utils/sessions";
+import { formatTimeRange, nextSession, splitSessions, teacherOf } from "@/utils/sessions";
 import type { EnrollmentResponse, EnrollmentStatus } from "@/interfaces/api";
 
 /** Câu báo đúng với kết quả hủy: hoàn ngay (ví/mock) hay đang chờ VNPay hoàn tiền */
@@ -39,6 +40,7 @@ function cancelNotice(result: EnrollmentResponse): string {
 /**
  * Các lớp học viên đã đóng học phí: học phí, ưu đãi, tiến độ buổi học, buổi kế tiếp và hủy ghi danh.
  * API: GET /enrollments/my, DELETE /enrollments/{id} (kèm lý do), GET /me/sessions để ghép tiến độ.
+ * Lớp đã có buổi học hoàn tất thì đánh giá được gia sư dạy gần nhất (POST /tutors/{id}/ratings, PUT /ratings/{id}).
  */
 export function StudentEnrollmentsPage() {
   const [filter, setFilter] = useState<EnrollmentStatus | "ALL">("ALL");
@@ -46,6 +48,7 @@ export function StudentEnrollmentsPage() {
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [ratingTutorId, setRatingTutorId] = useState<number | null>(null);
   const enrollments = useMyEnrollments();
   const sessions = useMySessions();
   const refreshMine = useRefreshMine();
@@ -71,6 +74,14 @@ export function StudentEnrollmentsPage() {
     const mine = (sessions.data ?? []).filter((session) => session.classGroupId === classGroupId && session.status !== "CANCELLED");
     const { upcoming, past } = splitSessions(mine, now);
     return { done: past.length, total: mine.length, next: nextSession(upcoming) };
+  }
+
+  /** Gia sư dạy buổi hoàn tất gần nhất của lớp — người học viên được đánh giá; chưa học xong buổi nào thì null */
+  function ratedTutorOf(classGroupId: number): number | null {
+    const completed = (sessions.data ?? [])
+      .filter((session) => session.classGroupId === classGroupId && session.status === "COMPLETED" && teacherOf(session) !== null)
+      .sort((a, b) => `${b.date}${b.startTime}`.localeCompare(`${a.date}${a.startTime}`));
+    return completed.length ? teacherOf(completed[0]) : null;
   }
 
   return (
@@ -143,6 +154,7 @@ export function StudentEnrollmentsPage() {
             const status = ENROLLMENT_STATUS[item.status];
             const progress = progressOf(item.classGroupId);
             const percent = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+            const tutorId = ratedTutorOf(item.classGroupId);
             return (
               <li key={item.enrollmentId} className={`flex flex-col overflow-hidden ${PORTAL_CARD}`}>
                 <div className="flex items-start justify-between gap-3 border-b border-dashed border-brand-sandLine bg-gradient-to-br from-brand-tint to-white px-5 py-4">
@@ -219,6 +231,19 @@ export function StudentEnrollmentsPage() {
                     </p>
                   )}
 
+                  {tutorId !== null && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-brand-sandLine px-3 py-2">
+                      <span className="flex flex-wrap items-center gap-x-2 text-[14px] text-brand-ink">
+                        <Icon name="person" className="text-[19px] text-brand-navy" />
+                        <TutorRatingBadge tutorId={tutorId} />
+                      </span>
+                      <button type="button" onClick={() => setRatingTutorId(tutorId)} className={PORTAL_BTN_GHOST}>
+                        <Icon name="star" className="text-[18px]" />
+                        Đánh giá gia sư
+                      </button>
+                    </div>
+                  )}
+
                   {item.status !== "ACTIVE" && item.cancellationReason && (
                     <p className="text-[13.5px] text-brand-muted">
                       Lý do hủy: <span className="text-brand-ink">{item.cancellationReason}</span>
@@ -261,6 +286,8 @@ export function StudentEnrollmentsPage() {
           })}
         </ul>
       )}
+
+      <TutorRatingDialog tutorId={ratingTutorId} onClose={() => setRatingTutorId(null)} />
 
       <PortalDialog
         open={cancelling !== null}
