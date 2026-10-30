@@ -122,6 +122,10 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   SUBMISSION_NOT_SUBMITTED: "Chỉ chấm được bài đã nộp.",
   INVALID_HOMEWORK_SCORE: "Điểm không được vượt quá điểm tối đa của bài.",
   GRADING_REASON_REQUIRED: "Cần nhập lý do khi sửa điểm đã chấm.",
+  // Đánh giá gia sư
+  RATING_NOT_FOUND: "Không tìm thấy đánh giá này.",
+  RATING_ALREADY_EXISTS: "Bạn đã đánh giá gia sư này rồi. Hãy tải lại để sửa đánh giá cũ.",
+  RATING_NOT_ELIGIBLE: "Bạn chỉ đánh giá được gia sư dạy lớp bạn đang học.",
 };
 
 /** Đổi lỗi của một lời gọi API thành câu báo cho người dùng; mất kết nối thì báo riêng. */

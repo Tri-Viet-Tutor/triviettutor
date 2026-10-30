@@ -117,6 +117,7 @@ export interface TutorRatingResponse {
 /** dto.rating.TutorRatingSummaryResponse */
 export interface TutorRatingSummaryResponse {
   tutorId: number;
+  tutorName: string;
   averageRating: number;
   totalRatings: number;
 }

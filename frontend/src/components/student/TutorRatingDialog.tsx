@@ -12,15 +12,20 @@ import { portalErrorMessage } from "@/utils/errors";
 /** Độ dài tối đa của nhận xét */
 const MAX_COMMENT = 2000;
 
-/** Điểm trung bình của gia sư dạng "★ 4.5 (3 đánh giá)"; chưa có đánh giá thì không hiện gì. */
+/** Tên gia sư (chưa tải được thì "Gia sư #mã") kèm điểm trung bình "★ 4.5 (3 đánh giá)" nếu đã có đánh giá. */
 export function TutorRatingBadge({ tutorId }: TutorRatingBadgeProps) {
   const summary = useTutorRatingSummary(tutorId);
-  if (!summary.data || summary.data.totalRatings === 0) return null;
+  const data = summary.data;
   return (
-    <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-brand-ink">
-      <Icon name="star" className="text-[17px] text-brand-orange" />
-      {Number(summary.data.averageRating).toFixed(1)}
-      <span className="font-normal text-brand-muted">({summary.data.totalRatings} đánh giá)</span>
+    <span className="inline-flex flex-wrap items-center gap-x-2 text-[14px] text-brand-ink">
+      <span className="font-semibold">{data?.tutorName || `Gia sư #${tutorId}`}</span>
+      {data && data.totalRatings > 0 && (
+        <span className="inline-flex items-center gap-1 text-[13px] font-semibold">
+          <Icon name="star" className="text-[17px] text-brand-orange" />
+          {Number(data.averageRating).toFixed(1)}
+          <span className="font-normal text-brand-muted">({data.totalRatings} đánh giá)</span>
+        </span>
+      )}
     </span>
   );
 }
@@ -33,6 +38,7 @@ export function TutorRatingDialog({ tutorId, onClose }: TutorRatingDialogProps) 
   const userId = useUserId();
   const queryClient = useQueryClient();
   const mine = useMyTutorRating(tutorId);
+  const summary = useTutorRatingSummary(tutorId);
   const [stars, setStars] = useState(0);
   const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +73,7 @@ export function TutorRatingDialog({ tutorId, onClose }: TutorRatingDialogProps) 
     <PortalDialog
       open={tutorId !== null}
       onClose={onClose}
-      title="Đánh giá gia sư"
+      title={summary.data?.tutorName ? `Đánh giá gia sư ${summary.data.tutorName}` : "Đánh giá gia sư"}
       description={existing ? "Bạn đã đánh giá gia sư này; có thể sửa lại bất cứ lúc nào." : "Chia sẻ cảm nhận của bạn về gia sư."}
       widthClassName="max-w-[480px]"
     >

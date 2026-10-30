@@ -15,7 +15,8 @@ import {
 import { SUBMISSION_STATUS } from "@/constants/labels";
 import { learningKeys } from "@/hooks/useLearningData";
 import { useUserId } from "@/hooks/usePortalData";
-import type { StudentHomeworkCardProps, SubmissionResponse } from "@/interfaces/learning";
+import type { PageResponse } from "@/interfaces/api";
+import type { StudentHomeworkCardProps, StudentHomeworkResponse, SubmissionResponse } from "@/interfaces/learning";
 import { saveSubmissionDraft, startSubmission, submitSubmission } from "@/services/learningService";
 import { formatDate, formatDateTime, parseIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
@@ -32,9 +33,7 @@ export function StudentHomeworkCard({ item, now }: StudentHomeworkCardProps) {
   const userId = useUserId();
   const queryClient = useQueryClient();
   const { homework } = item;
-  // Bản mới nhất nhận về sau một thao tác — dùng tới khi danh sách tải lại xong (để luôn gửi đúng version)
-  const [latest, setLatest] = useState<SubmissionResponse | null>(null);
-  const submission = latest && (latest.version ?? -1) >= (item.submission.version ?? -1) ? latest : item.submission;
+  const submission = item.submission;
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState("");
   const [resourceUrl, setResourceUrl] = useState("");
@@ -45,10 +44,22 @@ export function StudentHomeworkCard({ item, now }: StudentHomeworkCardProps) {
   const accepting = homework.status === "PUBLISHED" && due.getTime() > now.getTime();
   const style = SUBMISSION_STATUS[submission.status];
 
+  /**
+   * Ghi bài làm mới vào ngay danh sách đang xem (thay vì tải lại) để thẻ không biến mất khỏi bộ lọc hiện tại
+   * và trình soạn / thông báo vẫn còn; các danh sách lọc khác đang không hiển thị thì bỏ cache để lần mở sau tải lại.
+   */
   function onDone(updated: SubmissionResponse, message: string | null) {
-    setLatest(updated);
     setNotice(message);
-    void queryClient.invalidateQueries({ queryKey: learningKeys.all(userId) });
+    const listKey = learningKeys.studentHomeworksAll(userId);
+    queryClient.setQueriesData<PageResponse<StudentHomeworkResponse>>(
+      { queryKey: listKey },
+      (page) =>
+        page && {
+          ...page,
+          content: page.content.map((row) => (row.homework.id === homework.id ? { ...row, submission: updated } : row)),
+        },
+    );
+    queryClient.removeQueries({ queryKey: listKey, type: "inactive" });
   }
 
   function openEditor(from: SubmissionResponse) {

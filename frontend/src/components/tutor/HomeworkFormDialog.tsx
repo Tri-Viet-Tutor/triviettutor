@@ -9,6 +9,7 @@ import type { HomeworkFormDialogProps, HomeworkRequest } from "@/interfaces/lear
 import { createHomework, updateHomework } from "@/services/learningService";
 import { addDays, toDateTimeLocal } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
+import { isValidScore, parseScore } from "@/utils/text";
 
 /** Giá trị đang nhập trong form */
 interface HomeworkDraft {
@@ -67,10 +68,12 @@ export function HomeworkFormDialog({ open, sessionId, homework, onClose }: Homew
     // Ô datetime-local bỏ mất giây: không đổi hạn nộp thì giữ nguyên giá trị cũ để bài đã công bố không bị coi là rút hạn
     const unchangedDue = homework !== null && draft.dueAt === toDateTimeLocal(new Date(homework.dueAt));
     const due = unchangedDue ? new Date(homework.dueAt) : new Date(draft.dueAt);
-    const maxScore = Number(draft.maxScore);
+    const maxScore = parseScore(draft.maxScore);
     if (!draft.title.trim() || !draft.instructions.trim()) return setError("Hãy nhập tiêu đề và nội dung bài tập.");
     if (Number.isNaN(due.getTime()) || due.getTime() <= Date.now()) return setError("Hạn nộp phải ở tương lai.");
-    if (!(maxScore > 0)) return setError("Điểm tối đa phải lớn hơn 0.");
+    if (!isValidScore(draft.maxScore) || !(maxScore > 0)) {
+      return setError("Điểm tối đa phải lớn hơn 0, tối đa 2 chữ số thập phân.");
+    }
     if (homework && published) {
       if (due.getTime() < new Date(homework.dueAt).getTime()) return setError("Bài đã công bố chỉ được lùi hạn nộp, không được rút ngắn.");
       if (maxScore < homework.maxScore) return setError("Bài đã công bố không được giảm điểm tối đa.");

@@ -207,7 +207,6 @@ export function StudentEnrollmentsPage() {
                     <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-brand-sandLine px-3 py-2">
                       <span className="flex flex-wrap items-center gap-x-2 text-[14px] text-brand-ink">
                         <Icon name="person" className="text-[19px] text-brand-navy" />
-                        Gia sư #{tutorId}
                         <TutorRatingBadge tutorId={tutorId} />
                       </span>
                       <button type="button" onClick={() => setRatingTutorId(tutorId)} className={PORTAL_BTN_GHOST}>

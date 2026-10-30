@@ -1,5 +1,5 @@
 import { isAxiosError } from "axios";
-import { api, unwrap } from "@/services/api";
+import { api, getApiError, unwrap } from "@/services/api";
 import type { ApiResponse, PageResponse } from "@/interfaces/api";
 import type {
   GradeSubmissionRequest,
@@ -85,44 +85,27 @@ export async function submitSubmission(homeworkId: number, request: SubmissionRe
 
 // ── Đánh giá gia sư ──
 
-/**
- * API đánh giá có thể trả DTO trần hoặc bọc trong khung ApiResponse — nhận cả hai:
- * có khung { success, data } thì lấy `data`, không thì dùng nguyên thân phản hồi.
- */
-function unwrapEither<T>(body: T | ApiResponse<T>): T {
-  if (body !== null && typeof body === "object" && "success" in body && typeof body.success === "boolean") {
-    return (body as ApiResponse<T>).data as T;
-  }
-  return body as T;
-}
-
-/** GET /tutors/{tutorId}/ratings/summary — điểm trung bình và số lượt đánh giá */
+/** GET /tutors/{tutorId}/ratings/summary — tên gia sư, điểm trung bình và số lượt đánh giá */
 export async function fetchTutorRatingSummary(tutorId: number): Promise<TutorRatingSummaryResponse> {
-  const { data } = await api.get<TutorRatingSummaryResponse | ApiResponse<TutorRatingSummaryResponse>>(
-    `/tutors/${tutorId}/ratings/summary`,
-  );
-  return unwrapEither(data);
+  return unwrap(await api.get<ApiResponse<TutorRatingSummaryResponse>>(`/tutors/${tutorId}/ratings/summary`));
 }
 
-/** GET /tutors/{tutorId}/my-rating — đánh giá của tôi; chưa đánh giá (404) thì trả null */
+/** GET /tutors/{tutorId}/my-rating — đánh giá của tôi; chưa đánh giá (404 RATING_NOT_FOUND) thì trả null */
 export async function fetchMyTutorRating(tutorId: number): Promise<TutorRatingResponse | null> {
   try {
-    const { data } = await api.get<TutorRatingResponse | ApiResponse<TutorRatingResponse>>(`/tutors/${tutorId}/my-rating`);
-    return unwrapEither(data) ?? null;
+    return unwrap(await api.get<ApiResponse<TutorRatingResponse>>(`/tutors/${tutorId}/my-rating`));
   } catch (error) {
-    if (isAxiosError(error) && error.response?.status === 404) return null;
+    if (getApiError(error).errorCode === "RATING_NOT_FOUND" || (isAxiosError(error) && error.response?.status === 404)) return null;
     throw error;
   }
 }
 
 /** POST /tutors/{tutorId}/ratings — mỗi học viên đánh giá một gia sư một lần */
 export async function createTutorRating(tutorId: number, request: TutorRatingRequest): Promise<TutorRatingResponse> {
-  const { data } = await api.post<TutorRatingResponse | ApiResponse<TutorRatingResponse>>(`/tutors/${tutorId}/ratings`, request);
-  return unwrapEither(data);
+  return unwrap(await api.post<ApiResponse<TutorRatingResponse>>(`/tutors/${tutorId}/ratings`, request));
 }
 
 /** PUT /ratings/{ratingId} — sửa đánh giá của tôi */
 export async function updateTutorRating(ratingId: number, request: TutorRatingRequest): Promise<TutorRatingResponse> {
-  const { data } = await api.put<TutorRatingResponse | ApiResponse<TutorRatingResponse>>(`/ratings/${ratingId}`, request);
-  return unwrapEither(data);
+  return unwrap(await api.put<ApiResponse<TutorRatingResponse>>(`/ratings/${ratingId}`, request));
 }

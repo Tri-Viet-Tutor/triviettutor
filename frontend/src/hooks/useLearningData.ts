@@ -14,6 +14,7 @@ export const learningKeys = {
   all: (userId: number | undefined) => ["me", userId, "learning"] as const,
   sessionHomeworks: (userId: number | undefined, sessionId: number) => ["me", userId, "learning", "session", sessionId] as const,
   submissions: (userId: number | undefined, homeworkId: number) => ["me", userId, "learning", "submissions", homeworkId] as const,
+  studentHomeworksAll: (userId: number | undefined) => ["me", userId, "learning", "student-homeworks"] as const,
   studentHomeworks: (userId: number | undefined, query: StudentHomeworksQuery) =>
     ["me", userId, "learning", "student-homeworks", query] as const,
   ratingSummary: (tutorId: number) => ["tutor-rating", tutorId, "summary"] as const,

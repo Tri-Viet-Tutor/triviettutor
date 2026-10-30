@@ -20,6 +20,7 @@ import { gradeSubmission } from "@/services/learningService";
 import { formatDateTime } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 import { studentLabel } from "@/utils/sessions";
+import { isValidScore, parseScore } from "@/utils/text";
 
 /**
  * Bài đã nộp của một bài tập (GET /homeworks/{id}/submissions — không gồm bản nháp của học viên)
@@ -37,7 +38,7 @@ export function SubmissionList({ homework }: SubmissionListProps) {
   const grade = useMutation({
     mutationFn: (submission: SubmissionResponse) =>
       gradeSubmission(submission.id as number, {
-        score: Number(score),
+        score: parseScore(score),
         ...(feedback.trim() ? { feedback: feedback.trim() } : {}),
         version: submission.version as number,
       }),
@@ -58,9 +59,8 @@ export function SubmissionList({ homework }: SubmissionListProps) {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!grading) return;
-    const value = Number(score);
-    if (score.trim() === "" || Number.isNaN(value) || value < 0 || value > homework.maxScore) {
-      return setError(`Điểm phải từ 0 đến ${homework.maxScore}.`);
+    if (!isValidScore(score) || parseScore(score) > homework.maxScore) {
+      return setError(`Điểm phải từ 0 đến ${homework.maxScore}, tối đa 2 chữ số thập phân.`);
     }
     setError(null);
     grade.mutate(grading);
