@@ -25,6 +25,7 @@ public class PaymentReadService {
     private final RefundRepository refunds;
     private final EnrollmentPaymentSupport support;
     private final ClassGroupRepository classes;
+    private final MockPaymentPolicy mockPolicy;
     private final Clock clock;
 
     public PaymentResponse detail(Long paymentId, User actor) {
@@ -76,14 +77,50 @@ public class PaymentReadService {
         return list(null, classId, status, page, size);
     }
 
+    /** One enrollment with its latest refund status and whether the student may cancel it for a full refund. */
+    public EnrollmentResponse enrollment(Enrollment enrollment) {
+        return enrollments(List.of(enrollment)).get(0);
+    }
+
+    private List<EnrollmentResponse> enrollments(List<Enrollment> rows) {
+        List<Long> paymentIds = rows.stream().map(Enrollment::getPaymentId).filter(Objects::nonNull).distinct().toList();
+        Map<Long, Refund> latestRefund = paymentIds.isEmpty() ? Map.of() : refunds.findByPaymentIdIn(paymentIds).stream()
+                .collect(Collectors.toMap(Refund::getPaymentId, refund -> refund,
+                        (a, b) -> a.getId() > b.getId() ? a : b));
+        Map<Long, Payment> paymentById = paymentIds.isEmpty() ? Map.of() : payments.findAllById(paymentIds).stream()
+                .collect(Collectors.toMap(Payment::getId, payment -> payment));
+        Map<Long, Boolean> fullRefund = new HashMap<>();
+        return rows.stream().map(enrollment -> {
+            Refund refund = latestRefund.get(enrollment.getPaymentId());
+            // Same rules the cancel endpoint enforces (BR-02.32 and the refund provider checks in
+            // EnrollmentRefundService.settle / VnpayRefundTransactions.prepare); a refund in flight already settles it.
+            boolean cancellable = enrollment.getStatus() == EnrollmentStatus.ACTIVE && refund == null
+                    && refundableBySelf(paymentById.get(enrollment.getPaymentId()))
+                    && fullRefund.computeIfAbsent(enrollment.getClassGroupId(), id -> classes.findById(id)
+                            .map(support::fullRefundRequired).orElse(false));
+            return EnrollmentResponse.from(enrollment, refund == null ? null : refund.getStatus(), cancellable);
+        }).toList();
+    }
+
+    private boolean refundableBySelf(Payment payment) {
+        if (payment == null || payment.getStatus() != PaymentStatus.COMPLETED || payment.getRefundedAmount().signum() != 0) return false;
+        return switch (payment.getMethod()) {
+            case "WALLET", "VNPAY" -> true;
+            case "MOCK" -> mockPolicy.isEnabled();
+            default -> false;
+        };
+    }
+
     private PageResponse<EnrollmentResponse> list(Long studentId, Long classId, EnrollmentStatus status, int page, int size) {
-        return PageResponse.from(enrollments.findAll((root, query, cb) -> {
+        Page<Enrollment> result = enrollments.findAll((root, query, cb) -> {
             List<Predicate> filters = new ArrayList<>();
             if (studentId != null) filters.add(cb.equal(root.get("studentId"), studentId));
             if (classId != null) filters.add(cb.equal(root.get("classGroupId"), classId));
             if (status != null) filters.add(cb.equal(root.get("status"), status));
             return cb.and(filters.toArray(Predicate[]::new));
-        }, paging(page, size)).map(EnrollmentResponse::from));
+        }, paging(page, size));
+        List<EnrollmentResponse> mapped = enrollments(result.getContent());
+        return PageResponse.from(new PageImpl<>(mapped, result.getPageable(), result.getTotalElements()));
     }
 
     private Pageable paging(int page, int size) {

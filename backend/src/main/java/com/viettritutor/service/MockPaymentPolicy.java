@@ -15,10 +15,12 @@ public class MockPaymentPolicy {
         this.enabled = enabled;
     }
 
+    public boolean isEnabled() {
+        return enabled && environment.acceptsProfiles(Profiles.of("dev", "demo", "test"))
+                && !environment.acceptsProfiles(Profiles.of("prod", "production"));
+    }
+
     public void requireEnabled() {
-        if (!enabled || !environment.acceptsProfiles(Profiles.of("dev", "demo", "test"))
-                || environment.acceptsProfiles(Profiles.of("prod", "production"))) {
-            throw new BusinessException(ErrorCode.PAYMENT_MOCK_DISABLED);
-        }
+        if (!isEnabled()) throw new BusinessException(ErrorCode.PAYMENT_MOCK_DISABLED);
     }
 }

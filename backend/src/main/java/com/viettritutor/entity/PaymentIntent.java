@@ -31,6 +31,10 @@ public class PaymentIntent {
     @Column(name = "amount", nullable = false, precision = 15, scale = 0)
     private BigDecimal amount;
 
+    /** Discount behind {@link #amount} at quote time; null on intents created before V23. */
+    @Column(name = "discount_rate", precision = 4, scale = 3)
+    private BigDecimal discountRate;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private PaymentIntentStatus status;
