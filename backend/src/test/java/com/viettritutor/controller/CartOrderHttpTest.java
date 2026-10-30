@@ -111,7 +111,7 @@ class CartOrderHttpTest {
         }
         call("GET","/api/v1/admin/orders",null,"student",null,403);
         var order=checkout("student",f.a(),f.b()); long id=order.path("id").asLong();
-        assertEquals(2500000,order.path("totalAmount").asLong());
+        assertEquals(2000000,order.path("totalAmount").asLong()); // 20% group discount on 1,000,000 + 1,500,000
         call("GET","/api/v1/orders/"+id,null,"other",null,403);
         call("GET","/api/v1/orders/"+id,null,"admin",null,200);
         call("GET","/api/v1/admin/orders?studentId="+f.student().getId(),null,"admin",null,200);

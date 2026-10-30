@@ -656,20 +656,6 @@ export interface ResetPasswordRequest {
   newPassword: string;
 }
 
-// ── services/orderService.ts ──
-/** (Đề xuất) Kết quả của POST /orders/checkout */
-export interface OrderResponse {
-  orderId: number;
-  /** Mã đơn hiển thị cho người mua */
-  orderCode: string;
-  /** Tổng tiền máy chủ chốt cho đơn (VND) */
-  totalAmount: number;
-  /** Đường dẫn thanh toán VNPay đã ký */
-  paymentUrl: string;
-  /** Thời điểm đường dẫn hết hạn (ISO 8601) */
-  expiresAt?: string;
-}
-
 // ── Thanh toán học phí qua VNPay (services/tuitionPaymentService.ts) ──
 
 /** Trạng thái một giao dịch học phí */
@@ -833,6 +819,10 @@ export interface EnrollmentResponse {
   cancelledAt: IsoDateTime | null;
   cancellationReason: string | null;
   cancelledBy: number | null;
+  /** Trạng thái lần hoàn tiền gần nhất của giao dịch; null khi chưa có */
+  refundStatus: "PENDING" | "COMPLETED" | "FAILED" | null;
+  /** Học viên còn được tự hủy và hoàn 100% học phí hay không (BR-02.32) */
+  cancellable: boolean;
 }
 
 /** Tham số của GET /enrollments/my và GET /admin/classes/{classId}/enrollments */
