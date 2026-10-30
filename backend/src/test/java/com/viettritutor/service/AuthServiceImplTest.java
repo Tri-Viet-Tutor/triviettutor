@@ -73,7 +73,6 @@ class AuthServiceImplTest {
 
         ForgotPasswordRequest request = ForgotPasswordRequest.builder()
                 .email("test@example.com")
-                .frontendUrl("http://localhost:3000")
                 .build();
 
         authService.forgotPassword(request);
@@ -84,7 +83,7 @@ class AuthServiceImplTest {
         ArgumentCaptor<String> linkCaptor = ArgumentCaptor.forClass(String.class);
         verify(emailService).sendPasswordResetEmail(eq("test@example.com"), linkCaptor.capture());
 
-        assertTrue(linkCaptor.getValue().startsWith("http://localhost:3000/reset-password?token="));
+        assertTrue(linkCaptor.getValue().startsWith("http://localhost:5173/reset-password?token="));
     }
 
     @Test

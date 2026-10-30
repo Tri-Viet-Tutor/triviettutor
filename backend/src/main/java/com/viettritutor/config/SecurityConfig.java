@@ -56,7 +56,9 @@ public class SecurityConfig {
                             response.setContentType("application/json");
                             response.getWriter().write("{\"success\":false,\"message\":\"Access denied\",\"errorCode\":\"ACCESS_DENIED\"}");
                         }))
-                .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2LoginSuccessHandler))
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oAuth2LoginSuccessHandler)
+                        .failureHandler(oAuth2LoginSuccessHandler))
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

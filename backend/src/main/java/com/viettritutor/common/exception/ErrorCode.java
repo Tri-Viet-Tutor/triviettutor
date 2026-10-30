@@ -27,17 +27,24 @@ public enum ErrorCode {
     INVALID_RESET_TOKEN       (HttpStatus.BAD_REQUEST,    "Invalid password reset token"),
     RESET_TOKEN_EXPIRED       (HttpStatus.BAD_REQUEST,    "Password reset token has expired"),
     EMAIL_SEND_FAILED         (HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send verification email. Please try again later"),
+    OTP_ATTEMPTS_EXCEEDED     (HttpStatus.TOO_MANY_REQUESTS, "Too many incorrect codes; request a new verification code"),
+    OTP_RESEND_TOO_SOON       (HttpStatus.TOO_MANY_REQUESTS, "Please wait before requesting another verification code"),
+    ACCOUNT_LOCKED            (HttpStatus.FORBIDDEN,      "This account has been locked by an administrator"),
 
     // ── Authorization ─────────────────────────────────────────────────────────
     ACCESS_DENIED             (HttpStatus.FORBIDDEN,      "You do not have permission to perform this action"),
     INVALID_PROFILE_FIELD     (HttpStatus.BAD_REQUEST,    "This field cannot be changed for your role"),
     INVALID_ROLE_FILTER       (HttpStatus.BAD_REQUEST,    "Role must be ROLE_ADMIN, ROLE_TUTOR or ROLE_STUDENT"),
     INVALID_PAGINATION        (HttpStatus.BAD_REQUEST,    "Page must be non-negative and size must be between 1 and 100"),
+    CANNOT_LOCK_SELF          (HttpStatus.UNPROCESSABLE_ENTITY, "You cannot lock your own account"),
 
     // ── Resource not found ────────────────────────────────────────────────────
     USER_NOT_FOUND            (HttpStatus.NOT_FOUND,      "User not found"),
     USER_NOT_TUTOR            (HttpStatus.UNPROCESSABLE_ENTITY, "This user is not a tutor"),
     COURSE_NOT_FOUND          (HttpStatus.NOT_FOUND,      "Course not found"),
+    RATING_NOT_FOUND          (HttpStatus.NOT_FOUND,      "Rating not found"),
+    RATING_ALREADY_EXISTS     (HttpStatus.CONFLICT,       "You have already rated this tutor"),
+    RATING_NOT_ELIGIBLE       (HttpStatus.UNPROCESSABLE_ENTITY, "You can only rate a tutor who teaches a class you are enrolled in"),
     CLASS_NOT_FOUND           (HttpStatus.NOT_FOUND,      "Class not found"),
     SESSION_NOT_FOUND         (HttpStatus.NOT_FOUND,      "Session not found"),
     ENROLLMENT_NOT_FOUND      (HttpStatus.NOT_FOUND,      "Enrollment not found"),
