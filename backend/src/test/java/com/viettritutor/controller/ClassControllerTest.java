@@ -165,14 +165,14 @@ class ClassControllerTest {
   assertEquals(1,listing.path("totalElements").asInt()); assertEquals(id,listing.path("content").get(0).path("id").asLong());
   var detail=data(call("GET",CAT+"/"+id,null,token(student)),200);
   assertFalse(detail.has("meetingUrl")); assertEquals(4,detail.path("sessions").size());
-  assertFalse(detail.path("sessions").toString().contains("private-room")); assertEquals(6400000,detail.path("estimatedFee").asInt());
+  assertFalse(detail.path("sessions").toString().contains("private-room")); assertEquals(8000000,detail.path("estimatedFee").asInt());
   assertEquals(2,data(call("GET",BASE+"?courseId="+course.getId(),null,admin),200).path("totalElements").asInt());
   assertEquals(0,data(call("GET",CAT+"?deliveryMode=OFFLINE",null,admin),200).path("totalElements").asInt());
   course.setActive(false);
   assertEquals(0,data(call("GET",CAT,null,admin),200).path("totalElements").asInt());
   call("GET",CAT+"/"+id,null,admin).andExpect(status().isNotFound());
  }
- @ParameterizedTest @CsvSource({"0,6400000","2,6400000","3,5200000","5,4800000","7,4800000"})
+ @ParameterizedTest @CsvSource({"0,8000000","2,8000000","3,8000000","5,8000000","7,8000000"})
  void pricesNextSeat(int count,int price) throws Exception {
   long id=open(); for(int i=0;i<count;i++) enroll(id,user("STUDENT"));
   var d=data(call("GET",CAT+"/"+id,null,admin),200);

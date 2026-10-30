@@ -25,6 +25,7 @@ public class ClassService {
     private final ClassCompletionService completion;
     private final ClassAuditService audit;
     private final TutorAssignmentService tutorAssignments;
+    private final ClassDiscountSettlementService discountSettlement;
     private final jakarta.persistence.EntityManager entityManager;
     private final Clock clock;
 
@@ -137,6 +138,7 @@ public class ClassService {
         }
         if (!valid) throw new BusinessException(ErrorCode.INVALID_STATUS_TRANSITION);
         c.setStatus(target);
+        if (target == ClassStatus.ASSIGNED) discountSettlement.settle(c);
         classes.flush();
         audit.record(id, actor.getId(), "STATUS", Map.of("from", before, "to", target, "reason", reason));
         return query.response(c, true, true);

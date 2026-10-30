@@ -201,8 +201,7 @@ public class ClassQueryService {
             var classPrice = course.priceFor(c.getTotalSessions());
             builder.basePrice1on1(classPrice).pricePerSession(course.pricePerSession());
             if (count < max) {
-                var discount = pricing.discount(c.getClassType(), count);
-                builder.discountRate(discount).estimatedFee(pricing.estimate(classPrice, discount));
+                builder.discountRate(java.math.BigDecimal.ZERO).estimatedFee(classPrice);
             }
         }
         if (includeSessions) {

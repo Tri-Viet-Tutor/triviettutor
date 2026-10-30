@@ -106,9 +106,8 @@ public class EnrollmentPaymentSupport {
         }
         LocalDate start = original.stream().map(Session::getSessionDate).min(LocalDate::compareTo).orElseThrow();
         LocalDate end = original.stream().map(Session::getSessionDate).max(LocalDate::compareTo).orElseThrow();
-        BigDecimal discountRate = pricing.discount(classGroup.getClassType(), existing);
-        // Học phí lớp = giá khóa quy theo buổi × số buổi của lớp, rồi giảm theo sĩ số
-        BigDecimal expectedAmount = pricing.estimate(course.priceFor(expectedSessions), discountRate);
+        BigDecimal discountRate = BigDecimal.ZERO;
+        BigDecimal expectedAmount = course.priceFor(expectedSessions);
         return new Admission(course, List.copyOf(payable), (int) existing + 1, start, end, discountRate, expectedAmount);
     }
 
