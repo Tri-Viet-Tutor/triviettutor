@@ -42,11 +42,12 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
-      - run: mvn -B -ntp test
+      - run: set -o pipefail; mvn -B -ntp test 2>&1 | tee mvn.log
       - name: Report failing tests
         if: failure()
         run: |
           shopt -s nullglob
+          grep -E '^\[ERROR\]' mvn.log | head -n 15 | while IFS= read -r line; do echo "::error::$line"; done
           for f in target/surefire-reports/*.txt; do
             if grep -qE "(Failures|Errors): [1-9]" "$f"; then
               echo "::error title=$(basename "$f" .txt)::$(grep -m1 -E 'Tests run' "$f")"
