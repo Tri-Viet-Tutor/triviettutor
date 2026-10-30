@@ -20,9 +20,9 @@ export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
   const { nameOf } = useUserDirectory();
 
   const tutorLabel = (tutorId: number) => [nameOf(tutorId), `(#${tutorId})`].filter(Boolean).join(" ");
+  const [makeupOpen, setMakeupOpen] = useState(false);
   const [url, setUrl] = useState(session.meetingUrl ?? "");
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [makeupOpen, setMakeupOpen] = useState(false);
 
   const saveUrl = useMutation({ mutationFn: () => setMeetingUrl(session.sessionId, url.trim()), onSuccess: () => void refresh() });
   const cancel = useMutation({
