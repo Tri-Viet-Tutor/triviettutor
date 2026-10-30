@@ -1,4 +1,4 @@
-import { LATE_NOTICE_HOURS } from "@/constants/rules";
+import { JOIN_CLOSES_AFTER_MINUTES, JOIN_OPENS_BEFORE_MINUTES, LATE_NOTICE_HOURS } from "@/constants/rules";
 import type { LeaveRequestResponse, SessionResponse } from "@/interfaces/api";
 import { addDays, diffDays, formatDate, formatDayMonth, parseIsoDate, startOfToday, startOfWeek, weekdayName } from "@/utils/date";
 import type { ClassProgress } from "@/interfaces/portal";
@@ -6,6 +6,7 @@ import type { ClassProgress } from "@/interfaces/portal";
 /* Các hàm tính toán trên buổi học (SessionResponse) dùng chung cho ba khu sau đăng nhập. Giờ học là giờ Việt Nam. */
 
 const HOUR_MS = 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
 
 /** Ghép ngày "YYYY-MM-DD" và giờ "HH:mm:ss" thành một thời điểm theo giờ máy */
 function atTime(date: string, time: string): Date {
@@ -65,6 +66,22 @@ export function splitSessions(sessions: SessionResponse[], now: Date): { upcomin
 /** Buổi kế tiếp sẽ học thật: bỏ buổi đã hủy và buổi đang chờ xếp lại lịch */
 export function nextSession(upcoming: SessionResponse[]): SessionResponse | undefined {
   return upcoming.find((session) => session.status === "SCHEDULED" || session.status === "IN_SESSION");
+}
+
+/** Lúc phòng học trực tuyến của buổi mở cửa */
+export function joinOpensAt(session: SessionResponse): Date {
+  return new Date(sessionStart(session).getTime() - JOIN_OPENS_BEFORE_MINUTES * MINUTE_MS);
+}
+
+/** Vào phòng học được ngay lúc này: buổi chưa hủy và đang trong khung từ 15 phút trước giờ học đến 15 phút sau khi kết thúc */
+export function canJoinNow(session: SessionResponse, now: Date): boolean {
+  const closesAt = sessionEnd(session).getTime() + JOIN_CLOSES_AFTER_MINUTES * MINUTE_MS;
+  return session.status !== "CANCELLED" && now.getTime() >= joinOpensAt(session).getTime() && now.getTime() < closesAt;
+}
+
+/** Phòng học chưa mở nhưng sẽ mở (buổi chưa hủy, chưa xong, chưa tới giờ mở) */
+export function joinOpensLater(session: SessionResponse, now: Date): boolean {
+  return session.status !== "CANCELLED" && session.status !== "COMPLETED" && now.getTime() < joinOpensAt(session).getTime();
 }
 
 /** Backend chỉ nhận đơn xin nghỉ cho buổi chưa bắt đầu và chưa bị hủy */

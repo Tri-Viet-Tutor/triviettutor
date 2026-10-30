@@ -5,13 +5,16 @@ import { HomeworkPanel } from "@/components/tutor/HomeworkPanel";
 import { Icon } from "@/components/ui/Icon";
 import { PORTAL_BTN_SECONDARY } from "@/constants/classNames";
 import { ROUTES } from "@/constants/routes";
-import { parseIsoDate } from "@/utils/date";
+import { formatClockTime, parseIsoDate } from "@/utils/date";
 import {
   attendanceDeadlinePassed,
+  canJoinNow,
   canRequestLeave,
   formatLongDate,
   formatTimeRange,
   isRecordable,
+  joinOpensAt,
+  joinOpensLater,
   sessionStart,
   teacherOf,
 } from "@/utils/sessions";
@@ -68,7 +71,8 @@ export function TutorSessionDetail({ session, now, tutorId, hasPendingLeave }: T
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2.5">
-        {session.status !== "CANCELLED" && session.status !== "COMPLETED" && (
+        {/* Phòng học chỉ mở từ 15 phút trước giờ dạy đến 15 phút sau khi kết thúc, và chỉ cho người dạy thật sự */}
+        {isTeacher && canJoinNow(session, now) && (
           <Link
             to={`/classroom/${session.sessionId}`}
             className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-brand-orange px-4 text-[14px] font-semibold text-brand-navyDeep transition-colors hover:bg-brand-orangeHover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
@@ -76,6 +80,11 @@ export function TutorSessionDetail({ session, now, tutorId, hasPendingLeave }: T
             <Icon name="videocam" className="text-[19px]" />
             Vào phòng học trực tuyến
           </Link>
+        )}
+        {isTeacher && joinOpensLater(session, now) && (
+          <StatusChip tone="slate" icon="videocam">
+            Phòng học mở lúc {formatClockTime(joinOpensAt(session))}
+          </StatusChip>
         )}
         {isTeacher &&
           (hasPendingLeave ? (

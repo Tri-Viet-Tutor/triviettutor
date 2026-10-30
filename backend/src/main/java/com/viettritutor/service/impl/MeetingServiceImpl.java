@@ -12,6 +12,7 @@ import com.viettritutor.entity.User;
 import com.viettritutor.enums.AssignmentStatus;
 import com.viettritutor.enums.EnrollmentStatus;
 import com.viettritutor.enums.LearningScheduleStatus;
+import com.viettritutor.enums.SessionStatus;
 import com.viettritutor.repository.*;
 import com.viettritutor.repository.mongo.MeetingParticipantLogRepository;
 import com.viettritutor.repository.mongo.MeetingSessionLogRepository;
@@ -26,8 +27,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 
 @Service
@@ -38,6 +42,11 @@ public class MeetingServiceImpl implements MeetingService {
     private static final String ROLE_ADMIN = "ROLE_ADMIN";
     private static final String ROLE_TUTOR = "ROLE_TUTOR";
     private static final String ROLE_STUDENT = "ROLE_STUDENT";
+
+    /** The classroom opens this long before the session starts ... */
+    static final Duration JOIN_OPENS_BEFORE_START = Duration.ofMinutes(15);
+    /** ... and stays open this long after the session ends so participants can rejoin. */
+    static final Duration JOIN_CLOSES_AFTER_END = Duration.ofMinutes(15);
 
     @Value("${livekit.url:ws://localhost:7880}")
     private String livekitUrl;
@@ -54,6 +63,7 @@ public class MeetingServiceImpl implements MeetingService {
     private final LearningScheduleRepository learningScheduleRepository;
     private final TutorAssignmentRepository tutorAssignmentRepository;
     private final UserRepository userRepository;
+    private final Clock clock;
 
     @Autowired(required = false)
     private MeetingSessionLogRepository meetingSessionLogRepository;
@@ -72,9 +82,9 @@ public class MeetingServiceImpl implements MeetingService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));
 
         Long classGroupId = session.getClassGroupId();
-        ClassGroup classGroup = classGroupId != null ? classGroupRepository.findById(classGroupId).orElse(null) : null;
-
         String role = validateAndResolveRole(session, classGroupId, currentUser);
+        requireJoinable(session, "ADMIN".equals(role));
+        ClassGroup classGroup = classGroupId != null ? classGroupRepository.findById(classGroupId).orElse(null) : null;
 
         boolean isTutor = "TUTOR".equals(role);
         boolean isAdmin = "ADMIN".equals(role);
@@ -103,12 +113,6 @@ public class MeetingServiceImpl implements MeetingService {
         );
 
         String jwt = token.toJwt();
-
-        // If session meetingUrl is unset, store default internal classroom link
-        if (session.getMeetingUrl() == null || session.getMeetingUrl().isBlank()) {
-            session.setMeetingUrl("/classroom/" + session.getId());
-            sessionRepository.save(session);
-        }
 
         // Safe audit logging to MongoDB without failing live token response
         auditMeetingEntry(session, classGroup, currentUser, role, roomName, identity, participantName);
@@ -144,12 +148,12 @@ public class MeetingServiceImpl implements MeetingService {
 
         List<Session> sessions = sessionRepository.findByClassGroupIdOrderBySessionNumberAsc(classGroupId);
         if (!sessions.isEmpty()) {
-            // Find first pending or in-progress session, or latest one
-            Session candidate = sessions.stream()
-                    .filter(s -> s.getStatus() != com.viettritutor.enums.SessionStatus.COMPLETED
-                            && s.getStatus() != com.viettritutor.enums.SessionStatus.CANCELLED)
-                    .findFirst()
-                    .orElse(sessions.get(0));
+            // Prefer the live session whose classroom is open now, else the first live one, else the first.
+            List<Session> live = sessions.stream()
+                    .filter(s -> s.getStatus() != SessionStatus.COMPLETED && s.getStatus() != SessionStatus.CANCELLED)
+                    .toList();
+            Session candidate = live.stream().filter(this::withinJoinWindow).findFirst()
+                    .orElse(live.isEmpty() ? sessions.get(0) : live.get(0));
             return generateTokenForSession(candidate.getId(), currentUser);
         }
 
@@ -212,40 +216,22 @@ public class MeetingServiceImpl implements MeetingService {
         }
 
         if (ROLE_TUTOR.equals(userRole)) {
-            Long scheduledTutorId = session.getScheduledTutorId();
-            Long actualTutorId = session.getActualTutorId();
-
-            if (userId.equals(actualTutorId) || userId.equals(scheduledTutorId)) {
+            // Only the tutor actually teaching this session: a substitute replaces the scheduled tutor.
+            if (userId.equals(teachingTutorId(session))) {
                 return "TUTOR";
             }
 
-            if (classGroupId != null) {
-                boolean isAssigned = tutorAssignmentRepository
-                        .findByClassGroupIdAndStatus(classGroupId, AssignmentStatus.ACTIVE)
-                        .map(a -> userId.equals(a.getTutorId()))
-                        .orElse(false);
-                if (isAssigned) {
-                    return "TUTOR";
-                }
-            }
-
-            log.warn("Tutor {} is not assigned to session {} or class {}", userId, session.getId(), classGroupId);
+            log.warn("Tutor {} is not teaching session {} of class {}", userId, session.getId(), classGroupId);
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
 
         if (ROLE_STUDENT.equals(userRole)) {
-            if (classGroupId != null) {
-                boolean isEnrolled = enrollmentRepository.existsByStudentIdAndClassGroupIdAndStatus(
-                        userId, classGroupId, EnrollmentStatus.ACTIVE);
-                if (isEnrolled) {
-                    return "STUDENT";
-                }
-
-                boolean hasSchedule = learningScheduleRepository
-                        .existsByStudentIdAndClassGroupIdAndStatus(userId, classGroupId, LearningScheduleStatus.ACTIVE);
-                if (hasSchedule) {
-                    return "STUDENT";
-                }
+            // The paid enrollment's learning schedule must cover the session date.
+            if (classGroupId != null && learningScheduleRepository
+                    .existsByStudentIdAndClassGroupIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                            userId, classGroupId, LearningScheduleStatus.ACTIVE,
+                            session.getSessionDate(), session.getSessionDate())) {
+                return "STUDENT";
             }
 
             log.warn("Student {} is not enrolled in class {}", userId, classGroupId);
@@ -253,6 +239,33 @@ public class MeetingServiceImpl implements MeetingService {
         }
 
         throw new BusinessException(ErrorCode.ACCESS_DENIED);
+    }
+
+    private static Long teachingTutorId(Session session) {
+        return session.getActualTutorId() != null ? session.getActualTutorId() : session.getScheduledTutorId();
+    }
+
+    private void requireJoinable(Session session, boolean admin) {
+        boolean open = withinJoinWindow(session);
+        // A session may finish (COMPLETED) right at its end; participants can still rejoin during the grace period.
+        if (session.getStatus() == SessionStatus.CANCELLED || (session.getStatus() == SessionStatus.COMPLETED && !open)) {
+            throw new BusinessException(ErrorCode.MEETING_NOT_AVAILABLE, "The session is cancelled or completed");
+        }
+        // Admins may observe a live session outside the window.
+        if (!admin && !open) {
+            throw new BusinessException(ErrorCode.MEETING_NOT_AVAILABLE,
+                    "The classroom opens 15 minutes before the session starts and closes 15 minutes after it ends");
+        }
+    }
+
+    private boolean withinJoinWindow(Session session) {
+        ZoneId zone = clock.getZone();
+        Instant opensAt = LocalDateTime.of(session.getSessionDate(), session.getStartTime()).atZone(zone).toInstant()
+                .minus(JOIN_OPENS_BEFORE_START);
+        Instant closesAt = LocalDateTime.of(session.getSessionDate(), session.getEndTime()).atZone(zone).toInstant()
+                .plus(JOIN_CLOSES_AFTER_END);
+        Instant now = clock.instant();
+        return !now.isBefore(opensAt) && now.isBefore(closesAt);
     }
 
     private String validateClassGroupMembership(Long classGroupId, User currentUser) {

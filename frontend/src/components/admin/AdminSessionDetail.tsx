@@ -2,12 +2,13 @@ import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 import { AdminAttendancePanel } from "@/components/admin/AdminAttendancePanel";
+import { MakeupForm } from "@/components/admin/MakeupForm";
 import { ReasonForm } from "@/components/admin/ReasonForm";
 import { AuthNotice } from "@/components/auth/AuthNotice";
 import { Icon } from "@/components/ui/Icon";
 import { AUTH_LABEL, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_TEXT_LINK } from "@/constants/classNames";
 import { ROUTES } from "@/constants/routes";
-import { useRefreshAdmin, useUserDirectory } from "@/hooks/useAdminData";
+import { useCanOfferMakeup, useRefreshAdmin, useUserDirectory } from "@/hooks/useAdminData";
 import { cancelSession, setMeetingUrl } from "@/services/admin";
 import { parseIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
@@ -19,6 +20,7 @@ export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
   const { nameOf } = useUserDirectory();
 
   const tutorLabel = (tutorId: number) => [nameOf(tutorId), `(#${tutorId})`].filter(Boolean).join(" ");
+  const [makeupOpen, setMakeupOpen] = useState(false);
   const [url, setUrl] = useState(session.meetingUrl ?? "");
   const [cancelOpen, setCancelOpen] = useState(false);
 
@@ -32,6 +34,9 @@ export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
   });
 
   const cancelled = session.status === "CANCELLED";
+  // Buổi đã hủy cần được học bù để lớp đủ buổi; buổi bù bị hủy thì xếp lại bù cho buổi gốc
+  const makeupTargetId = session.originalSessionId ?? session.sessionId;
+  const canMakeup = useCanOfferMakeup(makeupTargetId, session.classGroupId, cancelled) === true;
   const started = sessionStart(session).getTime() <= now.getTime();
   // Chỉ cho lưu khi link đã đổi và không để trống
   const urlChanged = url.trim() !== (session.meetingUrl ?? "") && url.trim() !== "";
@@ -136,7 +141,28 @@ export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
             Hủy buổi học
           </button>
         )}
+        {canMakeup && !makeupOpen && (
+          <button type="button" onClick={() => setMakeupOpen(true)} className={PORTAL_BTN_SECONDARY}>
+            Xếp buổi bù
+          </button>
+        )}
       </div>
+      {makeupOpen && (
+        <MakeupForm
+          idPrefix={`session-makeup-${session.sessionId}`}
+          sessionId={makeupTargetId}
+          note={
+            session.originalSessionId === null
+              ? "Buổi học bù được tạo cho cả lớp thay cho buổi đã hủy này."
+              : `Buổi bù này đã hủy; buổi bù mới sẽ thay cho buổi gốc #${session.originalSessionId}.`
+          }
+          onDone={() => {
+            setMakeupOpen(false);
+            void refresh();
+          }}
+          onCancel={() => setMakeupOpen(false)}
+        />
+      )}
       {cancelOpen && (
         <ReasonForm
           id={`cancel-reason-${session.sessionId}`}

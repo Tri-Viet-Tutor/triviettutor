@@ -74,6 +74,8 @@ export type ErrorCode =
   | "SESSION_ALREADY_CANCELLED"
   | "MAKEUP_ALREADY_EXISTS"
   | "INVALID_MAKEUP_TIME"
+  | "SESSION_ALREADY_TAUGHT"
+  | "MEETING_NOT_AVAILABLE"
   | "PAYROLL_FINALIZED"
   | "SESSION_STATE_CHANGED"
   | "SCHEDULE_CONFLICT"
@@ -649,7 +651,8 @@ export interface AdminLeaveRequestsQuery extends MyLeaveRequestsQuery {
 
 /** dto.leave.MakeupRequest — POST /admin/sessions/{sessionId}/makeup */
 export interface MakeupRequest {
-  leaveRequestId: number;
+  /** Bỏ trống khi xếp bù cho buổi đã hủy mà không có đơn xin nghỉ */
+  leaveRequestId?: number;
   makeupDate: IsoDate;
   startTime: IsoTime;
   endTime: IsoTime;
