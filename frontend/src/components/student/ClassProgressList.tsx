@@ -2,6 +2,7 @@ import { AntMascot } from "@/components/dashboard/AntMascot";
 import { PORTAL_CARD } from "@/constants/classNames";
 import { classProgress } from "@/utils/sessions";
 import type { ClassProgressListProps } from "@/interfaces/portal";
+import { displayCode } from "@/utils/classes";
 
 /** Vòng tròn tiến độ: bán kính và chu vi (đơn vị của viewBox) */
 const RING_RADIUS = 52;
@@ -14,12 +15,10 @@ const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
  */
 export function ClassProgressList({ sessions }: ClassProgressListProps) {
   const classes = classProgress(sessions);
-  if (classes.length === 0) return null;
-
-  // Gộp tất cả các lớp để tính phần trăm chung
+  // Gộp tất cả các lớp để tính phần trăm chung; chưa có lớp thì vòng tròn 0% kèm lời nhắc
   const completed = classes.reduce((sum, item) => sum + item.completed, 0);
   const total = classes.reduce((sum, item) => sum + item.total, 0);
-  const percent = Math.round((completed / total) * 100);
+  const percent = total ? Math.round((completed / total) * 100) : 0;
 
   return (
     <section
@@ -52,20 +51,26 @@ export function ClassProgressList({ sessions }: ClassProgressListProps) {
           Tiến độ
         </h2>
         <p className="mt-0.5 text-[14.5px] text-brand-muted">
-          Đã học <strong className="font-bold text-brand-navy">{completed}</strong> / {total} buổi của {classes.length} lớp
+          {classes.length === 0 ? (
+            "Bạn chưa có lớp nào. Tiến độ sẽ hiện ở đây khi bạn bắt đầu học."
+          ) : (
+            <>
+              Đã học <strong className="font-bold text-brand-navy">{completed}</strong> / {total} buổi của {classes.length} lớp
+            </>
+          )}
         </p>
         <ul className="mt-3 space-y-3">
           {classes.map((item) => (
             <li key={item.classGroupId}>
               <div className="flex items-baseline justify-between gap-3 text-[15px]">
-                <span className="font-semibold text-brand-ink">Lớp #{item.classGroupId}</span>
+                <span className="font-semibold text-brand-ink">Lớp {displayCode("class", item.classGroupId)}</span>
                 <span className="tabular-nums text-brand-muted">
                   {item.completed} / {item.total} buổi
                 </span>
               </div>
               <div
                 role="progressbar"
-                aria-label={`Lớp #${item.classGroupId}: đã học ${item.completed} trên ${item.total} buổi`}
+                aria-label={`Lớp ${displayCode("class", item.classGroupId)}: đã học ${item.completed} trên ${item.total} buổi`}
                 aria-valuemin={0}
                 aria-valuemax={item.total}
                 aria-valuenow={item.completed}

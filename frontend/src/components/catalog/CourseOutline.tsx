@@ -5,7 +5,7 @@ export function CourseOutline({ course }: CourseOutlineProps) {
   return (
     <div className="diary-page rounded-[20px] border border-brand-navy/10 py-7 pl-[60px] pr-5 shadow-soft sm:py-8 sm:pl-[92px] sm:pr-9">
       <div key={course.id} className="diary-flip">
-        <p className="text-[13px] font-semibold italic text-brand-muted">Lộ trình · Khóa {course.name}</p>
+        <p className="text-[13px] font-semibold italic text-brand-muted">Lộ trình - Khóa {course.name}</p>
         <p className="mt-2 text-[16px] leading-relaxed text-brand-ink">{course.summary}</p>
         <ol className="mt-5 space-y-3">
           {course.steps.map((step, index) => (

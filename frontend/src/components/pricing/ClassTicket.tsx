@@ -1,10 +1,12 @@
 import { Icon } from "@/components/ui/Icon";
 import { StarRating } from "@/components/ui/StarRating";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { FOCUS_RING } from "@/constants/classNames";
 import { DELIVERY_MODE_OPTIONS, GRADE_OPTIONS, SCHEDULE_PATTERN_OPTIONS } from "@/constants/classOptions";
 import type { ClassTicketProps } from "@/interfaces/pricing";
 import { formatVnd } from "@/utils/currency";
 import { formatDayMonth, parseIsoDate } from "@/utils/date";
+import { discountForSize } from "@/utils/classes";
 
 /** Màu cuống vé, xoay vòng theo vị trí lớp trong danh sách */
 const STUB_TONES = [
@@ -36,7 +38,9 @@ export function ClassTicket({
   const grade = GRADE_OPTIONS.find((option) => option.value === item.gradeLevel)?.label;
   const mode = DELIVERY_MODE_OPTIONS.find((option) => option.value === item.deliveryMode)?.label;
   const days = SCHEDULE_PATTERN_OPTIONS.find((option) => option.value === item.schedulePattern)?.label;
-  const discounted = item.discountRate > 0 && item.estimatedFee < item.basePrice1on1;
+  // Đăng ký trả đủ học phí; lớp nhóm được hoàn phần giảm theo sĩ số vào ví khi lớp chốt
+  const isGroup = item.classType !== "ONE_ON_ONE";
+  const refundNow = isGroup ? discountForSize(item.classType, item.currentStudents + 1) : 0;
   const soldOut = item.spotsLeft < 1;
 
   return (
@@ -61,7 +65,7 @@ export function ClassTicket({
         {item.tutorName && (
           <p className="mt-2 flex items-center gap-2 whitespace-nowrap text-[14px] text-brand-ink">
             <span className="flex min-w-0 items-center gap-1.5 truncate">
-              <Icon name="person" className="text-[18px] text-brand-navy" />
+              <UserAvatar userId={item.tutorId} name={item.tutorName} size={26} />
               Gia sư <strong className="font-semibold">{item.tutorName}</strong>
             </span>
             {item.tutorRating != null && (item.tutorRatingCount ?? 0) > 0 ? (
@@ -102,7 +106,7 @@ export function ClassTicket({
           <li className="flex items-center gap-1.5">
             <Icon name="groups" className="text-[17px] text-brand-navy" />
             {item.classType === "ONE_ON_ONE" ? "Học 1 kèm 1" : `${item.currentStudents}/${item.maxStudents} học viên`}
-            {" · "}
+            {" - "}
             <strong className={`font-semibold ${item.spotsLeft <= 2 ? "text-brand-orange" : ""}`}>
               {soldOut ? "Hết chỗ" : `còn ${item.spotsLeft} chỗ`}
             </strong>
@@ -117,13 +121,20 @@ export function ClassTicket({
           className={`${NOTCH} ${surfaceClassName} -right-2.5 -top-2.5 md:-bottom-2.5 md:-left-2.5 md:right-auto md:top-auto`}
         />
         <p className="md:text-right">
-          {discounted && <span className="block text-[13px] text-brand-muted line-through">{formatVnd(item.basePrice1on1)}</span>}
           <span className="whitespace-nowrap text-[23px] font-bold leading-tight tracking-tight text-brand-navy">
             {formatVnd(item.estimatedFee)}
           </span>
           <span className="ml-1.5 text-[13px] text-brand-muted md:ml-0 md:block">
-            {discounted ? `giảm ${Math.round(item.discountRate * 100)}% · cả khóa` : "cả khóa"}
+            cả khóa
           </span>
+          {isGroup && (
+            <span
+              className="mt-1 block text-[12.5px] font-semibold text-emerald-700"
+              title="Học phí đóng đủ khi đăng ký. Khi lớp chốt sĩ số, phần giảm được hoàn vào ví: 2–3 người 20%, 4–5 người 35%, 6–8 người 40%."
+            >
+              Hoàn {refundNow >= 0.4 ? "40" : `${Math.round(refundNow * 100)}–40`}% khi chốt lớp
+            </span>
+          )}
         </p>
         <button
           type="button"

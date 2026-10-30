@@ -4,13 +4,14 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthNotice } from "@/components/auth/AuthNotice";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
 import { Icon } from "@/components/ui/Icon";
-import { PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT } from "@/constants/classNames";
+import { PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD } from "@/constants/classNames";
 import { ROUTES } from "@/constants/routes";
 import { walletService } from "@/services/walletService";
 import { useAuthStore } from "@/stores/authStore";
 import { formatVnd } from "@/utils/currency";
 import { readTopup, saveTopup, walletError } from "@/utils/wallet";
 import type { TopupAttempt } from "@/utils/wallet";
+import { displayCode } from "@/utils/classes";
 
 const STATUS = {
   PENDING: "Đang chờ xác nhận từ VNPay",
@@ -113,109 +114,218 @@ function WalletContent({ userId, fullName }: { userId: number; fullName: string 
     if (returning) void returned.refetch();
     void cache.invalidateQueries({ queryKey: ["wallet-history", userId] });
   }
+  const limits = wallet.data;
+  const quick = [100_000, 200_000, 500_000, 1_000_000, 2_000_000].filter(
+    (option) => !limits || (option >= limits.minTopupAmount && option <= limits.maxTopupAmount),
+  );
+  const locked = create.isPending || pending || returning;
+  // Ba bước của một lần nạp: tạo yêu cầu → thanh toán ở VNPay → cộng vào ví
+  const step = !topup ? 0 : topup.status === "COMPLETED" ? 3 : topup.status === "PENDING" ? 2 : 1;
+
   return (
     <div className="space-y-6">
       <PortalPageHeader
         icon="account_balance_wallet"
         title="Ví của tôi"
-        description="Nạp qua VNPay Sandbox, dùng số dư đóng học phí và theo dõi từng giao dịch."
-        action={
-          <button type="button" onClick={refresh} className={PORTAL_BTN_SECONDARY}>
-            Làm mới
-          </button>
-        }
+        description="Nạp tiền qua VNPay, dùng số dư đóng học phí và nhận tiền hoàn ưu đãi lớp nhóm."
       />
       {notice && <AuthNotice tone="info">{notice}</AuthNotice>}
       {error && <AuthNotice tone="error">{walletError(error)}</AuthNotice>}
-      <div className="grid items-start gap-6 lg:grid-cols-2">
-        <section className="overflow-hidden rounded-2xl bg-brand-navy p-7 text-white">
-          <Icon name="account_balance_wallet" className="mb-5 text-3xl" />
-          <h2 className="text-sm text-white/75">Số dư khả dụng</h2>
-          <p className="my-3 break-words text-4xl font-bold">{wallet.data ? formatVnd(wallet.data.balance) : "—"}</p>
-          <p className="mt-6 border-t border-white/20 pt-4 text-sm">{fullName}</p>
-          <Link to={ROUTES.studentCheckout} className="mt-5 inline-block rounded-xl bg-white px-4 py-2 font-semibold text-brand-navy">
-            Dùng ví đóng học phí
-          </Link>
-          {wallet.isPending && (
-            <p role="status" className="mt-3">
-              Đang tải số dư…
+
+      <div className="grid items-start gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
+        {/* Thẻ ví */}
+        <section className="relative mx-auto flex aspect-[1.586/1] w-full max-w-[420px] flex-col overflow-hidden rounded-3xl bg-gradient-to-br from-brand-navyDeep via-brand-navy to-[#2563C9] p-5 text-white shadow-[0_30px_60px_-34px_rgba(8,42,102,0.9)] sm:p-6">
+          <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-white/10" />
+          <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 -left-10 h-64 w-64 rounded-full bg-brand-orange/25 blur-2xl" />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:radial-gradient(#fff_1px,transparent_1px)] [background-size:14px_14px]"
+          />
+          <div className="relative flex items-start justify-between">
+            <div>
+              <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-white/70">Ví học phí</p>
+              <p className="mt-0.5 text-[15px] font-extrabold uppercase tracking-tight">
+                Tri Viet <span className="text-brand-orange">Tutor</span>
+              </p>
+            </div>
+            {/* Chip thẻ */}
+            <span aria-hidden="true" className="grid h-9 w-12 grid-cols-3 gap-px overflow-hidden rounded-md bg-gradient-to-br from-[#F7D98B] to-[#C9A24A] p-1 opacity-90">
+              {Array.from({ length: 6 }, (_, index) => (
+                <span key={index} className="rounded-[2px] bg-black/10" />
+              ))}
+            </span>
+          </div>
+
+          <div className="relative mt-auto pt-3">
+            <p className="text-[13px] text-white/70">Số dư khả dụng</p>
+            <p className="mt-1 break-words text-[30px] font-extrabold leading-none tracking-tight tabular-nums sm:text-[34px]">
+              {wallet.isPending ? "…" : wallet.data ? formatVnd(wallet.data.balance) : "—"}
             </p>
-          )}
-          {wallet.isError && (
-            <p role="alert" className="mt-3">
-              Không tải được ví. Bấm Làm mới để thử lại.
-            </p>
-          )}
+            {wallet.isError && (
+              <p role="alert" className="mt-2 text-[13px] text-white/80">
+                Không tải được ví. Vui lòng tải lại trang.
+              </p>
+            )}
+          </div>
+
+          <div className="relative mt-4 flex items-end justify-between gap-3 border-t border-white/15 pt-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/60">Chủ ví</p>
+              <p className="truncate text-[14.5px] font-bold">{fullName}</p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <Link
+                to={ROUTES.studentCatalog}
+                className="inline-flex h-9 items-center gap-1 rounded-xl bg-white px-3 text-[13px] font-semibold text-brand-navy hover:bg-brand-tint"
+              >
+                <Icon name="school" className="text-[18px]" />
+                Đóng học phí
+              </Link>
+            </div>
+          </div>
         </section>
-        <section className={`${PORTAL_CARD} space-y-4 p-6`}>
-          <h2 className="text-xl font-bold text-brand-navy">Nạp tiền vào ví</h2>
-          <p className="text-sm text-brand-muted">Môi trường thử nghiệm VNPay Sandbox. Nhập thẻ và OTP tại trang VNPay.</p>
+
+        {/* Nạp tiền */}
+        <section className={`${PORTAL_CARD} flex flex-col p-6`}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-[19px] font-extrabold text-brand-navy">Nạp tiền vào ví</h2>
+              <p className="mt-0.5 text-[13.5px] text-brand-muted">Thanh toán bằng thẻ ATM, thẻ quốc tế hoặc QR tại cổng VNPay.</p>
+            </div>
+          </div>
           <form
-            className="space-y-4"
+            className="mt-5 flex flex-1 flex-col"
             onSubmit={(e) => {
               e.preventDefault();
               if (validAmount && !pending && !create.isPending) create.mutate();
             }}
           >
-            <label className="block text-sm font-semibold" htmlFor="wallet-amount">
-              Số tiền nạp (VNĐ)
+            <label className="text-[13px] font-semibold text-brand-muted" htmlFor="wallet-amount">
+              Số tiền muốn nạp
             </label>
-            <input
-              id="wallet-amount"
-              inputMode="numeric"
-              autoComplete="off"
-              pattern="[0-9]+"
-              required
-              aria-describedby="wallet-limits"
-              className={PORTAL_INPUT}
-              value={amount}
-              disabled={create.isPending || pending || returning}
-              onChange={(e) => {
-                setAmount(e.target.value.replace(/\D/g, ""));
-                create.reset();
-              }}
-              placeholder="Nhập số tiền"
-            />
-            <p id="wallet-limits" className="text-sm text-brand-muted">
-              {wallet.data
-                ? `Từ ${formatVnd(wallet.data.minTopupAmount)} đến ${formatVnd(wallet.data.maxTopupAmount)}. Không thu phí nạp.`
+            <div
+              className={`mt-2 flex h-16 items-center gap-3 rounded-2xl border-2 bg-white px-4 transition-colors focus-within:border-brand-navy ${
+                amount && !validAmount ? "border-red-300" : "border-brand-sandLine"
+              }`}
+            >
+              <input
+                id="wallet-amount"
+                inputMode="numeric"
+                autoComplete="off"
+                required
+                aria-describedby="wallet-limits"
+                className="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-[28px] font-extrabold leading-none tabular-nums text-brand-navy outline-none placeholder:text-slate-300 focus:ring-0"
+                value={amount ? Number(amount).toLocaleString("vi-VN") : ""}
+                disabled={locked}
+                onChange={(e) => {
+                  setAmount(e.target.value.replace(/\D/g, "").replace(/^0+/, ""));
+                  create.reset();
+                }}
+                placeholder="0"
+              />
+              <span className="shrink-0 rounded-lg bg-brand-sand px-2.5 py-1 text-[13px] font-bold text-brand-muted">VNĐ</span>
+            </div>
+            <p id="wallet-limits" className={`mt-2 text-[12.5px] ${amount && !validAmount ? "text-red-700" : "text-brand-muted"}`}>
+              {limits
+                ? `Mỗi lần nạp từ ${formatVnd(limits.minTopupAmount)} đến ${formatVnd(limits.maxTopupAmount)} - không thu phí.`
                 : "Đang tải giới hạn nạp…"}
             </p>
-            <button type="submit" disabled={!validAmount || create.isPending || pending || returning} className={PORTAL_BTN_PRIMARY}>
-              {create.isPending ? "Đang kết nối VNPay…" : "Nạp qua VNPay Sandbox"}
+
+            <p className="mt-5 text-[13px] font-semibold text-brand-muted">Chọn nhanh</p>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+              {quick.map((option) => {
+                const active = Number(amount) === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    disabled={locked}
+                    onClick={() => {
+                      setAmount(String(option));
+                      create.reset();
+                    }}
+                    className={`h-10 rounded-xl border px-1 text-[12.5px] font-bold tabular-nums transition-colors disabled:opacity-50 ${
+                      active
+                        ? "border-brand-navy bg-brand-navy text-white"
+                        : "border-brand-sandLine bg-white text-brand-ink hover:border-brand-navy/40 hover:bg-brand-tint hover:text-brand-navy"
+                    }`}
+                  >
+                    {formatVnd(option)}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-auto pt-6">
+            <button type="submit" disabled={!validAmount || locked} className={`${PORTAL_BTN_PRIMARY} h-12 w-full text-[15px]`}>
+              <Icon name="lock" className="text-[18px]" />
+              {create.isPending ? "Đang kết nối VNPay…" : validAmount ? `Nạp ${formatVnd(value)} qua VNPay` : "Nạp qua VNPay"}
             </button>
+            {pending && <p className="mt-2 text-center text-[12.5px] text-brand-muted">Đang có một yêu cầu chờ xác nhận bên dưới.</p>}
+            </div>
           </form>
         </section>
       </div>
+
       {(topup || returning || (detail.isPending && Boolean(topupId))) && (
-        <section className={`${PORTAL_CARD} space-y-3 p-6`} aria-live="polite">
-          <h2 className="text-lg font-bold text-brand-navy">Yêu cầu nạp tiền</h2>
+        <section className={`${PORTAL_CARD} p-6`} aria-live="polite">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-[17px] font-extrabold text-brand-navy">Yêu cầu nạp tiền</h2>
+              {topup && (
+                <p className="mt-0.5 text-[13.5px] text-brand-muted">
+                  {displayCode("topup", topup.topupId)} - <strong className="text-brand-ink">{formatVnd(topup.amount)}</strong>
+                </p>
+              )}
+            </div>
+            {topup && (
+              <span
+                className={`rounded-full px-3 py-1 text-[12.5px] font-bold ${
+                  topup.status === "COMPLETED"
+                    ? "bg-emerald-100 text-emerald-800"
+                    : topup.status === "PENDING"
+                      ? "bg-amber-100 text-amber-800"
+                      : "bg-red-100 text-red-800"
+                }`}
+              >
+                {STATUS[topup.status]}
+              </span>
+            )}
+          </div>
+
           {topup ? (
             <>
-              <p>
-                Yêu cầu #{topup.topupId} · {formatVnd(topup.amount)}
-              </p>
-              <AuthNotice tone={topup.status === "COMPLETED" ? "success" : topup.status === "FAILED" ? "error" : "info"}>
-                {STATUS[topup.status]}
-              </AuthNotice>
+              {/* Tiến trình */}
+              <ol className="mt-5 grid grid-cols-3 gap-2">
+                {["Tạo yêu cầu", "Thanh toán tại VNPay", "Cộng vào ví"].map((label, index) => {
+                  const done = index < step;
+                  const failed = (topup.status === "FAILED" || topup.status === "EXPIRED") && index === 1;
+                  return (
+                    <li key={label} className="flex flex-col gap-1.5">
+                      <span className={`h-1.5 rounded-full ${failed ? "bg-red-400" : done ? "bg-emerald-500" : index === step ? "bg-amber-400" : "bg-brand-sand"}`} />
+                      <span className={`text-[12.5px] font-semibold ${done ? "text-emerald-700" : failed ? "text-red-700" : "text-brand-muted"}`}>{label}</span>
+                    </li>
+                  );
+                })}
+              </ol>
               {pending && (
-                <p className="text-sm text-brand-muted">
+                <p className="mt-4 text-[13px] text-brand-muted">
                   Hiệu lực đến {new Date(topup.expiresAt).toLocaleString("vi-VN")}. Nếu xác nhận bị chậm, bấm kiểm tra trạng thái.
                 </p>
               )}
               {topup.status === "EXPIRED" && (
-                <p className="text-sm">
-                  Nếu VNPay đã thu tiền, hệ thống vẫn ghi nhận khi nhận được xác nhận. Liên hệ trung tâm và cung cấp mã yêu cầu nếu cần đối
-                  soát.
+                <p className="mt-4 text-[13px] text-brand-muted">
+                  Nếu VNPay đã thu tiền, hệ thống vẫn ghi nhận khi nhận được xác nhận. Liên hệ trung tâm và cung cấp mã yêu cầu nếu cần đối soát.
                 </p>
               )}
-              <div className="flex flex-wrap gap-3">
-                {topup.paymentUrl && (
+              <div className="mt-4 flex flex-wrap gap-2.5">
+                {topup.paymentUrl && pending && (
                   <a href={topup.paymentUrl} className={PORTAL_BTN_PRIMARY}>
                     Tiếp tục tại VNPay
                   </a>
                 )}
                 <button type="button" onClick={refresh} className={PORTAL_BTN_SECONDARY}>
+                  <Icon name="refresh" className="text-[18px]" />
                   Kiểm tra trạng thái
                 </button>
                 {(pending || topup.status === "EXPIRED") && (
@@ -231,10 +341,10 @@ function WalletContent({ userId, fullName }: { userId: number; fullName: string 
               </div>
             </>
           ) : (
-            <p>Đang xác minh kết quả nạp…</p>
+            <p className="mt-3 text-brand-muted">Đang xác minh kết quả nạp…</p>
           )}
           {returned.isError && (
-            <button type="button" onClick={() => void returned.refetch()} className={PORTAL_BTN_SECONDARY}>
+            <button type="button" onClick={() => void returned.refetch()} className={`${PORTAL_BTN_SECONDARY} mt-3`}>
               Xác minh lại
             </button>
           )}
@@ -244,82 +354,126 @@ function WalletContent({ userId, fullName }: { userId: number; fullName: string 
     </div>
   );
 }
+
+/** Kiểu giao dịch: nhãn, biểu tượng, màu và dấu cộng / trừ */
+const KINDS = {
+  TOPUP: { label: "Nạp tiền", icon: "south_west", tone: "bg-emerald-50 text-emerald-700", sign: "+" },
+  TUITION: { label: "Đóng học phí", icon: "school", tone: "bg-brand-tint text-brand-navy", sign: "−" },
+  REFUND: { label: "Hoàn tiền", icon: "undo", tone: "bg-sky-50 text-sky-700", sign: "+" },
+  CLASS_DISCOUNT: { label: "Hoàn ưu đãi lớp nhóm", icon: "savings", tone: "bg-amber-50 text-amber-700", sign: "+" },
+} as const;
+type Kind = keyof typeof KINDS;
+
+/** Lịch sử giao dịch: lọc theo loại, nhóm theo ngày, mỗi dòng có biểu tượng loại và số dư sau giao dịch */
 function WalletHistory({ userId }: { userId: number }) {
   const [page, setPage] = useState(0);
+  const [kind, setKind] = useState<Kind | "">("");
   const history = useQuery({ queryKey: ["wallet-history", userId, page], queryFn: () => walletService.history(page) });
-  const labels = { TOPUP: "Nạp tiền", TUITION: "Học phí", REFUND: "Hoàn tiền" };
+  const items = (history.data?.content ?? []).filter((item) => !kind || item.type === kind);
+  const groups = new Map<string, typeof items>();
+  for (const item of items) {
+    const key = new Date(item.createdAt).toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+
   return (
-    <section className={`${PORTAL_CARD} p-6`}>
-      <h2 className="mb-4 text-xl font-bold text-brand-navy">Lịch sử giao dịch</h2>
-      {history.isPending && <p>Đang tải lịch sử…</p>}
-      {history.isError && (
-        <AuthNotice tone="error">
-          Không tải được lịch sử.{" "}
-          <button type="button" onClick={() => void history.refetch()}>
-            Thử lại
-          </button>
-        </AuthNotice>
-      )}
-      {history.data?.content.length === 0 && <p className="text-brand-muted">Chưa có giao dịch ví.</p>}
-      {Boolean(history.data?.content.length) && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <caption className="sr-only">Các khoản nạp, trả học phí và hoàn tiền vào ví</caption>
-            <thead>
-              <tr className="border-b">
-                <th scope="col" className="p-3">
-                  Thời gian
-                </th>
-                <th scope="col" className="p-3">
-                  Giao dịch
-                </th>
-                <th scope="col" className="p-3 text-right">
-                  Số tiền
-                </th>
-                <th scope="col" className="p-3 text-right">
-                  Số dư sau giao dịch
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.data?.content.map((t) => (
-                <tr key={t.transactionId} className="border-b border-brand-sandLine">
-                  <td className="whitespace-nowrap p-3">{new Date(t.createdAt).toLocaleString("vi-VN")}</td>
-                  <td className="p-3">
-                    <strong>{labels[t.type]}</strong>
-                    <p className="text-brand-muted">{t.description}</p>
-                  </td>
-                  <td
-                    className={`whitespace-nowrap p-3 text-right font-semibold ${t.type === "TUITION" ? "text-brand-ink" : "text-emerald-700"}`}
-                  >
-                    {t.type === "TUITION" ? "−" : "+"}
-                    {formatVnd(t.amount)}
-                  </td>
-                  <td className="whitespace-nowrap p-3 text-right">{formatVnd(t.balanceAfter)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <section className={`${PORTAL_CARD} overflow-hidden`}>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-sandLine px-5 py-4 sm:px-6">
+        <h2 className="text-[18px] font-extrabold text-brand-navy">Lịch sử giao dịch</h2>
+        <div className="flex flex-wrap gap-1.5">
+          {([["", "Tất cả"], ["TOPUP", "Nạp tiền"], ["TUITION", "Học phí"], ["REFUND", "Hoàn tiền"], ["CLASS_DISCOUNT", "Ưu đãi"]] as const).map(
+            ([value, label]) => (
+              <button
+                key={value || "all"}
+                type="button"
+                aria-pressed={kind === value}
+                onClick={() => setKind(value)}
+                className={`h-8 rounded-full px-3 text-[12.5px] font-semibold transition-colors ${
+                  kind === value ? "bg-brand-navy text-white" : "bg-brand-sand text-brand-ink hover:bg-brand-sandLine"
+                }`}
+              >
+                {label}
+              </button>
+            ),
+          )}
         </div>
-      )}
-      {history.data && history.data.totalPages > 1 && (
-        <div className="mt-4 flex items-center gap-3">
-          <button type="button" className={PORTAL_BTN_SECONDARY} disabled={page === 0} onClick={() => setPage(page - 1)}>
-            Trang trước
-          </button>
-          <span>
-            {page + 1}/{history.data.totalPages}
-          </span>
-          <button
-            type="button"
-            className={PORTAL_BTN_SECONDARY}
-            disabled={page + 1 >= history.data.totalPages}
-            onClick={() => setPage(page + 1)}
-          >
-            Trang sau
-          </button>
+      </div>
+
+      <div className="px-5 py-4 sm:px-6">
+        {history.isPending && <p className="text-brand-muted">Đang tải lịch sử…</p>}
+        {history.isError && (
+          <AuthNotice tone="error">
+            Không tải được lịch sử.{" "}
+            <button type="button" onClick={() => void history.refetch()} className="font-semibold underline">
+              Thử lại
+            </button>
+          </AuthNotice>
+        )}
+        {history.data && items.length === 0 && (
+          <div className="flex flex-col items-center py-10 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-sand text-brand-muted">
+              <Icon name="receipt_long" className="text-[28px]" />
+            </span>
+            <p className="mt-3 text-[15px] font-bold text-brand-ink">Không có giao dịch.</p>
+            <p className="mt-0.5 text-[13px] text-brand-muted">Các lần nạp tiền, đóng học phí và hoàn tiền sẽ hiện ở đây.</p>
+          </div>
+        )}
+        <div className="space-y-5">
+          {[...groups].map(([day, list]) => (
+            <div key={day}>
+              <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-brand-muted first-letter:uppercase">{day}</p>
+              <ul className="divide-y divide-brand-sandLine rounded-2xl border border-brand-sandLine">
+                {list.map((t) => {
+                  const meta = KINDS[t.type];
+                  const income = meta.sign === "+";
+                  return (
+                    <li key={t.transactionId} className="flex items-center gap-3 px-4 py-3">
+                      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${meta.tone}`}>
+                        <Icon name={meta.icon} className="text-[20px]" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[14px] font-bold text-brand-ink">{meta.label}</p>
+                        <p className="truncate text-[12.5px] text-brand-muted" title={t.description}>
+                          {new Date(t.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                          {t.description && ` - ${t.description}`}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className={`text-[15px] font-extrabold tabular-nums ${income ? "text-emerald-700" : "text-brand-ink"}`}>
+                          {meta.sign}
+                          {formatVnd(t.amount)}
+                        </p>
+                        <p className="text-[11.5px] tabular-nums text-brand-muted">Số dư {formatVnd(t.balanceAfter)}</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
         </div>
-      )}
+
+        {history.data && history.data.totalPages > 1 && (
+          <div className="mt-5 flex items-center justify-center gap-3">
+            <button type="button" className={PORTAL_BTN_SECONDARY} disabled={page === 0} onClick={() => setPage(page - 1)}>
+              <Icon name="chevron_left" className="text-[18px]" />
+              Trang trước
+            </button>
+            <span className="text-[13.5px] font-semibold tabular-nums text-brand-muted">
+              {page + 1}/{history.data.totalPages}
+            </span>
+            <button
+              type="button"
+              className={PORTAL_BTN_SECONDARY}
+              disabled={page + 1 >= history.data.totalPages}
+              onClick={() => setPage(page + 1)}
+            >
+              Trang sau
+              <Icon name="chevron_right" className="text-[18px]" />
+            </button>
+          </div>
+        )}
+      </div>
     </section>
   );
 }

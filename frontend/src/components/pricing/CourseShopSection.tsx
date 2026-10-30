@@ -9,8 +9,8 @@ import { DELIVERY_MODE_OPTIONS, GRADE_OPTIONS, SCHEDULE_PATTERN_OPTIONS } from "
 import { PURCHASE_STEPS } from "@/constants/pricing";
 import { ROUTES } from "@/constants/routes";
 import { useCart, useCartMutations } from "@/hooks/useCart";
-import { rememberCartClass } from "@/utils/cartPreference";
-import type { DeliveryMode, GradeLevel, SchedulePattern, TuitionClass } from "@/interfaces/api";
+import { cartCourseKey, preferredCartClass, preferredCartCourse, rememberCartCourse } from "@/utils/cartPreference";
+import type { CourseResponse, DeliveryMode, GradeLevel, SchedulePattern, TuitionClass } from "@/interfaces/api";
 import type { ClassShopFilters, ClassShopSort, CourseShopSectionProps } from "@/interfaces/pricing";
 import { listCatalogCourses, listTuitionClasses } from "@/services/tuitionPaymentService";
 import { useAuthStore } from "@/stores/authStore";
@@ -70,13 +70,38 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
   const { add } = useCartMutations();
   const cartSubjects = new Set((cart.data?.items ?? []).map((cartItem) => cartItem.subjectName));
 
-  /** Giỏ hàng giữ theo môn; khách chưa đăng nhập thì đăng nhập rồi quay lại danh mục */
-  function addToCart(subjectId: number | undefined, item?: TuitionClass) {
+  // Đổi khi học viên chọn khóa / lớp khác cho môn đã có trong giỏ (lựa chọn nằm trong bộ nhớ trình duyệt)
+  const [, setCartPick] = useState(0);
+
+  /**
+   * Giỏ hàng của backend giữ theo môn, nên thêm khóa Toán 10 thì môn Toán vào giỏ — không được đánh dấu
+   * mọi khóa Toán khác là "Đã trong giỏ". Nhớ đúng khóa (và lớp, nếu thêm từ một lớp) học viên đã chọn;
+   * chọn khóa khác cùng môn thì chỉ đổi lựa chọn, không thêm dòng giỏ mới.
+   * Khách chưa đăng nhập thì đăng nhập rồi quay lại danh mục.
+   */
+  function addToCart(subjectId: number | undefined, item?: TuitionClass, course?: CourseResponse) {
     if (!user) return navigate(ROUTES.login, { state: { returnTo: ROUTES.studentCatalog } });
-    // Thêm từ một lớp cụ thể: nhớ lớp đó để trang giỏ chọn sẵn
-    if (item) rememberCartClass(user.id, item.subject, item.id);
-    if (subjectId !== undefined) add.mutate(subjectId);
+    if (item) rememberCartCourse(user.id, item.subject, cartCourseKey(item.courseName, item.subject, item.gradeLevel), item.id);
+    else if (course) rememberCartCourse(user.id, course.subject, cartCourseKey(course.name, course.subject, course.gradeLevel));
+    setCartPick((value) => value + 1);
+    const subject = item?.subject ?? course?.subject;
+    if (subjectId !== undefined && !(subject && cartSubjects.has(subject))) add.mutate(subjectId);
   }
+
+  /** Khóa trong giỏ = khóa đã nhớ cho môn; giỏ cũ chưa nhớ khóa thì suy từ lớp đã nhớ */
+  function pickedCourse(subject: string): string | undefined {
+    const remembered = preferredCartCourse(user?.id, subject);
+    if (remembered) return remembered;
+    const classId = preferredCartClass(user?.id, subject);
+    const group = classes.find((item) => item.id === classId);
+    return group ? cartCourseKey(group.courseName, group.subject, group.gradeLevel) : undefined;
+  }
+  const isCourseInCart = (key: string) => {
+    const subject = key.split("|")[0];
+    return cartSubjects.has(subject) && pickedCourse(subject) === key;
+  };
+  const isClassInCart = (item: TuitionClass) =>
+    cartSubjects.has(item.subject) && preferredCartClass(user?.id, item.subject) === item.id;
   const addingSubjectId = add.isPending ? add.variables : undefined;
 
   const [filters, setFilters] = useState<ClassShopFilters>(DEFAULT_FILTERS);
@@ -297,6 +322,8 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
                 onBuy={buy}
                 onAddToCart={addToCart}
                 cartSubjects={cartSubjects}
+                isCourseInCart={isCourseInCart}
+                isClassInCart={isClassInCart}
                 addingSubjectId={addingSubjectId}
                 surfaceClassName={PORTAL_SURFACE}
                 onResetFilters={() => updateFilters(DEFAULT_FILTERS)}
@@ -352,7 +379,7 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
                           canBuy={isStudent || !user}
                           onBuy={() => buy(item)}
                           onAddToCart={item.subjectId !== undefined ? () => addToCart(item.subjectId, item) : undefined}
-                          inCart={cartSubjects.has(item.subject)}
+                          inCart={isClassInCart(item)}
                           adding={add.isPending && add.variables === item.subjectId}
                           surfaceClassName={inStudentArea ? PORTAL_SURFACE : undefined}
                         />
@@ -363,7 +390,7 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
                   <div className="mt-4 rounded-2xl border border-dashed border-brand-navy/30 px-6 py-12 text-center">
                     <Icon name="search_off" className="text-[44px] text-brand-navy/40" />
                     <p className="mt-2 text-[17px] font-bold text-brand-navy">
-                      {classes.length === 0 ? "Hiện chưa có lớp nào mở đăng ký" : "Không có lớp phù hợp"}
+                      {classes.length === 0 ? "Hiện chưa có lớp nào mở đăng ký." : "Không có lớp phù hợp."}
                     </p>
                     {hasFilters && (
                       <button

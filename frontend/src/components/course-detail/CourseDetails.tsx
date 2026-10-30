@@ -13,6 +13,7 @@ import { listTuitionClasses, getTuitionClass } from "@/services/tuitionPaymentSe
 import { useAuthStore } from "@/stores/authStore";
 import { useCart, useCartMutations } from "@/hooks/useCart";
 import { useSubjects } from "@/hooks/useManagementData";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { formatVnd } from "@/utils/currency";
 import { formatDate, parseIsoDate, startOfToday } from "@/utils/date";
 
@@ -99,7 +100,7 @@ export function CourseDetails({ course, backTo }: { course: Course; backTo: stri
       <header className="relative overflow-hidden rounded-3xl bg-brand-navy p-7 text-white sm:p-10">
         <BookOpen aria-hidden="true" className="pointer-events-none absolute -right-4 -top-4 h-44 w-44 -rotate-12 opacity-10" />
         <p className="relative text-sm font-semibold uppercase tracking-widest text-white/80">
-          {course.subjectLabel} · {GRADE_RANGE_LABEL}
+          {course.subjectLabel} - {GRADE_RANGE_LABEL}
         </p>
         <h1 className="relative mt-3 text-3xl font-extrabold sm:text-4xl">{course.name}</h1>
         <p className="relative mt-4 max-w-2xl text-base leading-relaxed text-white/90">{course.summary}</p>
@@ -215,7 +216,7 @@ export function CourseDetails({ course, backTo }: { course: Course; backTo: stri
                 {classes.isSuccess && classes.data.content.length === 0 && (
                   <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center">
                     <CalendarX aria-hidden="true" className="mx-auto h-8 w-8 text-brand-muted" />
-                    <p className="mt-2 font-semibold">Chưa có lớp đang mở cho khối này</p>
+                    <p className="mt-2 font-semibold">Chưa có lớp đang mở cho khối này.</p>
                     <p className="mt-1 text-sm text-brand-muted">Bạn có thể chọn khối khác hoặc liên hệ trung tâm để được tư vấn.</p>
                     <Link to={ROUTES.contactForm} className="mt-3 inline-block text-sm font-semibold text-brand-navy underline">
                       Liên hệ tư vấn
@@ -241,27 +242,30 @@ export function CourseDetails({ course, backTo }: { course: Course; backTo: stri
                   >
                     <span className="flex flex-wrap items-start justify-between gap-2">
                       <strong className="text-brand-navy">
-                        {group.courseName} · {group.classCode}
+                        {group.courseName} - {group.classCode}
                       </strong>
                       <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800">
                         {unavailable(group) ? "Ngừng nhận đăng ký" : "Còn " + group.spotsLeft + " chỗ"}
                       </span>
                     </span>
                     {group.tutorName && (
-                      <span className="mt-3 block text-sm font-semibold text-brand-ink">Gia sư {group.tutorName}</span>
+                      <span className="mt-3 flex items-center gap-2 text-sm font-semibold text-brand-ink">
+                        <UserAvatar userId={group.tutorId} name={group.tutorName} size={24} />
+                        Gia sư {group.tutorName}
+                      </span>
                     )}
                     <span className={(group.tutorName ? "mt-1" : "mt-3") + " block text-sm"}>
-                      {scheduleLabel(group)} · {group.timeSlotLabel}
+                      {scheduleLabel(group)} - {group.timeSlotLabel}
                     </span>
                     <span className="mt-1 block text-sm text-brand-muted">
-                      Khai giảng {dateLabel(group.startDate)} · {modeLabel(group)}
+                      Khai giảng {dateLabel(group.startDate)} - {modeLabel(group)}
                     </span>
                     <span className="mt-1 block text-sm text-brand-muted">
-                      {group.totalSessions} buổi · Tối đa {group.maxStudents} học viên
+                      {group.totalSessions} buổi - Tối đa {group.maxStudents} học viên
                     </span>
                     <span className="mt-3 flex flex-wrap justify-between gap-2 text-sm font-bold text-brand-navy">
                       <span>{formatVnd(group.basePrice1on1)} / khóa</span>
-                      <span>{classId === group.id ? "Đã chọn · Xem lịch bên dưới" : "Chọn lớp và xem lịch →"}</span>
+                      <span>{classId === group.id ? "Đã chọn - Xem lịch bên dưới" : "Chọn lớp và xem lịch →"}</span>
                     </span>
                   </button>
                 ))}
@@ -309,7 +313,7 @@ export function CourseDetails({ course, backTo }: { course: Course; backTo: stri
                 {selected && (
                   <>
                     <p className="mt-2 text-sm text-brand-muted">
-                      {selected.classCode} · Kết thúc dự kiến {dateLabel(endDate)}
+                      {selected.classCode} - Kết thúc dự kiến {dateLabel(endDate)}
                     </p>
                     {unavailable(selected) && (
                       <p role="alert" className="mt-3 text-sm text-red-700">
@@ -321,7 +325,7 @@ export function CourseDetails({ course, backTo }: { course: Course; backTo: stri
                         {sessions.map((session, index) => (
                           <li key={session.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
                             <span>
-                              <strong>Buổi {session.sessionNumber ?? index + 1}</strong> · {dateLabel(session.date)}
+                              <strong>Buổi {session.sessionNumber ?? index + 1}</strong> - {dateLabel(session.date)}
                               <span className="mt-1 block text-brand-muted">
                                 {session.startTime.slice(0, 5)} – {session.endTime.slice(0, 5)}
                               </span>
@@ -370,13 +374,13 @@ export function CourseDetails({ course, backTo }: { course: Course; backTo: stri
                 </div>
               </dl>
               <div className="border-t border-slate-200 pt-4">
-                {/* Giá học viên trả nếu đăng ký ngay, theo sĩ số lớp (backend tính); lớp đầy thì không có estimatedFee */}
-                <p className="text-sm text-brand-muted">
-                  Học phí trọn khóa{selected.discountRate > 0 ? ` · giảm ${Math.round(selected.discountRate * 100)}% theo sĩ số` : ""}
-                </p>
+                {/* Đăng ký trả đủ học phí; lớp nhóm được hoàn phần giảm theo sĩ số vào ví khi lớp chốt */}
+                <p className="text-sm text-brand-muted">Học phí trọn khóa</p>
                 <p className="mt-1 text-2xl font-extrabold text-brand-navy">{formatVnd(selected.estimatedFee ?? selected.basePrice1on1)}</p>
-                {selected.estimatedFee != null && selected.estimatedFee < selected.basePrice1on1 && (
-                  <p className="text-sm text-brand-muted line-through">{formatVnd(selected.basePrice1on1)}</p>
+                {selected.classType !== "ONE_ON_ONE" && (
+                  <p className="mt-1 text-[13px] leading-relaxed text-emerald-700">
+                    Khi lớp chốt sĩ số, bạn được hoàn vào ví: 2–3 người 20%, 4–5 người 35%, 6–8 người 40% học phí.
+                  </p>
                 )}
               </div>
             </>

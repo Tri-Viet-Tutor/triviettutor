@@ -8,11 +8,10 @@ import { SUBJECT_OPTIONS, coursePricePerSession, gradeLabel, subjectIcon, subjec
 import type { CourseResponse, TuitionClass } from "@/interfaces/api";
 import type { CourseOfferListProps } from "@/interfaces/pricing";
 import { listCatalogCourses } from "@/services/tuitionPaymentService";
-import { useSubjects } from "@/hooks/useManagementData";
 import { useAuthStore } from "@/stores/authStore";
 import { formatVnd } from "@/utils/currency";
-import { formatDayMonth, parseIsoDate } from "@/utils/date";
 import { normalizeText } from "@/utils/text";
+import { cartCourseKey } from "@/utils/cartPreference";
 
 /** Số khóa hiện mỗi lần; còn nữa thì có nút "Xem thêm" */
 const PAGE_SIZE = 8;
@@ -31,7 +30,7 @@ const SUBJECT_TONES = [
 ];
 
 /** Khóa nhận diện một khóa học từ dữ liệu lớp (lớp không trả courseId) */
-const courseKey = (name: string, subject: string, grade: string) => `${subject}|${grade}|${name}`;
+const courseKey = cartCourseKey;
 
 const labelOf = <T extends string>(options: { value: T; label: string }[], value: T) =>
   options.find((option) => option.value === value)?.label ?? value;
@@ -58,7 +57,8 @@ function sortCourses(courses: CourseResponse[]): CourseResponse[] {
 function summarize(classes: TuitionClass[]) {
   if (classes.length === 0) return null;
   const minFee = Math.min(...classes.map((item) => item.estimatedFee));
-  const maxDiscount = Math.max(...classes.map((item) => item.discountRate));
+  // Lớp nhóm: đóng đủ khi đăng ký, được hoàn đến 40% vào ví khi lớp chốt sĩ số
+  const maxDiscount = classes.some((item) => item.classType !== "ONE_ON_ONE") ? 0.4 : 0;
   const spots = classes.reduce((sum, item) => sum + Math.max(item.spotsLeft, 0), 0);
   const earliest = [...classes].sort((first, second) => first.startDate.localeCompare(second.startDate))[0];
   const modes = [...new Set(classes.map((item) => item.deliveryMode))].map((mode) => labelOf(DELIVERY_MODE_OPTIONS, mode));
@@ -106,6 +106,7 @@ export function CourseOfferList({
   onBuy,
   onAddToCart,
   cartSubjects,
+  isClassInCart,
   addingSubjectId,
   surfaceClassName,
   onResetFilters,
@@ -115,10 +116,8 @@ export function CourseOfferList({
   const [expanded, setExpanded] = useState<number | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  // Id môn để thêm vào giỏ: lấy từ khóa, thiếu thì tra theo mã môn (GET /catalog/subjects)
-  const subjectsList = useSubjects();
-  const subjectIdOf = (course: { subject: string; subjectId?: number | null }): number | undefined =>
-    course.subjectId ?? subjectsList.data?.find((subject) => subject.code === course.subject)?.id;
+  // Giỏ giữ theo môn: chỉ lớp học viên đã bấm thêm mới hiện "Đã trong giỏ", không phải mọi lớp cùng môn
+  const inCartClass = (item: TuitionClass) => (isClassInCart ? isClassInCart(item) : Boolean(cartSubjects?.has(item.subject)));
 
   const courses = useQuery({
     queryKey: ["catalog-courses", user?.id],
@@ -183,14 +182,14 @@ export function CourseOfferList({
           <strong className="text-[18px] font-bold text-brand-navy">{results.length}</strong> khóa học đang bán
           {results.length > 0 && (
             <>
-              {" · "}
+              {" - "}
               <strong className="font-semibold text-brand-ink">{openClassTotal}</strong> lớp đang tuyển sinh
             </>
           )}
         </p>
         <p className="hidden items-center gap-1.5 text-[13px] text-brand-muted sm:flex">
           <Icon name="info" className="text-[16px]" />
-          Học nhóm đông người được giảm học phí
+          Lớp nhóm càng đông, tiền hoàn vào ví khi chốt lớp càng nhiều
         </p>
       </div>
 
@@ -198,7 +197,7 @@ export function CourseOfferList({
         <div className="mt-4 rounded-2xl border border-dashed border-brand-navy/30 bg-white/60 px-6 py-12 text-center">
           <Icon name={noCoursesAtAll ? "inventory_2" : "search_off"} className="text-[44px] text-brand-navy/40" />
           <p className="mt-2 text-[17px] font-bold text-brand-navy">
-            {noCoursesAtAll ? "Hiện chưa có khóa học nào đang bán" : "Không có khóa học phù hợp"}
+            {noCoursesAtAll ? "Hiện chưa có khóa học nào đang bán." : "Không có khóa học phù hợp."}
           </p>
           <p className="mt-1 text-[14px] text-brand-muted">
             {noCoursesAtAll ? "Trung tâm sẽ sớm mở bán khóa mới, bạn quay lại sau nhé." : "Thử bỏ bớt bộ lọc hoặc tìm bằng từ khóa khác."}
@@ -227,14 +226,6 @@ export function CourseOfferList({
               .filter((item) => item.totalSessions > 0)
               .map((item) => item.estimatedFee / item.totalSessions);
             const perSession = Math.round(classPerSession.length > 0 ? Math.min(...classPerSession) : basePerSession);
-            const discounted = perSession < basePerSession;
-            const sessionCounts = [...new Set(courseClasses.map((item) => item.totalSessions))].sort((a, b) => a - b);
-            const sessionsLabel =
-              sessionCounts.length === 0
-                ? "Theo lớp"
-                : sessionCounts.length === 1
-                  ? `${sessionCounts[0]} buổi`
-                  : `${sessionCounts[0]} – ${sessionCounts[sessionCounts.length - 1]} buổi`;
             const filtered = Boolean(filters.mode || filters.schedule);
 
             const status = !summary
@@ -245,7 +236,7 @@ export function CourseOfferList({
                 }
               : summary.spots <= FEW_SPOTS
                 ? {
-                    label: `Sắp hết chỗ · còn ${summary.spots}`,
+                    label: `Sắp hết chỗ - còn ${summary.spots}`,
                     icon: "local_fire_department",
                     className: "bg-orange-50 text-orange-700 ring-orange-200",
                   }
@@ -270,7 +261,7 @@ export function CourseOfferList({
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className={`text-[12.5px] font-bold uppercase tracking-[0.12em] ${tone.eyebrow}`}>
-                            {subjectLabel(course.subject)} · {gradeLabel(course.gradeLevel)}
+                            {subjectLabel(course.subject)}
                           </p>
                           <span
                             className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-semibold ring-1 ${status.className}`}
@@ -280,17 +271,12 @@ export function CourseOfferList({
                           </span>
                         </div>
                         <h3 className="mt-1 text-[19px] font-extrabold leading-snug tracking-tight text-brand-ink">{course.name}</h3>
-                        {course.description && (
-                          <p className="mt-1.5 line-clamp-2 text-[14px] leading-relaxed text-brand-muted">{course.description}</p>
-                        )}
                       </div>
                     </div>
 
                     {/* Thông số của khóa */}
-                    <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <dl className="mt-4 grid grid-cols-2 gap-2 sm:max-w-[420px]">
                       {[
-                        { icon: "event_repeat", label: "Số buổi", value: sessionsLabel },
-                        { icon: "timer", label: "Mỗi buổi", value: `${course.durationMinutes} phút` },
                         { icon: "groups", label: "Lớp đang mở", value: `${courseClasses.length} lớp` },
                         { icon: "school", label: "Khối lớp", value: gradeLabel(course.gradeLevel) },
                       ].map((spec) => (
@@ -304,63 +290,29 @@ export function CourseOfferList({
                       ))}
                     </dl>
 
-                    {/* Tóm tắt các lớp đang mở */}
-                    {summary ? (
-                      <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-[13.5px] text-brand-ink">
-                        <li className="flex items-center gap-1.5">
-                          <Icon name="rocket_launch" className="text-[17px] text-brand-navy" />
-                          Khai giảng sớm nhất{" "}
-                          <strong className="font-semibold">{formatDayMonth(parseIsoDate(summary.earliest.startDate))}</strong>
-                        </li>
-                        <li className="flex items-center gap-1.5">
-                          <Icon name="calendar_month" className="text-[17px] text-brand-navy" />
-                          {summary.patterns.join(" / ")}
-                        </li>
-                        <li className="flex items-center gap-1.5">
-                          <Icon name="schedule" className="text-[17px] text-brand-navy" />
-                          {summary.slots.join(" / ")}
-                        </li>
-                        <li className="flex items-center gap-1.5">
-                          <Icon name="location_on" className="text-[17px] text-brand-navy" />
-                          {summary.modes.join(" / ")}
-                        </li>
-                        <li className="flex items-center gap-1.5">
-                          <Icon name="event_seat" className="text-[17px] text-brand-navy" />
-                          Còn <strong className="font-semibold">{summary.spots}</strong> chỗ trong {courseClasses.length} lớp
-                        </li>
-                      </ul>
-                    ) : (
-                      <p className="mt-4 flex items-start gap-1.5 rounded-xl bg-amber-50/70 px-3 py-2.5 text-[13.5px] text-amber-900">
-                        <Icon name="notifications_active" className="mt-px text-[17px]" />
-                        {filtered
-                          ? "Khóa này chưa có lớp theo hình thức hoặc lịch bạn đang lọc. Thử đổi bộ lọc để xem các lớp khác."
-                          : "Trung tâm đang xếp lịch cho khóa này. Lớp mới sẽ hiện ở đây ngay khi mở đăng ký."}
-                      </p>
-                    )}
                   </div>
 
-                  {/* Học phí và nút chọn lớp */}
-                  <div className="flex shrink-0 flex-col justify-between gap-4 border-t border-slate-200 bg-brand-sand/50 p-5 sm:p-6 lg:w-[250px] lg:border-l lg:border-t-0">
+                  {/* Học phí và nút chọn lớp (thêm vào giỏ nằm ở từng lớp) */}
+                  <div className="flex shrink-0 flex-col justify-between gap-4 border-t border-slate-200 bg-brand-sand/50 p-5 sm:p-6 lg:w-[256px] lg:border-l lg:border-t-0">
                     <div>
-                      <p className="text-[12.5px] font-semibold uppercase tracking-wide text-brand-muted">
-                        {summary ? "Học phí mỗi buổi chỉ từ" : "Học phí mỗi buổi"}
+                      <p className="text-[12.5px] font-medium text-brand-muted">{summary ? "Học phí chỉ từ" : "Học phí"}</p>
+                      <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1">
+                        <span className="whitespace-nowrap text-[24px] font-extrabold leading-tight tracking-tight text-brand-navy tabular-nums">
+                          {formatVnd(perSession)}
+                        </span>
+                        <span className="text-[13px] font-semibold text-brand-muted">/ buổi</span>
                       </p>
-                      {discounted && (
-                        <p className="mt-1 text-[13.5px] text-brand-muted line-through tabular-nums">{formatVnd(basePerSession)}</p>
-                      )}
-                      <p className="text-[26px] font-extrabold leading-tight tracking-tight text-brand-navy tabular-nums">
-                        {formatVnd(perSession)}
-                      </p>
-                      <p className="mt-0.5 text-[13px] text-brand-muted">/ buổi · học phí cả lớp tùy số buổi của lớp</p>
                       {summary && summary.maxDiscount > 0 && (
-                        <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[12.5px] font-bold text-emerald-800">
-                          <Icon name="sell" className="text-[15px]" />
-                          Giảm đến {Math.round(summary.maxDiscount * 100)}% khi học nhóm
+                        <p className="mt-3 flex items-start gap-1.5 border-t border-dashed border-slate-300 pt-3 text-[12.5px] leading-snug text-emerald-800">
+                          <Icon name="savings" className="mt-px text-[16px]" />
+                          <span>
+                            Lớp nhóm được hoàn đến <strong className="font-bold">{Math.round(summary.maxDiscount * 100)}%</strong> vào ví khi
+                            chốt lớp
+                          </span>
                         </p>
                       )}
                     </div>
 
-                    <div className="flex flex-col gap-2">
                     {summary ? (
                       <button
                         type="button"
@@ -373,7 +325,7 @@ export function CourseOfferList({
                             : "bg-brand-navy text-white hover:bg-brand-navyDeep"
                         }`}
                       >
-                        {open ? "Thu gọn" : `Chọn lớp (${courseClasses.length})`}
+                        {open ? "Thu gọn" : `Xem ${courseClasses.length} lớp`}
                         <Icon name={open ? "expand_less" : "expand_more"} className="text-[20px]" />
                       </button>
                     ) : (
@@ -382,22 +334,6 @@ export function CourseOfferList({
                         Chưa có lớp
                       </span>
                     )}
-                    {onAddToCart && subjectIdOf(course) !== undefined && (
-                      <button
-                        type="button"
-                        onClick={() => onAddToCart(subjectIdOf(course) as number)}
-                        disabled={!canBuy || cartSubjects?.has(course.subject) || addingSubjectId === subjectIdOf(course)}
-                        className={`inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-brand-navy bg-white px-4 text-[14.5px] font-semibold text-brand-navy transition-colors hover:bg-brand-tint disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 disabled:hover:bg-white ${FOCUS_RING}`}
-                      >
-                        <Icon name={cartSubjects?.has(course.subject) ? "check" : "add_shopping_cart"} className="text-[19px]" />
-                        {cartSubjects?.has(course.subject)
-                          ? "Đã trong giỏ"
-                          : addingSubjectId === subjectIdOf(course)
-                            ? "Đang thêm…"
-                            : "Thêm vào giỏ"}
-                      </button>
-                    )}
-                    </div>
                   </div>
                 </article>
 
@@ -409,7 +345,7 @@ export function CourseOfferList({
                   >
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                       <p className="text-[15px] font-bold text-brand-navy">Chọn lớp có lịch hợp với bạn</p>
-                      <p className="text-[13px] text-brand-muted">Học phí đã tính ưu đãi theo sĩ số hiện tại của lớp</p>
+                      <p className="text-[13px] text-brand-muted">Đóng đủ học phí khi đăng ký - lớp nhóm được hoàn vào ví khi chốt</p>
                     </div>
                     <ul className="space-y-4">
                       {courseClasses.map((item, index) => (
@@ -420,7 +356,7 @@ export function CourseOfferList({
                             canBuy={canBuy}
                             onBuy={() => onBuy(item)}
                             onAddToCart={onAddToCart && item.subjectId !== undefined ? () => onAddToCart(item.subjectId as number, item) : undefined}
-                            inCart={cartSubjects?.has(item.subject)}
+                            inCart={inCartClass(item)}
                             adding={addingSubjectId !== undefined && addingSubjectId === item.subjectId}
                             surfaceClassName={surfaceClassName}
                           />

@@ -23,11 +23,13 @@ import { useMyEnrollments, useRefreshMine } from "@/hooks/useManagementData";
 import { useMySessions } from "@/hooks/usePortalData";
 import { cancelEnrollment } from "@/services/managementService";
 import { getTuitionClass } from "@/services/tuitionPaymentService";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { formatVnd } from "@/utils/currency";
 import { formatDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 import { formatTimeRange, nextSession, splitSessions } from "@/utils/sessions";
 import type { EnrollmentResponse, EnrollmentStatus } from "@/interfaces/api";
+import { displayCode } from "@/utils/classes";
 
 /**
  * Các lớp học viên đã đóng học phí: học phí, ưu đãi, tiến độ buổi học, buổi kế tiếp và hủy ghi danh.
@@ -133,7 +135,7 @@ export function StudentEnrollmentsPage() {
       ) : shown.length === 0 ? (
         <PortalEmpty
           icon="local_library"
-          title={all.length === 0 ? "Bạn chưa đăng ký lớp nào" : "Không có lớp ở trạng thái này"}
+          title={all.length === 0 ? "Bạn chưa đăng ký lớp nào." : "Không có lớp ở trạng thái này."}
           description="Chọn một khóa học đang mở và thanh toán qua VNPay để giữ chỗ trong lớp."
           action={
             <Link to={ROUTES.studentCatalog} className={PORTAL_BTN_ACCENT}>
@@ -156,13 +158,18 @@ export function StudentEnrollmentsPage() {
                     </span>
                     <div>
                       <p className="text-[12.5px] font-bold uppercase tracking-wide text-brand-orangeHover">
-                        Mã ghi danh #{item.enrollmentId}
+                        Mã ghi danh {displayCode("enrollment", item.enrollmentId)}
                       </p>
                       <h2 className="text-[17px] font-bold text-brand-ink">
-                        {classById.get(item.classGroupId)?.courseName ?? `Lớp #${item.classGroupId}`}
+                        {classById.get(item.classGroupId)?.courseName ?? `Lớp ${displayCode("class", item.classGroupId)}`}
                       </h2>
                       {classById.get(item.classGroupId)?.tutorName && (
-                        <p className="text-[13.5px] text-brand-muted">
+                        <p className="mt-0.5 flex items-center gap-1.5 text-[13.5px] text-brand-muted">
+                          <UserAvatar
+                            userId={classById.get(item.classGroupId)?.tutorId}
+                            name={classById.get(item.classGroupId)?.tutorName ?? ""}
+                            size={20}
+                          />
                           Gia sư <span className="font-semibold text-brand-ink">{classById.get(item.classGroupId)?.tutorName}</span>
                         </p>
                       )}
@@ -181,7 +188,7 @@ export function StudentEnrollmentsPage() {
                     </div>
                     {item.discountRate > 0 && (
                       <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[12.5px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/15">
-                        Ưu đãi lớp nhóm −{Math.round(item.discountRate * 100)}%
+                        Đã hoàn {Math.round(item.discountRate * 100)}% vào ví
                       </span>
                     )}
                   </div>

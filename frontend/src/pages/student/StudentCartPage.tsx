@@ -14,9 +14,11 @@ import { cancelOrder, checkoutCart, payOrderMock } from "@/services/cartService"
 import { listTuitionClasses } from "@/services/tuitionPaymentService";
 import { useAuthStore } from "@/stores/authStore";
 import { StarRating } from "@/components/ui/StarRating";
-import { preferredCartClass, rememberCartClass } from "@/utils/cartPreference";
+import { UserAvatar } from "@/components/ui/UserAvatar";
+import { cartCourseKey, preferredCartClass, preferredCartCourse, rememberCartCourse } from "@/utils/cartPreference";
 import { formatVnd } from "@/utils/currency";
 import { formatDate, parseIsoDate } from "@/utils/date";
+import { displayCode } from "@/utils/classes";
 
 /** Câu báo cho các lỗi của giỏ hàng / đơn hàng */
 const CART_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
@@ -31,7 +33,7 @@ const CART_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   ORDER_EXPIRED: "Đơn đã hết thời gian giữ giá. Hãy đặt đơn lại.",
   ORDER_NOT_PENDING: "Đơn này không còn chờ thanh toán.",
   PAYMENT_MOCK_DISABLED:
-    "Thanh toán đơn nhiều lớp hiện chỉ có cổng thử nghiệm và máy chủ đang tắt cổng này. Hãy mua từng lớp bằng nút “Mua ngay”.",
+    "Thanh toán đơn nhiều lớp hiện chưa mở. Hãy mua từng lớp bằng nút “Mua ngay”.",
   PAYMENT_PRICE_CHANGED: "Học phí vừa thay đổi. Hãy đặt đơn lại.",
 };
 
@@ -80,8 +82,12 @@ export function StudentCartPage() {
         const classes = offers[index]?.data?.content ?? [];
         if (classes.length === 0 || (next[item.id] !== undefined && classes.some((group) => group.id === next[item.id]))) return;
         const preferred = preferredCartClass(userId, item.subjectName);
+        const course = preferredCartCourse(userId, item.subjectName);
+        const byStart = [...classes].sort((first, second) => first.startDate.localeCompare(second.startDate));
+        // Lớp đã chọn; không có thì lớp khai giảng sớm nhất của khóa đã thêm vào giỏ
         const pick =
           classes.find((group) => group.id === preferred) ??
+          byStart.find((group) => cartCourseKey(group.courseName, group.subject, group.gradeLevel) === course) ??
           [...classes].sort((first, second) => first.startDate.localeCompare(second.startDate))[0];
         next[item.id] = pick.id;
       });
@@ -164,7 +170,7 @@ export function StudentCartPage() {
       ) : items.length === 0 ? (
         <PortalEmpty
           icon="shopping_cart"
-          title="Giỏ hàng đang trống"
+          title="Giỏ hàng đang trống."
           description="Thêm môn từ trang chi tiết khóa học, rồi quay lại đây để chọn lớp và đặt đơn."
           action={
             <Link to={ROUTES.studentCatalog} className={PORTAL_BTN_PRIMARY}>
@@ -179,6 +185,11 @@ export function StudentCartPage() {
               const offer = offers[index];
               const classes = offer?.data?.content ?? [];
               const selected = classById.get(choice[item.id]);
+              // Đổi lớp chỉ trong cùng khóa đã chọn (Toán 11 chỉ đổi sang lớp Toán 11 khác); chưa rõ khóa thì hiện mọi lớp của môn
+              const keyOf = (group: TuitionClass) => cartCourseKey(group.courseName, group.subject, group.gradeLevel);
+              const course = selected ? keyOf(selected) : preferredCartCourse(userId, item.subjectName);
+              const sameCourse = course ? classes.filter((group) => keyOf(group) === course) : [];
+              const options = sameCourse.length > 0 ? sameCourse : classes;
               const picking = changing === item.id || (!selected && classes.length > 0);
               return (
                 <li key={item.id} className={`overflow-hidden ${PORTAL_CARD}`}>
@@ -204,7 +215,7 @@ export function StudentCartPage() {
                         <span className="text-[17px] font-extrabold tabular-nums text-brand-navy">{formatVnd(selected.estimatedFee)}</span>
                       )}
                       <div className="flex items-center gap-1">
-                        {selected && classes.length > 1 && (
+                        {selected && options.length > 1 && (
                           <button
                             type="button"
                             onClick={() => setChanging(changing === item.id ? null : item.id)}
@@ -231,7 +242,7 @@ export function StudentCartPage() {
                     <fieldset className="border-t border-brand-sandLine bg-brand-sand/40 px-4 py-3 sm:px-5">
                       <legend className="sr-only">Chọn lớp {subjectLabel(item.subjectName)}</legend>
                       <ul className="space-y-1.5">
-                        {classes.map((group) => {
+                        {options.map((group) => {
                           const checked = choice[item.id] === group.id;
                           return (
                             <li key={group.id}>
@@ -246,16 +257,17 @@ export function StudentCartPage() {
                                   checked={checked}
                                   onChange={() => {
                                     setChoice((current) => ({ ...current, [item.id]: group.id }));
-                                    rememberCartClass(userId, item.subjectName, group.id);
+                                    rememberCartCourse(userId, item.subjectName, cartCourseKey(group.courseName, group.subject, group.gradeLevel), group.id);
                                     setChanging(null);
                                   }}
                                   className="accent-[#0B3A8C]"
                                 />
                                 <span className="min-w-0 flex-1 truncate">
+                                  {options !== sameCourse && <span className="font-semibold text-brand-navy">{group.courseName} - </span>}
                                   <span className="font-semibold text-brand-ink">{patternLabel(group.schedulePattern)}</span>
                                   <span className="text-brand-muted">
-                                    {" "}· {group.timeSlotLabel} · từ {formatDate(parseIsoDate(group.startDate))}
-                                    {group.tutorName && <> · {group.tutorName}</>}
+                                    {" "}- {group.timeSlotLabel} - từ {formatDate(parseIsoDate(group.startDate))}
+                                    {group.tutorName && <> - {group.tutorName}</>}
                                   </span>
                                 </span>
                                 <span className="shrink-0 font-semibold tabular-nums text-brand-ink">{formatVnd(group.estimatedFee)}</span>
@@ -297,7 +309,7 @@ export function StudentCartPage() {
               {checkout.isPending ? "Đang đặt đơn…" : "Đặt đơn"}
             </button>
             <p className="text-[12.5px] leading-relaxed text-brand-muted">
-              {ready ? "Học phí chốt lúc đặt đơn, đã gồm giảm giá theo sĩ số." : "Chọn lớp cho tất cả các môn để đặt đơn."}
+              {ready ? "Đóng đủ học phí khi đặt đơn. Lớp nhóm được hoàn 20–40% vào ví khi lớp chốt sĩ số." : "Chọn lớp cho tất cả các môn để đặt đơn."}
             </p>
           </aside>
         </div>
@@ -323,7 +335,7 @@ function PendingOrder({
   const expires = new Date(order.expiresAt);
   return (
     <section className={`mx-auto max-w-[640px] p-6 ${PORTAL_CARD}`}>
-      <h2 className="text-[18px] font-bold text-brand-navy">Đơn #{order.id} đang chờ thanh toán</h2>
+      <h2 className="text-[18px] font-bold text-brand-navy">Đơn {displayCode("order", order.id)} đang chờ thanh toán</h2>
       <p className="mt-1 text-[13.5px] text-brand-muted">
         Giá được giữ đến {expires.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}. Quá hạn bạn cần đặt đơn lại.
       </p>
@@ -361,7 +373,7 @@ function PaidOrder({ order }: { order: CartOrderResponse }) {
       <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
         <Icon name="check" className="text-[30px]" />
       </span>
-      <h2 className="mt-3 text-[19px] font-bold text-brand-navy">Đã thanh toán đơn #{order.id}</h2>
+      <h2 className="mt-3 text-[19px] font-bold text-brand-navy">Đã thanh toán đơn {displayCode("order", order.id)}</h2>
       <p className="mt-1 text-[14px] text-brand-muted">
         Bạn đã ghi danh {order.items.length} lớp, tổng {formatVnd(order.totalAmount)}.
       </p>
@@ -378,13 +390,14 @@ function ClassSummary({ group }: { group: TuitionClass }) {
     <div className="mt-0.5 min-w-0">
       <p className="truncate text-[15.5px] font-bold text-brand-ink">{group.courseName}</p>
       {group.tutorName && (
-        <p className="mt-0.5 flex items-center gap-2 text-[13.5px] text-brand-ink">
+        <p className="mt-1 flex items-center gap-2 text-[13.5px] text-brand-ink">
+          <UserAvatar userId={group.tutorId} name={group.tutorName} size={22} />
           <span className="truncate">Gia sư {group.tutorName}</span>
           <StarRating value={group.tutorRating && (group.tutorRatingCount ?? 0) > 0 ? group.tutorRating : null} size={13} />
         </p>
       )}
       <p className="mt-0.5 text-[13px] text-brand-muted">
-        {patternLabel(group.schedulePattern)} · {group.timeSlotLabel} · {group.totalSessions} buổi · khai giảng{" "}
+        {patternLabel(group.schedulePattern)} - {group.timeSlotLabel} - {group.totalSessions} buổi - khai giảng{" "}
         {formatDate(parseIsoDate(group.startDate))}
       </p>
     </div>
