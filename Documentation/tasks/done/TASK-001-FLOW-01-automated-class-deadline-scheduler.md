@@ -5,9 +5,9 @@ flow: FLOW-01-COURSE-CLASS
 step_in_flow: Step 1 of 4 (Class Lifecycle Hardening)
 assigned_to: backend-dev
 reviewer: tech-lead
-status: TODO
+status: DONE
 created_at: 2026-10-25
-updated_at: 2026-10-25
+updated_at: 2026-10-29
 inputs:
   - Documentation/00-Product-Definition/01-Functional-Requirements.md
   - Documentation/01-Business-Logic/04-Matching-and-Class-Management.md
@@ -15,6 +15,8 @@ inputs:
 outputs:
   - backend/src/main/java/com/viettritutor/service/SessionLifecycleService.java
   - backend/src/test/java/com/viettritutor/service/SessionLifecycleServiceTest.java
+  - backend/src/test/java/com/viettritutor/service/SessionLifecycleIntegrationTest.java
+  - backend/src/test/java/com/viettritutor/service/SessionLifecycleJobTest.java
 dependencies:
   - backend/src/main/java/com/viettritutor/entity/ClassGroup.java
 ---
@@ -28,12 +30,12 @@ dependencies:
 - **Next Step Triggered**: `TASK-002` (Enrollment & Checkout).
 
 ## 2. Acceptance Criteria (Product Owner)
-- [ ] Given a `GROUP` class in `ENROLLING` status where current UTC/local time has crossed `registrationDeadline`:
+- [x] Given a `GROUP` class in `ENROLLING` status where current UTC/local time has crossed `registrationDeadline`:
   - If `currentEnrollments == 0`, class status automatically transitions to `CANCELLED`.
   - If `currentEnrollments == 1`, class status automatically transitions to `FAILED_TO_OPEN` and emits audit warning for Admin remediation.
   - If `currentEnrollments >= 2`, class status remains eligible and ready for Admin tutor assignment (`ASSIGNED`).
-- [ ] For `FAILED_TO_OPEN` classes, Admin endpoints `/api/v1/admin/classes/{classId}/reopen` and `/api/v1/admin/classes/{classId}/convert-to-one-on-one` must function deterministically without corrupted session schedules.
-- [ ] Background job `SessionLifecycleJob` execution is strictly idempotent; re-running it multiple times must not alter previously finalized classes.
+- [x] For `FAILED_TO_OPEN` classes, Admin endpoints `/api/v1/admin/classes/{classId}/reopen` and `/api/v1/admin/classes/{classId}/convert-to-one-on-one` must function deterministically without corrupted session schedules.
+- [x] Background job `SessionLifecycleJob` execution is strictly idempotent; re-running it multiple times must not alter previously finalized classes.
 
 ## 3. Technical Constraints (Tech Lead)
 - Follow existing Spring Boot layered architecture in `com.viettritutor.service`.
@@ -47,11 +49,18 @@ dependencies:
 - PO/BA Preliminary Decision & Proposal: Group threshold invariants strictly follow BR-02.10 (min 2, max 8).
 
 ## 5. Work Execution Checklist (Assignee)
-- [ ] Verify existing methods in `SessionLifecycleService` and `ClassLifecycle`.
-- [ ] Move ticket to `Documentation/tasks/in-progress/` when active.
-- [ ] Write integration test cases in `SessionLifecycleServiceTest.java` verifying 0, 1, and >=2 enrollment deadline triggers.
-- [ ] Verify test execution via `mvn test-compile` and relevant unit tests.
-- [ ] Move ticket to `Documentation/tasks/done/` and update `Documentation/tasks/BOARD.md`.
+- [x] Verify existing methods in `SessionLifecycleService` and `ClassLifecycle`.
+- [x] Move ticket to `Documentation/tasks/in-progress/` when active. (skipped: delivered in one branch)
+- [x] Write integration test cases in `SessionLifecycleServiceTest.java` verifying 0, 1, and >=2 enrollment deadline triggers.
+- [x] Verify test execution via `mvn test-compile` and relevant unit tests.
+- [x] Move ticket to `Documentation/tasks/done/` and update `Documentation/tasks/BOARD.md`.
+
+## 5a. Delivery Notes (2026-10-29, branch `fix/flows/class-lifecycle-scheduler`)
+- Deadline evaluation locks each ENROLLING class (`findForUpdate`), counts the active roster via `ClassQueryService.students()`, and runs per class in its own transaction. 0 students → `CANCELLED` (GROUP and ONE_ON_ONE) with class audit; 1 student in a GROUP class → `FAILED_TO_OPEN` with class audit; ≥2 → unchanged, ready for assignment.
+- Added BR-04 auto start: `ASSIGNED` → `IN_PROGRESS` once the first original session starts, so `ClassCompletionService.markCompleted` can complete the class.
+- Sessions advance to `IN_SESSION` only for `ASSIGNED`/`IN_PROGRESS` classes with a teacher; `PENDING_RESCHEDULE` sessions still pending at start time are cancelled (BR-03 §5.2) with their pending leave requests resolved as `CANCEL`.
+- `SessionLifecycleJob` isolates every step; idempotency comes from re-checking status under the row lock.
+- Automated audits are attributed to the oldest `ROLE_ADMIN` account because audit actor columns are `NOT NULL`.
 
 ## 6. Review & Sign-Off (Reviewer)
 - [ ] Architecture and interface compliance verified.

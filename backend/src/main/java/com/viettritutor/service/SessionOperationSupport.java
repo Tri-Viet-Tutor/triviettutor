@@ -135,6 +135,16 @@ public class SessionOperationSupport {
         request.setReplacementSessionId(replacementId);
     }
 
+    /** Approves a leave request on behalf of an automated job: no human resolver is recorded. */
+    public void approveAsSystem(LeaveRequest request, LeaveResolution resolution, String reason) {
+        request.setStatus(LeaveRequestStatus.APPROVED);
+        request.setResolution(resolution);
+        request.setResolvedBy(null);
+        request.setResolvedAt(OffsetDateTime.now(clock));
+        request.setResolutionReason(reason.trim());
+        request.setReplacementSessionId(null);
+    }
+
     public Snapshot snapshot(Session session) {
         return new Snapshot(session.getStatus(), session.getScheduledTutorId(),
                 session.getActualTutorId() != null ? session.getActualTutorId() : session.getScheduledTutorId());
@@ -148,5 +158,15 @@ public class SessionOperationSupport {
                 .scheduledTutorId(before.scheduledTutorId()).previousTutorId(before.actualTutorId())
                 .newTutorId(session.getActualTutorId() != null ? session.getActualTutorId() : session.getScheduledTutorId())
                 .replacementSessionId(replacementId).build());
+    }
+
+    /** Records a session change made by an automated job: no human actor is recorded. */
+    public void auditAsSystem(Session session, Snapshot before, SessionChangeType action, String reason, Long requestId) {
+        changeRepository.save(SessionChange.builder().sessionId(session.getId()).leaveRequestId(requestId)
+                .action(action).actorId(null).reason(reason.trim()).changedAt(OffsetDateTime.now(clock))
+                .previousStatus(before.status()).newStatus(session.getStatus())
+                .scheduledTutorId(before.scheduledTutorId()).previousTutorId(before.actualTutorId())
+                .newTutorId(session.getActualTutorId() != null ? session.getActualTutorId() : session.getScheduledTutorId())
+                .build());
     }
 }

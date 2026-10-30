@@ -4,20 +4,25 @@ import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { StatusChip } from "@/components/dashboard/StatusChip";
 import { Icon } from "@/components/ui/Icon";
 import { AUTH_ERROR, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
-import { CLASS_STATUS, CLASS_STATUS_ORDER } from "@/constants/labels";
+import { CLASS_STATUS } from "@/constants/labels";
 import { changeClassStatus, reopenClass } from "@/services/managementService";
 import { addDays, startOfToday, toIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 import type { ClassStatus } from "@/interfaces/api";
 import type { ClassStatusDialogProps } from "@/interfaces/admin";
 
-/** Bước tiếp theo hay dùng của từng trạng thái — hiện lên đầu danh sách */
-const NEXT_STATUS: Partial<Record<ClassStatus, ClassStatus[]>> = {
+/**
+ * Các bước chuyển mà ClassService.changeStatus chấp nhận (bước đầu tiên là gợi ý mặc định).
+ * Lớp FAILED_TO_OPEN mở lại qua API riêng; ASSIGNED → IN_PROGRESS và IN_PROGRESS → COMPLETED
+ * cũng được hệ thống tự chuyển khi đủ điều kiện.
+ */
+const ALLOWED_STATUS: Partial<Record<ClassStatus, ClassStatus[]>> = {
   DRAFT: ["PUBLISHED", "CANCELLED"],
   PUBLISHED: ["ENROLLING", "CANCELLED"],
-  ENROLLING: ["FAILED_TO_OPEN", "CANCELLED"],
+  ENROLLING: ["FAILED_TO_OPEN", "ASSIGNED", "CANCELLED"],
+  FAILED_TO_OPEN: ["CANCELLED"],
   ASSIGNED: ["IN_PROGRESS", "CANCELLED"],
-  IN_PROGRESS: ["COMPLETED", "CANCELLED"],
+  IN_PROGRESS: ["COMPLETED"],
 };
 
 /**
@@ -36,7 +41,7 @@ export function ClassStatusDialog({ classItem, mode, onClose, onSaved }: ClassSt
     setFormError(null);
     setReason("");
     setDeadline("");
-    setNewStatus(NEXT_STATUS[classItem.status]?.[0] ?? CLASS_STATUS_ORDER.find((status) => status !== classItem.status) ?? "PUBLISHED");
+    setNewStatus(ALLOWED_STATUS[classItem.status]?.[0] ?? classItem.status);
   }, [classItem]);
 
   const save = useMutation({
@@ -50,17 +55,18 @@ export function ClassStatusDialog({ classItem, mode, onClose, onSaved }: ClassSt
     onError: (error) => setFormError(portalErrorMessage(error, "Chưa cập nhật được lớp. Vui lòng thử lại.")),
   });
 
+  const options = classItem ? (ALLOWED_STATUS[classItem.status] ?? []) : [];
+
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (mode === "reopen" && !reason.trim()) return setFormError("Hãy nhập lý do mở lại lớp.");
     if (mode === "reopen" && deadline && deadline > startDate) return setFormError("Hạn đăng ký phải trước hoặc bằng ngày khai giảng.");
+    if (mode === "status" && !options.includes(newStatus)) return setFormError("Hãy chọn trạng thái mới cho lớp.");
     if (mode === "status" && newStatus === "CANCELLED" && !reason.trim()) return setFormError("Hãy nhập lý do hủy lớp.");
     setFormError(null);
     save.mutate();
   }
 
-  const suggested = classItem ? (NEXT_STATUS[classItem.status] ?? []) : [];
-  const others = CLASS_STATUS_ORDER.filter((status) => status !== classItem?.status && !suggested.includes(status));
 
   return (
     <PortalDialog
@@ -82,7 +88,10 @@ export function ClassStatusDialog({ classItem, mode, onClose, onSaved }: ClassSt
             <fieldset>
               <legend className={PORTAL_LABEL}>Chuyển sang</legend>
               <div className="grid gap-2 sm:grid-cols-2">
-                {[...suggested, ...others].map((status) => (
+                {options.length === 0 && (
+                  <p className="text-[14px] text-brand-muted sm:col-span-2">Lớp ở trạng thái này không thể chuyển tiếp.</p>
+                )}
+                {options.map((status, index) => (
                   <button
                     key={status}
                     type="button"
@@ -97,7 +106,7 @@ export function ClassStatusDialog({ classItem, mode, onClose, onSaved }: ClassSt
                   >
                     <Icon name={CLASS_STATUS[status].icon} className="text-[19px]" />
                     {CLASS_STATUS[status].label}
-                    {suggested.includes(status) && (
+                    {index === 0 && options.length > 1 && (
                       <span className="ml-auto rounded-full bg-brand-orange/15 px-2 py-0.5 text-[11px] font-bold text-brand-orangeHover">
                         Gợi ý
                       </span>
