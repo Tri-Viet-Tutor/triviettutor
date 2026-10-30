@@ -247,7 +247,10 @@ export function AdminClassesPage() {
                           style={{ width: `${percent}%` }}
                         />
                       </div>
-                      <p className="mt-1 text-[12.5px] text-brand-muted tabular-nums">Học phí ước tính {formatVnd(item.estimatedFee)}</p>
+                      {/* Backend trả estimatedFee = null khi lớp đã đủ chỗ (không còn ghế để báo giá) */}
+                      <p className="mt-1 text-[12.5px] text-brand-muted tabular-nums">
+                        {item.estimatedFee != null ? `Học phí ước tính ${formatVnd(item.estimatedFee)}` : "Lớp đã đủ chỗ"}
+                      </p>
                     </div>
 
                     {/* Trạng thái + thao tác */}

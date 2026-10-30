@@ -795,8 +795,11 @@ export interface ClassSessionPreview {
 }
 
 /** dto.classgroup.ClassResponse — GET/POST /admin/classes */
-export interface AdminClassResponse extends CatalogClassResponse {
+export interface AdminClassResponse extends Omit<CatalogClassResponse, "estimatedFee" | "discountRate"> {
   courseId: number;
+  /** null khi lớp đã đủ chỗ (lớp 1-1 đã có học viên, lớp nhóm đủ 8) */
+  estimatedFee: number | null;
+  discountRate: number | null;
   status: ClassStatus;
   enrollmentDeadline: IsoDate | null;
   reservedStudents: number;
