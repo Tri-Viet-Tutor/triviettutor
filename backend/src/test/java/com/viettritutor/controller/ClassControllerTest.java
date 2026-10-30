@@ -87,13 +87,13 @@ class ClassControllerTest {
  }
  long create() throws Exception { return data(call("POST",BASE,valid(),admin),201).path("id").asLong(); }
  JsonNode changeStatus(long id, String value) throws Exception {
-  // Mở đăng ký cần lớp đã có gia sư: phân công một gia sư mới (không trùng lịch) nếu lớp chưa có
+  // Opening enrollment requires a primary tutor: assign one when the class has none yet
   if (value.equals("ENROLLING") && tutorAssignments.findByClassGroupIdAndStatus(id, AssignmentStatus.ACTIVE).isEmpty()
       && classes.findById(id).orElseThrow().getStatus() == ClassStatus.PUBLISHED) assignTutor(id);
   return data(call("PATCH",BASE+"/"+id+"/status",Map.of("newStatus",value),admin),200);
  }
  void assignTutor(long id) throws Exception {
-  call("POST",BASE+"/"+id+"/assign",Map.of("tutorId",user("TUTOR").getId()),admin).andExpect(status().isOk());
+  call("POST",BASE+"/"+id+"/assign",Map.of("tutorId",user("TUTOR").getId()),admin).andExpect(status().isCreated());
  }
  long open() throws Exception { long id=create(); changeStatus(id,"PUBLISHED"); changeStatus(id,"ENROLLING"); return id; }
  LearningSchedule enroll(long id, User u) {
