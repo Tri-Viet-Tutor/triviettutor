@@ -194,8 +194,8 @@ export interface CourseFormDialogProps {
   /** Khóa đang sửa; null là tạo mới */
   course: CourseResponse | null;
   onClose: () => void;
-  /** Lưu xong */
-  onSaved: (course: CourseResponse) => void;
+  /** Lưu xong; `createClass` = người dùng muốn tạo lớp đầu tiên ngay (chỉ khi tạo khóa mới) */
+  onSaved: (course: CourseResponse, options: { createClass: boolean }) => void;
 }
 
 /** Props của ClassFormDialog */
@@ -212,6 +212,21 @@ export interface CourseClassesPanelProps {
   course: CourseResponse;
   /** Bấm "Tạo lớp" cho khóa này */
   onCreate: () => void;
+  /** Bấm đổi trạng thái / mở lại một lớp */
+  onChangeStatus: (item: AdminClassResponse, mode: "status" | "reopen") => void;
+}
+
+/** Props của CourseDetailSheet (ngăn chi tiết khóa trượt từ bên phải) */
+export interface CourseDetailSheetProps {
+  /** Khóa đang xem; null là đóng ngăn */
+  course: CourseResponse | null;
+  onClose: () => void;
+  /** Đang gửi yêu cầu bật / tắt bán khóa này */
+  toggling: boolean;
+  onEdit: (course: CourseResponse) => void;
+  onToggle: (course: CourseResponse) => void;
+  /** Bấm "Tạo lớp" cho khóa này */
+  onCreateClass: (course: CourseResponse) => void;
   /** Bấm đổi trạng thái / mở lại một lớp */
   onChangeStatus: (item: AdminClassResponse, mode: "status" | "reopen") => void;
 }

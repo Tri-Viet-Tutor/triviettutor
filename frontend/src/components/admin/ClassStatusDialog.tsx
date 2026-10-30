@@ -1,50 +1,45 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { PortalDialog } from "@/components/dashboard/PortalDialog";
-import { StatusChip } from "@/components/dashboard/StatusChip";
 import { Icon } from "@/components/ui/Icon";
-import { AUTH_ERROR, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
-import { CLASS_STATUS, CLASS_STATUS_ORDER } from "@/constants/labels";
+import { AUTH_ERROR, FOCUS_RING, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
 import { changeClassStatus, reopenClass } from "@/services/managementService";
+import { classStatusActions } from "@/utils/classes";
 import { addDays, startOfToday, toIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
-import type { ClassStatus } from "@/interfaces/api";
+import type { AdminClassResponse } from "@/interfaces/api";
 import type { ClassStatusDialogProps } from "@/interfaces/admin";
 
-/** Bước tiếp theo hay dùng của từng trạng thái — hiện lên đầu danh sách */
-const NEXT_STATUS: Partial<Record<ClassStatus, ClassStatus[]>> = {
-  DRAFT: ["PUBLISHED", "CANCELLED"],
-  PUBLISHED: ["ENROLLING", "CANCELLED"],
-  ENROLLING: ["FAILED_TO_OPEN", "CANCELLED"],
-  ASSIGNED: ["IN_PROGRESS", "CANCELLED"],
-  IN_PROGRESS: ["COMPLETED", "CANCELLED"],
-};
-
 /**
- * Đổi trạng thái lớp (PATCH /admin/classes/{id}/status) hoặc mở lại lớp không đủ sĩ số
- * (POST /admin/classes/{id}/reopen). Backend tự chặn các bước chuyển không hợp lệ.
+ * Cập nhật lớp: chỉ đưa ra các bước hợp lệ lúc này (Mở đăng ký, Chốt lớp, Bắt đầu học, Kết thúc, Hủy…)
+ * rồi gọi PATCH /admin/classes/{id}/status lần lượt; hoặc mở lại lớp không đủ sĩ số (POST /admin/classes/{id}/reopen).
  */
 export function ClassStatusDialog({ classItem, mode, onClose, onSaved }: ClassStatusDialogProps) {
-  const [newStatus, setNewStatus] = useState<ClassStatus>("PUBLISHED");
+  const actions = useMemo(() => (classItem ? classStatusActions(classItem, new Date()) : []), [classItem]);
+  const [actionKey, setActionKey] = useState("");
   const [reason, setReason] = useState("");
   const [startDate, setStartDate] = useState(toIsoDate(addDays(startOfToday(), 14)));
   const [deadline, setDeadline] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const action = actions.find((item) => item.key === actionKey) ?? actions[0];
 
   useEffect(() => {
     if (!classItem) return;
     setFormError(null);
     setReason("");
     setDeadline("");
-    setNewStatus(NEXT_STATUS[classItem.status]?.[0] ?? CLASS_STATUS_ORDER.find((status) => status !== classItem.status) ?? "PUBLISHED");
+    setActionKey("");
   }, [classItem]);
 
   const save = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const id = (classItem as NonNullable<typeof classItem>).id;
-      return mode === "reopen"
-        ? reopenClass(id, { startDate, enrollmentDeadline: deadline || undefined, reason: reason.trim() })
-        : changeClassStatus(id, { newStatus, reason: reason.trim() || undefined });
+      if (mode === "reopen") return reopenClass(id, { startDate, enrollmentDeadline: deadline || undefined, reason: reason.trim() });
+      let updated: AdminClassResponse | undefined;
+      for (const target of action.targets) {
+        updated = await changeClassStatus(id, { newStatus: target, reason: reason.trim() || undefined });
+      }
+      return updated as AdminClassResponse;
     },
     onSuccess: (saved) => onSaved(saved),
     onError: (error) => setFormError(portalErrorMessage(error, "Chưa cập nhật được lớp. Vui lòng thử lại.")),
@@ -53,65 +48,56 @@ export function ClassStatusDialog({ classItem, mode, onClose, onSaved }: ClassSt
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (mode === "reopen" && !reason.trim()) return setFormError("Hãy nhập lý do mở lại lớp.");
-    if (mode === "reopen" && deadline && deadline > startDate) return setFormError("Hạn đăng ký phải trước hoặc bằng ngày khai giảng.");
-    if (mode === "status" && newStatus === "CANCELLED" && !reason.trim()) return setFormError("Hãy nhập lý do hủy lớp.");
+    if (mode === "reopen" && deadline && deadline >= startDate) return setFormError("Hạn đăng ký phải trước ngày khai giảng.");
+    if (mode === "status" && !action) return;
+    if (mode === "status" && action.danger && !reason.trim()) return setFormError("Hãy nhập lý do hủy lớp.");
     setFormError(null);
     save.mutate();
   }
 
-  const suggested = classItem ? (NEXT_STATUS[classItem.status] ?? []) : [];
-  const others = CLASS_STATUS_ORDER.filter((status) => status !== classItem?.status && !suggested.includes(status));
+  const showReason = mode === "reopen" || action?.danger;
 
   return (
     <PortalDialog
       open={classItem !== null}
       onClose={onClose}
-      title={mode === "reopen" ? "Mở lại lớp" : "Đổi trạng thái lớp"}
+      title={mode === "reopen" ? "Mở lại lớp" : "Cập nhật lớp"}
       description={classItem ? `${classItem.classCode} · ${classItem.courseName}` : undefined}
     >
       {classItem && (
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
-          <p className="flex items-center gap-2 text-[14px] text-brand-muted">
-            Hiện tại:
-            <StatusChip tone={CLASS_STATUS[classItem.status].tone} icon={CLASS_STATUS[classItem.status].icon}>
-              {CLASS_STATUS[classItem.status].label}
-            </StatusChip>
-          </p>
-
           {mode === "status" ? (
-            <fieldset>
-              <legend className={PORTAL_LABEL}>Chuyển sang</legend>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {[...suggested, ...others].map((status) => (
-                  <button
-                    key={status}
-                    type="button"
-                    role="radio"
-                    aria-checked={newStatus === status}
-                    onClick={() => setNewStatus(status)}
-                    className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[14px] font-semibold transition-colors ${
-                      newStatus === status
-                        ? "border-brand-navy bg-brand-tint text-brand-navy ring-1 ring-brand-navy"
-                        : "border-brand-sandLine bg-white text-brand-ink hover:border-brand-navy/40"
-                    }`}
-                  >
-                    <Icon name={CLASS_STATUS[status].icon} className="text-[19px]" />
-                    {CLASS_STATUS[status].label}
-                    {suggested.includes(status) && (
-                      <span className="ml-auto rounded-full bg-brand-orange/15 px-2 py-0.5 text-[11px] font-bold text-brand-orangeHover">
-                        Gợi ý
+            actions.length === 0 ? (
+              <p className="rounded-xl bg-slate-50 px-4 py-3 text-[14px] text-brand-muted">Lớp chưa có bước nào cần làm lúc này.</p>
+            ) : (
+              <div role="radiogroup" aria-label="Thao tác" className="space-y-2">
+                {actions.map((item) => {
+                  const selected = action?.key === item.key;
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => setActionKey(item.key)}
+                      className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${FOCUS_RING} ${
+                        selected
+                          ? item.danger
+                            ? "border-red-300 bg-red-50 ring-1 ring-red-300"
+                            : "border-brand-navy bg-brand-tint ring-1 ring-brand-navy"
+                          : "border-brand-sandLine bg-white hover:border-brand-navy/40"
+                      }`}
+                    >
+                      <Icon name={item.icon} className={`text-[21px] ${item.danger ? "text-red-600" : "text-brand-navy"}`} />
+                      <span className="min-w-0">
+                        <span className={`block text-[14.5px] font-semibold ${item.danger ? "text-red-700" : "text-brand-ink"}`}>{item.label}</span>
+                        <span className="block text-[12.5px] text-brand-muted">{item.hint}</span>
                       </span>
-                    )}
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
-              {newStatus === "PUBLISHED" && (
-                <p className="mt-2 flex items-start gap-1.5 text-[13px] text-brand-muted">
-                  <Icon name="info" className="text-[17px] text-brand-navy" />
-                  Đăng lớp sẽ sinh lịch toàn bộ buổi học theo lịch và ca đã chọn.
-                </p>
-              )}
-            </fieldset>
+            )
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -141,18 +127,20 @@ export function ClassStatusDialog({ classItem, mode, onClose, onSaved }: ClassSt
             </div>
           )}
 
-          <div>
-            <label htmlFor="class-reason" className={PORTAL_LABEL}>
-              Lý do {mode === "status" && newStatus !== "CANCELLED" && <span className="font-normal">(không bắt buộc)</span>}
-            </label>
-            <textarea
-              id="class-reason"
-              rows={2}
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              className={`${PORTAL_INPUT} h-auto py-2`}
-            />
-          </div>
+          {showReason && (
+            <div>
+              <label htmlFor="class-reason" className={PORTAL_LABEL}>
+                Lý do
+              </label>
+              <textarea
+                id="class-reason"
+                rows={2}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                className={`${PORTAL_INPUT} h-auto py-2`}
+              />
+            </div>
+          )}
 
           {formError && (
             <p role="alert" className={`${AUTH_ERROR} flex items-center gap-1.5`}>
@@ -163,11 +151,17 @@ export function ClassStatusDialog({ classItem, mode, onClose, onSaved }: ClassSt
 
           <div className="flex justify-end gap-2 border-t border-brand-sandLine pt-4">
             <button type="button" onClick={onClose} className={PORTAL_BTN_SECONDARY}>
-              Hủy
+              Đóng
             </button>
-            <button type="submit" disabled={save.isPending} className={PORTAL_BTN_PRIMARY}>
-              {save.isPending ? "Đang lưu…" : mode === "reopen" ? "Mở lại lớp" : "Cập nhật"}
-            </button>
+            {(mode === "reopen" || action) && (
+              <button
+                type="submit"
+                disabled={save.isPending}
+                className={action?.danger && mode === "status" ? `${PORTAL_BTN_PRIMARY} !bg-red-600 hover:!bg-red-700` : PORTAL_BTN_PRIMARY}
+              >
+                {save.isPending ? "Đang lưu…" : mode === "reopen" ? "Mở lại lớp" : action.label}
+              </button>
+            )}
           </div>
         </form>
       )}

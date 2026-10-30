@@ -70,7 +70,8 @@ public class OrderService {
         }
         if(ttlMinutes<1 || ttlMinutes>1440)throw new IllegalStateException("Order TTL must be between 1 and 1440 minutes");
         OffsetDateTime now=now();
-        BigDecimal total=admissions.values().stream().map(a->a.course().getBasePrice1on1()).reduce(BigDecimal.ZERO,BigDecimal::add);
+        // Mỗi lớp tính đúng giá học viên sẽ trả khi đăng ký lẻ (BR-02.11: giảm theo sĩ số lớp nhóm), chốt trong thời hạn đơn
+        BigDecimal total=admissions.values().stream().map(EnrollmentPaymentSupport.Admission::expectedAmount).reduce(BigDecimal.ZERO,BigDecimal::add);
         PurchaseOrder order=orders.saveAndFlush(PurchaseOrder.builder().studentId(student.getId()).status(OrderStatus.PENDING_PAYMENT)
                 .totalAmount(total).refundedAmount(BigDecimal.ZERO).cartVersion(cart.getVersion()).createdAt(now)
                 .expiresAt(now.plusMinutes(ttlMinutes)).build());
@@ -79,7 +80,7 @@ public class OrderService {
             orderItems.save(OrderItem.builder().orderId(order.getId()).cartItemId(selection.getCartItemId())
                     .subjectId(course.getSubjectId()).courseId(course.getId()).classId(group.getId())
                     .subjectName(course.getSubject()).courseName(course.getName()).classCode(group.getClassCode())
-                    .unitPrice(course.getBasePrice1on1()).build());
+                    .unitPrice(admissions.get(group.getId()).expectedAmount()).build());
         }
         orderItems.flush();
         return idempotency.remember(student.getId(),"CHECKOUT",key,fingerprint,response(order));
@@ -121,7 +122,8 @@ public class OrderService {
             if(success) {
                 Enrollment enrollment=enrollments.saveAndFlush(Enrollment.builder().studentId(student.getId())
                         .classGroupId(item.getClassId()).paymentId(payment.getId()).feeCharged(item.getUnitPrice())
-                        .discountRate(BigDecimal.ZERO).enrollmentSizeAtTime(admission.enrollmentSize())
+                        .discountRate(discountOf(item.getUnitPrice(),admission.course().priceFor(admission.sessions().size())))
+                        .enrollmentSizeAtTime(admission.enrollmentSize())
                         .status(EnrollmentStatus.ACTIVE).enrolledAt(now).build());
                 learning.activate(enrollment.getId(),student.getId(),item.getClassId(),admission.start(),admission.end());
                 item.setPaymentId(payment.getId());item.setEnrollmentId(enrollment.getId());
@@ -133,6 +135,12 @@ public class OrderService {
         }
         entityManager.flush();
         return idempotency.remember(student.getId(),"PAY",key,orderId.toString(),response(order));
+    }
+
+    /** Mức giảm thực tế của giá đã chốt trong đơn so với học phí gốc 1 kèm 1 (0..1, 3 chữ số thập phân). */
+    private static BigDecimal discountOf(BigDecimal unitPrice,BigDecimal basePrice) {
+        if(basePrice==null || basePrice.signum()<=0 || unitPrice.compareTo(basePrice)>=0)return BigDecimal.ZERO;
+        return BigDecimal.ONE.subtract(unitPrice.divide(basePrice,3,java.math.RoundingMode.HALF_UP)).max(BigDecimal.ZERO);
     }
 
     @Transactional

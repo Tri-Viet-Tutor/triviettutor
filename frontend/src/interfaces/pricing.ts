@@ -45,6 +45,8 @@ export interface ClassShopFilters {
   grade: GradeLevel | "";
   mode: DeliveryMode | "";
   schedule: SchedulePattern | "";
+  /** Id gia sư phụ trách (dạng chuỗi của ô chọn); rỗng = mọi gia sư */
+  tutor: string;
 }
 
 /** Cách sắp xếp danh sách lớp đang mở */
@@ -58,6 +60,11 @@ export interface ClassTicketProps {
   /** Tài khoản hiện tại được đăng ký lớp không (chỉ học viên) */
   canBuy: boolean;
   onBuy: () => void;
+  /** Thêm môn của lớp vào giỏ hàng (chọn lớp cụ thể lúc thanh toán giỏ) */
+  onAddToCart?: () => void;
+  /** Môn của lớp đã có trong giỏ */
+  inCart?: boolean;
+  adding?: boolean;
   surfaceClassName?: string;
 }
 
@@ -70,6 +77,12 @@ export interface CourseOfferListProps {
   /** Tài khoản hiện tại được đăng ký lớp không (chỉ học viên) */
   canBuy: boolean;
   onBuy: (item: TuitionClass) => void;
+  /** Thêm môn vào giỏ hàng (giỏ giữ theo môn, chọn lớp lúc thanh toán giỏ) */
+  onAddToCart?: (subjectId: number, item?: TuitionClass) => void;
+  /** Mã môn (subject code) đã có trong giỏ */
+  cartSubjects?: Set<string>;
+  /** Id môn đang được thêm vào giỏ */
+  addingSubjectId?: number;
   surfaceClassName?: string;
   /** Bấm "Xóa bộ lọc" khi không có khóa phù hợp */
   onResetFilters: () => void;

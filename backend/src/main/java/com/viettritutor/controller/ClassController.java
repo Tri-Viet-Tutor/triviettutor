@@ -45,9 +45,16 @@ public class ClassController {
             @RequestParam(required = false) ClassStatus status,
             @RequestParam(required = false) ClassType classType,
             @RequestParam(required = false) SchedulePattern schedulePattern,
+            @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.ok(query.adminList(courseId, status, classType, schedulePattern, page, size));
+        return ApiResponse.ok(query.adminList(courseId, status, classType, schedulePattern, q, page, size));
+    }
+
+    @GetMapping("/summary")
+    @Operation(summary = "Count classes by status", description = "Every class status with its count (zero included) and the total, ignoring list filters.")
+    public ApiResponse<ClassSummaryResponse> summary() {
+        return ApiResponse.ok(query.adminSummary());
     }
 
     @PatchMapping("/{classId}/status")
@@ -59,6 +66,15 @@ public class ClassController {
             @Parameter(hidden = true)
             @CurrentUser User user) {
         return ApiResponse.ok(service.changeStatus(classId, request, user));
+    }
+
+    @DeleteMapping("/{classId}")
+    @Operation(summary = "Delete a class that never had students",
+            description = "Only DRAFT, PUBLISHED or CANCELLED classes without enrollments, payments, orders or teaching history. "
+                    + "Removes its sessions, tutor assignment and audit rows. Otherwise 409 CLASS_IN_USE: cancel the class instead.")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable @Positive Long classId, @CurrentUser User user) {
+        service.delete(classId, user);
     }
 
     @PostMapping("/{classId}/reopen")

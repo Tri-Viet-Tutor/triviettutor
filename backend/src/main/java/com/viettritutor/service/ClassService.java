@@ -24,6 +24,8 @@ public class ClassService {
     private final ClassScheduleService schedule;
     private final ClassCompletionService completion;
     private final ClassAuditService audit;
+    private final TutorAssignmentService tutorAssignments;
+    private final jakarta.persistence.EntityManager entityManager;
     private final Clock clock;
 
     @Transactional
@@ -32,7 +34,8 @@ public class ClassService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.COURSE_NOT_FOUND));
         if (!course.isActive()) throw new BusinessException(ErrorCode.COURSE_INACTIVE);
         // Existing SessionGenerator uses the center's fixed two-hour slots.
-        if (course.getDurationMinutes() != 120 || course.getTotalSessions() > 1000) {
+        int totalSessions = request.getTotalSessions() != null ? request.getTotalSessions() : course.getTotalSessions();
+        if (course.getDurationMinutes() != 120 || totalSessions < 1 || totalSessions > 1000) {
             throw new BusinessException(ErrorCode.INVALID_CLASS_CONFIGURATION,
                     "Classes require 120-minute sessions and at most 1000 sessions");
         }
@@ -41,7 +44,7 @@ public class ClassService {
                 .classType(request.getClassType()).deliveryMode(request.getDeliveryMode())
                 .schedulePattern(request.getSchedulePattern()).timeSlot(request.getTimeSlot())
                 .startDate(request.getStartDate()).enrollmentDeadline(deadline).status(ClassStatus.DRAFT)
-                .totalSessions(course.getTotalSessions()).maxStudents(request.getClassType() == ClassType.GROUP ? 8 : 1)
+                .totalSessions(totalSessions).maxStudents(request.getClassType() == ClassType.GROUP ? 8 : 1)
                 .meetingUrl(meetingUrl(request.getMeetingUrl())).build();
         classes.saveAndFlush(c);
         String pattern = switch (c.getSchedulePattern()) {
@@ -54,6 +57,11 @@ public class ClassService {
                 + "-" + pattern + "-" + slot + "-" + String.format(Locale.ROOT, "%03d", c.getId()));
         classes.flush();
         audit.record(c.getId(), actor.getId(), "CREATE", Map.of("courseId", course.getId(), "classCode", c.getClassCode()));
+        if (request.getTutorId() != null) {
+            // Phân công gia sư ngay lúc mở lớp: sinh lịch trước để kiểm tra trùng lịch gia sư
+            schedule.ensureGenerated(c);
+            tutorAssignments.assign(c.getId(), request.getTutorId(), actor);
+        }
         return query.response(c, true, true);
     }
 
@@ -79,6 +87,10 @@ public class ClassService {
                 valid = before == ClassStatus.PUBLISHED; // Failed classes must use the audited reopen API.
                 if (valid) {
                     requireActiveCourse(c);
+                    // Lớp chưa có gia sư thì không mở đăng ký được (học viên chọn lớp theo thầy cô)
+                    if (assignments.findByClassGroupIdAndStatus(id, AssignmentStatus.ACTIVE).isEmpty()) {
+                        throw new BusinessException(ErrorCode.CLASS_TUTOR_REQUIRED);
+                    }
                     schedule.validateDates(c.getStartDate(), c.getEnrollmentDeadline());
                     schedule.ensureGenerated(c);
                 }
@@ -94,8 +106,11 @@ public class ClassService {
                             .allMatch(s -> Objects.equals(s.getScheduledTutorId(), assignment.orElseThrow().getTutorId()));
                 }
             }
-            case FAILED_TO_OPEN -> valid = before == ClassStatus.ENROLLING && c.getClassType() == ClassType.GROUP
-                    && LocalDate.now(clock).isAfter(c.getEnrollmentDeadline()) && count == 1;
+            case FAILED_TO_OPEN -> {
+                valid = before == ClassStatus.ENROLLING && c.getClassType() == ClassType.GROUP
+                        && LocalDate.now(clock).isAfter(c.getEnrollmentDeadline()) && count == 1;
+                if (valid) releasePreAssignedTutor(c, actor, reason);
+            }
             case CANCELLED -> {
                 valid = Set.of(ClassStatus.DRAFT, ClassStatus.PUBLISHED, ClassStatus.ENROLLING,
                         ClassStatus.FAILED_TO_OPEN, ClassStatus.ASSIGNED).contains(before);
@@ -127,6 +142,43 @@ public class ClassService {
         return query.response(c, true, true);
     }
 
+    /**
+     * Xóa hẳn lớp chưa từng có học viên, thanh toán hay lịch sử dạy (Bản nháp, Chưa mở đăng ký hoặc Đã hủy).
+     * Xóa kèm lịch buổi, phân công gia sư và nhật ký của lớp; còn dữ liệu khác thì trả CLASS_IN_USE.
+     */
+    @Transactional
+    public void delete(Long id, User actor) {
+        ClassGroup c = lock(id);
+        if (!Set.of(ClassStatus.DRAFT, ClassStatus.PUBLISHED, ClassStatus.CANCELLED).contains(c.getStatus())) {
+            throw new BusinessException(ErrorCode.CLASS_IN_USE);
+        }
+        Number used = (Number) entityManager.createNativeQuery("""
+                SELECT (SELECT COUNT(*) FROM learning_schedules WHERE class_group_id = :id)
+                     + (SELECT COUNT(*) FROM enrollments WHERE class_group_id = :id)
+                     + (SELECT COUNT(*) FROM payment_intents WHERE class_group_id = :id)
+                     + (SELECT COUNT(*) FROM payments WHERE class_group_id = :id)
+                     + (SELECT COUNT(*) FROM order_items WHERE class_id = :id)
+                     + (SELECT COUNT(*) FROM class_conversions WHERE class_group_id = :id)
+                """).setParameter("id", id).getSingleResult();
+        if (used.longValue() > 0) throw new BusinessException(ErrorCode.CLASS_IN_USE);
+        try {
+            String sessionIds = "SELECT id FROM sessions WHERE class_group_id = :id";
+            entityManager.createNativeQuery("DELETE FROM session_changes WHERE session_id IN (" + sessionIds
+                    + ") OR replacement_session_id IN (" + sessionIds + ")").setParameter("id", id).executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM sessions WHERE class_group_id = :id AND original_session_id IS NOT NULL")
+                    .setParameter("id", id).executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM sessions WHERE class_group_id = :id").setParameter("id", id).executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM tutor_assignments WHERE class_group_id = :id").setParameter("id", id).executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM class_changes WHERE class_group_id = :id").setParameter("id", id).executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM session_generation_locks WHERE class_group_id = :id").setParameter("id", id).executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM class_groups WHERE id = :id").setParameter("id", id).executeUpdate();
+        } catch (jakarta.persistence.PersistenceException ex) {
+            // Còn bảng khác trỏ tới lớp / buổi học (bài tập, điểm danh, đơn xin nghỉ...)
+            throw new BusinessException(ErrorCode.CLASS_IN_USE);
+        }
+        entityManager.detach(c);
+    }
+
     @Transactional
     public ClassResponse reopen(Long id, ReopenClassRequest request, User actor) {
         ClassGroup c = lock(id);
@@ -141,6 +193,20 @@ public class ClassService {
         c.setStatus(ClassStatus.ENROLLING);
         classes.flush();
         return query.response(c, true, true);
+    }
+
+    /** Lớp không mở được: trả gia sư đã phân công trước, để lớp có thể mở lại với lịch mới */
+    private void releasePreAssignedTutor(ClassGroup c, User actor, String reason) {
+        assignments.findByClassGroupIdAndStatus(c.getId(), AssignmentStatus.ACTIVE).ifPresent(a -> {
+            a.setStatus(AssignmentStatus.TERMINATED); a.setTerminatedBy(actor.getId());
+            a.setTerminatedAt(OffsetDateTime.now(clock)); a.setTerminationReason(reason);
+            assignments.saveAndFlush(a);
+            for (Session s : sessions.findClassSessionsForUpdate(c.getId())) {
+                s.setScheduledTutorId(null);
+                s.setActualTutorId(null);
+                s.setActualTutorOverridden(false);
+            }
+        });
     }
 
     private ClassGroup lock(Long id) {

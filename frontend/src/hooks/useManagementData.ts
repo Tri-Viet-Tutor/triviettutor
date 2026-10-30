@@ -3,6 +3,9 @@ import type { AdminClassesQuery, AdminCoursesQuery, EnrollmentsQuery, TutorPayro
 import {
   fetchAdminClasses,
   fetchAdminCourses,
+  fetchCourseSummary,
+  fetchClassSummary,
+  fetchSubjects,
   fetchClassEnrollments,
   fetchMyEnrollments,
   fetchMyPayroll,
@@ -13,6 +16,9 @@ import { useUserId } from "@/hooks/usePortalData";
 /** Khóa cache: phần quản trị nằm dưới "admin" để useRefreshAdmin làm mới được cả nhóm */
 export const managementKeys = {
   courses: (query: AdminCoursesQuery) => ["admin", "courses", query] as const,
+  courseSummary: ["admin", "course-summary"] as const,
+  classSummary: ["admin", "class-summary"] as const,
+  subjects: ["catalog", "subjects"] as const,
   classes: (query: AdminClassesQuery) => ["admin", "classes", query] as const,
   classEnrollments: (classId: number) => ["admin", "class-enrollments", classId] as const,
   payroll: (year: number, month: number) => ["admin", "payroll", year, month] as const,
@@ -27,6 +33,21 @@ export function useAdminCourses(query: AdminCoursesQuery) {
     queryFn: () => fetchAdminCourses(query),
     placeholderData: (previous) => previous,
   });
+}
+
+/** Số khóa tổng / đang bán / ngừng bán */
+export function useCourseSummary() {
+  return useQuery({ queryKey: managementKeys.courseSummary, queryFn: fetchCourseSummary });
+}
+
+/** Số lớp theo từng trạng thái */
+export function useClassSummary() {
+  return useQuery({ queryKey: managementKeys.classSummary, queryFn: fetchClassSummary });
+}
+
+/** Môn học có trong hệ thống (ít thay đổi nên giữ cache 10 phút) */
+export function useSubjects() {
+  return useQuery({ queryKey: managementKeys.subjects, queryFn: fetchSubjects, staleTime: 10 * 60 * 1000 });
 }
 
 /** Danh sách lớp học */

@@ -73,6 +73,9 @@ export type ErrorCode =
   | "INVALID_AVAILABILITY"
   | "INVALID_TUTOR"
   | "CLASS_NOT_ASSIGNABLE"
+  | "CLASS_TUTOR_REQUIRED"
+  | "CLASS_IN_USE"
+  | "COURSE_IN_USE"
   | "CLASS_ALREADY_ASSIGNED"
   | "ASSIGNMENT_NOT_FOUND"
   | "TUTOR_ALREADY_ASSIGNED"
@@ -118,6 +121,14 @@ export type ErrorCode =
   | "REFUND_ALREADY_SETTLED"
   // Không nằm trong enum ErrorCode nhưng backend vẫn trả về:
   | "VALIDATION_ERROR"
+  | "CART_ITEM_NOT_FOUND"
+  | "CART_LIMIT_EXCEEDED"
+  | "CART_CHANGED"
+  | "INVALID_CHECKOUT"
+  | "ORDER_SUBJECT_MISMATCH"
+  | "ORDER_EXPIRED"
+  | "ORDER_NOT_PENDING"
+  | "PAYMENT_MOCK_DISABLED"
   | "INTERNAL_ERROR";
 
 // ── Người dùng & đăng nhập (dto.auth, entity.User) ───────────────────────────
@@ -219,6 +230,10 @@ export interface CourseResponse {
   name: string;
   /** Mã môn, ví dụ "MATH" */
   subject: string;
+  /** Id môn trong bảng subjects (dùng để thêm môn vào giỏ hàng) */
+  subjectId?: number;
+  /** Học phí 1 kèm 1 cho MỘT buổi; học phí lớp = giá này × số buổi của lớp */
+  pricePerSession?: number;
   gradeLevel: GradeLevel;
   /** Học phí gốc của lớp 1 kèm 1 cho trọn khóa (đồng) */
   basePrice1on1: number;
@@ -228,11 +243,45 @@ export interface CourseResponse {
   description: string | null;
   active: boolean;
   createdAt: IsoDateTime;
+  updatedAt?: IsoDateTime;
+  /** Học phí mỗi học viên theo bậc sĩ số do backend tính (PricingService); backend cũ chưa có thì undefined */
+  priceTiers?: CoursePriceTier[];
+}
+
+/** Một bậc học phí theo sĩ số (CourseResponse.priceTiers) */
+export interface CoursePriceTier {
+  minStudents: number;
+  maxStudents: number;
+  /** 0, 0.2, 0.35, 0.4 */
+  discountRate: number;
+  /** Số tiền mỗi học viên trả (đồng) */
+  pricePerStudent: number;
+}
+
+/** GET /admin/classes/summary — số lớp theo từng trạng thái */
+export interface ClassSummaryResponse {
+  total: number;
+  byStatus: Record<ClassStatus, number>;
+}
+
+/** GET /admin/courses/summary */
+export interface CourseSummaryResponse {
+  total: number;
+  active: number;
+  inactive: number;
+}
+
+/** Một môn học — GET /catalog/subjects; `code` là mã môn lưu ở khóa học ("MATH") */
+export interface SubjectResponse {
+  id: number;
+  code: string;
 }
 
 /** Một lớp đang mở đăng ký — phần tử của GET /catalog/classes */
 export interface CatalogClassResponse {
   courseId?: number;
+  /** Id môn trong bảng subjects (dùng để thêm vào giỏ hàng) */
+  subjectId?: number;
   full?: boolean;
   id: number;
   /** Ví dụ "MATH-G10-MWF-M-001" */
@@ -259,6 +308,14 @@ export interface CatalogClassResponse {
   /** 1 với ONE_ON_ONE, 8 với GROUP */
   maxStudents: number;
   spotsLeft: number;
+  /** Gia sư phụ trách lớp (phân công khi mở lớp); chưa phân công thì không có */
+  tutorId?: number | null;
+  tutorName?: string | null;
+  /** Điểm đánh giá trung bình của gia sư (1 – 5); chưa có đánh giá thì null */
+  tutorRating?: number | null;
+  tutorRatingCount?: number;
+  /** Học phí 1 kèm 1 cho một buổi (basePrice1on1 là giá cả lớp theo số buổi của lớp) */
+  pricePerSession?: number;
 }
 
 /** Tham số lọc của GET /catalog/classes */
@@ -738,9 +795,10 @@ export interface CourseRequest {
   /** Mã môn, ví dụ "MATH" */
   subject: string;
   gradeLevel: GradeLevel;
-  /** Học phí gốc lớp 1 kèm 1 cho trọn khóa (đồng) */
+  /** Học phí 1 kèm 1 cho MỘT buổi (đồng) khi không gửi totalSessions */
   basePrice1on1: number;
-  totalSessions: number;
+  /** Bỏ trống: số buổi đặt ở từng lớp (chỉ client cũ còn gửi) */
+  totalSessions?: number;
   durationMinutes: number;
   description?: string;
 }
@@ -748,6 +806,8 @@ export interface CourseRequest {
 /** Tham số lọc của GET /admin/courses */
 export interface AdminCoursesQuery {
   subject?: string;
+  /** Tìm trong tên khóa (không phân biệt hoa thường) */
+  q?: string;
   gradeLevel?: GradeLevel;
   active?: boolean;
   page?: number;
@@ -779,6 +839,8 @@ export interface AdminClassResponse extends CatalogClassResponse {
 /** Tham số lọc của GET /admin/classes */
 export interface AdminClassesQuery {
   courseId?: number;
+  /** Tìm trong mã lớp hoặc tên khóa */
+  q?: string;
   status?: ClassStatus;
   classType?: ClassType;
   schedulePattern?: SchedulePattern;
@@ -796,6 +858,10 @@ export interface CreateClassRequest {
   startDate: IsoDate;
   enrollmentDeadline?: IsoDate;
   meetingUrl?: string;
+  /** Gia sư phụ trách, phân công ngay khi mở lớp (backend kiểm tra trùng lịch) */
+  tutorId?: number;
+  /** Số buổi của lớp (1 – 200) */
+  totalSessions?: number;
 }
 
 /** PATCH /admin/classes/{classId}/status */
@@ -881,4 +947,54 @@ export interface TutorPayrollQuery {
   month?: number;
   page?: number;
   size?: number;
+}
+
+// ── Giỏ hàng & đơn nhiều lớp (CartController, OrderController) ─────────────
+
+/** GET /cart — giỏ của học viên; mỗi dòng là một môn, chọn lớp cụ thể lúc đặt đơn */
+export interface CartResponse {
+  id: number | null;
+  /** Tăng mỗi khi giỏ đổi; gửi lại khi đặt đơn để backend biết giỏ chưa bị sửa ở nơi khác */
+  cartVersion: number;
+  items: CartItem[];
+}
+
+export interface CartItem {
+  id: number;
+  subjectId: number;
+  /** Mã môn, ví dụ "MATH" */
+  subjectName: string;
+  addedAt: IsoDateTime;
+}
+
+/** POST /orders/checkout */
+export interface CartCheckoutRequest {
+  cartVersion: number;
+  items: { cartItemId: number; classId: number }[];
+}
+
+export type CartOrderStatus = "PENDING_PAYMENT" | "PAID" | "CANCELLED" | "EXPIRED" | "PARTIALLY_REFUNDED" | "REFUNDED";
+
+/** Một đơn nhiều lớp với giá đã chốt cho từng lớp */
+export interface CartOrderResponse {
+  id: number;
+  status: CartOrderStatus;
+  totalAmount: number;
+  refundedAmount: number;
+  createdAt: IsoDateTime;
+  /** Giá giữ đến thời điểm này; quá hạn phải đặt lại */
+  expiresAt: IsoDateTime;
+  paidAt: IsoDateTime | null;
+  items: {
+    id: number;
+    cartItemId: number;
+    subjectId: number;
+    courseId: number;
+    classId: number;
+    subjectName: string;
+    courseName: string;
+    classCode: string | null;
+    unitPrice: number;
+    enrollmentId: number | null;
+  }[];
 }

@@ -67,9 +67,9 @@ export const ROLE_NAME: Record<Role, string> = {
 /** Trạng thái lớp học (vòng đời DRAFT → PUBLISHED → ENROLLING → ASSIGNED → IN_PROGRESS → COMPLETED) */
 export const CLASS_STATUS: Record<ClassStatus, StatusStyle> = {
   DRAFT: { label: "Bản nháp", tone: "slate", icon: "edit_note" },
-  PUBLISHED: { label: "Đã đăng", tone: "navy", icon: "public" },
+  PUBLISHED: { label: "Chưa mở đăng ký", tone: "slate", icon: "public" },
   ENROLLING: { label: "Đang tuyển sinh", tone: "amber", icon: "how_to_reg" },
-  ASSIGNED: { label: "Đã có gia sư", tone: "navy", icon: "assignment_ind" },
+  ASSIGNED: { label: "Đã chốt lớp", tone: "navy", icon: "lock" },
   IN_PROGRESS: { label: "Đang học", tone: "green", icon: "play_circle" },
   COMPLETED: { label: "Đã kết thúc", tone: "slate", icon: "task_alt" },
   FAILED_TO_OPEN: { label: "Không đủ sĩ số", tone: "red", icon: "group_off" },

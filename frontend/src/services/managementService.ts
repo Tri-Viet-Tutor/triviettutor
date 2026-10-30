@@ -6,6 +6,9 @@ import type {
   ChangeClassStatusRequest,
   CourseRequest,
   CourseResponse,
+  CourseSummaryResponse,
+  ClassSummaryResponse,
+  SubjectResponse,
   CreateClassRequest,
   EnrollmentResponse,
   EnrollmentsQuery,
@@ -39,7 +42,32 @@ export async function updateCourse(courseId: number, request: CourseRequest): Pr
   return unwrap(await api.put<ApiResponse<CourseResponse>>(`/admin/courses/${courseId}`, request));
 }
 
-/** PATCH /admin/courses/{courseId}/toggle — bật / tắt bán khóa học */
+/** PUT /admin/courses/{courseId}/active — đặt trạng thái bán (gửi lặp cùng giá trị không đổi gì thêm) */
+export async function setCourseActive(courseId: number, active: boolean): Promise<CourseResponse> {
+  return unwrap(await api.put<ApiResponse<CourseResponse>>(`/admin/courses/${courseId}/active`, { active }));
+}
+
+/** DELETE /admin/courses/{courseId} — xóa hẳn khóa chưa có lớp / đơn hàng (409 COURSE_IN_USE nếu đã dùng) */
+export async function deleteCourse(courseId: number): Promise<void> {
+  await api.delete(`/admin/courses/${courseId}`);
+}
+
+/** DELETE /admin/classes/{classId} — xóa hẳn lớp chưa từng có học viên (409 CLASS_IN_USE nếu đã dùng) */
+export async function deleteClass(classId: number): Promise<void> {
+  await api.delete(`/admin/classes/${classId}`);
+}
+
+/** GET /admin/courses/summary — số khóa tổng / đang bán / ngừng bán */
+export async function fetchCourseSummary(): Promise<CourseSummaryResponse> {
+  return unwrap(await api.get<ApiResponse<CourseSummaryResponse>>("/admin/courses/summary"));
+}
+
+/** GET /catalog/subjects — các môn học đang có trong hệ thống */
+export async function fetchSubjects(): Promise<SubjectResponse[]> {
+  return unwrap(await api.get<ApiResponse<SubjectResponse[]>>("/catalog/subjects"));
+}
+
+/** PATCH /admin/courses/{courseId}/toggle — đảo trạng thái bán (không idempotent; trang khóa học dùng setCourseActive) */
 export async function toggleCourse(courseId: number): Promise<CourseResponse> {
   return unwrap(await api.patch<ApiResponse<CourseResponse>>(`/admin/courses/${courseId}/toggle`));
 }
@@ -54,6 +82,11 @@ export async function fetchAdminClasses(query: AdminClassesQuery = {}): Promise<
 /** POST /admin/classes — mở lớp mới của một khóa học */
 export async function createClass(request: CreateClassRequest): Promise<AdminClassResponse> {
   return unwrap(await api.post<ApiResponse<AdminClassResponse>>("/admin/classes", request));
+}
+
+/** GET /admin/classes/summary — số lớp theo từng trạng thái */
+export async function fetchClassSummary(): Promise<ClassSummaryResponse> {
+  return unwrap(await api.get<ApiResponse<ClassSummaryResponse>>("/admin/classes/summary"));
 }
 
 /** PATCH /admin/classes/{classId}/status — đổi trạng thái lớp (đăng lớp sẽ sinh lịch các buổi) */

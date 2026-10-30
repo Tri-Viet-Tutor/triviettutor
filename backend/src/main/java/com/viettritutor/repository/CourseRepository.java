@@ -14,4 +14,6 @@ public interface CourseRepository extends JpaRepository<Course, Long>, JpaSpecif
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from Course c where c.id = :id")
     Optional<Course> findForUpdate(@Param("id") Long id);
+
+    long countByActive(boolean active);
 }

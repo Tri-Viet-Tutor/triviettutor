@@ -119,8 +119,10 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
   const [grade, setGrade] = useState<GradeLevel | "">("");
   const [mode, setMode] = useState<DeliveryMode | "">("");
   const [page, setPage] = useState(0);
-  // Bấm "Đăng ký ngay" ở trang "Mua khóa học" (?lop=<id>): chỉ thanh toán đúng lớp đó
-  const lopParam = Number(new URLSearchParams(search).get("lop"));
+  // Bấm "Mua ngay" ở trang "Mua khóa học" (?lop=<id>) hoặc "Đăng ký" ở trang chi tiết khóa (?classId=<id>):
+  // chỉ thanh toán đúng lớp đó
+  const query = new URLSearchParams(search);
+  const lopParam = Number(query.get("lop") ?? query.get("classId"));
   const lockedClassId = Number.isSafeInteger(lopParam) && lopParam > 0 ? lopParam : null;
   const [classId, setClassId] = useState<number | null>(lockedClassId);
   const [activeId, setActiveId] = useState(() => storedIntent(userId));
@@ -471,6 +473,9 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-bold text-brand-navy">{selected.data.courseName}</h2>
+                  {selected.data.tutorName && (
+                    <p className="text-sm font-semibold text-brand-ink">Gia sư {selected.data.tutorName}</p>
+                  )}
                   <p className="text-sm text-brand-muted">
                     Mã lớp {selected.data.classCode} · Khai giảng {selected.data.startDate} · Còn {selected.data.spotsLeft} chỗ
                   </p>

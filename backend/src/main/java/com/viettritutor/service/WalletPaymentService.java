@@ -51,7 +51,7 @@ public class WalletPaymentService {
         }
         var admission = support.admission(group, student.getId(), intentId);
         if (!intent.getCourseId().equals(admission.course().getId())
-                || intent.getAmount().compareTo(admission.course().getBasePrice1on1()) != 0) {
+                || intent.getAmount().compareTo(admission.course().priceFor(group.getTotalSessions())) != 0) {
             throw new BusinessException(ErrorCode.PAYMENT_PRICE_CHANGED);
         }
         OffsetDateTime now = OffsetDateTime.now(clock);

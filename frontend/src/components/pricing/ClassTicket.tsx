@@ -1,4 +1,5 @@
 import { Icon } from "@/components/ui/Icon";
+import { StarRating } from "@/components/ui/StarRating";
 import { FOCUS_RING } from "@/constants/classNames";
 import { DELIVERY_MODE_OPTIONS, GRADE_OPTIONS, SCHEDULE_PATTERN_OPTIONS } from "@/constants/classOptions";
 import type { ClassTicketProps } from "@/interfaces/pricing";
@@ -21,7 +22,16 @@ const NOTCH = "absolute h-5 w-5 rounded-full border border-slate-200";
  * Một lớp đang mở đăng ký (dữ liệu thật từ GET /catalog/classes — các lớp admin mở bán),
  * trình bày như tấm vé: cuống vé là môn, thân vé là thông tin lớp, phần xé là học phí và nút đăng ký.
  */
-export function ClassTicket({ item, index, canBuy, onBuy, surfaceClassName = "bg-[#F5F1E9]" }: ClassTicketProps) {
+export function ClassTicket({
+  item,
+  index,
+  canBuy,
+  onBuy,
+  onAddToCart,
+  inCart = false,
+  adding = false,
+  surfaceClassName = "bg-[#F5F1E9]",
+}: ClassTicketProps) {
   const tone = STUB_TONES[index % STUB_TONES.length];
   const grade = GRADE_OPTIONS.find((option) => option.value === item.gradeLevel)?.label;
   const mode = DELIVERY_MODE_OPTIONS.find((option) => option.value === item.deliveryMode)?.label;
@@ -48,6 +58,27 @@ export function ClassTicket({ item, index, canBuy, onBuy, surfaceClassName = "bg
         </p>
         <h3 className="mt-1.5 text-[20px] font-bold leading-tight text-brand-navy">{item.courseName}</h3>
         <p className="mt-1 text-[13.5px] text-brand-muted">Mã lớp {item.classCode}</p>
+        {item.tutorName && (
+          <p className="mt-2 flex items-center gap-2 whitespace-nowrap text-[14px] text-brand-ink">
+            <span className="flex min-w-0 items-center gap-1.5 truncate">
+              <Icon name="person" className="text-[18px] text-brand-navy" />
+              Gia sư <strong className="font-semibold">{item.tutorName}</strong>
+            </span>
+            {item.tutorRating != null && (item.tutorRatingCount ?? 0) > 0 ? (
+              <span className="flex shrink-0 items-center gap-1.5 text-[13px]">
+                <StarRating value={item.tutorRating} />
+                <strong className="font-semibold text-brand-ink">
+                  {item.tutorRating.toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                </strong>
+                <span className="text-brand-muted">({item.tutorRatingCount} đánh giá)</span>
+              </span>
+            ) : (
+              <span className="flex shrink-0 items-center gap-1.5 text-[13px] text-brand-muted">
+                <StarRating value={null} />
+              </span>
+            )}
+          </p>
+        )}
 
         <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[13.5px] text-brand-ink">
           <li className="flex items-center gap-1.5">
@@ -104,6 +135,18 @@ export function ClassTicket({ item, index, canBuy, onBuy, surfaceClassName = "bg
           {soldOut ? "Hết chỗ" : "Đăng ký ngay"}
           {!soldOut && <Icon name="arrow_forward" className="text-[17px]" />}
         </button>
+        {onAddToCart && !soldOut && (
+          <button
+            type="button"
+            onClick={onAddToCart}
+            disabled={!canBuy || inCart || adding}
+            aria-label={`Thêm môn ${item.subject} vào giỏ hàng`}
+            className={`inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-brand-navy px-4 text-[14px] font-semibold text-brand-navy transition-colors hover:bg-brand-tint disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 disabled:hover:bg-transparent ${FOCUS_RING}`}
+          >
+            <Icon name={inCart ? "check" : "add_shopping_cart"} className="text-[17px]" />
+            {inCart ? "Đã trong giỏ" : adding ? "Đang thêm…" : "Thêm vào giỏ"}
+          </button>
+        )}
       </div>
     </article>
   );

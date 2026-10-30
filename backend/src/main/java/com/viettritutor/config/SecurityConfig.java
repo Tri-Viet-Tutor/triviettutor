@@ -24,7 +24,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  *
  * URL access rules implement BR-01.10 permission matrix:
  *   /api/v1/auth/**          — public (login, register)
- *   /api/v1/catalog/**       — authenticated
+ *   GET /api/v1/catalog/**   — public (guests browse courses, classes and subjects)
  *   /api/v1/admin/**         — ROLE_ADMIN only
  *   /api/v1/tutor/**         — ROLE_TUTOR only
  *   /api/v1/enrollments/**   — ROLE_STUDENT only
@@ -85,8 +85,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/me/leave-requests").hasAnyRole("TUTOR", "STUDENT")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/sessions/*/attendance").hasAnyRole("ADMIN", "TUTOR")
                         .requestMatchers(HttpMethod.GET, "/api/v1/sessions/*/attendance").hasAnyRole("ADMIN", "TUTOR", "STUDENT")
-                        // Catalog accessible to all authenticated users
-                        .requestMatchers(HttpMethod.GET, "/api/v1/catalog/**").authenticated()
+                        // Catalog (courses on sale, open classes, subjects) is public so guests can browse before signing up.
+                        // An invalid or expired token is still rejected with 401 by JwtAuthFilter.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/catalog/**").permitAll()
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
                         // Everything else requires authentication
                         .anyRequest().authenticated()

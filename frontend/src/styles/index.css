@@ -26,6 +26,13 @@
     font-family: "Be Vietnam Pro", system-ui, sans-serif !important;
   }
 
+  /* Khu quản trị dùng Inter (gọn, rõ số liệu); đặc hiệu cao hơn quy tắc trên nên thắng */
+  .font-admin,
+  .font-admin *:not(.material-symbols-outlined) {
+    font-family: "Inter", "Be Vietnam Pro", system-ui, sans-serif !important;
+    font-feature-settings: "cv11", "ss01";
+  }
+
   .material-symbols-outlined {
     font-family: "Material Symbols Outlined" !important;
     font-size: 24px;

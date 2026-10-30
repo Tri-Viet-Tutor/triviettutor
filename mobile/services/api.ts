@@ -1,13 +1,6 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import {
-  SessionItem,
-  BackendSessionResponse,
-  BackendApiResponse,
-  User,
-  Subject,
-} from '@/types';
-import { MOCK_SESSIONS } from '@/constants/data';
+import { BackendApiResponse, User } from '@/types';
 
 /**
  * Base URL for VietTriTutor Spring Boot REST API.
@@ -210,86 +203,10 @@ export function getDayOfWeekLabel(dateStr: string): string {
 }
 
 export function formatTimeSlotHours(startTime?: string, endTime?: string): string {
-  if (!startTime || !endTime) return '18:00 - 20:00';
+  if (!startTime || !endTime) return '';
   const start = startTime.length >= 5 ? startTime.substring(0, 5) : startTime;
   const end = endTime.length >= 5 ? endTime.substring(0, 5) : endTime;
   return `${start} - ${end}`;
-}
-
-export function mapBackendSessionToItem(
-  session: BackendSessionResponse,
-  fallbackClassName = 'Lớp bồi dưỡng THPT'
-): SessionItem {
-  const isOnline = Boolean(session.meetingUrl && session.meetingUrl.trim().length > 0);
-  const timeSlotHours = formatTimeSlotHours(session.startTime, session.endTime);
-  const dayOfWeek = getDayOfWeekLabel(session.date);
-
-  return {
-    sessionId: String(session.sessionId),
-    classId: `cls-${session.classGroupId}`,
-    className: `${fallbackClassName} #${session.classGroupId}`,
-    subject: 'MATH' as Subject,
-    subjectLabel: 'Toán',
-    gradeLabel: 'Lớp 12',
-    sessionNumber: session.sessionNumber || 1,
-    totalSessions: 30,
-    date: session.date,
-    dayOfWeek,
-    timeSlotHours,
-    deliveryMode: isOnline ? 'ONLINE' : 'OFFLINE',
-    roomOrLink: session.meetingUrl || 'Phòng học Trung tâm Việt Trì',
-    tutorName: session.actualTutorId
-      ? `Gia sư #${session.actualTutorId}`
-      : session.scheduledTutorId
-      ? `Gia sư #${session.scheduledTutorId}`
-      : 'Gia sư Trung tâm',
-    status: session.status || 'UPCOMING',
-    attendance: session.status === 'COMPLETED' ? 'PRESENT' : undefined,
-    topic: `Buổi ${session.sessionNumber}: Nội dung bài học và luyện tập trọng tâm`,
-    meetingUrl: session.meetingUrl || undefined,
-  };
-}
-
-// ============================================================================
-// Endpoint Integrations
-// ============================================================================
-
-/**
- * Fetch authenticated student or tutor sessions from GET /api/v1/me/sessions.
- * Falls back safely to mock dataset if backend is offline or network fails.
- */
-export async function fetchMySessions(params?: {
-  from?: string;
-  to?: string;
-  status?: string;
-  classGroupId?: number;
-}): Promise<SessionItem[]> {
-  try {
-    const query = new URLSearchParams();
-    if (params?.from) query.append('from', params.from);
-    if (params?.to) query.append('to', params.to);
-    if (params?.status) query.append('status', params.status);
-    if (params?.classGroupId) query.append('classGroupId', String(params.classGroupId));
-
-    const queryString = query.toString();
-    const endpoint = `/me/sessions${queryString ? `?${queryString}` : ''}`;
-
-    const data = await requestApi<BackendSessionResponse[]>(endpoint, {
-      method: 'GET',
-      requiresAuth: true,
-    });
-
-    if (Array.isArray(data) && data.length > 0) {
-      return data.map((s) => mapBackendSessionToItem(s));
-    }
-    return MOCK_SESSIONS;
-  } catch (error: any) {
-    if (error?.message === 'SESSION_EXPIRED') {
-      throw error;
-    }
-    console.warn('Backend /me/sessions unavailable, using cached session schedule:', error?.message);
-    return MOCK_SESSIONS;
-  }
 }
 
 /**
@@ -341,12 +258,23 @@ export async function loginWithApi(
     id: String(result.user.id),
     fullName: result.user.fullName,
     email: result.user.email,
-    role: result.user.role as any,
-    gradeLevel: 'GRADE_12',
+    role: result.user.role as User['role'],
   };
 
   await setStoredToken(result.accessToken);
   await setStoredUser(user);
 
   return { accessToken: result.accessToken, user };
+}
+
+/**
+ * Tạo tài khoản học viên: POST /api/v1/auth/register.
+ * Máy chủ gửi mã kích hoạt qua email; tài khoản chỉ đăng nhập được sau khi nhập mã (làm trên website).
+ */
+export async function registerWithApi(fullName: string, email: string, password: string): Promise<void> {
+  await requestApi('/auth/register', {
+    method: 'POST',
+    requiresAuth: false,
+    body: JSON.stringify({ fullName: fullName.trim(), email: email.trim(), password }),
+  });
 }

@@ -51,6 +51,8 @@ export const ROUTES = {
   studentCatalogLegacy: "/student/courses",
   studentCheckout: "/student/checkout",
   studentWallet: "/student/wallet",
+  /** Giỏ hàng: chọn lớp cho từng môn rồi đặt đơn nhiều lớp */
+  studentCart: "/student/cart",
   studentLeave: "/student/leave",
   /** Các lớp đã đóng học phí */
   studentEnrollments: "/student/classes",

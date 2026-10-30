@@ -60,6 +60,9 @@ class TutorAssignmentServiceTest {
     @Mock
     private ConflictValidationService conflictService;
 
+    @Mock
+    private ClassScheduleService scheduleService;
+
     private TutorAssignmentService assignmentService;
 
     private User admin;
@@ -77,6 +80,7 @@ class TutorAssignmentServiceTest {
                 learningScheduleRepository,
                 sessionRepository,
                 conflictService,
+                scheduleService,
                 FIXED_CLOCK
         );
 
@@ -157,6 +161,41 @@ class TutorAssignmentServiceTest {
         assertThat(session1.getScheduledTutorId()).isEqualTo(10L);
         assertThat(session1.getActualTutorId()).isEqualTo(10L);
         verify(sessionRepository).saveAll(List.of(session1));
+    }
+
+    @Test
+    @DisplayName("Assign tutor while the class is still enrolling pre-assigns and keeps the class ENROLLING")
+    void assign_whileEnrolling_preAssignsWithoutConfirming() {
+        groupClass.setEnrollmentDeadline(LocalDate.of(2026, 10, 30));
+        when(classRepository.findForUpdate(100L)).thenReturn(Optional.of(groupClass));
+        when(userRepository.findForUpdate(10L)).thenReturn(Optional.of(tutor1));
+        when(assignmentRepository.findByClassGroupIdAndStatus(100L, AssignmentStatus.ACTIVE)).thenReturn(Optional.empty());
+        when(learningScheduleRepository.countActiveStudents(eq(100L), any(LocalDate.class))).thenReturn(0L);
+        Session session1 = Session.builder().id(1L).classGroupId(100L).sessionNumber(1)
+                .sessionDate(LocalDate.of(2026, 11, 2)).startTime(LocalTime.of(18, 0)).endTime(LocalTime.of(20, 0))
+                .status(SessionStatus.SCHEDULED).build();
+        when(sessionRepository.findClassSessionsForUpdate(100L)).thenReturn(List.of(session1));
+        when(assignmentRepository.save(any(TutorAssignment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AssignmentResponse response = assignmentService.assign(100L, 10L, admin);
+
+        assertThat(response.tutorId()).isEqualTo(10L);
+        assertThat(groupClass.getStatus()).isEqualTo(ClassStatus.ENROLLING);
+        assertThat(session1.getScheduledTutorId()).isEqualTo(10L);
+        verify(scheduleService).ensureGenerated(groupClass);
+    }
+
+    @Test
+    @DisplayName("Assign tutor is refused once the class has finished")
+    void assign_completedClass_notAssignable() {
+        groupClass.setStatus(ClassStatus.COMPLETED);
+        when(classRepository.findForUpdate(100L)).thenReturn(Optional.of(groupClass));
+        when(userRepository.findForUpdate(10L)).thenReturn(Optional.of(tutor1));
+        when(assignmentRepository.findByClassGroupIdAndStatus(100L, AssignmentStatus.ACTIVE)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> assignmentService.assign(100L, 10L, admin))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.CLASS_NOT_ASSIGNABLE));
     }
 
     @Test

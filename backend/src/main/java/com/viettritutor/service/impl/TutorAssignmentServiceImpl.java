@@ -6,6 +6,7 @@ import com.viettritutor.dto.assignment.*;
 import com.viettritutor.entity.*;
 import com.viettritutor.enums.*;
 import com.viettritutor.repository.*;
+import com.viettritutor.service.ClassScheduleService;
 import com.viettritutor.service.ConflictValidationService;
 import com.viettritutor.service.TutorAssignmentService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class TutorAssignmentServiceImpl implements TutorAssignmentService {
+    /** Lớp chưa chốt sĩ số: được phân công gia sư trước để học viên chọn thầy cô khi đăng ký */
+    private static final Set<ClassStatus> PRE_ASSIGNABLE = EnumSet.of(ClassStatus.DRAFT, ClassStatus.PUBLISHED, ClassStatus.ENROLLING);
+
     private final ClassGroupRepository classRepository;
     private final UserRepository userRepository;
     private final TutorAssignmentRepository assignmentRepository;
@@ -26,6 +30,7 @@ public class TutorAssignmentServiceImpl implements TutorAssignmentService {
     private final LearningScheduleRepository learningScheduleRepository;
     private final SessionRepository sessionRepository;
     private final ConflictValidationService conflictService;
+    private final ClassScheduleService scheduleService;
     private final Clock clock;
 
     @Override
@@ -37,12 +42,18 @@ public class TutorAssignmentServiceImpl implements TutorAssignmentService {
         if (assignmentRepository.findByClassGroupIdAndStatus(classId, AssignmentStatus.ACTIVE).isPresent()) {
             throw new BusinessException(ErrorCode.CLASS_ALREADY_ASSIGNED);
         }
-        validateInitialAssignment(classGroup);
+        // Đủ điều kiện chốt lớp -> phân công và chuyển ASSIGNED như trước;
+        // còn đang mở (DRAFT / PUBLISHED / ENROLLING) -> phân công trước, giữ nguyên trạng thái.
+        boolean confirm = readyToConfirm(classGroup);
+        if (!confirm && !PRE_ASSIGNABLE.contains(classGroup.getStatus())) {
+            throw new BusinessException(ErrorCode.CLASS_NOT_ASSIGNABLE);
+        }
+        if (!confirm) scheduleService.ensureGenerated(classGroup);
         List<Session> sessions = futureSessions(sessionRepository.findClassSessionsForUpdate(classId));
         requireFutureSessions(sessions);
         conflictService.assertTutorAvailable(tutorId, sessions);
         updateSessions(sessions, tutorId, null);
-        classGroup.setStatus(ClassStatus.ASSIGNED);
+        if (confirm) classGroup.setStatus(ClassStatus.ASSIGNED);
         return createAssignment(classGroup, tutor, admin, null);
     }
 
@@ -52,7 +63,8 @@ public class TutorAssignmentServiceImpl implements TutorAssignmentService {
         requireAdmin(admin);
         ClassGroup classGroup = lockClass(classId);
         User tutor = lockTutor(tutorId);
-        if (classGroup.getStatus() != ClassStatus.ASSIGNED && classGroup.getStatus() != ClassStatus.IN_PROGRESS) {
+        if (classGroup.getStatus() != ClassStatus.ASSIGNED && classGroup.getStatus() != ClassStatus.IN_PROGRESS
+                && !PRE_ASSIGNABLE.contains(classGroup.getStatus())) {
             throw new BusinessException(ErrorCode.CLASS_NOT_ASSIGNABLE);
         }
         TutorAssignment previous = assignmentRepository.findByClassGroupIdAndStatusForUpdate(classId, AssignmentStatus.ACTIVE)
@@ -130,22 +142,14 @@ public class TutorAssignmentServiceImpl implements TutorAssignmentService {
         }
     }
 
-    private void validateInitialAssignment(ClassGroup classGroup) {
-        if (classGroup.getStatus() != ClassStatus.ENROLLING) {
-            throw new BusinessException(ErrorCode.CLASS_NOT_ASSIGNABLE);
-        }
+    /** Lớp ENROLLING đã chốt sĩ số: 1 kèm 1 có đúng 1 học viên; lớp nhóm 2-8 học viên và đã qua hạn đăng ký */
+    private boolean readyToConfirm(ClassGroup classGroup) {
+        if (classGroup.getStatus() != ClassStatus.ENROLLING) return false;
         LocalDate today = LocalDate.now(clock);
         long students = learningScheduleRepository.countActiveStudents(classGroup.getId(), today);
-        if (classGroup.getClassType() == ClassType.ONE_ON_ONE) {
-            if (students != 1) {
-                throw new BusinessException(ErrorCode.CLASS_NOT_ASSIGNABLE,
-                        "One-on-one classes require exactly one active paid enrollment");
-            }
-        } else if (classGroup.getEnrollmentDeadline() == null
-                || !today.isAfter(classGroup.getEnrollmentDeadline()) || students < 2 || students > 8) {
-            throw new BusinessException(ErrorCode.CLASS_NOT_ASSIGNABLE,
-                    "Group classes require 2 to 8 active paid enrollments after the enrollment deadline");
-        }
+        if (classGroup.getClassType() == ClassType.ONE_ON_ONE) return students == 1;
+        return classGroup.getEnrollmentDeadline() != null && today.isAfter(classGroup.getEnrollmentDeadline())
+                && students >= 2 && students <= 8;
     }
 
     private List<Session> futureSessions(List<Session> sessions) {

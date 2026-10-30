@@ -51,7 +51,7 @@ class SessionLifecycleServiceTest {
     void setUp() {
         service = new SessionLifecycleServiceImpl(
                 repository, CLOCK, Optional.of(classLifecycle), eventPublisher,
-                classGroupRepository, enrollmentRepository, Optional.of(classAuditService));
+                classGroupRepository, enrollmentRepository, Optional.of(classAuditService), Optional.empty());
     }
 
     @Test

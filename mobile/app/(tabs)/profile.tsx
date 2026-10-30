@@ -18,7 +18,7 @@ import { CENTER_INFO } from '@/constants/data';
 import { useAuth } from '@/services/authContext';
 
 export default function ProfileScreen() {
-  const { user, isAuthenticated, logout, switchRole } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const handleLogout = () => {
     Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?', [
@@ -87,21 +87,6 @@ export default function ProfileScreen() {
               </View>
             )}
 
-            {/* Quick Stats */}
-            <View style={styles.statsRow}>
-              <View style={styles.statBox}>
-                <Text style={styles.statVal}>2</Text>
-                <Text style={styles.statLbl}>Lớp đang học</Text>
-              </View>
-              <View style={styles.statBox}>
-                <Text style={[styles.statVal, { color: BrandColors.success }]}>98%</Text>
-                <Text style={styles.statLbl}>Chuyên cần</Text>
-              </View>
-              <View style={styles.statBox}>
-                <Text style={[styles.statVal, { color: BrandColors.orange }]}>0</Text>
-                <Text style={styles.statLbl}>Đơn xin nghỉ</Text>
-              </View>
-            </View>
           </View>
         ) : (
           <View style={styles.guestCard}>
@@ -119,75 +104,6 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         )}
-
-        {/* Demo Role Switcher */}
-        <View style={styles.sectionBox}>
-          <Text style={styles.sectionHeaderTitle}>Trải nghiệm nhanh theo vai trò (Demo Switcher)</Text>
-          <Text style={styles.sectionSubDesc}>
-            Chuyển nhanh góc nhìn người dùng để trải nghiệm giao diện các nhóm actor:
-          </Text>
-          <View style={styles.demoButtons}>
-            <TouchableOpacity
-              style={[
-                styles.demoBtn,
-                user?.role === 'ROLE_STUDENT' && styles.demoBtnActive,
-              ]}
-              onPress={() => switchRole('student')}>
-              <Ionicons
-                name="school-outline"
-                size={16}
-                color={user?.role === 'ROLE_STUDENT' ? '#FFFFFF' : BrandColors.navy}
-              />
-              <Text
-                style={[
-                  styles.demoBtnText,
-                  user?.role === 'ROLE_STUDENT' && styles.demoBtnTextActive,
-                ]}>
-                Học viên (Student)
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.demoBtn,
-                user?.role === 'ROLE_TUTOR' && styles.demoBtnActive,
-              ]}
-              onPress={() => switchRole('tutor')}>
-              <Ionicons
-                name="person-outline"
-                size={16}
-                color={user?.role === 'ROLE_TUTOR' ? '#FFFFFF' : BrandColors.navy}
-              />
-              <Text
-                style={[
-                  styles.demoBtnText,
-                  user?.role === 'ROLE_TUTOR' && styles.demoBtnTextActive,
-                ]}>
-                Gia sư (Tutor)
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.demoBtn,
-                user?.role === 'ROLE_ADMIN' && styles.demoBtnActive,
-              ]}
-              onPress={() => switchRole('admin')}>
-              <Ionicons
-                name="shield-outline"
-                size={16}
-                color={user?.role === 'ROLE_ADMIN' ? '#FFFFFF' : BrandColors.navy}
-              />
-              <Text
-                style={[
-                  styles.demoBtnText,
-                  user?.role === 'ROLE_ADMIN' && styles.demoBtnTextActive,
-                ]}>
-                Quản trị viên (Admin)
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
 
         {/* Menu Items */}
         <View style={styles.menuContainer}>
@@ -221,21 +137,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => Alert.alert('Thông báo', 'Tính năng thông báo tự động trước giờ học 30 phút đã được kích hoạt.')}
-            activeOpacity={0.7}>
-            <View style={[styles.menuIcon, { backgroundColor: '#F0FDF4' }]}>
-              <Ionicons name="notifications-outline" size={20} color="#16A34A" />
-            </View>
-            <View style={styles.menuContent}>
-              <Text style={styles.menuLabel}>Cài đặt Thông báo & Nhắc lịch</Text>
-              <Text style={styles.menuSubLabel}>Nhắc trước buổi học 30 phút qua push notification</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => Alert.alert('Quy chế học phí', 'Học phí được thanh toán theo kỳ hoặc khóa học. Lớp nhóm từ 2 đến 8 học viên áp dụng bảng chiết khấu cố định theo quy tắc BR-02.')}
+            onPress={() => Alert.alert('Quy chế học phí', 'Học phí trả trọn khóa khi đăng ký và được chốt tại thời điểm đó. Lớp nhóm 2 - 3 bạn giảm 20%, 4 - 5 bạn giảm 35%, 6 - 8 bạn giảm 40% so với học phí 1 kèm 1. Lớp nhóm không đủ 2 bạn khi hết hạn đăng ký sẽ được dời ngày hoặc hoàn tiền 100%.')}
             activeOpacity={0.7}>
             <View style={[styles.menuIcon, { backgroundColor: '#FAF5FF' }]}>
               <Ionicons name="receipt-outline" size={20} color="#9333EA" />

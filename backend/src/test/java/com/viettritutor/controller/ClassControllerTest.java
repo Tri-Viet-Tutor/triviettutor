@@ -54,6 +54,7 @@ class ClassControllerTest {
  @Autowired LearningScheduleRepository rosters;
  @Autowired ClassConversionRepository conversions;
  @Autowired ClassChangeRepository changes;
+ @Autowired TutorAssignmentRepository tutorAssignments;
  @Autowired JwtService jwt;
  @Autowired jakarta.persistence.EntityManager em;
  Course course;
@@ -85,7 +86,15 @@ class ClassControllerTest {
   return json.readTree(r.andExpect(status().is(status)).andReturn().getResponse().getContentAsString()).get("data");
  }
  long create() throws Exception { return data(call("POST",BASE,valid(),admin),201).path("id").asLong(); }
- JsonNode changeStatus(long id, String value) throws Exception { return data(call("PATCH",BASE+"/"+id+"/status",Map.of("newStatus",value),admin),200); }
+ JsonNode changeStatus(long id, String value) throws Exception {
+  // Mở đăng ký cần lớp đã có gia sư: phân công một gia sư mới (không trùng lịch) nếu lớp chưa có
+  if (value.equals("ENROLLING") && tutorAssignments.findByClassGroupIdAndStatus(id, AssignmentStatus.ACTIVE).isEmpty()
+      && classes.findById(id).orElseThrow().getStatus() == ClassStatus.PUBLISHED) assignTutor(id);
+  return data(call("PATCH",BASE+"/"+id+"/status",Map.of("newStatus",value),admin),200);
+ }
+ void assignTutor(long id) throws Exception {
+  call("POST",BASE+"/"+id+"/assign",Map.of("tutorId",user("TUTOR").getId()),admin).andExpect(status().isOk());
+ }
  long open() throws Exception { long id=create(); changeStatus(id,"PUBLISHED"); changeStatus(id,"ENROLLING"); return id; }
  LearningSchedule enroll(long id, User u) {
   var all=sessions.findByClassGroupIdOrderBySessionNumberAsc(id);
@@ -126,10 +135,28 @@ class ClassControllerTest {
   call("PATCH",BASE+"/"+id+"/status",Map.of("newStatus","CANCELLED"),auth).andExpect(status().is(denied));
   call("POST",BASE+"/"+id+"/reopen",Map.of("startDate",START.plusDays(20).toString(),"reason","test"),auth).andExpect(status().is(denied));
   call("POST",BASE+"/"+id+"/convert-to-one-on-one",conversion("KEEP_PAID_AMOUNT"),auth).andExpect(status().is(denied));
-  int publicStatus=denied==403?200:401;
+  // Danh mục công khai: khách xem được; token sai vẫn bị 401
+  int publicStatus=role.equals("INVALID")?401:200;
   call("GET",CAT,null,auth).andExpect(status().is(publicStatus));
   call("GET",CAT+"/"+id,null,auth).andExpect(status().is(publicStatus));
   assertEquals(ClassStatus.ENROLLING,classes.findById(id).orElseThrow().getStatus());
+ }
+ @Test void adminSummaryCountsEveryStatusAndSearchMatchesCodeOrCourseName() throws Exception {
+  var before=data(call("GET",BASE+"/summary",null,admin),200);
+  long draft=create(), id=open();
+  var after=data(call("GET",BASE+"/summary",null,admin),200);
+  assertEquals(before.path("total").asLong()+2,after.path("total").asLong());
+  assertEquals(before.path("byStatus").path("DRAFT").asLong()+1,after.path("byStatus").path("DRAFT").asLong());
+  assertEquals(before.path("byStatus").path("ENROLLING").asLong()+1,after.path("byStatus").path("ENROLLING").asLong());
+  assertEquals(0,after.path("byStatus").path("CANCELLED").asLong()-before.path("byStatus").path("CANCELLED").asLong());
+  String code=null;
+  for(var c:data(call("GET",BASE+"?status=ENROLLING&size=100",null,admin),200).path("content"))
+   if(c.path("id").asLong()==id) code=c.path("classCode").asText();
+  assertNotNull(code);
+  var byCode=data(call("GET",BASE+"?q="+code.toLowerCase(),null,admin),200);
+  assertEquals(1,byCode.path("totalElements").asInt()); assertEquals(id,byCode.path("content").get(0).path("id").asLong());
+  assertEquals(0,data(call("GET",BASE+"?q=__khong_co__",null,admin),200).path("totalElements").asInt());
+  assertNotEquals(draft,id);
  }
  @Test void catalogFiltersVisibilityAndNeverExposesMeetingLink() throws Exception {
   long draft=create(), id=open();
@@ -253,6 +280,31 @@ class ClassControllerTest {
   call("PATCH",BASE+"/"+id+"/status",Map.of("newStatus","PUBLISHED"),admin).andExpect(status().isConflict());
   assertEquals(ClassStatus.DRAFT,classes.findById(id).orElseThrow().getStatus());
   assertEquals(before,changes.count());assertEquals(1,sessions.findByClassGroupIdOrderBySessionNumberAsc(id).size());
+ }
+ @Test void deletesOnlyClassesThatNeverHadStudents() throws Exception {
+  var body=valid(); body.put("tutorId",user("TUTOR").getId());
+  long draft=data(call("POST",BASE,body,admin),201).path("id").asLong();
+  call("DELETE",BASE+"/"+draft,null,admin).andExpect(status().isNoContent());
+  assertTrue(classes.findById(draft).isEmpty());
+  assertTrue(sessions.findByClassGroupIdOrderBySessionNumberAsc(draft).isEmpty());
+  assertTrue(tutorAssignments.findByClassGroupIdAndStatus(draft, AssignmentStatus.ACTIVE).isEmpty());
+  long enrolling=open();
+  call("DELETE",BASE+"/"+enrolling,null,admin).andExpect(status().isConflict()).andExpect(jsonPath("$.errorCode").value("CLASS_IN_USE"));
+  assertTrue(classes.findById(enrolling).isPresent());
+ }
+ @Test void enrollingRequiresTutorAndCatalogShowsIt() throws Exception {
+  long id=create(); changeStatus(id,"PUBLISHED");
+  call("PATCH",BASE+"/"+id+"/status",Map.of("newStatus","ENROLLING"),admin).andExpect(status().isUnprocessableEntity())
+   .andExpect(jsonPath("$.errorCode").value("CLASS_TUTOR_REQUIRED"));
+  assertEquals(ClassStatus.PUBLISHED,classes.findById(id).orElseThrow().getStatus());
+  var body=valid(); body.put("tutorId",user("TUTOR").getId()); body.put("startDate",START.plusDays(30).toString());
+  long withTutor=data(call("POST",BASE,body,admin),201).path("id").asLong();
+  assertEquals(4,sessions.findByClassGroupIdOrderBySessionNumberAsc(withTutor).size());
+  changeStatus(withTutor,"PUBLISHED"); changeStatus(withTutor,"ENROLLING");
+  var listing=data(call("GET",CAT,null,null),200).path("content");
+  boolean shown=false;
+  for(var c:listing) if(c.path("id").asLong()==withTutor) { shown=true; assertEquals("TUTOR",c.path("tutorName").asText()); }
+  assertTrue(shown);
  }
  @Test void oneOnOneCapacityAndFeeHaveNoGroupDiscount() throws Exception {
   var body=valid();body.put("classType","ONE_ON_ONE");

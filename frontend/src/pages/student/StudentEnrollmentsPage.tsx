@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueries } from "@tanstack/react-query";
 import { FilterTabs } from "@/components/dashboard/FilterTabs";
 import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
@@ -22,6 +22,7 @@ import { ROUTES } from "@/constants/routes";
 import { useMyEnrollments, useRefreshMine } from "@/hooks/useManagementData";
 import { useMySessions } from "@/hooks/usePortalData";
 import { cancelEnrollment } from "@/services/managementService";
+import { getTuitionClass } from "@/services/tuitionPaymentService";
 import { formatVnd } from "@/utils/currency";
 import { formatDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
@@ -54,6 +55,17 @@ export function StudentEnrollmentsPage() {
   });
 
   const all = enrollments.data?.content ?? [];
+  // Tên khóa và gia sư của từng lớp đã ghi danh (GET /catalog/classes/{id})
+  const classIds = [...new Set(all.map((item) => item.classGroupId))];
+  const classDetails = useQueries({
+    queries: classIds.map((id) => ({
+      queryKey: ["catalog-class", id],
+      queryFn: () => getTuitionClass(id),
+      staleTime: 60_000,
+      retry: false,
+    })),
+  });
+  const classById = new Map(classIds.map((id, index) => [id, classDetails[index]?.data]));
   const shown = filter === "ALL" ? all : all.filter((item) => item.status === filter);
   const active = all.filter((item) => item.status === "ACTIVE");
   const paid = all.reduce((sum, item) => sum + item.feeCharged, 0);
@@ -146,7 +158,14 @@ export function StudentEnrollmentsPage() {
                       <p className="text-[12.5px] font-bold uppercase tracking-wide text-brand-orangeHover">
                         Mã ghi danh #{item.enrollmentId}
                       </p>
-                      <h2 className="text-[17px] font-bold text-brand-ink">Lớp #{item.classGroupId}</h2>
+                      <h2 className="text-[17px] font-bold text-brand-ink">
+                        {classById.get(item.classGroupId)?.courseName ?? `Lớp #${item.classGroupId}`}
+                      </h2>
+                      {classById.get(item.classGroupId)?.tutorName && (
+                        <p className="text-[13.5px] text-brand-muted">
+                          Gia sư <span className="font-semibold text-brand-ink">{classById.get(item.classGroupId)?.tutorName}</span>
+                        </p>
+                      )}
                     </div>
                   </div>
                   <StatusChip tone={status.tone} icon={status.icon}>

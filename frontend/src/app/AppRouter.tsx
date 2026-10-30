@@ -58,6 +58,7 @@ import { TutorPayrollPage } from "@/pages/tutor/TutorPayrollPage";
 // Trang học viên
 import { StudentHomePage } from "@/pages/student/StudentHomePage";
 import { StudentSchedulePage } from "@/pages/student/StudentSchedulePage";
+import { StudentCartPage } from "@/pages/student/StudentCartPage";
 import { StudentCatalogPage } from "@/pages/student/StudentCatalogPage";
 import { StudentCheckoutPage } from "@/pages/student/StudentCheckoutPage";
 import { StudentWalletPage } from "@/pages/student/StudentWalletPage";
@@ -143,6 +144,7 @@ export function AppRouter() {
               <Route path={ROUTES.studentCatalogLegacy} element={<LegacyRedirect to={ROUTES.studentCatalog} />} />
               <Route path={ROUTES.studentCheckout} element={<StudentCheckoutPage />} />
               <Route path={ROUTES.studentWallet} element={<StudentWalletPage />} />
+              <Route path={ROUTES.studentCart} element={<StudentCartPage />} />
               <Route path={ROUTES.studentLeave} element={<StudentLeavePage />} />
               <Route path={ROUTES.studentEnrollments} element={<StudentEnrollmentsPage />} />
               <Route path={ROUTES.studentProfile} element={<ProfilePage />} />

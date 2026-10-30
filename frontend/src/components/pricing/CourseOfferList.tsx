@@ -4,10 +4,11 @@ import { ClassTicket } from "@/components/pricing/ClassTicket";
 import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING } from "@/constants/classNames";
 import { DELIVERY_MODE_OPTIONS, GRADE_OPTIONS, SCHEDULE_PATTERN_OPTIONS } from "@/constants/classOptions";
-import { SUBJECT_OPTIONS, gradeLabel, subjectIcon, subjectLabel } from "@/constants/management";
+import { SUBJECT_OPTIONS, coursePricePerSession, gradeLabel, subjectIcon, subjectLabel } from "@/constants/management";
 import type { CourseResponse, TuitionClass } from "@/interfaces/api";
 import type { CourseOfferListProps } from "@/interfaces/pricing";
 import { listCatalogCourses } from "@/services/tuitionPaymentService";
+import { useSubjects } from "@/hooks/useManagementData";
 import { useAuthStore } from "@/stores/authStore";
 import { formatVnd } from "@/utils/currency";
 import { formatDayMonth, parseIsoDate } from "@/utils/date";
@@ -98,16 +99,30 @@ function OfferSkeleton() {
  * (học phí thấp nhất, ưu đãi, khai giảng sớm nhất, lịch, hình thức, số chỗ còn);
  * bấm "Chọn lớp" mở các lớp của khóa (đã áp bộ lọc hình thức, thứ học, sắp xếp) để đăng ký.
  */
-export function CourseOfferList({ classes, filters, canBuy, onBuy, surfaceClassName, onResetFilters }: CourseOfferListProps) {
+export function CourseOfferList({
+  classes,
+  filters,
+  canBuy,
+  onBuy,
+  onAddToCart,
+  cartSubjects,
+  addingSubjectId,
+  surfaceClassName,
+  onResetFilters,
+}: CourseOfferListProps) {
   const user = useAuthStore((state) => state.user);
   // Khóa đang mở danh sách lớp
   const [expanded, setExpanded] = useState<number | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
+  // Id môn để thêm vào giỏ: lấy từ khóa, thiếu thì tra theo mã môn (GET /catalog/subjects)
+  const subjectsList = useSubjects();
+  const subjectIdOf = (course: { subject: string; subjectId?: number | null }): number | undefined =>
+    course.subjectId ?? subjectsList.data?.find((subject) => subject.code === course.subject)?.id;
+
   const courses = useQuery({
     queryKey: ["catalog-courses", user?.id],
     queryFn: () => listCatalogCourses({ size: CATALOG_LIMIT }),
-    enabled: Boolean(user),
   });
 
   // Lớp của từng khóa (đã lọc / sắp xếp sẵn từ CourseShopSection)
@@ -206,10 +221,20 @@ export function CourseOfferList({ classes, filters, canBuy, onBuy, surfaceClassN
             const open = expanded === course.id;
             const panelId = `course-classes-${course.id}`;
             const tone = toneOf(course.subject);
-            const totalHours = Math.round((course.totalSessions * course.durationMinutes) / 60);
-            const fee = summary?.minFee ?? course.basePrice1on1;
-            const discounted = summary !== null && summary.minFee < course.basePrice1on1;
-            const perSession = Math.round(fee / Math.max(course.totalSessions, 1) / 1000) * 1000;
+            // Số buổi đặt theo từng lớp: so sánh học phí theo buổi
+            const basePerSession = coursePricePerSession(course);
+            const classPerSession = courseClasses
+              .filter((item) => item.totalSessions > 0)
+              .map((item) => item.estimatedFee / item.totalSessions);
+            const perSession = Math.round(classPerSession.length > 0 ? Math.min(...classPerSession) : basePerSession);
+            const discounted = perSession < basePerSession;
+            const sessionCounts = [...new Set(courseClasses.map((item) => item.totalSessions))].sort((a, b) => a - b);
+            const sessionsLabel =
+              sessionCounts.length === 0
+                ? "Theo lớp"
+                : sessionCounts.length === 1
+                  ? `${sessionCounts[0]} buổi`
+                  : `${sessionCounts[0]} – ${sessionCounts[sessionCounts.length - 1]} buổi`;
             const filtered = Boolean(filters.mode || filters.schedule);
 
             const status = !summary
@@ -264,9 +289,9 @@ export function CourseOfferList({ classes, filters, canBuy, onBuy, surfaceClassN
                     {/* Thông số của khóa */}
                     <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
                       {[
-                        { icon: "event_repeat", label: "Số buổi", value: `${course.totalSessions} buổi` },
+                        { icon: "event_repeat", label: "Số buổi", value: sessionsLabel },
                         { icon: "timer", label: "Mỗi buổi", value: `${course.durationMinutes} phút` },
-                        { icon: "hourglass_bottom", label: "Tổng thời lượng", value: `${totalHours} giờ` },
+                        { icon: "groups", label: "Lớp đang mở", value: `${courseClasses.length} lớp` },
                         { icon: "school", label: "Khối lớp", value: gradeLabel(course.gradeLevel) },
                       ].map((spec) => (
                         <div key={spec.label} className="rounded-xl border border-slate-200/80 bg-white/80 px-3 py-2">
@@ -318,17 +343,15 @@ export function CourseOfferList({ classes, filters, canBuy, onBuy, surfaceClassN
                   <div className="flex shrink-0 flex-col justify-between gap-4 border-t border-slate-200 bg-brand-sand/50 p-5 sm:p-6 lg:w-[250px] lg:border-l lg:border-t-0">
                     <div>
                       <p className="text-[12.5px] font-semibold uppercase tracking-wide text-brand-muted">
-                        {summary ? "Học phí chỉ từ" : "Học phí gốc"}
+                        {summary ? "Học phí mỗi buổi chỉ từ" : "Học phí mỗi buổi"}
                       </p>
                       {discounted && (
-                        <p className="mt-1 text-[13.5px] text-brand-muted line-through tabular-nums">{formatVnd(course.basePrice1on1)}</p>
+                        <p className="mt-1 text-[13.5px] text-brand-muted line-through tabular-nums">{formatVnd(basePerSession)}</p>
                       )}
                       <p className="text-[26px] font-extrabold leading-tight tracking-tight text-brand-navy tabular-nums">
-                        {formatVnd(fee)}
+                        {formatVnd(perSession)}
                       </p>
-                      <p className="mt-0.5 text-[13px] text-brand-muted">
-                        cả khóa · khoảng <span className="font-semibold tabular-nums text-brand-ink">{formatVnd(perSession)}</span> / buổi
-                      </p>
+                      <p className="mt-0.5 text-[13px] text-brand-muted">/ buổi · học phí cả lớp tùy số buổi của lớp</p>
                       {summary && summary.maxDiscount > 0 && (
                         <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[12.5px] font-bold text-emerald-800">
                           <Icon name="sell" className="text-[15px]" />
@@ -337,6 +360,7 @@ export function CourseOfferList({ classes, filters, canBuy, onBuy, surfaceClassN
                       )}
                     </div>
 
+                    <div className="flex flex-col gap-2">
                     {summary ? (
                       <button
                         type="button"
@@ -358,6 +382,22 @@ export function CourseOfferList({ classes, filters, canBuy, onBuy, surfaceClassN
                         Chưa có lớp
                       </span>
                     )}
+                    {onAddToCart && subjectIdOf(course) !== undefined && (
+                      <button
+                        type="button"
+                        onClick={() => onAddToCart(subjectIdOf(course) as number)}
+                        disabled={!canBuy || cartSubjects?.has(course.subject) || addingSubjectId === subjectIdOf(course)}
+                        className={`inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-brand-navy bg-white px-4 text-[14.5px] font-semibold text-brand-navy transition-colors hover:bg-brand-tint disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 disabled:hover:bg-white ${FOCUS_RING}`}
+                      >
+                        <Icon name={cartSubjects?.has(course.subject) ? "check" : "add_shopping_cart"} className="text-[19px]" />
+                        {cartSubjects?.has(course.subject)
+                          ? "Đã trong giỏ"
+                          : addingSubjectId === subjectIdOf(course)
+                            ? "Đang thêm…"
+                            : "Thêm vào giỏ"}
+                      </button>
+                    )}
+                    </div>
                   </div>
                 </article>
 
@@ -379,6 +419,9 @@ export function CourseOfferList({ classes, filters, canBuy, onBuy, surfaceClassN
                             index={index}
                             canBuy={canBuy}
                             onBuy={() => onBuy(item)}
+                            onAddToCart={onAddToCart && item.subjectId !== undefined ? () => onAddToCart(item.subjectId as number, item) : undefined}
+                            inCart={cartSubjects?.has(item.subject)}
+                            adding={addingSubjectId !== undefined && addingSubjectId === item.subjectId}
                             surfaceClassName={surfaceClassName}
                           />
                         </li>
