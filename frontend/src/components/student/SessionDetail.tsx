@@ -1,12 +1,23 @@
 import { Link } from "react-router-dom";
 import { StatusChip } from "@/components/dashboard/StatusChip";
+import { SessionHomeworkList } from "@/components/student/SessionHomeworkList";
 import { Icon } from "@/components/ui/Icon";
 import { ATTENDANCE_STATUS } from "@/constants/labels";
 import { ROUTES } from "@/constants/routes";
 import { useSessionAttendance } from "@/hooks/usePortalData";
 import { formatClockTime, parseIsoDate } from "@/utils/date";
-import { canRequestLeave, formatLongDate, formatTimeRange, hasSubstituteTutor, sessionStart, teacherOf } from "@/utils/sessions";
 import { useState } from "react";
+import {
+  canJoinNow,
+  canRequestLeave,
+  formatLongDate,
+  formatTimeRange,
+  hasSubstituteTutor,
+  joinOpensAt,
+  joinOpensLater,
+  sessionStart,
+  teacherOf,
+} from "@/utils/sessions";
 import { RateTutorDialog, type StudentTutor, useStudentTutors } from "@/components/student/RateTutor";
 import type { SessionDetailProps } from "@/interfaces/portal";
 import { displayCode } from "@/utils/classes";
@@ -17,7 +28,7 @@ const LINK =
 
 /**
  * Chi tiết một buổi học: ngày giờ, ghi chú (học bù, dạy thay), điểm danh của tôi
- * (GET /sessions/{id}/attendance, chỉ tải khi buổi đã bắt đầu) và lối xin nghỉ / vào lớp.
+ * (GET /sessions/{id}/attendance, chỉ tải khi buổi đã bắt đầu), bài tập đã công bố và lối xin nghỉ / vào lớp.
  */
 export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailProps) {
   const started = sessionStart(session).getTime() <= now.getTime();
@@ -27,7 +38,11 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
   // Học viên chỉ nhận về bản ghi của chính mình
   const record = attendance.data?.records[0];
   const recordStyle = record ? ATTENDANCE_STATUS[record.status] : null;
-  const canJoin = session.status !== "CANCELLED" && session.status !== "COMPLETED";
+  // Phòng học chỉ mở từ 15 phút trước giờ học đến 15 phút sau khi kết thúc
+  const joinNow = canJoinNow(session, now);
+  const opensLater = joinOpensLater(session, now);
+  // Hiện khu vực vào lớp khi phòng đang mở hoặc sắp mở
+  const canJoin = joinNow || opensLater;
   const canLeave = canRequestLeave(session, now);
   // Buổi đã học xong: mời chấm sao gia sư dạy buổi đó
   const { tutors } = useStudentTutors();
@@ -90,6 +105,8 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
         </ul>
       )}
 
+      <SessionHomeworkList sessionId={session.sessionId} />
+
       {(canJoin || canLeave || hasPendingLeave) && (
         <div className="mt-4 flex flex-wrap items-center gap-2.5">
           {tutor && (
@@ -102,7 +119,7 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
               Đánh giá gia sư
             </button>
           )}
-          {canJoin && (
+          {joinNow && (
             <Link
               to={`/classroom/${session.sessionId}`}
               className={`${LINK} bg-brand-orange text-brand-navyDeep hover:bg-brand-orangeHover`}
@@ -110,6 +127,11 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
               <Icon name="videocam" className="text-[19px]" />
               Vào phòng học trực tuyến
             </Link>
+          )}
+          {opensLater && (
+            <StatusChip tone="slate" icon="videocam">
+              Phòng học mở lúc {formatClockTime(joinOpensAt(session))}
+            </StatusChip>
           )}
           {hasPendingLeave ? (
             <StatusChip tone="amber" icon="hourglass_top">

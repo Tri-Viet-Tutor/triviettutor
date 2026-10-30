@@ -1,4 +1,5 @@
 import type {
+  ActualTutorChange,
   AdminLeaveRequestsQuery,
   AdminSessionsQuery,
   AdminUserResponse,
@@ -21,6 +22,7 @@ import type {
   SessionResponse,
   SubstituteRequest,
   UpdateTutorProfileRequest,
+  UpdateUserStatusRequest,
 } from "@/interfaces/api";
 import { api, unwrap } from "@/services/api";
 
@@ -45,6 +47,11 @@ export async function createTutor(request: CreateTutorRequest): Promise<MeRespon
 /** PUT /admin/users/{userId}/tutor-profile — sửa lương, thù lao và giới thiệu của một gia sư */
 export async function updateTutorProfile(userId: number, request: UpdateTutorProfileRequest): Promise<MeResponse> {
   return unwrap(await api.put<ApiResponse<MeResponse>>(`/admin/users/${userId}/tutor-profile`, request));
+}
+
+/** PATCH /admin/users/{userId}/status — khóa (true) / mở khóa (false) tài khoản; không tự khóa chính mình được */
+export async function updateUserStatus(userId: number, request: UpdateUserStatusRequest): Promise<AdminUserResponse> {
+  return unwrap(await api.patch<ApiResponse<AdminUserResponse>>(`/admin/users/${userId}/status`, request));
 }
 
 // ── Buổi học ─────────────────────────────────────────────────────────────────
@@ -125,6 +132,25 @@ export async function correctAttendance(
   input: AttendanceCorrection,
 ): Promise<AttendanceRecordResponse> {
   return unwrap(await api.patch<ApiResponse<AttendanceRecordResponse>>(`/admin/sessions/${sessionId}/attendance/${recordId}`, input));
+}
+
+/**
+ * PUT /admin/sessions/{sessionId}/attendance/students/{studentId} — sửa điểm danh đã khóa của một học viên trong danh sách,
+ * tạo bản ghi mới nếu học viên chưa được điểm danh; bắt buộc có lý do
+ */
+export async function correctStudentAttendance(
+  sessionId: number,
+  studentId: number,
+  input: AttendanceCorrection,
+): Promise<AttendanceRecordResponse> {
+  return unwrap(
+    await api.put<ApiResponse<AttendanceRecordResponse>>(`/admin/sessions/${sessionId}/attendance/students/${studentId}`, input),
+  );
+}
+
+/** PATCH /admin/sessions/{sessionId}/actual-tutor — sửa gia sư thực dạy của buổi đã bắt đầu (vd. gia sư khác dạy thay khi vắng), kèm lý do */
+export async function changeActualTutor(sessionId: number, input: ActualTutorChange): Promise<SessionResponse> {
+  return unwrap(await api.patch<ApiResponse<SessionResponse>>(`/admin/sessions/${sessionId}/actual-tutor`, input));
 }
 
 // ── Phân công gia sư ─────────────────────────────────────────────────────────

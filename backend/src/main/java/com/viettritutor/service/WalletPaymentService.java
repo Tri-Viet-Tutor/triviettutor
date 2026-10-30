@@ -51,7 +51,7 @@ public class WalletPaymentService {
         }
         var admission = support.admission(group, student.getId(), intentId);
         if (!intent.getCourseId().equals(admission.course().getId())
-                || intent.getAmount().compareTo(admission.course().priceFor(group.getTotalSessions())) != 0) {
+                || intent.getAmount().compareTo(admission.expectedAmount()) != 0) {
             throw new BusinessException(ErrorCode.PAYMENT_PRICE_CHANGED);
         }
         OffsetDateTime now = OffsetDateTime.now(clock);
@@ -61,7 +61,7 @@ public class WalletPaymentService {
         wallet.post(student.getId(), "TUITION", intent.getAmount(), null, payment.getId(), null, "Học phí lớp " + group.getClassCode());
         intent.setStatus(PaymentIntentStatus.COMPLETED);
         Enrollment enrollment = enrollments.saveAndFlush(Enrollment.builder().studentId(student.getId()).classGroupId(group.getId())
-                .paymentId(payment.getId()).feeCharged(intent.getAmount()).discountRate(BigDecimal.ZERO)
+                .paymentId(payment.getId()).feeCharged(intent.getAmount()).discountRate(admission.discountRate())
                 .enrollmentSizeAtTime(admission.enrollmentSize()).status(EnrollmentStatus.ACTIVE).enrolledAt(now).build());
         learning.activate(enrollment.getId(), student.getId(), group.getId(), admission.start(), admission.end());
         idempotency.remember(student.getId(), PaymentOperationType.CONFIRM_WALLET, key, intentId.toString(), payment.getId());
@@ -72,6 +72,6 @@ public class WalletPaymentService {
         Enrollment enrollment = enrollments.findByPaymentId(payment.getId()).orElse(null);
         return new PaymentConfirmationResponse(payment.getIntentId(),
                 intents.findById(payment.getIntentId()).orElseThrow().getStatus(), reads.response(payment),
-                enrollment == null ? null : EnrollmentResponse.from(enrollment));
+                enrollment == null ? null : reads.enrollment(enrollment));
     }
 }

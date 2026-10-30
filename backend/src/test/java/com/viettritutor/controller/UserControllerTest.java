@@ -68,6 +68,21 @@ class UserControllerTest {
     }
 
     @Test
+    void searchTreatsLikeWildcardsAsLiteralCharacters() throws Exception {
+        User admin = createUser("admin-wild@example.test", "Admin", "ROLE_ADMIN");
+        createUser("an_le@example.test", "An Le", "ROLE_STUDENT");
+        createUser("anxle@example.test", "Anx Le", "ROLE_STUDENT");
+
+        mvc.perform(get("/api/v1/admin/users").header("Authorization", bearer(admin)).param("search", "%"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(0));
+        mvc.perform(get("/api/v1/admin/users").header("Authorization", bearer(admin)).param("search", "an_le"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].email").value("an_le@example.test"));
+    }
+
+    @Test
     void paginationIsStableAndHasDocumentedDefaults() throws Exception {
         User admin = createUser("admin-page@example.test", "Admin", "ROLE_ADMIN");
         createUser("first-page@example.test", "First", "ROLE_STUDENT");

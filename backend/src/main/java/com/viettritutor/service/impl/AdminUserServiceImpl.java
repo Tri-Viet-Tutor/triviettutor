@@ -44,7 +44,9 @@ public class AdminUserServiceImpl implements AdminUserService {
             throw new BusinessException(ErrorCode.INVALID_ROLE_FILTER);
         }
         String normalizedSearch = search == null || search.isBlank()
-                ? "" : search.trim().toLowerCase(Locale.ROOT);
+                ? "" : search.trim().toLowerCase(Locale.ROOT)
+                        // Match LIKE wildcards literally: searching "%" must not list every user.
+                        .replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
         return PageResponse.from(userRepository.findAdminUsers(
                 normalizedRole, normalizedSearch,
                 PageRequest.of(page, size, Sort.by("id").ascending()))
@@ -64,6 +66,8 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName().trim())
                 .role("ROLE_TUTOR")
+                // Admin-created accounts are usable immediately; no email OTP step.
+                .enabled(true)
                 .build();
         try {
             userRepository.saveAndFlush(user);
@@ -91,6 +95,18 @@ public class AdminUserServiceImpl implements AdminUserService {
                         profile.getBio()
                 )
         );
+    }
+
+    @Override
+    @Transactional
+    public AdminUserResponse updateStatus(Long adminId, Long userId, boolean locked) {
+        if (locked && userId.equals(adminId)) {
+            throw new BusinessException(ErrorCode.CANNOT_LOCK_SELF);
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        user.setLocked(locked);
+        return AdminUserResponse.from(userRepository.save(user));
     }
 
     @Override

@@ -48,6 +48,13 @@ export type ErrorCode =
   | "INVALID_RESET_TOKEN"
   | "RESET_TOKEN_EXPIRED"
   | "EMAIL_SEND_FAILED"
+  | "OTP_ATTEMPTS_EXCEEDED"
+  | "OTP_RESEND_TOO_SOON"
+  | "ACCOUNT_LOCKED"
+  | "CANNOT_LOCK_SELF"
+  | "RATING_NOT_FOUND"
+  | "RATING_ALREADY_EXISTS"
+  | "RATING_NOT_ELIGIBLE"
   | "ACCESS_DENIED"
   | "INVALID_PROFILE_FIELD"
   | "INVALID_ROLE_FILTER"
@@ -67,6 +74,8 @@ export type ErrorCode =
   | "SESSION_ALREADY_CANCELLED"
   | "MAKEUP_ALREADY_EXISTS"
   | "INVALID_MAKEUP_TIME"
+  | "SESSION_ALREADY_TAUGHT"
+  | "MEETING_NOT_AVAILABLE"
   | "PAYROLL_FINALIZED"
   | "SESSION_STATE_CHANGED"
   | "SCHEDULE_CONFLICT"
@@ -119,6 +128,25 @@ export type ErrorCode =
   | "ATTENDANCE_SESSION_NOT_ENDED"
   | "ATTENDANCE_EXCUSED_NOT_ALLOWED"
   | "INVALID_STATUS_TRANSITION"
+  // Bài tập, bài nộp, chấm điểm
+  | "INVALID_HOMEWORK_DATE_RANGE"
+  | "HOMEWORK_NOT_FOUND"
+  | "HOMEWORK_LOCKED"
+  | "HOMEWORK_PUBLISHED_EDIT_RESTRICTED"
+  | "HOMEWORK_DEADLINE_PASSED"
+  | "HOMEWORK_INVALID_DEADLINE"
+  | "HOMEWORK_NOT_ACCEPTING"
+  | "HOMEWORK_SESSION_CANCELLED"
+  | "LEARNING_VERSION_CONFLICT"
+  | "INVALID_RESOURCE_URL"
+  | "SUBMISSION_NOT_FOUND"
+  | "SUBMISSION_NOT_STARTED"
+  | "SUBMISSION_LOCKED"
+  | "EMPTY_SUBMISSION"
+  | "SUBMISSION_NOT_SUBMITTED"
+  | "INVALID_SUBMISSION_FILTER"
+  | "INVALID_HOMEWORK_SCORE"
+  | "GRADING_REASON_REQUIRED"
   // (Đề xuất) Đơn hàng & thanh toán VNPay — backend chưa có
   | "ORDER_NOT_FOUND"
   | "INVALID_ORDER_ITEMS"
@@ -625,6 +653,20 @@ export interface UpdateMeRequest {
 /** dto.user.AdminUserResponse — GET /admin/users */
 export interface AdminUserResponse extends UserInfo {
   createdAt: IsoDateTime;
+  /** Bị quản trị viên khóa: không đăng nhập được (cả Google), phiên cũ hết hiệu lực */
+  locked: boolean;
+  /** Đã xác thực email / kích hoạt */
+  enabled: boolean;
+  /** LOCKED ưu tiên hơn UNVERIFIED; còn lại ACTIVE */
+  status: AdminUserStatus;
+}
+
+/** Trạng thái tài khoản trong AdminUserResponse */
+export type AdminUserStatus = "ACTIVE" | "LOCKED" | "UNVERIFIED";
+
+/** PATCH /admin/users/{userId}/status */
+export interface UpdateUserStatusRequest {
+  locked: boolean;
 }
 
 /** Tham số của GET /admin/users (page từ 0, size 1 – 100) */
@@ -695,7 +737,8 @@ export interface AdminLeaveRequestsQuery extends MyLeaveRequestsQuery {
 
 /** dto.leave.MakeupRequest — POST /admin/sessions/{sessionId}/makeup */
 export interface MakeupRequest {
-  leaveRequestId: number;
+  /** Bỏ trống khi xếp bù cho buổi đã hủy mà không có đơn xin nghỉ */
+  leaveRequestId?: number;
   makeupDate: IsoDate;
   startTime: IsoTime;
   endTime: IsoTime;
@@ -726,10 +769,9 @@ export interface ApiError {
 }
 
 // ── services/authService.ts ──
-/** POST /auth/forgot-password — email nhận liên kết; frontendUrl để backend dựng liên kết về đúng trang */
+/** POST /auth/forgot-password — email nhận liên kết (địa chỉ trang do backend tự cấu hình) */
 export interface ForgotPasswordRequest {
   email: string;
-  frontendUrl?: string;
 }
 
 /** POST /auth/reset-password — token lấy từ liên kết trong email */
@@ -737,20 +779,6 @@ export interface ResetPasswordRequest {
   token: string;
   /** 6 – 128 ký tự, cùng giới hạn với mật khẩu lúc đăng ký */
   newPassword: string;
-}
-
-// ── services/orderService.ts ──
-/** (Đề xuất) Kết quả của POST /orders/checkout */
-export interface OrderResponse {
-  orderId: number;
-  /** Mã đơn hiển thị cho người mua */
-  orderCode: string;
-  /** Tổng tiền máy chủ chốt cho đơn (VND) */
-  totalAmount: number;
-  /** Đường dẫn thanh toán VNPay đã ký */
-  paymentUrl: string;
-  /** Thời điểm đường dẫn hết hạn (ISO 8601) */
-  expiresAt?: string;
 }
 
 // ── Thanh toán học phí qua VNPay (services/tuitionPaymentService.ts) ──
@@ -856,8 +884,11 @@ export interface ClassSessionPreview {
 }
 
 /** dto.classgroup.ClassResponse — GET/POST /admin/classes */
-export interface AdminClassResponse extends CatalogClassResponse {
+export interface AdminClassResponse extends Omit<CatalogClassResponse, "estimatedFee" | "discountRate"> {
   courseId: number;
+  /** null khi lớp đã đủ chỗ (lớp 1-1 đã có học viên, lớp nhóm đủ 8) */
+  estimatedFee: number | null;
+  discountRate: number | null;
   status: ClassStatus;
   enrollmentDeadline: IsoDate | null;
   reservedStudents: number;
@@ -925,6 +956,10 @@ export interface EnrollmentResponse {
   cancelledAt: IsoDateTime | null;
   cancellationReason: string | null;
   cancelledBy: number | null;
+  /** Trạng thái lần hoàn tiền gần nhất của giao dịch; null khi chưa có */
+  refundStatus: "PENDING" | "COMPLETED" | "FAILED" | null;
+  /** Học viên còn được tự hủy và hoàn 100% học phí hay không (BR-02.32) */
+  cancellable: boolean;
 }
 
 /** Tham số của GET /enrollments/my và GET /admin/classes/{classId}/enrollments */
@@ -950,12 +985,52 @@ export interface PayrollLineResponse {
   /** Buổi được tính lương */
   validSessions: number;
   cancelledSessions: number;
-  /** Buổi đã có người dạy thay */
+  /** Buổi của gia sư này nhưng do gia sư khác dạy thay (được dạy thay) */
   substitutedOutSessions: number;
   /** Buổi chưa chốt (chưa khóa điểm danh / chưa xác nhận đã dạy) */
   unfinalizedSessions: number;
   sessionPay: number;
   totalPay: number;
+  /** Đối soát từng buổi của tháng (backend luôn trả kèm) */
+  reconciliation?: TeachingPeriodSummary | null;
+}
+
+/** dto.attendance.TeachingSessionResponse — một buổi trong bảng đối soát lương */
+export interface TeachingSessionResponse {
+  sessionId: number;
+  classGroupId: number;
+  originalSessionId: number | null;
+  date: IsoDate;
+  startTime: IsoTime;
+  endTime: IsoTime;
+  status: SessionStatus;
+  scheduledTutorId: number | null;
+  actualTutorId: number | null;
+  taughtByTutorId: number | null;
+  teachingConfirmedBy: number | null;
+  teachingConfirmedAt: IsoDateTime | null;
+  attendanceLocked: boolean;
+  needsAdminReview: boolean;
+  cancellationReason: string | null;
+  scheduledTutorAtCancellation: number | null;
+  actualTutorAtCancellation: number | null;
+}
+
+/** dto.attendance.TeachingPeriodSummary — các buổi của một gia sư trong tháng, chia theo nhóm */
+export interface TeachingPeriodSummary {
+  tutorId: number;
+  /** "2026-10" */
+  month: string;
+  completed: TeachingSessionResponse[];
+  cancelled: TeachingSessionResponse[];
+  substitutedOut: TeachingSessionResponse[];
+  unfinalized: TeachingSessionResponse[];
+}
+
+/** dto.attendance.ActualTutorChange — PATCH /admin/sessions/{sessionId}/actual-tutor */
+export interface ActualTutorChange {
+  tutorId: number;
+  reason: string;
 }
 
 /** dto.payroll.PayrollResponse — GET /admin/payroll/{year}/{month} */

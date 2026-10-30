@@ -9,6 +9,7 @@ import com.viettritutor.repository.*;
 import com.viettritutor.service.ClassDiscountSettlementService;
 import com.viettritutor.service.ClassScheduleService;
 import com.viettritutor.service.ConflictValidationService;
+import com.viettritutor.service.SessionOperationSupport;
 import com.viettritutor.service.TutorAssignmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ public class TutorAssignmentServiceImpl implements TutorAssignmentService {
     private final ConflictValidationService conflictService;
     private final ClassScheduleService scheduleService;
     private final ClassDiscountSettlementService discountSettlement;
+    private final SessionOperationSupport operations;
     private final Clock clock;
 
     @Override
@@ -89,7 +91,10 @@ public class TutorAssignmentServiceImpl implements TutorAssignmentService {
         previous.setTerminationReason(reason.trim());
         // Release the unique active-assignment key before inserting the successor.
         assignmentRepository.saveAndFlush(previous);
+        Map<Long, SessionOperationSupport.Snapshot> before = new HashMap<>();
+        sessions.forEach(session -> before.put(session.getId(), operations.snapshot(session)));
         updateSessions(sessions, tutorId, previous.getTutorId());
+        resolvePreviousTutorLeave(sessions, before, previous.getTutorId(), reason, admin);
         return createAssignment(classGroup, tutor, admin, reason.trim());
     }
 
@@ -121,8 +126,10 @@ public class TutorAssignmentServiceImpl implements TutorAssignmentService {
         return rank(tutors, List.of(session), slot -> slot.getAvailableDate().equals(session.getSessionDate()));
     }
 
-    private List<AvailableTutorResponse> rank(List<User> tutors, List<Session> requested,
+    private List<AvailableTutorResponse> rank(List<User> candidates, List<Session> requested,
                                               Predicate<TutorAvailability> shownAvailability) {
+        // A locked tutor cannot sign in to teach, so they are never suggested.
+        List<User> tutors = candidates.stream().filter(tutor -> !tutor.isLocked()).toList();
         if (tutors.isEmpty()) {
             return List.of();
         }
@@ -149,6 +156,9 @@ public class TutorAssignmentServiceImpl implements TutorAssignmentService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         if (!"ROLE_TUTOR".equals(tutor.getRole())) {
             throw new BusinessException(ErrorCode.INVALID_TUTOR);
+        }
+        if (tutor.isLocked()) {
+            throw new BusinessException(ErrorCode.INVALID_TUTOR, "The selected tutor account is locked");
         }
         return tutor;
     }
@@ -205,6 +215,33 @@ public class TutorAssignmentServiceImpl implements TutorAssignmentService {
             session.setScheduledTutorId(tutorId);
         }
         sessionRepository.saveAll(sessions);
+    }
+
+    /**
+     * The replaced tutor no longer teaches the moved sessions, so their pending leave on them is settled as a
+     * substitution by the new tutor and the session returns to SCHEDULED unless another pending leave still blocks it.
+     */
+    private void resolvePreviousTutorLeave(List<Session> sessions, Map<Long, SessionOperationSupport.Snapshot> before,
+                                           Long previousTutorId, String reason, User admin) {
+        for (Session session : sessions) {
+            List<LeaveRequest> pending = operations.pending(session.getId());
+            List<LeaveRequest> resolved = pending.stream()
+                    .filter(request -> "ROLE_TUTOR".equals(request.getRequesterRole())
+                            && previousTutorId.equals(request.getRequesterId()))
+                    .toList();
+            if (resolved.isEmpty()) {
+                continue;
+            }
+            for (LeaveRequest request : resolved) {
+                operations.approve(request, LeaveResolution.SUBSTITUTE, admin, reason, null);
+            }
+            boolean stillBlocked = pending.stream()
+                    .filter(request -> !resolved.contains(request))
+                    .anyMatch(LeaveRequest::isAffectsSession);
+            session.setStatus(stillBlocked ? SessionStatus.PENDING_RESCHEDULE : SessionStatus.SCHEDULED);
+            operations.audit(session, before.get(session.getId()), SessionChangeType.SUBSTITUTE, admin, reason,
+                    resolved.get(0).getId(), null);
+        }
     }
 
     private AssignmentResponse createAssignment(ClassGroup classGroup, User tutor, User admin, String reason) {

@@ -3,16 +3,14 @@ package com.viettritutor.controller;
 import com.viettritutor.common.api.ApiResponse;
 import com.viettritutor.common.api.PageResponse;
 import com.viettritutor.dto.user.*;
-import com.viettritutor.service.AdminUserService;
-import com.viettritutor.service.AvatarService;
 import com.viettritutor.entity.User;
 import com.viettritutor.security.CurrentUser;
+import com.viettritutor.service.AdminUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +22,6 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final AdminUserService adminUserService;
-    private final AvatarService avatarService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -58,6 +55,23 @@ public class UserController {
                 ));
     }
 
+    @PatchMapping("/{userId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+            summary = "Lock or unlock a user account",
+            description = "Admin only. A locked user cannot log in (password or Google) and existing tokens stop working. "
+                    + "An admin cannot lock their own account."
+    )
+    public ApiResponse<AdminUserResponse> updateStatus(
+            @PathVariable Long userId,
+            @Valid @RequestBody UpdateUserStatusRequest request,
+            @CurrentUser User admin
+    ) {
+        return ApiResponse.ok(
+                adminUserService.updateStatus(admin.getId(), userId, request.getLocked())
+        );
+    }
+
     @PutMapping("/{userId}/tutor-profile")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(
@@ -87,19 +101,5 @@ public class UserController {
     public ApiResponse<Void> deleteUser(@PathVariable Long userId, @CurrentUser User admin) {
         adminUserService.deleteUser(userId, admin.getId());
         return ApiResponse.ok(null);
-    }
-
-    @GetMapping("/users/{userId}/avatar")
-    @Operation(summary = "Get user avatar")
-    public ResponseEntity<byte[]> getAvatar(
-            @PathVariable Long userId
-    ) {
-        AvatarImageResponse avatar = avatarService.getAvatar(userId);
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(
-                        avatar.contentType()
-                ))
-                .body(avatar.data());
     }
 }

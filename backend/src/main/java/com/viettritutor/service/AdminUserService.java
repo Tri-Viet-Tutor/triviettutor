@@ -13,4 +13,5 @@ public interface AdminUserService {
     MeResponse updateTutorProfile(Long userId, UpdateTutorProfileRequest request);
     AdminUserResponse updateUser(Long userId, UpdateUserRequest request);
     void deleteUser(Long userId, Long actorId);
+    AdminUserResponse updateStatus(Long adminId, Long userId, boolean locked);
 }

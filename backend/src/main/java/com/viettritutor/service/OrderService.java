@@ -70,17 +70,17 @@ public class OrderService {
         }
         if(ttlMinutes<1 || ttlMinutes>1440)throw new IllegalStateException("Order TTL must be between 1 and 1440 minutes");
         OffsetDateTime now=now();
-        // Mỗi lớp tính đúng giá học viên sẽ trả khi đăng ký lẻ (BR-02.11: giảm theo sĩ số lớp nhóm), chốt trong thời hạn đơn
+        // Price each seat exactly like a single-class quote: the group discount the admission computed for this student.
         BigDecimal total=admissions.values().stream().map(EnrollmentPaymentSupport.Admission::expectedAmount).reduce(BigDecimal.ZERO,BigDecimal::add);
         PurchaseOrder order=orders.saveAndFlush(PurchaseOrder.builder().studentId(student.getId()).status(OrderStatus.PENDING_PAYMENT)
                 .totalAmount(total).refundedAmount(BigDecimal.ZERO).cartVersion(cart.getVersion()).createdAt(now)
                 .expiresAt(now.plusMinutes(ttlMinutes)).build());
         for(var selection:selected.stream().sorted(Comparator.comparing(CheckoutRequest.Selection::getCartItemId)).toList()) {
-            ClassGroup group=classes.get(selection.getClassId());Course course=admissions.get(group.getId()).course();
+            ClassGroup group=classes.get(selection.getClassId());var admission=admissions.get(group.getId());Course course=admission.course();
             orderItems.save(OrderItem.builder().orderId(order.getId()).cartItemId(selection.getCartItemId())
                     .subjectId(course.getSubjectId()).courseId(course.getId()).classId(group.getId())
                     .subjectName(course.getSubject()).courseName(course.getName()).classCode(group.getClassCode())
-                    .unitPrice(admissions.get(group.getId()).expectedAmount()).build());
+                    .unitPrice(admission.expectedAmount()).discountRate(admission.discountRate()).build());
         }
         orderItems.flush();
         return idempotency.remember(student.getId(),"CHECKOUT",key,fingerprint,response(order));
@@ -111,8 +111,11 @@ public class OrderService {
         OffsetDateTime now=now();
         for(OrderItem item:items) {
             var admission=admissions.get(item.getClassId());
+            // The order is a price snapshot: charge and record the rate quoted at checkout.
+            // Items created before V23 were snapshotted at the undiscounted course price.
+            BigDecimal rate=item.getDiscountRate()!=null?item.getDiscountRate():BigDecimal.ZERO;
             PaymentIntent intent=intents.saveAndFlush(PaymentIntent.builder().studentId(student.getId())
-                    .classGroupId(item.getClassId()).courseId(item.getCourseId()).amount(item.getUnitPrice())
+                    .classGroupId(item.getClassId()).courseId(item.getCourseId()).amount(item.getUnitPrice()).discountRate(rate)
                     .status(success?PaymentIntentStatus.COMPLETED:PaymentIntentStatus.FAILED)
                     .createdAt(now).expiresAt(now.plusMinutes(ttlMinutes)).build());
             Payment payment=payments.saveAndFlush(Payment.builder().intentId(intent.getId()).studentId(student.getId())
@@ -122,8 +125,7 @@ public class OrderService {
             if(success) {
                 Enrollment enrollment=enrollments.saveAndFlush(Enrollment.builder().studentId(student.getId())
                         .classGroupId(item.getClassId()).paymentId(payment.getId()).feeCharged(item.getUnitPrice())
-                        .discountRate(discountOf(item.getUnitPrice(),admission.course().priceFor(admission.sessions().size())))
-                        .enrollmentSizeAtTime(admission.enrollmentSize())
+                        .discountRate(rate).enrollmentSizeAtTime(admission.enrollmentSize())
                         .status(EnrollmentStatus.ACTIVE).enrolledAt(now).build());
                 learning.activate(enrollment.getId(),student.getId(),item.getClassId(),admission.start(),admission.end());
                 item.setPaymentId(payment.getId());item.setEnrollmentId(enrollment.getId());
@@ -135,12 +137,6 @@ public class OrderService {
         }
         entityManager.flush();
         return idempotency.remember(student.getId(),"PAY",key,orderId.toString(),response(order));
-    }
-
-    /** Mức giảm thực tế của giá đã chốt trong đơn so với học phí gốc 1 kèm 1 (0..1, 3 chữ số thập phân). */
-    private static BigDecimal discountOf(BigDecimal unitPrice,BigDecimal basePrice) {
-        if(basePrice==null || basePrice.signum()<=0 || unitPrice.compareTo(basePrice)>=0)return BigDecimal.ZERO;
-        return BigDecimal.ONE.subtract(unitPrice.divide(basePrice,3,java.math.RoundingMode.HALF_UP)).max(BigDecimal.ZERO);
     }
 
     @Transactional

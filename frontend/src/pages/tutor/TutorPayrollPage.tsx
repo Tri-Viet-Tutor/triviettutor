@@ -1,3 +1,4 @@
+import { PayrollReconciliation } from "@/components/dashboard/PayrollReconciliation";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
 import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/PortalState";
 import { StatTile } from "@/components/dashboard/StatTile";
@@ -10,7 +11,8 @@ import { useMyPayroll } from "@/hooks/useManagementData";
 import { formatVnd } from "@/utils/currency";
 
 /**
- * Thu nhập của gia sư theo từng tháng: lương cứng, thù lao theo buổi hợp lệ, buổi bị hủy / dạy thay / chưa chốt.
+ * Thu nhập của gia sư theo từng tháng đã chốt: lương cứng, thù lao theo buổi hợp lệ, buổi bị hủy / được dạy thay / chưa chốt,
+ * kèm danh sách từng buổi đã dạy.
  * API: GET /tutor/payroll.
  */
 export function TutorPayrollPage() {
@@ -25,7 +27,7 @@ export function TutorPayrollPage() {
       <PortalPageHeader
         icon="account_balance_wallet"
         title="Bảng lương của tôi"
-        description="Lương cứng cộng thù lao cho mỗi buổi dạy hợp lệ. Tháng ở trạng thái Tạm tính có thể còn thay đổi cho tới khi trung tâm chốt."
+        description="Lương cứng cộng thù lao cho mỗi buổi dạy hợp lệ. Bảng lương của một tháng hiện ở đây sau khi trung tâm chốt lương tháng đó."
       />
 
       {payroll.isPending ? (
@@ -64,7 +66,7 @@ export function TutorPayrollPage() {
               <dl className="grid grid-cols-3 gap-2 text-center">
                 {[
                   { label: "Hợp lệ", value: latest.validSessions, icon: "task_alt" },
-                  { label: "Dạy thay", value: latest.substitutedOutSessions, icon: "swap_horiz" },
+                  { label: "Được dạy thay", value: latest.substitutedOutSessions, icon: "swap_horiz" },
                   { label: "Chưa chốt", value: latest.unfinalizedSessions, icon: "pending" },
                 ].map((item) => (
                   <div key={item.label} className="rounded-2xl bg-white/10 px-3 py-2.5 ring-1 ring-inset ring-white/15">
@@ -90,31 +92,36 @@ export function TutorPayrollPage() {
             {lines.map((line) => {
               const status = PAYROLL_STATUS[line.status];
               return (
-                <li
-                  key={`${line.year}-${line.month}`}
-                  className={`flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5 ${PORTAL_CARD}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-tint leading-none text-brand-navy">
-                      <span className="text-[11px] font-semibold">Th</span>
-                      <span className="text-[18px] font-extrabold">{line.month}</span>
-                    </span>
-                    <div>
-                      <p className="font-bold text-brand-ink">{monthLabel(line.year, line.month)}</p>
-                      <p className="text-[13.5px] text-brand-muted">
-                        {line.validSessions} buổi hợp lệ - {line.cancelledSessions} hủy - {line.substitutedOutSessions} dạy thay
-                        {line.unfinalizedSessions > 0 && (
-                          <span className="font-semibold text-red-600"> - {line.unfinalizedSessions} chưa chốt</span>
-                        )}
-                      </p>
+                <li key={`${line.year}-${line.month}`} className={`p-4 sm:p-5 ${PORTAL_CARD}`}>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-tint leading-none text-brand-navy">
+                        <span className="text-[11px] font-semibold">Th</span>
+                        <span className="text-[18px] font-extrabold">{line.month}</span>
+                      </span>
+                      <div>
+                        <p className="font-bold text-brand-ink">{monthLabel(line.year, line.month)}</p>
+                        <p className="text-[13.5px] text-brand-muted">
+                          {line.validSessions} buổi hợp lệ - {line.cancelledSessions} hủy - {line.substitutedOutSessions} được dạy thay
+                          {line.unfinalizedSessions > 0 && (
+                            <span className="font-semibold text-red-600"> - {line.unfinalizedSessions} chưa chốt</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 sm:flex-col sm:items-end sm:gap-1">
+                      <p className="text-[19px] font-extrabold tabular-nums text-brand-navy">{formatVnd(line.totalPay)}</p>
+                      <StatusChip tone={status.tone} icon={status.icon}>
+                        {status.label}
+                      </StatusChip>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 sm:flex-col sm:items-end sm:gap-1">
-                    <p className="text-[19px] font-extrabold tabular-nums text-brand-navy">{formatVnd(line.totalPay)}</p>
-                    <StatusChip tone={status.tone} icon={status.icon}>
-                      {status.label}
-                    </StatusChip>
-                  </div>
+                  <details className="mt-3 border-t border-brand-sandLine pt-3">
+                    <summary className="cursor-pointer text-[13.5px] font-semibold text-brand-navy">Xem các buổi đã dạy</summary>
+                    <div className="mt-2">
+                      <PayrollReconciliation summary={line.reconciliation} />
+                    </div>
+                  </details>
                 </li>
               );
             })}

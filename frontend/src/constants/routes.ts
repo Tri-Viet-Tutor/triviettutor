@@ -19,6 +19,8 @@ export const ROUTES = {
   verifyEmail: "/verify-email",
   forgotPassword: "/forgot-password",
   resetPassword: "/reset-password",
+  /** Backend chuyển về đây sau khi đăng nhập Google, token nằm trong phần #token=… */
+  oauth2Success: "/oauth2/success",
   /** Khu quản trị: tổng quan, người dùng, buổi học, duyệt nghỉ / xếp bù, phân công gia sư, hồ sơ */
   admin: "/admin",
   adminUsers: "/admin/users",
@@ -56,6 +58,7 @@ export const ROUTES = {
   /** Giỏ hàng: chọn lớp cho từng môn rồi đặt đơn nhiều lớp */
   studentCart: "/student/cart",
   studentLeave: "/student/leave",
+  /** Bài tập về nhà ở các lớp đang học: làm, lưu nháp, nộp và xem điểm */
   studentHomework: "/student/homework",
   studentFeedback: "/student/feedback",
   /** Các lớp đã đóng học phí */

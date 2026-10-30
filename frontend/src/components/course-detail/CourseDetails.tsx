@@ -84,7 +84,7 @@ export function CourseDetails({ course, backTo }: { course: Course; backTo: stri
     navigate(
       ROUTES.studentCheckout +
         "?" +
-        new URLSearchParams({ classId: String(selected.id), subject: selected.subject, gradeLevel: selected.gradeLevel }),
+        new URLSearchParams({ lop: String(selected.id), subject: selected.subject, gradeLevel: selected.gradeLevel }),
     );
   }
 

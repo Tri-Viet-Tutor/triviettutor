@@ -9,6 +9,7 @@ import type {
   Role,
   SessionStatus,
 } from "@/interfaces/api";
+import type { HomeworkStatus, SubmissionStatus } from "@/interfaces/learning";
 import type { Tone, StatusStyle } from "@/interfaces/ui";
 
 /* Chữ và màu hiển thị cho các enum của backend dùng trong ba khu sau đăng nhập */
@@ -105,4 +106,19 @@ export const ENROLLMENT_STATUS: Record<EnrollmentStatus, StatusStyle> = {
 export const PAYROLL_STATUS: Record<PayrollStatus, StatusStyle> = {
   DRAFT: { label: "Tạm tính", tone: "amber", icon: "pending" },
   FINALIZED: { label: "Đã chốt", tone: "green", icon: "lock" },
+};
+
+/** Trạng thái bài tập (phía gia sư) */
+export const HOMEWORK_STATUS: Record<HomeworkStatus, StatusStyle> = {
+  DRAFT: { label: "Bản nháp", tone: "slate", icon: "edit_note" },
+  PUBLISHED: { label: "Đã công bố", tone: "green", icon: "campaign" },
+  CLOSED: { label: "Đã đóng", tone: "red", icon: "lock" },
+};
+
+/** Trạng thái bài làm của học viên */
+export const SUBMISSION_STATUS: Record<SubmissionStatus, StatusStyle> = {
+  NOT_STARTED: { label: "Chưa làm", tone: "slate", icon: "radio_button_unchecked" },
+  IN_PROGRESS: { label: "Đang làm", tone: "amber", icon: "edit" },
+  SUBMITTED: { label: "Đã nộp", tone: "navy", icon: "upload" },
+  GRADED: { label: "Đã chấm", tone: "green", icon: "grading" },
 };

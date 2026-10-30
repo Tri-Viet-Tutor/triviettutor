@@ -119,11 +119,7 @@ public class ClassService {
                     if (count != 0) throw new BusinessException(ErrorCode.CLASS_REFUND_REQUIRED);
                     if (before == ClassStatus.ASSIGNED && !LocalDate.now(clock).isBefore(c.getStartDate())) valid = false;
                     if (valid) {
-                        schedule.cancelSessions(c, actor, reason);
-                        assignments.findByClassGroupIdAndStatus(id, AssignmentStatus.ACTIVE).ifPresent(a -> {
-                            a.setStatus(AssignmentStatus.TERMINATED); a.setTerminatedBy(actor.getId());
-                            a.setTerminatedAt(OffsetDateTime.now(clock)); a.setTerminationReason(reason);
-                        });
+                        schedule.cancelClass(c, actor, reason);
                     }
                 }
             }

@@ -59,3 +59,13 @@ export function weekdayName(date: Date, short = false): string {
 export function startOfWeek(date: Date): Date {
   return addDays(date, -((date.getDay() + 6) % 7));
 }
+
+/** Ngày giờ kiểu Việt Nam: 18:05 01/10/2026. */
+export function formatDateTime(date: Date): string {
+  return `${formatClockTime(date)} ${formatDate(date)}`;
+}
+
+/** Đổi một thời điểm thành giá trị cho ô <input type="datetime-local">: "YYYY-MM-DDTHH:mm" (giờ máy người xem). */
+export function toDateTimeLocal(date: Date): string {
+  return `${toIsoDate(date)}T${formatClockTime(date)}`;
+}

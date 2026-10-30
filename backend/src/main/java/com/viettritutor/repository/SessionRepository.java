@@ -12,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 import jakarta.persistence.LockModeType;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,8 +22,14 @@ public interface SessionRepository extends JpaRepository<Session, Long>, JpaSpec
     @Query("select s from Session s where s.id = :id")
     Optional<Session> findForUpdate(@Param("id") Long id);
 
-    @Query("select s.id from Session s where s.attendanceAutoProcessed = false and s.sessionDate <= :date and s.id > :afterId order by s.id")
-    List<Long> findAttendanceLockCandidates(@Param("date") LocalDate date,
+    /** Unprocessed sessions whose end time is at or before the cutoff (now - 24h, split into date and time). */
+    @Query("""
+        select s.id from Session s where s.attendanceAutoProcessed = false
+        and (s.sessionDate < :cutoffDate or (s.sessionDate = :cutoffDate and s.endTime <= :cutoffTime))
+        and s.id > :afterId order by s.id
+        """)
+    List<Long> findAttendanceLockCandidates(@Param("cutoffDate") LocalDate cutoffDate,
+                                           @Param("cutoffTime") LocalTime cutoffTime,
                                            @Param("afterId") Long afterId, Pageable pageable);
 
     List<Session> findBySessionDateBetweenOrderBySessionDateAscStartTimeAscIdAsc(LocalDate from, LocalDate to);
@@ -74,12 +81,15 @@ public interface SessionRepository extends JpaRepository<Session, Long>, JpaSpec
 
     @Query("""
             select s from Session s where s.status = :status and s.sessionDate <= :date
-            and not exists (
-                select c.id from ClassGroup c where c.id = s.classGroupId and c.course is not null
-                and c.status not in (com.viettritutor.enums.ClassStatus.ASSIGNED, com.viettritutor.enums.ClassStatus.IN_PROGRESS)
+            and coalesce(s.actualTutorId, s.scheduledTutorId) is not null
+            and exists (
+                select c.id from ClassGroup c where c.id = s.classGroupId
+                and c.status in (com.viettritutor.enums.ClassStatus.ASSIGNED, com.viettritutor.enums.ClassStatus.IN_PROGRESS)
             )
             """)
     List<Session> findByStatusAndSessionDateLessThanEqual(@Param("status") SessionStatus status, @Param("date") LocalDate date);
+
+    List<Session> findByStatusAndSessionDateLessThanEqualOrderByIdAsc(SessionStatus status, LocalDate date);
 
     @Query("select distinct s.classGroupId from Session s")
     List<Long> findDistinctClassGroupIds();

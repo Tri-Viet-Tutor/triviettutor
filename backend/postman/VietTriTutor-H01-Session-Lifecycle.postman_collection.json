@@ -1,0 +1,559 @@
+{
+  "info": {
+    "_postman_id": "5ef7d28d-bbcc-4f0c-964f-01580bd30001",
+    "name": "VietTriTutor - H01 Session Lifecycle",
+    "description": "Postman collection for H01 session generation, personal schedules and session lifecycle APIs.\n\nPrerequisites:\n1. Run the backend at http://localhost:8080.\n2. Provide valid ADMIN, STUDENT and TUTOR credentials in collection variables.\n3. The Student must have an ACTIVE LearningSchedule for the selected class.\n4. The Tutor must be the scheduledTutorId or actualTutorId of the selected session.\n5. Run the Authentication folder first.\n6. Run Admin - Search sessions before detail/update requests to automatically capture the first returned sessionId.\n\nSupported session statuses: SCHEDULED, IN_SESSION, COMPLETED, PENDING_RESCHEDULE, CANCELLED.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 - Authentication",
+      "description": "Login requests automatically save role-specific JWTs into collection variables.",
+      "item": [
+        {
+          "name": "Login as Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Admin login returns 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.test('Admin login succeeds', function () {",
+                  "  pm.expect(json.success).to.eql(true);",
+                  "  pm.expect(json.data.accessToken).to.be.a('string').and.not.empty;",
+                  "  pm.expect(json.data.user.role).to.eql('ROLE_ADMIN');",
+                  "});",
+                  "if (json.success && json.data && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('adminToken', json.data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login as Student",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Student login returns 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.test('Student login succeeds', function () {",
+                  "  pm.expect(json.success).to.eql(true);",
+                  "  pm.expect(json.data.accessToken).to.be.a('string').and.not.empty;",
+                  "  pm.expect(json.data.user.role).to.eql('ROLE_STUDENT');",
+                  "});",
+                  "if (json.success && json.data && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('studentToken', json.data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"{{studentPassword}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login as Tutor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Tutor login returns 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.test('Tutor login succeeds', function () {",
+                  "  pm.expect(json.success).to.eql(true);",
+                  "  pm.expect(json.data.accessToken).to.be.a('string').and.not.empty;",
+                  "  pm.expect(json.data.user.role).to.eql('ROLE_TUTOR');",
+                  "});",
+                  "if (json.success && json.data && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('tutorToken', json.data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{tutorEmail}}\",\n  \"password\": \"{{tutorPassword}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 - H01 Session APIs",
+      "item": [
+        {
+          "name": "H-A01 - Student - Get my sessions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.test('Returns a session array', function () {",
+                  "  pm.expect(json.success).to.eql(true);",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "});",
+                  "json.data.forEach(function (session) {",
+                  "  pm.expect(session).to.have.keys('sessionId', 'classGroupId', 'sessionNumber', 'date', 'startTime', 'endTime', 'status');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{studentToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/me/sessions?from={{from}}&to={{to}}&status={{status}}&classGroupId={{classGroupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["me", "sessions"],
+              "query": [
+                { "key": "from", "value": "{{from}}" },
+                { "key": "to", "value": "{{to}}" },
+                { "key": "status", "value": "{{status}}", "disabled": true },
+                { "key": "classGroupId", "value": "{{classGroupId}}", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "H-A01 - Tutor - Get my sessions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.test('Returns planned or substitute sessions', function () {",
+                  "  pm.expect(json.success).to.eql(true);",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tutorToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/me/sessions?from={{from}}&to={{to}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["me", "sessions"],
+              "query": [
+                { "key": "from", "value": "{{from}}" },
+                { "key": "to", "value": "{{to}}" },
+                { "key": "status", "value": "{{status}}", "disabled": true },
+                { "key": "classGroupId", "value": "{{classGroupId}}", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "H-A02 - Admin - Search sessions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.test('Returns a page', function () {",
+                  "  pm.expect(json.success).to.eql(true);",
+                  "  pm.expect(json.data.content).to.be.an('array');",
+                  "  pm.expect(json.data.page).to.be.a('number');",
+                  "  pm.expect(json.data.size).to.be.a('number');",
+                  "  pm.expect(json.data.totalElements).to.be.a('number');",
+                  "  pm.expect(json.data.totalPages).to.be.a('number');",
+                  "});",
+                  "if (json.data.content.length > 0) {",
+                  "  const first = json.data.content[0];",
+                  "  pm.collectionVariables.set('sessionId', String(first.sessionId));",
+                  "  pm.collectionVariables.set('classGroupId', String(first.classGroupId));",
+                  "  if (first.actualTutorId) pm.collectionVariables.set('tutorId', String(first.actualTutorId));",
+                  "  else if (first.scheduledTutorId) pm.collectionVariables.set('tutorId', String(first.scheduledTutorId));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/sessions?from={{from}}&to={{to}}&page={{page}}&size={{size}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "sessions"],
+              "query": [
+                { "key": "from", "value": "{{from}}" },
+                { "key": "to", "value": "{{to}}" },
+                { "key": "classGroupId", "value": "{{classGroupId}}", "disabled": true },
+                { "key": "tutorId", "value": "{{tutorId}}", "disabled": true },
+                { "key": "status", "value": "{{status}}", "disabled": true },
+                { "key": "page", "value": "{{page}}" },
+                { "key": "size", "value": "{{size}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "H-A03 - Admin - Get session detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.test('Returns requested session', function () {",
+                  "  pm.expect(json.success).to.eql(true);",
+                  "  pm.expect(String(json.data.sessionId)).to.eql(pm.collectionVariables.get('sessionId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/{{sessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions", "{{sessionId}}"]
+            }
+          }
+        },
+        {
+          "name": "H-A03 - Student - Get enrolled session detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Enrolled Student can view the session', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.test('Response succeeds', function () { pm.expect(json.success).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{studentToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/{{sessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions", "{{sessionId}}"]
+            }
+          }
+        },
+        {
+          "name": "H-A03 - Tutor - Get assigned session detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Assigned or substitute Tutor can view the session', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.test('Response succeeds', function () { pm.expect(json.success).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tutorToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/{{sessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions", "{{sessionId}}"]
+            }
+          }
+        },
+        {
+          "name": "H-A04 - Admin - Update meeting URL",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.test('Meeting URL is updated', function () {",
+                  "  pm.expect(json.success).to.eql(true);",
+                  "  pm.expect(json.data.meetingUrl).to.eql(pm.collectionVariables.get('meetingUrl'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meetingUrl\": \"{{meetingUrl}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/sessions/{{sessionId}}/meeting-url",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "sessions", "{{sessionId}}", "meeting-url"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Negative and authorization cases",
+      "item": [
+        {
+          "name": "Student cannot search admin sessions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{studentToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/sessions?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "sessions"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject reversed date range",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+                  "const json = pm.response.json();",
+                  "pm.test('Returns INVALID_DATE_RANGE', function () { pm.expect(json.errorCode).to.eql('INVALID_DATE_RANGE'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/sessions?from=2026-12-31&to=2026-01-01&page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "sessions"],
+              "query": [
+                { "key": "from", "value": "2026-12-31" },
+                { "key": "to", "value": "2026-01-01" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject unsafe meeting URL",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 400', function () { pm.response.to.have.status(400); });",
+                  "const json = pm.response.json();",
+                  "pm.test('Returns INVALID_MEETING_URL', function () { pm.expect(json.errorCode).to.eql('INVALID_MEETING_URL'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meetingUrl\": \"javascript:alert(1)\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/sessions/{{sessionId}}/meeting-url",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "sessions", "{{sessionId}}", "meeting-url"]
+            }
+          }
+        },
+        {
+          "name": "Admin gets SESSION_NOT_FOUND",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Returns 404', function () { pm.response.to.have.status(404); });",
+                  "const json = pm.response.json();",
+                  "pm.test('Returns SESSION_NOT_FOUND', function () { pm.expect(json.errorCode).to.eql('SESSION_NOT_FOUND'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/{{missingSessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions", "{{missingSessionId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1", "type": "string" },
+    { "key": "adminEmail", "value": "admin@viettritutor.local", "type": "string" },
+    { "key": "adminPassword", "value": "Admin@123", "type": "string" },
+    { "key": "studentEmail", "value": "student@example.com", "type": "string" },
+    { "key": "studentPassword", "value": "Student@123", "type": "string" },
+    { "key": "tutorEmail", "value": "tutor@example.com", "type": "string" },
+    { "key": "tutorPassword", "value": "Tutor@123", "type": "string" },
+    { "key": "adminToken", "value": "", "type": "string" },
+    { "key": "studentToken", "value": "", "type": "string" },
+    { "key": "tutorToken", "value": "", "type": "string" },
+    { "key": "sessionId", "value": "1", "type": "string" },
+    { "key": "missingSessionId", "value": "999999999", "type": "string" },
+    { "key": "classGroupId", "value": "1", "type": "string" },
+    { "key": "tutorId", "value": "2", "type": "string" },
+    { "key": "from", "value": "2026-10-01", "type": "string" },
+    { "key": "to", "value": "2027-12-31", "type": "string" },
+    { "key": "status", "value": "SCHEDULED", "type": "string" },
+    { "key": "page", "value": "0", "type": "string" },
+    { "key": "size", "value": "20", "type": "string" },
+    { "key": "meetingUrl", "value": "https://meet.google.com/example-room", "type": "string" }
+  ]
+}

@@ -5,7 +5,10 @@ import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-public record MakeupRequest(@NotNull @Positive Long leaveRequestId,
+/**
+ * {@code leaveRequestId} is optional: without it an admin may only make up a session that is already CANCELLED.
+ */
+public record MakeupRequest(@Positive Long leaveRequestId,
                             @NotNull LocalDate makeupDate,
                             @NotNull LocalTime startTime,
                             @NotNull LocalTime endTime) {}

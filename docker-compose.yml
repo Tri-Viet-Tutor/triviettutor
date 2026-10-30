@@ -69,6 +69,10 @@ services:
       WALLET_TOPUP_MAX_AMOUNT: ${WALLET_TOPUP_MAX_AMOUNT:-50000000}
       WALLET_TOPUP_TTL_MINUTES: ${WALLET_TOPUP_TTL_MINUTES:-15}
       WALLET_VNPAY_RETURN_PATH: ${WALLET_VNPAY_RETURN_PATH:-/student/wallet}
+      # An empty MONGODB_URI (as copied from .env.example) is an invalid connection string and stops the
+      # backend from starting; ":-" also replaces an empty value. Meeting logs degrade gracefully without MongoDB.
+      MONGODB_URI: ${MONGODB_URI:-mongodb://localhost:27017/triviettutor}
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-triviettutor}
       LIVEKIT_URL: ${LIVEKIT_URL:-ws://livekit:7880}
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}

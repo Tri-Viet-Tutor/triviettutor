@@ -18,4 +18,7 @@ public interface ClassGroupRepository extends JpaRepository<ClassGroup, Long>, J
     List<ClassGroup> findByStatusAndClassType(ClassStatus status, ClassType classType);
 
     long countByStatus(ClassStatus status);
+
+    @Query("select c.id from ClassGroup c where c.status = :status order by c.id")
+    List<Long> findIdsByStatus(@Param("status") ClassStatus status);
 }

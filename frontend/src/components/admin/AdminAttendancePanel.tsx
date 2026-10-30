@@ -8,7 +8,7 @@ import { ATTENDANCE_STATUS, ATTENDANCE_STATUS_ORDER } from "@/constants/labels";
 import { useRefreshAdmin } from "@/hooks/useAdminData";
 import { portalKeys, useSessionAttendance, useUserId } from "@/hooks/usePortalData";
 import type { AttendanceRecordResponse, AttendanceStatus } from "@/interfaces/api";
-import { correctAttendance, setAttendanceLock } from "@/services/admin";
+import { correctStudentAttendance, setAttendanceLock } from "@/services/admin";
 import { studentLabel as formatStudent, isRecordable, sessionEnd } from "@/utils/sessions";
 import type { AdminAttendancePanelProps } from "@/interfaces/admin";
 
@@ -19,8 +19,8 @@ export function AdminAttendancePanel({ session, now, nameOf }: AdminAttendancePa
   const attendance = useSessionAttendance(session.sessionId);
   // Form khóa / mở khóa đang mở?
   const [lockOpen, setLockOpen] = useState(false);
-  // Bản ghi đang sửa (khi điểm danh đã khóa) và giá trị đang nhập
-  const [editing, setEditing] = useState<AttendanceRecordResponse | null>(null);
+  // Học viên đang sửa / điền điểm danh (khi đã khóa; record null nghĩa là chưa có bản ghi) và giá trị đang nhập
+  const [editing, setEditing] = useState<{ studentId: number; record: AttendanceRecordResponse | null } | null>(null);
   const [status, setStatus] = useState<AttendanceStatus>("PRESENT");
   const [note, setNote] = useState("");
 
@@ -37,10 +37,10 @@ export function AdminAttendancePanel({ session, now, nameOf }: AdminAttendancePa
       void refresh();
     },
   });
-  // Sửa một bản ghi đã khóa; ghi chú để trống thì không gửi
+  // Sửa (hoặc điền mới) điểm danh đã khóa của một học viên; ghi chú để trống thì không gửi
   const correct = useMutation({
     mutationFn: (reason: string) =>
-      correctAttendance(session.sessionId, (editing as AttendanceRecordResponse).recordId, {
+      correctStudentAttendance(session.sessionId, (editing as { studentId: number }).studentId, {
         status,
         reason,
         ...(note.trim() ? { note: note.trim() } : {}),
@@ -48,15 +48,17 @@ export function AdminAttendancePanel({ session, now, nameOf }: AdminAttendancePa
     onSuccess: () => {
       setEditing(null);
       void queryClient.invalidateQueries({ queryKey: attendanceKey });
+      // Trạng thái buổi (hoàn tất / cần xem lại) có thể đổi theo
+      void refresh();
     },
   });
 
-  /** Mở form sửa, điền sẵn giá trị cũ */
-  function startEditing(record: AttendanceRecordResponse) {
+  /** Mở form sửa, điền sẵn giá trị cũ (học viên chưa có bản ghi thì mặc định Có mặt) */
+  function startEditing(studentId: number, record: AttendanceRecordResponse | undefined) {
     correct.reset();
-    setEditing(record);
-    setStatus(record.status);
-    setNote(record.note ?? "");
+    setEditing({ studentId, record: record ?? null });
+    setStatus(record?.status ?? "PRESENT");
+    setNote(record?.note ?? "");
   }
 
   const studentLabel = (studentId: number) => formatStudent(studentId, nameOf);
@@ -81,11 +83,9 @@ export function AdminAttendancePanel({ session, now, nameOf }: AdminAttendancePa
                     ) : (
                       <span className="text-[13.5px] text-brand-muted">Chưa điểm danh</span>
                     )}
-                    {record && (
-                      <button type="button" onClick={() => startEditing(record)} className={`text-[13.5px] ${PORTAL_TEXT_LINK}`}>
-                        Sửa
-                      </button>
-                    )}
+                    <button type="button" onClick={() => startEditing(studentId, record)} className={`text-[13.5px] ${PORTAL_TEXT_LINK}`}>
+                      {record ? "Sửa" : "Điền"}
+                    </button>
                   </span>
                   {record?.note && <span className="w-full text-[13.5px] text-brand-muted">{record.note}</span>}
                 </li>
@@ -94,8 +94,8 @@ export function AdminAttendancePanel({ session, now, nameOf }: AdminAttendancePa
           </ul>
           {editing && (
             <ReasonForm
-              id={`correct-reason-${editing.recordId}`}
-              label="Lý do sửa"
+              id={`correct-reason-${editing.studentId}`}
+              label={editing.record ? "Lý do sửa" : "Lý do bổ sung"}
               submitLabel="Lưu bản ghi"
               isPending={correct.isPending}
               error={correct.error}
@@ -103,14 +103,16 @@ export function AdminAttendancePanel({ session, now, nameOf }: AdminAttendancePa
               onSubmit={(reason) => correct.mutate(reason)}
               onCancel={() => setEditing(null)}
             >
-              <p className="text-[14.5px] font-semibold text-brand-ink">Sửa điểm danh của {studentLabel(editing.studentId)}</p>
+              <p className="text-[14.5px] font-semibold text-brand-ink">
+                {editing.record ? "Sửa" : "Bổ sung"} điểm danh của {studentLabel(editing.studentId)}
+              </p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label htmlFor={`correct-status-${editing.recordId}`} className={`mb-1.5 ${AUTH_LABEL}`}>
+                  <label htmlFor={`correct-status-${editing.studentId}`} className={`mb-1.5 ${AUTH_LABEL}`}>
                     Trạng thái
                   </label>
                   <select
-                    id={`correct-status-${editing.recordId}`}
+                    id={`correct-status-${editing.studentId}`}
                     value={status}
                     onChange={(event) => setStatus(event.target.value as AttendanceStatus)}
                     className={PORTAL_INPUT}
@@ -123,11 +125,11 @@ export function AdminAttendancePanel({ session, now, nameOf }: AdminAttendancePa
                   </select>
                 </div>
                 <div>
-                  <label htmlFor={`correct-note-${editing.recordId}`} className={`mb-1.5 ${AUTH_LABEL}`}>
+                  <label htmlFor={`correct-note-${editing.studentId}`} className={`mb-1.5 ${AUTH_LABEL}`}>
                     Ghi chú
                   </label>
                   <input
-                    id={`correct-note-${editing.recordId}`}
+                    id={`correct-note-${editing.studentId}`}
                     type="text"
                     maxLength={1000}
                     value={note}

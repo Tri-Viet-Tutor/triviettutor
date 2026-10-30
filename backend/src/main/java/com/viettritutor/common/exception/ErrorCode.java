@@ -27,12 +27,16 @@ public enum ErrorCode {
     INVALID_RESET_TOKEN       (HttpStatus.BAD_REQUEST,    "Invalid password reset token"),
     RESET_TOKEN_EXPIRED       (HttpStatus.BAD_REQUEST,    "Password reset token has expired"),
     EMAIL_SEND_FAILED         (HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send verification email. Please try again later"),
+    OTP_ATTEMPTS_EXCEEDED     (HttpStatus.TOO_MANY_REQUESTS, "Too many incorrect codes; request a new verification code"),
+    OTP_RESEND_TOO_SOON       (HttpStatus.TOO_MANY_REQUESTS, "Please wait before requesting another verification code"),
+    ACCOUNT_LOCKED            (HttpStatus.FORBIDDEN,      "This account has been locked by an administrator"),
 
     // ── Authorization ─────────────────────────────────────────────────────────
     ACCESS_DENIED             (HttpStatus.FORBIDDEN,      "You do not have permission to perform this action"),
     INVALID_PROFILE_FIELD     (HttpStatus.BAD_REQUEST,    "This field cannot be changed for your role"),
     INVALID_ROLE_FILTER       (HttpStatus.BAD_REQUEST,    "Role must be ROLE_ADMIN, ROLE_TUTOR or ROLE_STUDENT"),
     INVALID_PAGINATION        (HttpStatus.BAD_REQUEST,    "Page must be non-negative and size must be between 1 and 100"),
+    CANNOT_LOCK_SELF          (HttpStatus.UNPROCESSABLE_ENTITY, "You cannot lock your own account"),
 
     // ── Resource not found ────────────────────────────────────────────────────
     USER_NOT_FOUND            (HttpStatus.NOT_FOUND,      "User not found"),
@@ -41,6 +45,9 @@ public enum ErrorCode {
     COURSE_IN_USE             (HttpStatus.CONFLICT,       "This course already has classes or orders; stop selling it instead"),
     CLASS_IN_USE              (HttpStatus.CONFLICT,       "This class has students, payments or teaching history; cancel it instead"),
     USER_IN_USE               (HttpStatus.CONFLICT,       "This user already has classes, payments or teaching history and cannot be deleted"),
+    RATING_NOT_FOUND          (HttpStatus.NOT_FOUND,      "Rating not found"),
+    RATING_ALREADY_EXISTS     (HttpStatus.CONFLICT,       "You have already rated this tutor"),
+    RATING_NOT_ELIGIBLE       (HttpStatus.UNPROCESSABLE_ENTITY, "You can only rate a tutor who teaches a class you are enrolled in"),
     CLASS_NOT_FOUND           (HttpStatus.NOT_FOUND,      "Class not found"),
     SESSION_NOT_FOUND         (HttpStatus.NOT_FOUND,      "Session not found"),
     ENROLLMENT_NOT_FOUND      (HttpStatus.NOT_FOUND,      "Enrollment not found"),
@@ -53,6 +60,9 @@ public enum ErrorCode {
     SESSION_ALREADY_CANCELLED (HttpStatus.CONFLICT, "This session has already been cancelled"),
     MAKEUP_ALREADY_EXISTS     (HttpStatus.CONFLICT, "This session already has a makeup session"),
     INVALID_MAKEUP_TIME       (HttpStatus.BAD_REQUEST, "Makeup must start in the future and end after its start time"),
+    SESSION_ALREADY_TAUGHT    (HttpStatus.UNPROCESSABLE_ENTITY, "This session already has attendance or a teaching confirmation"),
+    MEETING_NOT_AVAILABLE     (HttpStatus.UNPROCESSABLE_ENTITY, "The classroom is not open for this session right now"),
+    MEETING_LOGS_UNAVAILABLE  (HttpStatus.SERVICE_UNAVAILABLE, "Meeting logs are temporarily unavailable"),
     INVALID_PAYROLL_PERIOD (HttpStatus.BAD_REQUEST, "Invalid payroll year or month"),
     INVALID_PAYROLL_KEY (HttpStatus.BAD_REQUEST, "Provide Idempotency-Key with 1-100 letters, digits or . _ : -"),
     PAYROLL_KEY_CONFLICT (HttpStatus.CONFLICT, "This idempotency key belongs to another payroll period"),
@@ -117,6 +127,8 @@ public enum ErrorCode {
     ATTENDANCE_NOT_LOCKED     (HttpStatus.UNPROCESSABLE_ENTITY, "Use the attendance submission API while attendance is unlocked"),
     ATTENDANCE_SESSION_NOT_ENDED (HttpStatus.UNPROCESSABLE_ENTITY, "Attendance cannot be finalized before the session ends"),
     ATTENDANCE_EXCUSED_NOT_ALLOWED (HttpStatus.UNPROCESSABLE_ENTITY, "Excused attendance requires approved student leave with at least 24 hours notice"),
+    ACTUAL_TUTOR_CHANGE_NOT_ALLOWED (HttpStatus.UNPROCESSABLE_ENTITY, "The actual tutor can only be corrected for a started, active session"),
+    TUTOR_DISABLED            (HttpStatus.UNPROCESSABLE_ENTITY, "The selected tutor account is disabled"),
 
     // ── Class lifecycle ───────────────────────────────────────────────────────
     INVALID_CLASS_CONFIGURATION (HttpStatus.BAD_REQUEST, "Invalid class dates, schedule, or course duration"),
@@ -158,6 +170,15 @@ public enum ErrorCode {
     GRADING_REASON_REQUIRED (HttpStatus.BAD_REQUEST, "An audit reason is required to revise a grade"),
     INVALID_STATUS_TRANSITION (HttpStatus.UNPROCESSABLE_ENTITY, "This status transition is not allowed"),
     AVATAR_NOT_FOUND (HttpStatus.NOT_FOUND, "Avatar not found"),
+    INVALID_AVATAR (HttpStatus.BAD_REQUEST, "Avatar must be a valid PNG or JPEG image"),
+    AVATAR_TOO_LARGE (HttpStatus.BAD_REQUEST, "Avatar must not exceed 2 MB"),
+
+    // ── Generic web errors ───────────────────────────────────────
+    RESOURCE_NOT_FOUND (HttpStatus.NOT_FOUND, "The requested resource does not exist"),
+    METHOD_NOT_ALLOWED (HttpStatus.METHOD_NOT_ALLOWED, "This HTTP method is not supported for this resource"),
+    MISSING_REQUEST_PART (HttpStatus.BAD_REQUEST, "A required request parameter or file is missing"),
+    FILE_TOO_LARGE (HttpStatus.PAYLOAD_TOO_LARGE, "The uploaded file is too large"),
+    UNSUPPORTED_MEDIA_TYPE (HttpStatus.UNSUPPORTED_MEDIA_TYPE, "This Content-Type is not supported for this resource"),
 
     // ── Assistant chatbot ─────────────────────────────────────────
     ASSISTANT_RATE_LIMITED (HttpStatus.TOO_MANY_REQUESTS, "Too many assistant questions; try again later"),

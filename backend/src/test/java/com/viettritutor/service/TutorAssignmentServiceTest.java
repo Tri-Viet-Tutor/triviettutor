@@ -67,6 +67,9 @@ class TutorAssignmentServiceTest {
     @Mock
     private ClassScheduleService scheduleService;
 
+    @Mock
+    private SessionOperationSupport operations;
+
     private TutorAssignmentService assignmentService;
 
     private User admin;
@@ -86,6 +89,7 @@ class TutorAssignmentServiceTest {
                 conflictService,
                 scheduleService,
                 org.mockito.Mockito.mock(ClassDiscountSettlementService.class),
+                operations,
                 FIXED_CLOCK
         );
 
@@ -502,5 +506,32 @@ class TutorAssignmentServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.CLASS_NOT_ASSIGNABLE);
         verify(conflictService, never()).assertTutorAvailable(any(), any());
+    }
+    @Test
+    @DisplayName("A locked tutor account is never suggested and cannot be assigned or reassigned")
+    void lockedTutor_isNotSuggestedAndCannotBeAssigned() {
+        User locked = User.builder().id(30L).fullName("Locked Tutor").role("ROLE_TUTOR").locked(true).build();
+        Session future = session(2L, "2026-11-02", 18, SessionStatus.SCHEDULED);
+        when(classRepository.findById(100L)).thenReturn(Optional.of(groupClass));
+        when(sessionRepository.findByClassGroupIdOrderBySessionNumberAsc(100L)).thenReturn(List.of(future));
+        when(assignmentRepository.findByClassGroupIdAndStatus(100L, AssignmentStatus.ACTIVE)).thenReturn(Optional.empty());
+        when(userRepository.findByRoleOrderByIdAsc("ROLE_TUTOR")).thenReturn(List.of(tutor1, locked));
+        when(availabilityRepository.findByTutorIdIn(List.of(10L))).thenReturn(List.of());
+        when(conflictService.checkTutor(10L, List.of(future))).thenReturn(List.of());
+
+        assertThat(assignmentService.availableTutors(100L)).extracting(AvailableTutorResponse::tutorId)
+                .containsExactly(10L);
+
+        when(classRepository.findForUpdate(100L)).thenReturn(Optional.of(groupClass));
+        when(userRepository.findForUpdate(30L)).thenReturn(Optional.of(locked));
+        assertThatThrownBy(() -> assignmentService.assign(100L, 30L, admin))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.INVALID_TUTOR);
+        groupClass.setStatus(ClassStatus.ASSIGNED);
+        assertThatThrownBy(() -> assignmentService.reassign(100L, 30L, "Locked", admin))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.INVALID_TUTOR);
+        verify(conflictService, never()).assertTutorAvailable(any(), any());
+        verify(assignmentRepository, never()).save(any());
     }
 }

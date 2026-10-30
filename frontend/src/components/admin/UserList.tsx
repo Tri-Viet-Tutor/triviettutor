@@ -3,29 +3,29 @@ import { type FormEvent, useState } from "react";
 import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
 import { AuthNotice } from "@/components/auth/AuthNotice";
 import { PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
-import { useRefreshAdmin } from "@/hooks/useAdminData";
 import { deleteUser, updateUser } from "@/services/admin";
-import { useAuthStore } from "@/stores/authStore";
-import { portalErrorMessage } from "@/utils/errors";
-import type { AdminUserResponse } from "@/interfaces/api";
 import { TutorProfileForm } from "@/components/admin/TutorForms";
 import { StatusChip } from "@/components/dashboard/StatusChip";
 import { Icon } from "@/components/ui/Icon";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { PORTAL_CARD } from "@/constants/classNames";
 import { ROLE_NAME } from "@/constants/labels";
-import type { Role } from "@/interfaces/api";
+import type { AdminUserResponse, AdminUserStatus, Role } from "@/interfaces/api";
 import type { Tone } from "@/interfaces/ui";
 import { displayCode } from "@/utils/classes";
 import { formatDate } from "@/utils/date";
 import type { UserListProps } from "@/interfaces/admin";
+import { useRefreshAdmin } from "@/hooks/useAdminData";
+import { updateUserStatus } from "@/services/admin";
+import { useAuthStore } from "@/stores/authStore";
+import { portalErrorMessage } from "@/utils/errors";
 
 /** Màu nhãn vai trò */
 const ROLE_TONE: Record<Role, Tone> = { ROLE_STUDENT: "navy", ROLE_TUTOR: "green", ROLE_ADMIN: "amber" };
 /** Mã hiển thị theo vai trò: HV003, GV012, ND001 */
 const codeOf = (role: Role, id: number) => displayCode(role === "ROLE_STUDENT" ? "student" : role === "ROLE_TUTOR" ? "tutor" : "user", id);
 
-const GRID = "lg:grid lg:grid-cols-[88px_minmax(0,1fr)_130px_120px_100px] lg:items-center lg:gap-x-4";
+const GRID = "lg:grid lg:grid-cols-[88px_minmax(0,1fr)_130px_130px_120px_128px] lg:items-center lg:gap-x-4";
 const ICON_BTN =
   "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-brand-sandLine bg-white px-2.5 text-[13px] font-semibold text-brand-navy transition-colors hover:border-brand-navy/40 hover:bg-brand-tint focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
 
@@ -87,9 +87,54 @@ function EditUserPanel({ user, onClose }: { user: AdminUserResponse; onClose: ()
   );
 }
 
+/** Nhãn và màu trạng thái tài khoản */
+const STATUS_LABEL: Record<AdminUserStatus, { label: string; tone: Tone }> = {
+  ACTIVE: { label: "Hoạt động", tone: "green" },
+  LOCKED: { label: "Đã khóa", tone: "red" },
+  UNVERIFIED: { label: "Chưa kích hoạt", tone: "slate" },
+};
+
+/** Nút khóa / mở khóa một tài khoản (PATCH /admin/users/{id}/status) */
+function LockToggle({ user }: { user: AdminUserResponse }) {
+  const refresh = useRefreshAdmin();
+  const toggle = useMutation({
+    mutationFn: () => updateUserStatus(user.id, { locked: !user.locked }),
+    onSuccess: () => void refresh(),
+  });
+
+  function onClick() {
+    const question = user.locked
+      ? `Mở khóa tài khoản ${user.email}?`
+      : `Khóa tài khoản ${user.email}? Người này sẽ không đăng nhập được và phiên đang dùng bị đăng xuất.`;
+    if (window.confirm(question)) toggle.mutate();
+  }
+
+  const error = toggle.error ? portalErrorMessage(toggle.error, "Chưa đổi được trạng thái. Vui lòng thử lại.") : null;
+  return (
+    <>
+      <button
+        type="button"
+        disabled={toggle.isPending}
+        onClick={onClick}
+        title={error ?? (user.locked ? "Mở khóa" : "Khóa")}
+        aria-label={user.locked ? `Mở khóa ${user.fullName}` : `Khóa ${user.fullName}`}
+        className={`${ICON_BTN} w-9 px-0 ${error ? "border-red-300 text-red-700" : ""}`}
+      >
+        <Icon name={user.locked ? "lock_open" : "lock"} className="text-[18px]" />
+      </button>
+      {error && (
+        <span role="alert" className="sr-only">
+          {error}
+        </span>
+      )}
+    </>
+  );
+}
+
 /**
- * Bảng người dùng của khu quản trị: mã theo vai trò, ảnh + họ tên + email, vai trò, ngày tạo và thao tác
- * Chỉnh sửa (họ tên, email; gia sư thêm lương / giới thiệu) và Xóa (chỉ tài khoản chưa có dữ liệu, không xóa chính mình).
+ * Bảng người dùng của khu quản trị: mã theo vai trò, ảnh + họ tên + email, vai trò, trạng thái, ngày tạo và thao tác
+ * Chỉnh sửa (họ tên, email; gia sư thêm lương / giới thiệu), Khóa / mở khóa và Xóa (chỉ tài khoản chưa có dữ liệu).
+ * Không khóa hay xóa chính mình.
  */
 export function UserList({ users }: UserListProps) {
   const me = useAuthStore((state) => state.user?.id);
@@ -108,6 +153,7 @@ export function UserList({ users }: UserListProps) {
         <span>Mã</span>
         <span>Người dùng</span>
         <span>Vai trò</span>
+        <span>Trạng thái</span>
         <span>Ngày tạo</span>
         <span className="text-right">Thao tác</span>
       </div>
@@ -130,6 +176,9 @@ export function UserList({ users }: UserListProps) {
                 <span className="order-2 lg:order-none">
                   <StatusChip tone={ROLE_TONE[user.role]}>{ROLE_NAME[user.role]}</StatusChip>
                 </span>
+                <span className="order-2 lg:order-none">
+                  <StatusChip tone={STATUS_LABEL[user.status].tone}>{STATUS_LABEL[user.status].label}</StatusChip>
+                </span>
                 <span className="order-2 text-[13.5px] tabular-nums text-brand-muted lg:order-none">
                   <span className="lg:hidden">Tạo ngày </span>
                   {formatDate(new Date(user.createdAt))}
@@ -145,6 +194,7 @@ export function UserList({ users }: UserListProps) {
                   >
                     <Icon name={editing ? "close" : "edit"} className="text-[18px]" />
                   </button>
+                  {user.id !== me && <LockToggle user={user} />}
                   {user.id !== me && (
                     <button
                       type="button"

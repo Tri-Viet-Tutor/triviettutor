@@ -5,13 +5,16 @@ import { StatusChip } from "@/components/dashboard/StatusChip";
 import { Icon } from "@/components/ui/Icon";
 import { PORTAL_BTN_SECONDARY } from "@/constants/classNames";
 import { ROUTES } from "@/constants/routes";
-import { parseIsoDate, weekdayName } from "@/utils/date";
+import { formatClockTime, parseIsoDate, weekdayName } from "@/utils/date";
 import {
   attendanceDeadlinePassed,
+  canJoinNow,
   canRequestLeave,
   formatLongDate,
   formatTimeRange,
   isRecordable,
+  joinOpensAt,
+  joinOpensLater,
   sessionStart,
   teacherOf,
 } from "@/utils/sessions";
@@ -20,23 +23,17 @@ import { displayCode } from "@/utils/classes";
 
 /**
  * Chi tiết một buổi dạy: ngày giờ, link lớp trực tuyến, điểm danh cả lớp (chỉ khi tôi là người dạy buổi đó)
- * và lối xin nghỉ dạy.
+ * lối xin nghỉ dạy và mục bài tập (giao, công bố, đóng, chấm bài nộp).
  */
 export function TutorSessionDetail({ session, now, tutorId, hasPendingLeave }: TutorSessionDetailProps) {
   // Tôi là người dạy thật sự (gia sư chính hoặc người dạy thay)
   const isTeacher = teacherOf(session) === tutorId;
   const started = sessionStart(session).getTime() <= now.getTime();
-  // Còn ghi / sửa điểm danh được: buổi đang diễn ra và chưa quá 24 giờ sau khi kết thúc
+  // Còn ghi / sửa điểm danh được (kể cả buổi đã hoàn tất) cho tới 24 giờ sau khi kết thúc, nếu chưa bị khóa
   const editable = isRecordable(session, now) && !attendanceDeadlinePassed(session, now);
-  const readOnlyNote =
-    session.status === "COMPLETED"
-      ? "Buổi học đã hoàn tất."
-      : attendanceDeadlinePassed(session, now)
-        ? "Đã quá 24 giờ sau buổi học nên không sửa được nữa."
-        : undefined;
+  const readOnlyNote = attendanceDeadlinePassed(session, now) ? "Đã quá 24 giờ sau buổi học nên không sửa được nữa." : undefined;
 
   const day = parseIsoDate(session.date);
-  const canEnter = session.status !== "CANCELLED" && session.status !== "COMPLETED";
 
   return (
     <div className="space-y-5">
@@ -78,9 +75,10 @@ export function TutorSessionDetail({ session, now, tutorId, hasPendingLeave }: T
         </p>
       )}
 
-      {(canEnter || isTeacher) && (
+      {isTeacher && (
         <div className="flex flex-wrap items-center gap-2.5">
-          {canEnter && (
+          {/* Phòng học chỉ mở từ 15 phút trước giờ dạy đến 15 phút sau khi kết thúc, và chỉ cho người dạy thật sự */}
+          {canJoinNow(session, now) && (
             <Link
               to={`/classroom/${session.sessionId}`}
               className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-brand-orange px-4 text-[14px] font-semibold text-brand-navyDeep transition-colors hover:bg-brand-orangeHover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
@@ -89,19 +87,23 @@ export function TutorSessionDetail({ session, now, tutorId, hasPendingLeave }: T
               Vào phòng học trực tuyến
             </Link>
           )}
-          {isTeacher &&
-            (hasPendingLeave ? (
-              <StatusChip tone="amber" icon="hourglass_top">
-                Đơn xin nghỉ đang chờ duyệt
-              </StatusChip>
-            ) : (
-              canRequestLeave(session, now) && (
-                <Link to={`${ROUTES.tutorLeave}?buoi=${session.sessionId}`} className={PORTAL_BTN_SECONDARY}>
-                  <Icon name="event_busy" className="text-[18px]" />
-                  Xin nghỉ dạy buổi này
-                </Link>
-              )
-            ))}
+          {joinOpensLater(session, now) && (
+            <StatusChip tone="slate" icon="videocam">
+              Phòng học mở lúc {formatClockTime(joinOpensAt(session))}
+            </StatusChip>
+          )}
+          {hasPendingLeave ? (
+            <StatusChip tone="amber" icon="hourglass_top">
+              Đơn xin nghỉ đang chờ duyệt
+            </StatusChip>
+          ) : (
+            canRequestLeave(session, now) && (
+              <Link to={`${ROUTES.tutorLeave}?buoi=${session.sessionId}`} className={PORTAL_BTN_SECONDARY}>
+                <Icon name="event_busy" className="text-[18px]" />
+                Xin nghỉ dạy buổi này
+              </Link>
+            )
+          )}
         </div>
       )}
 
