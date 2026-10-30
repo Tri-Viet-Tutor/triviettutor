@@ -136,10 +136,18 @@ public class PayrollService {
     }
 
     private PayrollLineResponse response(PayrollLine line,PayrollPeriod saved) {
+        YearMonth month=YearMonth.of(saved.getYear(),saved.getMonth());
         TeachingPeriodSummary summary;
         try { summary=json.readValue(line.getReconciliation(),TeachingPeriodSummary.class); }
-        catch(JsonProcessingException ex) { throw new IllegalStateException("Cannot read payroll snapshot",ex); }
-        return lineBuilder(line.getTutorId(),line.getTutorName(),YearMonth.of(saved.getYear(),saved.getMonth()),
+        catch(JsonProcessingException ex) {
+            // Lines not written by finalizePeriod (e.g. imported sample data) may hold plain-text notes.
+            // The stored amounts are still the frozen payroll, so return them without session details.
+            return lineBuilder(line.getTutorId(),line.getTutorName(),month,saved.getStatus(),saved.getFinalizedAt(),
+                    line.getBaseSalary(),line.getSessionRate(),line.getSessionPay(),line.getTotalPay(),
+                    new TeachingPeriodSummary(line.getTutorId(),month,List.of(),List.of(),List.of(),List.of()))
+                    .validSessions(line.getValidSessions()).reconciliation(null).build();
+        }
+        return lineBuilder(line.getTutorId(),line.getTutorName(),month,
                 saved.getStatus(),saved.getFinalizedAt(),line.getBaseSalary(),line.getSessionRate(),line.getSessionPay(),
                 line.getTotalPay(),summary).build();
     }
