@@ -28,6 +28,14 @@ import { portalErrorMessage } from "@/utils/errors";
 import { formatTimeRange, nextSession, splitSessions } from "@/utils/sessions";
 import type { EnrollmentResponse, EnrollmentStatus } from "@/interfaces/api";
 
+/** Câu báo đúng với kết quả hủy: hoàn ngay (ví/mock) hay đang chờ VNPay hoàn tiền */
+function cancelNotice(result: EnrollmentResponse): string {
+  if (result.status === "REFUNDED") return "Đã hủy ghi danh và hoàn học phí.";
+  if (result.refundStatus === "PENDING") return "Đã gửi yêu cầu hủy. VNPay đang hoàn tiền; lớp sẽ chuyển sang “Đã hoàn tiền” khi hoàn tất.";
+  if (result.refundStatus === "FAILED") return "Đã gửi yêu cầu hủy nhưng hoàn tiền chưa thành công. Trung tâm sẽ liên hệ để xử lý.";
+  return "Đã hủy ghi danh lớp học.";
+}
+
 /**
  * Các lớp học viên đã đóng học phí: học phí, ưu đãi, tiến độ buổi học, buổi kế tiếp và hủy ghi danh.
  * API: GET /enrollments/my, DELETE /enrollments/{id} (kèm lý do), GET /me/sessions để ghép tiến độ.
@@ -47,7 +55,7 @@ export function StudentEnrollmentsPage() {
     mutationFn: () => cancelEnrollment((cancelling as EnrollmentResponse).enrollmentId, reason.trim()),
     onSuccess: (result) => {
       setCancelling(null);
-      setNotice(result.status === "REFUNDED" ? "Đã hủy ghi danh. Học phí sẽ được hoàn theo quy định." : "Đã hủy ghi danh lớp học.");
+      setNotice(cancelNotice(result));
       void refreshMine();
     },
     onError: (err) => setError(portalErrorMessage(err, "Chưa hủy được ghi danh. Vui lòng thử lại.")),
@@ -191,6 +199,26 @@ export function StudentEnrollmentsPage() {
                     </p>
                   )}
 
+                  {item.status === "ACTIVE" && item.refundStatus === "PENDING" && (
+                    <p className="flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-2.5 text-[13.5px] font-medium text-amber-800">
+                      <Icon name="hourglass_top" className="text-[18px]" />
+                      Đang hoàn tiền qua VNPay. Lớp sẽ được hủy khi hoàn tiền xong.
+                    </p>
+                  )}
+                  {item.status === "ACTIVE" && item.refundStatus === "FAILED" && (
+                    <p className="flex items-center gap-1.5 rounded-xl bg-red-50 px-3 py-2.5 text-[13.5px] font-medium text-red-700">
+                      <Icon name="error" className="text-[18px]" />
+                      Hoàn tiền chưa thành công. Trung tâm sẽ liên hệ để xử lý.
+                    </p>
+                  )}
+
+                  {item.status === "ACTIVE" && item.refundStatus === "COMPLETED" && (
+                    <p className="flex items-center gap-1.5 rounded-xl bg-sky-50 px-3 py-2.5 text-[13.5px] font-medium text-sky-800">
+                      <Icon name="info" className="text-[18px]" />
+                      Đã hoàn tiền một phần. Bạn vẫn tiếp tục học lớp này.
+                    </p>
+                  )}
+
                   {item.status !== "ACTIVE" && item.cancellationReason && (
                     <p className="text-[13.5px] text-brand-muted">
                       Lý do hủy: <span className="text-brand-ink">{item.cancellationReason}</span>
@@ -207,17 +235,23 @@ export function StudentEnrollmentsPage() {
                           <Icon name="calendar_month" className="text-[18px]" />
                           Lịch học
                         </Link>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setReason("");
-                            setError(null);
-                            setCancelling(item);
-                          }}
-                          className={`${PORTAL_BTN_GHOST} text-red-600 hover:bg-red-50`}
-                        >
-                          Hủy ghi danh
-                        </button>
+                        {item.cancellable ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReason("");
+                              setError(null);
+                              setCancelling(item);
+                            }}
+                            className={`${PORTAL_BTN_GHOST} text-red-600 hover:bg-red-50`}
+                          >
+                            Hủy ghi danh
+                          </button>
+                        ) : (
+                          (!item.refundStatus || item.refundStatus === "COMPLETED") && (
+                            <span className="self-center px-2 text-[12.5px]">Liên hệ admin để hủy</span>
+                          )
+                        )}
                       </>
                     )}
                   </div>

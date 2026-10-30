@@ -58,6 +58,10 @@ export async function getIntent(intentId: number): Promise<IntentDetail> {
 export async function cancelIntent(intentId: number): Promise<IntentDetail> {
   return unwrap((await api.delete<ApiResponse<IntentDetail>>(`/payment-intents/${intentId}`)).data);
 }
+/** POST /payment-intents/{id}/reconcile — hỏi lại VNPay khi chưa nhận được xác nhận (IPN); gọi lặp lại vẫn an toàn */
+export async function reconcileIntent(intentId: number): Promise<IntentDetail> {
+  return unwrap((await api.post<ApiResponse<IntentDetail>>(`/payment-intents/${intentId}/reconcile`)).data);
+}
 export async function verifyVnpayReturn(search: string): Promise<IntentDetail> {
   return unwrap((await api.get<ApiResponse<IntentDetail>>("/payments/vnpay/return", { params: new URLSearchParams(search) })).data);
 }

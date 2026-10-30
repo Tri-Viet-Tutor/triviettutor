@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, BookOpen, CalendarX, Check, ChevronRight, ShoppingCart } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarX, ChevronRight } from "lucide-react";
 import { AuthNotice } from "@/components/auth/AuthNotice";
 import { FOCUS_RING, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD } from "@/constants/classNames";
 import { GRADE_OPTIONS, GRADE_RANGE_LABEL, DELIVERY_MODE_OPTIONS, SCHEDULE_PATTERN_OPTIONS } from "@/constants/classOptions";
@@ -11,7 +11,6 @@ import type { Course } from "@/interfaces/course";
 import type { GradeLevel, TuitionClass } from "@/interfaces/api";
 import { listTuitionClasses, getTuitionClass } from "@/services/tuitionPaymentService";
 import { useAuthStore } from "@/stores/authStore";
-import { useCartStore } from "@/stores/cartStore";
 import { formatVnd } from "@/utils/currency";
 import { formatDate, parseIsoDate, startOfToday } from "@/utils/date";
 
@@ -30,8 +29,6 @@ export function CourseDetails({ course, backTo }: { course: Course; backTo: stri
   const user = useAuthStore((state) => state.user);
   const authenticated = useAuthStore((state) => state.isAuthenticated);
   const navigate = useNavigate();
-  const add = useCartStore((state) => state.add);
-  const inCart = useCartStore((state) => state.subjects.includes(course.subject));
   const [grade, setGrade] = useState<GradeLevel>("GRADE_10");
   const [page, setPage] = useState(0);
   const [classId, setClassId] = useState<number | null>(null);
@@ -61,11 +58,10 @@ export function CourseDetails({ course, backTo }: { course: Course; backTo: stri
   const isStudent = authenticated && user?.role === "ROLE_STUDENT";
   function register() {
     if (blocked || !isStudent || !selected) return;
-    add(course.subject);
     navigate(
       ROUTES.studentCheckout +
         "?" +
-        new URLSearchParams({ classId: String(selected.id), subject: selected.subject, gradeLevel: selected.gradeLevel }),
+        new URLSearchParams({ lop: String(selected.id), subject: selected.subject, gradeLevel: selected.gradeLevel }),
     );
   }
 
@@ -369,10 +365,6 @@ export function CourseDetails({ course, backTo }: { course: Course; backTo: stri
             Đăng ký lớp này <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </button>
           {authenticated && !isStudent && <p className="text-sm text-brand-muted">Chỉ tài khoản học viên được đăng ký lớp.</p>}
-          <button type="button" onClick={() => add(course.subject)} disabled={inCart} className={PORTAL_BTN_SECONDARY + " w-full"}>
-            {inCart ? <Check aria-hidden="true" className="h-4 w-4" /> : <ShoppingCart aria-hidden="true" className="h-4 w-4" />}
-            {inCart ? "Đã trong giỏ" : "Thêm môn vào giỏ"}
-          </button>
           <p className="text-xs leading-relaxed text-brand-muted">
             Bạn sẽ kiểm tra lại thông tin ở bước thanh toán. Chỗ học được kiểm tra lại khi đăng ký; chọn lớp tại đây chưa giữ chỗ.
           </p>

@@ -44,7 +44,7 @@ public class PaymentIntentService {
         if (ttlMinutes < 1) throw new IllegalStateException("Payment intent TTL must be positive");
         OffsetDateTime now = OffsetDateTime.now(clock);
         PaymentIntent intent = intents.saveAndFlush(PaymentIntent.builder().studentId(student.getId()).classGroupId(classId)
-                .courseId(admission.course().getId()).amount(admission.expectedAmount())
+                .courseId(admission.course().getId()).amount(admission.expectedAmount()).discountRate(admission.discountRate())
                 .status(PaymentIntentStatus.PENDING).createdAt(now).expiresAt(now.plusMinutes(ttlMinutes)).build());
         idempotency.remember(student.getId(), PaymentOperationType.CREATE_INTENT, key, request, intent.getId());
         return PaymentIntentResponse.from(intent, clock);
@@ -108,6 +108,6 @@ public class PaymentIntentService {
         PaymentIntent intent = intents.findById(payment.getIntentId()).orElseThrow();
         Enrollment enrollment = enrollments.findByPaymentId(payment.getId()).orElse(null);
         return new PaymentConfirmationResponse(intent.getId(), intent.getStatus(), reads.response(payment),
-                enrollment == null ? null : EnrollmentResponse.from(enrollment));
+                enrollment == null ? null : reads.enrollment(enrollment));
     }
 }
