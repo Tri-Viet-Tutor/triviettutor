@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { AttendanceEditor } from "@/components/dashboard/AttendanceEditor";
 import { StatusChip } from "@/components/dashboard/StatusChip";
+import { HomeworkPanel } from "@/components/tutor/HomeworkPanel";
 import { Icon } from "@/components/ui/Icon";
 import { PORTAL_BTN_SECONDARY } from "@/constants/classNames";
 import { ROUTES } from "@/constants/routes";
@@ -18,7 +19,7 @@ import type { TutorSessionDetailProps } from "@/interfaces/portal";
 
 /**
  * Chi tiết một buổi dạy: ngày giờ, link lớp trực tuyến, điểm danh cả lớp (chỉ khi tôi là người dạy buổi đó)
- * và lối xin nghỉ dạy.
+ * lối xin nghỉ dạy và mục bài tập (giao, công bố, đóng, chấm bài nộp).
  */
 export function TutorSessionDetail({ session, now, tutorId, hasPendingLeave }: TutorSessionDetailProps) {
   // Tôi là người dạy thật sự (gia sư chính hoặc người dạy thay)
@@ -100,6 +101,8 @@ export function TutorSessionDetail({ session, now, tutorId, hasPendingLeave }: T
           )}
         </section>
       )}
+
+      {isTeacher && <HomeworkPanel sessionId={session.sessionId} cancelled={session.status === "CANCELLED"} />}
     </div>
   );
 }
