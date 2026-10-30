@@ -77,3 +77,17 @@ services:
         value: "50000000"
       - key: WALLET_TOPUP_TTL_MINUTES
         value: "15"
+      # Google login, the online classroom (LiveKit) and meeting logs (MongoDB) read these; without them
+      # the backend still starts, but Google login fails and LiveKit tokens are signed with the dev key.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+      - key: MONGODB_URI
+        sync: false
