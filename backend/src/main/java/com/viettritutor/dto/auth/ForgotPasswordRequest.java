@@ -16,7 +16,4 @@ public class ForgotPasswordRequest {
     @NotBlank(message = "Email không được để trống")
     @Email(message = "Email không đúng định dạng")
     private String email;
-
-    /** Tùy chọn: URL frontend từ client gửi lên (ví dụ: window.location.origin) */
-    private String frontendUrl;
 }

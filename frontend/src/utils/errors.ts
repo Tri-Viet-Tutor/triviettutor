@@ -14,6 +14,9 @@ const AUTH_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   INVALID_RESET_TOKEN: "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã qua sử dụng. Vui lòng gửi lại yêu cầu.",
   RESET_TOKEN_EXPIRED: "Liên kết đặt lại mật khẩu đã hết hạn (sau 15 phút). Vui lòng gửi lại yêu cầu.",
   EMAIL_SEND_FAILED: "Chưa gửi được email. Vui lòng thử lại sau ít phút.",
+  OTP_ATTEMPTS_EXCEEDED: "Bạn đã nhập sai mã quá 5 lần. Hãy bấm gửi lại mã để nhận mã mới.",
+  OTP_RESEND_TOO_SOON: "Mã vừa được gửi. Vui lòng chờ khoảng 1 phút rồi gửi lại.",
+  ACCOUNT_LOCKED: "Tài khoản đã bị khóa. Vui lòng liên hệ trung tâm để được hỗ trợ.",
   USER_NOT_FOUND: "Không tìm thấy tài khoản với email này.",
   VALIDATION_ERROR: "Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.",
   // (Đề xuất) backend chỉ cho tạo tài khoản khi email đã có đơn thanh toán xong
@@ -23,6 +26,20 @@ const AUTH_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
 /** Đổi lỗi của một lời gọi API thành câu báo cho người dùng; mất kết nối thì báo riêng. */
 export function authErrorMessage(error: unknown, fallback = "Có lỗi xảy ra. Vui lòng thử lại."): string {
   return apiErrorMessage(error, AUTH_ERROR_TEXT, fallback);
+}
+
+/** Câu báo cho `?error=` mà backend gắn khi đăng nhập Google không thành công */
+const GOOGLE_LOGIN_ERROR_TEXT: Record<string, string> = {
+  GOOGLE_EMAIL_NOT_VERIFIED: "Email Google của bạn chưa được Google xác minh.",
+  ACCOUNT_NOT_VERIFIED: "Email này đã đăng ký nhưng chưa kích hoạt. Hãy đăng nhập bằng mật khẩu và nhập mã xác thực trước.",
+  ACCOUNT_LOCKED: "Tài khoản đã bị khóa. Vui lòng liên hệ trung tâm để được hỗ trợ.",
+  GOOGLE_ACCOUNT_CONFLICT: "Tài khoản Google này không khớp với tài khoản đã liên kết trước đó.",
+  GOOGLE_LOGIN_FAILED: "Đăng nhập bằng Google chưa thành công. Vui lòng thử lại.",
+};
+
+/** Đổi mã `?error=` của trang đăng nhập thành câu báo; mã lạ dùng câu chung */
+export function googleLoginErrorMessage(code: string): string {
+  return GOOGLE_LOGIN_ERROR_TEXT[code] ?? GOOGLE_LOGIN_ERROR_TEXT.GOOGLE_LOGIN_FAILED;
 }
 
 /** Mã lỗi của lời gọi API (nếu backend có trả về) */
@@ -80,6 +97,7 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   INVALID_DATE_RANGE: "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.",
   INVALID_PAGINATION: "Số trang không hợp lệ.",
   INVALID_ROLE_FILTER: "Vai trò lọc không hợp lệ.",
+  CANNOT_LOCK_SELF: "Bạn không thể tự khóa tài khoản của mình.",
   // Khóa học, lớp, ghi danh, bảng lương
   COURSE_NOT_FOUND: "Không tìm thấy khóa học này.",
   INVALID_STATUS_TRANSITION: "Không chuyển được lớp sang trạng thái này từ trạng thái hiện tại.",

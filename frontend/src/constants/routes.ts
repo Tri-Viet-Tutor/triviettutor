@@ -19,6 +19,8 @@ export const ROUTES = {
   verifyEmail: "/verify-email",
   forgotPassword: "/forgot-password",
   resetPassword: "/reset-password",
+  /** Backend chuyển về đây sau khi đăng nhập Google, token nằm trong phần #token=… */
+  oauth2Success: "/oauth2/success",
   /** Khu quản trị: tổng quan, người dùng, buổi học, duyệt nghỉ / xếp bù, phân công gia sư, hồ sơ */
   admin: "/admin",
   adminUsers: "/admin/users",

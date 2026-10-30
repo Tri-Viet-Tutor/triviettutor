@@ -6,6 +6,7 @@ import com.viettritutor.common.exception.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
@@ -19,9 +20,11 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
                          AuthenticationException exception) throws IOException {
+        // Always 401 so the frontend ends the session; a locked account gets its own code.
+        ErrorCode code = exception instanceof LockedException ? ErrorCode.ACCOUNT_LOCKED : ErrorCode.UNAUTHORIZED;
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
         objectMapper.writeValue(response.getOutputStream(),
-                ApiResponse.error(ErrorCode.UNAUTHORIZED.getDefaultMessage(), ErrorCode.UNAUTHORIZED.name()));
+                ApiResponse.error(code.getDefaultMessage(), code.name()));
     }
 }

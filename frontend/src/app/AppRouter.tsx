@@ -15,6 +15,7 @@ import { RegisterPage } from "@/pages/auth/RegisterPage";
 import { VerifyEmailPage } from "@/pages/auth/VerifyEmailPage";
 import { ForgotPasswordPage } from "@/pages/auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/auth/ResetPasswordPage";
+import { OAuth2SuccessPage } from "@/pages/auth/OAuth2SuccessPage";
 
 // Trang công khai
 import { HomePage } from "@/pages/public/HomePage";
@@ -97,6 +98,7 @@ export function AppRouter() {
           <Route path={ROUTES.verifyEmail} element={<VerifyEmailPage />} />
           <Route path={ROUTES.forgotPassword} element={<ForgotPasswordPage />} />
           <Route path={ROUTES.resetPassword} element={<ResetPasswordPage />} />
+          <Route path={ROUTES.oauth2Success} element={<OAuth2SuccessPage />} />
         </Route>
 
         {/* Admin*/}

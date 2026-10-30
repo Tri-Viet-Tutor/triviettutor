@@ -48,6 +48,13 @@ export type ErrorCode =
   | "INVALID_RESET_TOKEN"
   | "RESET_TOKEN_EXPIRED"
   | "EMAIL_SEND_FAILED"
+  | "OTP_ATTEMPTS_EXCEEDED"
+  | "OTP_RESEND_TOO_SOON"
+  | "ACCOUNT_LOCKED"
+  | "CANNOT_LOCK_SELF"
+  | "RATING_NOT_FOUND"
+  | "RATING_ALREADY_EXISTS"
+  | "RATING_NOT_ELIGIBLE"
   | "ACCESS_DENIED"
   | "INVALID_PROFILE_FIELD"
   | "INVALID_ROLE_FILTER"
@@ -541,6 +548,20 @@ export interface UpdateMeRequest {
 /** dto.user.AdminUserResponse — GET /admin/users */
 export interface AdminUserResponse extends UserInfo {
   createdAt: IsoDateTime;
+  /** Bị quản trị viên khóa: không đăng nhập được (cả Google), phiên cũ hết hiệu lực */
+  locked: boolean;
+  /** Đã xác thực email / kích hoạt */
+  enabled: boolean;
+  /** LOCKED ưu tiên hơn UNVERIFIED; còn lại ACTIVE */
+  status: AdminUserStatus;
+}
+
+/** Trạng thái tài khoản trong AdminUserResponse */
+export type AdminUserStatus = "ACTIVE" | "LOCKED" | "UNVERIFIED";
+
+/** PATCH /admin/users/{userId}/status */
+export interface UpdateUserStatusRequest {
+  locked: boolean;
 }
 
 /** Tham số của GET /admin/users (page từ 0, size 1 – 100) */
@@ -643,10 +664,9 @@ export interface ApiError {
 }
 
 // ── services/authService.ts ──
-/** POST /auth/forgot-password — email nhận liên kết; frontendUrl để backend dựng liên kết về đúng trang */
+/** POST /auth/forgot-password — email nhận liên kết (địa chỉ trang do backend tự cấu hình) */
 export interface ForgotPasswordRequest {
   email: string;
-  frontendUrl?: string;
 }
 
 /** POST /auth/reset-password — token lấy từ liên kết trong email */

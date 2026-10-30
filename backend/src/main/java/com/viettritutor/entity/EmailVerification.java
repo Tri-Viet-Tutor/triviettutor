@@ -34,6 +34,11 @@ public class EmailVerification {
     @Column(nullable = false)
     private boolean verified = false;
 
+    /** Wrong codes entered for this OTP; after the limit the code is unusable and a resend is required. */
+    @Builder.Default
+    @Column(name = "failed_attempts", nullable = false)
+    private int failedAttempts = 0;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
