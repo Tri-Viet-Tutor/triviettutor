@@ -33,6 +33,9 @@ public class OrderItem {
     private String classCode;
     @Column(name="unit_price",nullable=false,precision=15,scale=0)
     private BigDecimal unitPrice;
+    /** Discount behind unitPrice at checkout; null on items created before V23. */
+    @Column(name="discount_rate",precision=4,scale=3)
+    private BigDecimal discountRate;
     @Column(name="payment_id",unique=true)
     private Long paymentId;
     @Column(name="enrollment_id",unique=true)
