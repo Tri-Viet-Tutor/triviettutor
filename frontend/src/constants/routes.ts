@@ -34,6 +34,7 @@ export const ROUTES = {
   adminCourses: "/admin/courses",
   adminClasses: "/admin/classes",
   adminPayroll: "/admin/payroll",
+  adminReviews: "/admin/reviews",
   /** Khu gia sư: tổng quan, lịch dạy + điểm danh, lịch rảnh, xin nghỉ, hồ sơ */
   tutor: "/tutor",
   tutorSessions: "/tutor/sessions",
@@ -42,6 +43,7 @@ export const ROUTES = {
   tutorProfile: "/tutor/profile",
   /** Thu nhập theo tháng */
   tutorPayroll: "/tutor/payroll",
+  tutorReviews: "/tutor/reviews",
   /** Khu học viên: tổng quan, lịch học, mua khóa học + thanh toán, xin nghỉ, hồ sơ */
   student: "/student",
   studentSchedule: "/student/schedule",
@@ -54,6 +56,8 @@ export const ROUTES = {
   /** Giỏ hàng: chọn lớp cho từng môn rồi đặt đơn nhiều lớp */
   studentCart: "/student/cart",
   studentLeave: "/student/leave",
+  studentHomework: "/student/homework",
+  studentFeedback: "/student/feedback",
   /** Các lớp đã đóng học phí */
   studentEnrollments: "/student/classes",
   studentProfile: "/student/profile",

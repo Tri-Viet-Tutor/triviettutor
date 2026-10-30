@@ -2,6 +2,7 @@ import { LATE_NOTICE_HOURS } from "@/constants/rules";
 import type { LeaveRequestResponse, SessionResponse } from "@/interfaces/api";
 import { addDays, diffDays, formatDate, formatDayMonth, parseIsoDate, startOfToday, startOfWeek, weekdayName } from "@/utils/date";
 import type { ClassProgress } from "@/interfaces/portal";
+import { displayCode } from "@/utils/classes";
 
 /* Các hàm tính toán trên buổi học (SessionResponse) dùng chung cho ba khu sau đăng nhập. Giờ học là giờ Việt Nam. */
 
@@ -43,10 +44,10 @@ export function formatLongDate(date: Date): string {
   return `${weekdayName(date)}, ${formatDate(date)}`;
 }
 
-/** Một dòng gọn để chọn buổi: "Thứ Sáu 09/10, 18:00 – 20:00, lớp #12" */
+/** Một dòng gọn để chọn buổi: "Thứ Sáu 09/10, 18:00 – 20:00, lớp LH012" */
 export function sessionOptionLabel(session: SessionResponse): string {
   const date = parseIsoDate(session.date);
-  return `${weekdayName(date)} ${formatDayMonth(date)}, ${formatTimeRange(session)}, lớp #${session.classGroupId}`;
+  return `${weekdayName(date)} ${formatDayMonth(date)}, ${formatTimeRange(session)}, lớp ${displayCode("class", session.classGroupId)}`;
 }
 
 /** Buổi chưa kết thúc (tính cả buổi đang diễn ra) */
@@ -132,12 +133,12 @@ export function nameInitial(fullName: string): string {
 }
 
 /**
- * Tên hiển thị của học viên trong danh sách điểm danh: "Nguyễn Minh Anh (#9)",
- * hoặc "Học viên #9" khi không tra được tên (backend chỉ trả mã học viên).
+ * Tên hiển thị của học viên trong danh sách điểm danh: "Nguyễn Minh Anh",
+ * hoặc "Học viên HV009" khi không tra được tên (backend chỉ trả mã học viên).
  */
 export function studentLabel(studentId: number, nameOf?: (studentId: number) => string | undefined): string {
   const name = nameOf?.(studentId);
-  return name ? `${name} (#${studentId})` : `Học viên #${studentId}`;
+  return name ?? `Học viên ${displayCode("student", studentId)}`;
 }
 
 /** Người thật sự dạy buổi này: gia sư dạy thay nếu có, không thì gia sư được phân công */

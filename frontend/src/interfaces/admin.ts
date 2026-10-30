@@ -16,6 +16,8 @@ export interface ClassSummary {
   //Buổi kế tiếp và số buổi sắp tới của lớp
   nextSession: SessionResponse;
   upcomingCount: number;
+  /** Thông tin lớp (GET /admin/classes): tên khóa, lịch, sĩ số… */
+  info?: AdminClassResponse;
 }
 
 /** Một ô trong bảng "Việc cần xử lý" */
@@ -53,7 +55,7 @@ export interface AdminAttendancePanelProps {
 }
 
 //Cách xử lý đang mở form: học bù, dạy thay, hủy buổi, từ chối
-export type LeaveCardAction = "makeup" | "substitute" | "cancel" | "reject";
+export type LeaveCardAction = "makeup" | "substitute" | "cancel" | "reject" | "excuse";
 
 /** Props của AdminLeaveCard */
 export interface AdminLeaveCardProps {
@@ -81,6 +83,8 @@ export interface AssignmentPanelProps {
   classId: number;
   /** Gia sư chính hiện tại của lớp (lấy từ các buổi sắp tới); null nếu lớp chưa có gia sư */
   currentTutorId: number | null;
+  /** Thông tin lớp để hiện phần đầu (tên khóa, lịch, sĩ số) */
+  info?: AdminClassResponse;
 }
 
 /** Props của ClassPicker */
@@ -235,7 +239,7 @@ export interface CourseDetailSheetProps {
 export interface ClassStatusDialogProps {
   /** Lớp đang thao tác; null là đóng hộp thoại */
   classItem: AdminClassResponse | null;
-  /** "status": đổi trạng thái · "reopen": mở lại lớp không đủ sĩ số */
+  /** "status": đổi trạng thái - "reopen": mở lại lớp không đủ sĩ số */
   mode: "status" | "reopen";
   onClose: () => void;
   onSaved: (classItem: AdminClassResponse) => void;

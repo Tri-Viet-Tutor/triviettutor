@@ -74,7 +74,24 @@ export type ErrorCode =
   | "INVALID_TUTOR"
   | "CLASS_NOT_ASSIGNABLE"
   | "CLASS_TUTOR_REQUIRED"
+  | "INVALID_HOMEWORK_DATE_RANGE"
+  | "HOMEWORK_NOT_FOUND"
+  | "HOMEWORK_LOCKED"
+  | "HOMEWORK_PUBLISHED_EDIT_RESTRICTED"
+  | "HOMEWORK_DEADLINE_PASSED"
+  | "HOMEWORK_INVALID_DEADLINE"
+  | "HOMEWORK_NOT_ACCEPTING"
+  | "HOMEWORK_SESSION_CANCELLED"
+  | "LEARNING_VERSION_CONFLICT"
+  | "SUBMISSION_NOT_FOUND"
+  | "SUBMISSION_NOT_STARTED"
+  | "SUBMISSION_LOCKED"
+  | "EMPTY_SUBMISSION"
+  | "SUBMISSION_NOT_SUBMITTED"
+  | "INVALID_SUBMISSION_FILTER"
+  | "INVALID_HOMEWORK_SCORE"
   | "CLASS_IN_USE"
+  | "USER_IN_USE"
   | "COURSE_IN_USE"
   | "CLASS_ALREADY_ASSIGNED"
   | "ASSIGNMENT_NOT_FOUND"
@@ -436,6 +453,14 @@ export interface AvailabilityResponse {
   endTime: IsoTime;
 }
 
+/** dto.assignment.TutorBoardResponse — GET /admin/tutor-board: khung rảnh đã khai và buổi đang dạy của một gia sư */
+export interface TutorBoardResponse {
+  tutorId: number;
+  tutorName: string;
+  availability: AvailabilityResponse[];
+  teaching: { sessionId: number; classGroupId: number; date: IsoDate; startTime: IsoTime; endTime: IsoTime }[];
+}
+
 /** dto.assignment.AvailabilityRequest — PUT /tutor/availability (tối đa 1000 khung giờ) */
 export interface AvailabilityRequest {
   slots: AvailabilityResponse[];
@@ -516,6 +541,10 @@ export interface AttendanceResponse {
   studentIds: number[];
   missingStudentIds: number[];
   records: AttendanceRecordResponse[];
+  /** Họ tên học viên theo mã (backend mới); backend cũ không có thì chỉ hiện mã */
+  studentNames?: Record<string, string>;
+  /** Học viên trung tâm đã duyệt nghỉ có phép buổi này: miễn điểm danh */
+  excusedStudentIds?: number[];
 }
 
 /** dto.attendance.AttendanceRecordInput */
@@ -999,4 +1028,60 @@ export interface CartOrderResponse {
     unitPrice: number;
     enrollmentId: number | null;
   }[];
+}
+
+// ── Bài tập (dto.learning: HomeworkController, SubmissionController) ─────────
+
+export type HomeworkStatus = "DRAFT" | "PUBLISHED" | "CLOSED";
+export type SubmissionStatus = "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED" | "GRADED";
+
+/** dto.learning.HomeworkResponse */
+export interface HomeworkResponse {
+  id: number;
+  sessionId: number;
+  /** Phiên bản để chống ghi đè; gửi kèm mọi lần sửa / đổi trạng thái */
+  version: number;
+  title: string;
+  instructions: string;
+  resourceUrl?: string | null;
+  dueAt: IsoDateTime;
+  maxScore: number;
+  status: HomeworkStatus;
+  createdAt?: IsoDateTime;
+  publishedAt?: IsoDateTime | null;
+  closedAt?: IsoDateTime | null;
+}
+
+/** dto.learning.HomeworkRequest — POST /sessions/{sessionId}/homeworks (tạo ở trạng thái DRAFT) */
+export interface HomeworkRequest {
+  title: string;
+  instructions: string;
+  resourceUrl?: string;
+  /** Hạn nộp trong tương lai, ISO có múi giờ */
+  dueAt: string;
+  maxScore: number;
+}
+
+/** dto.learning.SubmissionResponse */
+export interface SubmissionResponse {
+  id?: number;
+  homeworkId: number;
+  studentId: number;
+  version?: number;
+  status: SubmissionStatus;
+  content?: string | null;
+  resourceUrl?: string | null;
+  startedAt?: IsoDateTime | null;
+  submittedAt?: IsoDateTime | null;
+  score?: number | null;
+  feedback?: string | null;
+  gradedAt?: IsoDateTime | null;
+}
+
+/** dto.learning.StudentHomeworkResponse — GET /student/homeworks */
+export interface StudentHomeworkResponse {
+  homework: HomeworkResponse;
+  classGroupId: number;
+  sessionDate: IsoDate;
+  submission: SubmissionResponse;
 }

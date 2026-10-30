@@ -45,7 +45,7 @@ export interface ClassStatusAction {
 /** Việc admin cần làm tiếp với một lớp (null nếu không có gì cần làm) */
 export interface ClassNextStep {
   text: string;
-  /** "assign": phân công gia sư · "status": đổi trạng thái · "reopen": xử lý lớp không đủ sĩ số */
+  /** "assign": phân công gia sư - "status": đổi trạng thái - "reopen": xử lý lớp không đủ sĩ số */
   action: "assign" | "status" | "reopen";
 }
 
@@ -176,6 +176,25 @@ export function sizeTierLabel(classType: string, size: number): string {
 }
 
 /** Mã hiển thị: khóa học KH001, lớp học LH001 (theo id trong database) */
-export function displayCode(kind: "course" | "class", id: number): string {
-  return `${kind === "course" ? "KH" : "LH"}${String(id).padStart(3, "0")}`;
+/** Tiền tố mã hiển thị theo loại đối tượng: KH001 (khóa), LH001 (lớp), BH001 (buổi học)… */
+const CODE_PREFIX = {
+  course: "KH",
+  class: "LH",
+  session: "BH",
+  student: "HV",
+  tutor: "GV",
+  user: "ND",
+  order: "DH",
+  payment: "TT",
+  refund: "HT",
+  enrollment: "GD",
+  topup: "NT",
+  intent: "YC",
+} as const;
+
+export type DisplayCodeKind = keyof typeof CODE_PREFIX;
+
+/** Mã dễ đọc thay cho "#id": displayCode("class", 12) → "LH012" */
+export function displayCode(kind: DisplayCodeKind, id: number): string {
+  return `${CODE_PREFIX[kind]}${String(id).padStart(3, "0")}`;
 }

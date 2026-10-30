@@ -35,12 +35,12 @@ export const SESSION_STATUS: Record<SessionStatus, StatusStyle> = {
 export const ATTENDANCE_STATUS: Record<AttendanceStatus, StatusStyle> = {
   PRESENT: { label: "Có mặt", tone: "green", icon: "check_circle" },
   LATE: { label: "Đi trễ", tone: "amber", icon: "schedule" },
-  ABSENT: { label: "Vắng", tone: "red", icon: "cancel" },
+  ABSENT: { label: "Vắng mặt", tone: "red", icon: "cancel" },
   EXCUSED: { label: "Nghỉ có phép", tone: "navy", icon: "verified" },
 };
 
-/** Thứ tự các trạng thái điểm danh trên nút chọn / ô chọn */
-export const ATTENDANCE_STATUS_ORDER: AttendanceStatus[] = ["PRESENT", "LATE", "ABSENT", "EXCUSED"];
+/** Trạng thái được chọn khi điểm danh: chỉ Có mặt / Vắng mặt (Đi trễ, Có phép chỉ còn để hiện bản ghi cũ) */
+export const ATTENDANCE_STATUS_ORDER: AttendanceStatus[] = ["PRESENT", "ABSENT"];
 
 /** Trạng thái đơn xin nghỉ */
 export const LEAVE_STATUS: Record<LeaveRequestStatus, StatusStyle> = {

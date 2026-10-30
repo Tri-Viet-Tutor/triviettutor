@@ -42,7 +42,7 @@ export const patternLabel = (pattern: (typeof SCHEDULE_PATTERN_OPTIONS)[number][
 /** "Tối (18:00 – 20:00)" từ "SLOT_EVENING" */
 export const slotLabel = (slot: (typeof TIME_SLOT_OPTIONS)[number]["value"]) => {
   const option = TIME_SLOT_OPTIONS.find((item) => item.value === slot);
-  return option ? `${option.label} · ${option.hint}` : slot;
+  return option ? `${option.label} - ${option.hint}` : slot;
 };
 
 /** "Tháng 10/2026" */

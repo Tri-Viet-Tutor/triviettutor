@@ -9,7 +9,7 @@ import { PortalLayout } from "@/layouts/PortalLayout";
 export function AdminLayout() {
   return (
     <div className="font-admin">
-      <PortalLayout areaLabel="Khu quản trị" homeTo={ROUTES.admin} profileTo={ROUTES.adminProfile} navItems={ADMIN_NAV} />
+      <PortalLayout areaLabel="Quản trị viên" homeTo={ROUTES.admin} profileTo={ROUTES.adminProfile} navItems={ADMIN_NAV} />
     </div>
   );
 }

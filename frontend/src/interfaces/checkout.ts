@@ -22,7 +22,7 @@ export interface VnpayResult {
   orderCode: string;
   /** Số tiền của đơn (VND) */
   amount: number;
-  /** PAID: đã thanh toán · PENDING_PAYMENT: VNPay chưa xác nhận xong · FAILED: không thành công hoặc bị hủy */
+  /** PAID: đã thanh toán - PENDING_PAYMENT: VNPay chưa xác nhận xong - FAILED: không thành công hoặc bị hủy */
   status: "PAID" | "PENDING_PAYMENT" | "FAILED";
   /** Họ tên và email đã điền lúc đặt mua */
   fullName: string;

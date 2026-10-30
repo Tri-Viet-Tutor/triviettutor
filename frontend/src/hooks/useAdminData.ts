@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ROLE_NAME } from "@/constants/labels";
 import type { AdminLeaveRequestsQuery, AdminSessionsQuery, AdminUsersQuery, Role } from "@/interfaces/api";
 import { fetchAdminLeaveRequests, fetchAdminSessions, fetchAdminUsers, fetchSession } from "@/services/admin";
+import { displayCode } from "@/utils/classes";
 
 /** Khóa cache của khu quản trị — tất cả nằm dưới "admin" nên sau một thao tác chỉ cần làm mới cả nhóm này */
 export const adminKeys = {
@@ -11,6 +12,8 @@ export const adminKeys = {
   session: (sessionId: number) => ["admin", "session", sessionId] as const,
   leaveRequests: (query: AdminLeaveRequestsQuery) => ["admin", "leave-requests", query] as const,
   availableTutors: (classId: number) => ["admin", "available-tutors", classId] as const,
+  substituteTutors: (sessionId: number) => ["admin", "substitute-tutors", sessionId] as const,
+  tutorBoard: (from: string, to: string) => ["admin", "tutor-board", from, to] as const,
 };
 
 /** Danh sách người dùng (có phân trang); giữ dữ liệu cũ trong lúc tải trang mới để danh sách không nhảy */
@@ -60,10 +63,10 @@ export function useUserDirectory() {
   const names = new Map<number, string>();
   for (const user of [...(tutors.data?.content ?? []), ...(students.data?.content ?? [])]) names.set(user.id, user.fullName);
 
-  /** "Gia sư Hồ Đức Thuận (#3)" hoặc "Gia sư #3" khi chưa biết tên */
+  /** "Gia sư Hồ Đức Thuận" hoặc "Gia sư GV003" khi chưa biết tên */
   function label(role: Role, userId: number): string {
     const name = names.get(userId);
-    return name ? `${ROLE_NAME[role]} ${name} (#${userId})` : `${ROLE_NAME[role]} #${userId}`;
+    return name ? `${ROLE_NAME[role]} ${name}` : `${ROLE_NAME[role]} ${displayCode(role === "ROLE_TUTOR" ? "tutor" : role === "ROLE_STUDENT" ? "student" : "user", userId)}`;
   }
 
   return { tutors: tutors.data?.content ?? [], nameOf: (userId: number) => names.get(userId), label };

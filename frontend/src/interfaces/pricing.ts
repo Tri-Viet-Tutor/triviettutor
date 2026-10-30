@@ -1,4 +1,4 @@
-import type { DeliveryMode, GradeLevel, SchedulePattern, TuitionClass } from "@/interfaces/api";
+import type { CourseResponse, DeliveryMode, GradeLevel, SchedulePattern, TuitionClass } from "@/interfaces/api";
 import type { PurchasableCourse } from "@/interfaces/checkout";
 import type { Course } from "@/interfaces/course";
 
@@ -78,9 +78,13 @@ export interface CourseOfferListProps {
   canBuy: boolean;
   onBuy: (item: TuitionClass) => void;
   /** Thêm môn vào giỏ hàng (giỏ giữ theo môn, chọn lớp lúc thanh toán giỏ) */
-  onAddToCart?: (subjectId: number, item?: TuitionClass) => void;
+  onAddToCart?: (subjectId: number, item?: TuitionClass, course?: CourseResponse) => void;
   /** Mã môn (subject code) đã có trong giỏ */
   cartSubjects?: Set<string>;
+  /** Khóa (cartCourseKey) đúng là khóa học viên đã thêm vào giỏ — giỏ giữ theo môn nên các khóa cùng môn không tính */
+  isCourseInCart?: (courseKey: string) => boolean;
+  /** Lớp đúng là lớp học viên đã thêm vào giỏ */
+  isClassInCart?: (item: TuitionClass) => boolean;
   /** Id môn đang được thêm vào giỏ */
   addingSubjectId?: number;
   surfaceClassName?: string;
@@ -102,7 +106,7 @@ export interface CartBarProps {
 
 /** Props của CourseShopSection */
 export interface CourseShopSectionProps {
-  /** "public": trang công khai · "student": nhúng trong khu học viên */
+  /** "public": trang công khai - "student": nhúng trong khu học viên */
   variant?: "public" | "student";
 }
 

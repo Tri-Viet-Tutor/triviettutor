@@ -25,3 +25,39 @@ export function rememberCartClass(userId: number | undefined, subject: string, c
     /* Trình duyệt chặn bộ nhớ: giỏ vẫn hoạt động, chỉ không chọn sẵn lớp */
   }
 }
+
+/**
+ * Khóa học viên đã thêm vào giỏ cho từng môn. Giỏ của backend giữ theo môn, nên nhiều khóa cùng môn
+ * (Toán 10, Toán 11…) dùng chung một dòng giỏ; nhớ khóa đã chọn để chỉ khóa đó hiện "Đã trong giỏ".
+ */
+const COURSE_KEY = (userId: number | undefined) => `viettri-cart-course:${userId ?? "guest"}`;
+
+/** Khóa nhận diện một khóa học từ tên, môn và khối (lớp trong danh mục không trả courseId) */
+export const cartCourseKey = (name: string, subject: string, grade: string) => `${subject}|${grade}|${name}`;
+
+function readCourses(userId: number | undefined): Record<string, string> {
+  try {
+    const raw = window.localStorage.getItem(COURSE_KEY(userId));
+    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Khóa đã chọn cho môn trong giỏ (mã môn → khóa nhận diện) */
+export function preferredCartCourse(userId: number | undefined, subject: string): string | undefined {
+  return readCourses(userId)[subject];
+}
+
+/** Nhớ khóa của môn; `classId` có thì nhớ luôn lớp, không có thì bỏ lớp đã nhớ trước đó (lớp có thể thuộc khóa khác) */
+export function rememberCartCourse(userId: number | undefined, subject: string, courseKey: string, classId?: number) {
+  try {
+    window.localStorage.setItem(COURSE_KEY(userId), JSON.stringify({ ...readCourses(userId), [subject]: courseKey }));
+    const classes = read(userId);
+    if (classId !== undefined) classes[subject] = classId;
+    else delete classes[subject];
+    window.localStorage.setItem(KEY(userId), JSON.stringify(classes));
+  } catch {
+    /* Trình duyệt chặn bộ nhớ: giỏ vẫn hoạt động, chỉ không nhớ khóa đã chọn */
+  }
+}
