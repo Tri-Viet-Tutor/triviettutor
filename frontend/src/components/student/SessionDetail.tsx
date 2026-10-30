@@ -34,8 +34,10 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
   const record = attendance.data?.records[0];
   const recordStyle = record ? ATTENDANCE_STATUS[record.status] : null;
   // Phòng học chỉ mở từ 15 phút trước giờ học đến 15 phút sau khi kết thúc
-  const canJoin = canJoinNow(session, now);
+  const joinNow = canJoinNow(session, now);
   const opensLater = joinOpensLater(session, now);
+  // Hiện khu vực vào lớp khi phòng đang mở hoặc sắp mở
+  const canJoin = joinNow || opensLater;
   const canLeave = canRequestLeave(session, now);
 
   return (
@@ -94,9 +96,9 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
         </ul>
       )}
 
-      {(canJoin || opensLater || canLeave || hasPendingLeave) && (
+      {(canJoin || canLeave || hasPendingLeave) && (
         <div className="mt-4 flex flex-wrap items-center gap-2.5">
-          {canJoin && (
+          {joinNow && (
             <Link
               to={`/classroom/${session.sessionId}`}
               className={`${LINK} bg-brand-orange text-brand-navyDeep hover:bg-brand-orangeHover`}
