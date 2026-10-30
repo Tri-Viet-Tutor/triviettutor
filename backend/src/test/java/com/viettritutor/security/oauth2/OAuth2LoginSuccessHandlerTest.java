@@ -97,6 +97,54 @@ class OAuth2LoginSuccessHandlerTest {
     }
 
     @Test
+    void missingGoogleEmailRedirectsWithErrorAndCreatesNothing() throws Exception {
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put("sub", "sub-noemail");
+        attributes.put("email_verified", true);
+        DefaultOAuth2User principal = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("OAUTH2_USER")), attributes, "sub");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(new MockHttpServletRequest(), response,
+                new OAuth2AuthenticationToken(principal, principal.getAuthorities(), "google"));
+
+        assertEquals("https://app.example.test/login?error=GOOGLE_EMAIL_NOT_VERIFIED", response.getRedirectedUrl());
+        verifyNoInteractions(userRepository, jwtService);
+    }
+
+    @Test
+    void existingUnverifiedLocalAccountIsNotLinked() throws Exception {
+        User pending = User.builder().id(9L).email("p@example.test").fullName("P").role("ROLE_STUDENT")
+                .enabled(false).build();
+        when(userRepository.findByGoogleId("sub-p")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("p@example.test")).thenReturn(Optional.of(pending));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(new MockHttpServletRequest(), response, google("sub-p", "p@example.test", true));
+
+        assertEquals("https://app.example.test/login?error=ACCOUNT_NOT_VERIFIED", response.getRedirectedUrl());
+        verify(userRepository, never()).save(any());
+        verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    void mixedCaseGoogleEmailLinksExistingLowerCaseAccount() throws Exception {
+        User local = User.builder().id(10L).email("mixed@example.test").fullName("M").role("ROLE_STUDENT")
+                .enabled(true).build();
+        when(userRepository.findByGoogleId("sub-m")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("mixed@example.test")).thenReturn(Optional.of(local));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(jwtService.generateToken(anyMap(), any())).thenReturn("t");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(new MockHttpServletRequest(), response, google("sub-m", " Mixed@Example.TEST ", true));
+
+        assertEquals("sub-m", local.getGoogleId());
+        verify(userRepository, never()).save(argThat(u -> u != local));
+        assertEquals("https://app.example.test/oauth2/success#token=t", response.getRedirectedUrl());
+    }
+
+    @Test
     void failureRedirectsToLoginWithError() throws Exception {
         MockHttpServletResponse response = new MockHttpServletResponse();
         handler.onAuthenticationFailure(new MockHttpServletRequest(), response, new BadCredentialsException("denied"));

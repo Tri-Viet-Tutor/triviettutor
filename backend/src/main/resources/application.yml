@@ -7,6 +7,11 @@ spring:
     name: viettritutor-backend
   profiles:
     active: ${APP_PROFILE:dev}
+  servlet:
+    multipart:
+      # Avatar uploads allow up to 2 MB (AvatarServiceImpl); Spring's default is 1 MB.
+      max-file-size: 2MB
+      max-request-size: 3MB
   mail:
     host: ${SPRING_MAIL_HOST:smtp.gmail.com}
     port: ${SPRING_MAIL_PORT:587}

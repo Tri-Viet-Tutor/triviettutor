@@ -32,29 +32,23 @@ public class AvatarServiceImpl implements AvatarService {
     @Transactional
     public AvatarResponse updateAvatar(User principal, MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Please select an image."
-            );
+            throw new BusinessException(ErrorCode.INVALID_AVATAR);
         }
 
         if (file.getSize() > MAX_SIZE) {
-            throw new IllegalArgumentException(
-                    "Avatar must not exceed 2 MB."
-            );
+            throw new BusinessException(ErrorCode.AVATAR_TOO_LARGE);
         }
 
         String contentType = file.getContentType();
 
         if (contentType == null || !ALLOWED_TYPES.contains(contentType)) {
-            throw new IllegalArgumentException(
-                    "Only PNG and JPEG images are allowed."
-            );
+            throw new BusinessException(ErrorCode.INVALID_AVATAR);
         }
 
         try {
             // Kiểm tra file có giải mã được thành ảnh hay không.
             if (ImageIO.read(file.getInputStream()) == null) {
-                throw new IllegalArgumentException("Invalid image file.");
+                throw new BusinessException(ErrorCode.INVALID_AVATAR);
             }
 
             User user = userRepository.findById(principal.getId())
@@ -73,9 +67,7 @@ public class AvatarServiceImpl implements AvatarService {
             );
 
         } catch (IOException e) {
-            throw new IllegalArgumentException(
-                    "Cannot read image file.", e
-            );
+            throw new BusinessException(ErrorCode.INVALID_AVATAR);
         }
     }
 
