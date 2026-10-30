@@ -1,21 +1,25 @@
 package com.viettritutor.service.impl;
 
+import com.viettritutor.common.exception.BusinessException;
+import com.viettritutor.common.exception.ErrorCode;
 import com.viettritutor.dto.rating.TutorRatingRequest;
 import com.viettritutor.dto.rating.TutorRatingResponse;
 import com.viettritutor.dto.rating.TutorRatingSummaryResponse;
 import com.viettritutor.entity.TutorRating;
 import com.viettritutor.entity.User;
+import com.viettritutor.enums.EnrollmentStatus;
+import com.viettritutor.repository.EnrollmentRepository;
 import com.viettritutor.repository.TutorRatingRepository;
 import com.viettritutor.repository.UserRepository;
 import com.viettritutor.service.TutorRatingService;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -24,8 +28,11 @@ import java.util.List;
 @Transactional
 public class TutorRatingServiceImpl implements TutorRatingService {
 
+    private static final String ROLE_TUTOR = "ROLE_TUTOR";
+
     private final TutorRatingRepository tutorRatingRepository;
     private final UserRepository userRepository;
+    private final EnrollmentRepository enrollmentRepository;
 
     @Override
     public TutorRatingResponse createRating(
@@ -34,25 +41,20 @@ public class TutorRatingServiceImpl implements TutorRatingService {
             TutorRatingRequest request
     ) {
         User student = findUserByEmail(studentEmail);
-        User tutor = findUserById(tutorId);
+        User tutor = findTutorById(tutorId);
 
-        if (student.getId().equals(tutor.getId())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "You cannot rate yourself"
-            );
+        if (tutorRatingRepository.existsByStudent_IdAndTutor_Id(student.getId(), tutorId)) {
+            throw new BusinessException(ErrorCode.RATING_ALREADY_EXISTS);
         }
 
-        if (tutorRatingRepository
-                .existsByStudent_IdAndTutor_Id(student.getId(), tutorId)) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "You have already rated this tutor"
-            );
+        // Only students actually taught by this tutor may rate: an ACTIVE enrollment in a
+        // class the tutor is or was assigned to (a replaced tutor still taught the class).
+        // Enrollments stay ACTIVE after the class completes, so finished classes count too.
+        boolean taught = enrollmentRepository.existsStudentTaughtByTutor(
+                student.getId(), tutorId, EnrollmentStatus.ACTIVE);
+        if (!taught) {
+            throw new BusinessException(ErrorCode.RATING_NOT_ELIGIBLE);
         }
-
-        // TODO: Verify that the student has completed
-        // at least one session with this tutor.
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -65,7 +67,12 @@ public class TutorRatingServiceImpl implements TutorRatingService {
                 .updatedAt(now)
                 .build();
 
-        return toResponse(tutorRatingRepository.save(rating));
+        try {
+            return toResponse(tutorRatingRepository.saveAndFlush(rating));
+        } catch (DataIntegrityViolationException ex) {
+            // Concurrent duplicate hit uk_tutor_review_student_tutor
+            throw new BusinessException(ErrorCode.RATING_ALREADY_EXISTS);
+        }
     }
 
     @Override
@@ -75,14 +82,7 @@ public class TutorRatingServiceImpl implements TutorRatingService {
             TutorRatingRequest request
     ) {
         User student = findUserByEmail(studentEmail);
-        TutorRating rating = findRatingById(ratingId);
-
-        if (!rating.getStudent().getId().equals(student.getId())) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "You can only update your own rating"
-            );
-        }
+        TutorRating rating = findOwnedRating(ratingId, student);
 
         rating.setRating(request.rating());
         rating.setComment(request.comment());
@@ -94,22 +94,13 @@ public class TutorRatingServiceImpl implements TutorRatingService {
     @Override
     public void deleteMyRating(Long ratingId, String studentEmail) {
         User student = findUserByEmail(studentEmail);
-        TutorRating rating = findRatingById(ratingId);
-
-        if (!rating.getStudent().getId().equals(student.getId())) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "You can only delete your own rating"
-            );
-        }
-
-        tutorRatingRepository.delete(rating);
+        tutorRatingRepository.delete(findOwnedRating(ratingId, student));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<TutorRatingResponse> getRatingsByTutor(Long tutorId) {
-        findUserById(tutorId);
+        findTutorById(tutorId);
 
         return tutorRatingRepository
                 .findAllByTutor_IdOrderByCreatedAtDesc(tutorId)
@@ -121,64 +112,51 @@ public class TutorRatingServiceImpl implements TutorRatingService {
     @Override
     @Transactional(readOnly = true)
     public TutorRatingSummaryResponse getTutorRatingSummary(Long tutorId) {
-        findUserById(tutorId);
+        findTutorById(tutorId);
 
-        Double average = tutorRatingRepository
-                .findAverageRatingByTutorId(tutorId);
-
+        Double average = tutorRatingRepository.findAverageRatingByTutorId(tutorId);
         long total = tutorRatingRepository.countByTutor_Id(tutorId);
 
         BigDecimal averageRating = average == null
                 ? BigDecimal.ZERO
-                : BigDecimal.valueOf(average).setScale(2, java.math.RoundingMode.HALF_UP);
+                : BigDecimal.valueOf(average).setScale(2, RoundingMode.HALF_UP);
 
-        return new TutorRatingSummaryResponse(
-                tutorId,
-                averageRating,
-                total
-        );
+        return new TutorRatingSummaryResponse(tutorId, averageRating, total);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public TutorRatingResponse getMyRating(
-            Long tutorId,
-            String studentEmail
-    ) {
+    public TutorRatingResponse getMyRating(Long tutorId, String studentEmail) {
         User student = findUserByEmail(studentEmail);
 
         TutorRating rating = tutorRatingRepository
                 .findByStudent_IdAndTutor_Id(student.getId(), tutorId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Rating not found"
-                ));
+                .orElseThrow(() -> new BusinessException(ErrorCode.RATING_NOT_FOUND));
 
         return toResponse(rating);
     }
 
     private User findUserByEmail(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "User not found"
-                ));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 
-    private User findUserById(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "User not found"
-                ));
+    private User findTutorById(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        if (!ROLE_TUTOR.equals(user.getRole())) {
+            throw new BusinessException(ErrorCode.USER_NOT_TUTOR);
+        }
+        return user;
     }
 
-    private TutorRating findRatingById(Long ratingId) {
-        return tutorRatingRepository.findById(ratingId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Rating not found"
-                ));
+    private TutorRating findOwnedRating(Long ratingId, User student) {
+        TutorRating rating = tutorRatingRepository.findById(ratingId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RATING_NOT_FOUND));
+        if (!rating.getStudent().getId().equals(student.getId())) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+        return rating;
     }
 
     private TutorRatingResponse toResponse(TutorRating rating) {

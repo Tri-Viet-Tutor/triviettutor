@@ -20,6 +20,7 @@ import type {
   SessionResponse,
   SubstituteRequest,
   UpdateTutorProfileRequest,
+  UpdateUserStatusRequest,
 } from "@/interfaces/api";
 import { api, unwrap } from "@/services/api";
 
@@ -44,6 +45,11 @@ export async function createTutor(request: CreateTutorRequest): Promise<MeRespon
 /** PUT /admin/users/{userId}/tutor-profile — sửa lương, thù lao và giới thiệu của một gia sư */
 export async function updateTutorProfile(userId: number, request: UpdateTutorProfileRequest): Promise<MeResponse> {
   return unwrap(await api.put<ApiResponse<MeResponse>>(`/admin/users/${userId}/tutor-profile`, request));
+}
+
+/** PATCH /admin/users/{userId}/status — khóa (true) / mở khóa (false) tài khoản; không tự khóa chính mình được */
+export async function updateUserStatus(userId: number, request: UpdateUserStatusRequest): Promise<AdminUserResponse> {
+  return unwrap(await api.patch<ApiResponse<AdminUserResponse>>(`/admin/users/${userId}/status`, request));
 }
 
 // ── Buổi học ─────────────────────────────────────────────────────────────────
