@@ -136,6 +136,7 @@ class AttendanceLockJobTest {
         @Mock private LeaveRequestRepository leaveRequestRepository;
         @Mock private SessionOperationSupport sessionOperationSupport;
         @Mock private EntityManager entityManager;
+        @Mock private UserRepository userRepository;
 
         private AttendanceService attendanceService;
 
@@ -152,6 +153,7 @@ class AttendanceLockJobTest {
                     sessionOperationSupport,
                     Optional.empty(),
                     entityManager,
+                    userRepository,
                     CLOCK
             );
         }

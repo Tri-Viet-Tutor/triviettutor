@@ -32,6 +32,7 @@ public class AttendanceServiceImpl implements AttendanceService {
     private final SessionOperationSupport operations;
     private final Optional<PayrollGuard> payrollGuard;
     private final EntityManager entityManager;
+    private final UserRepository users;
     private final Clock clock;
 
     @Override
@@ -78,6 +79,12 @@ public class AttendanceServiceImpl implements AttendanceService {
                     AttendanceRecord.builder().sessionId(sessionId).studentId(item.studentId()).build());
             writeRecord(session, record, item.status(), item.note(), item.arrivedAt(), actor,
                     auditReason(input.reason(), "Manual attendance submission"), AttendanceChangeType.RECORD);
+        }
+        for (Long studentId : excusedStudents(sessionId)) {
+            if (submitted.contains(studentId) || existing.containsKey(studentId) || !roster.contains(studentId)) continue;
+            AttendanceRecord record = AttendanceRecord.builder().sessionId(sessionId).studentId(studentId).build();
+            writeRecord(session, record, AttendanceStatus.EXCUSED, null, null, actor,
+                    "Excused by approved student leave", AttendanceChangeType.RECORD);
         }
         if (!isAdmin(actor) || Boolean.TRUE.equals(input.teachingConfirmed())) {
             confirmTeaching(session, actor, auditReason(input.reason(), "Tutor attested teaching through manual attendance"));
@@ -353,6 +360,20 @@ public class AttendanceServiceImpl implements AttendanceService {
                 onlyStudentId == null && session.isAttendanceNeedsReview(), visible,
                 visible.stream().filter(id -> !recorded.contains(id)).toList(),
                 all.stream().filter(record -> onlyStudentId == null || record.getStudentId().equals(onlyStudentId))
-                        .map(record -> AttendanceRecordResponse.from(record, locked)).toList());
+                        .map(record -> AttendanceRecordResponse.from(record, locked)).toList(),
+                studentNames(visible),
+                excusedStudents(session.getId()).stream().filter(visible::contains).toList());
+    }
+
+    private List<Long> excusedStudents(Long sessionId) {
+        return leaves.findBySessionIdAndStatusOrderByRequestedAtAscIdAsc(sessionId, LeaveRequestStatus.APPROVED).stream()
+                .filter(request -> "ROLE_STUDENT".equals(request.getRequesterRole())
+                        && request.getResolution() == LeaveResolution.EXCUSED)
+                .map(LeaveRequest::getRequesterId).distinct().toList();
+    }
+
+    private Map<Long, String> studentNames(List<Long> ids) {
+        if (ids.isEmpty()) return Map.of();
+        return users.findAllById(ids).stream().collect(Collectors.toMap(User::getId, User::getFullName));
     }
 }

@@ -5,6 +5,10 @@ server:
 spring:
   application:
     name: viettritutor-backend
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
   profiles:
     active: ${APP_PROFILE:dev}
   mail:

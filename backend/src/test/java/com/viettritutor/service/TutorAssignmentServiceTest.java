@@ -85,6 +85,7 @@ class TutorAssignmentServiceTest {
                 sessionRepository,
                 conflictService,
                 scheduleService,
+                org.mockito.Mockito.mock(ClassDiscountSettlementService.class),
                 FIXED_CLOCK
         );
 

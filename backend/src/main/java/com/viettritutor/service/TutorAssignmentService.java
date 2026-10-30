@@ -10,4 +10,5 @@ public interface TutorAssignmentService {
     AssignmentResponse assign(Long classId, Long tutorId, User admin);
     AssignmentResponse reassign(Long classId, Long tutorId, String reason, User admin);
     List<AvailableTutorResponse> availableTutors(Long classId);
+    List<AvailableTutorResponse> availableSubstitutes(Long sessionId);
 }

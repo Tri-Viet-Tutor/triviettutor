@@ -6,6 +6,7 @@ import com.viettritutor.dto.assignment.*;
 import com.viettritutor.entity.*;
 import com.viettritutor.enums.*;
 import com.viettritutor.repository.*;
+import com.viettritutor.service.ClassDiscountSettlementService;
 import com.viettritutor.service.ClassScheduleService;
 import com.viettritutor.service.ConflictValidationService;
 import com.viettritutor.service.TutorAssignmentService;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.*;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +33,7 @@ public class TutorAssignmentServiceImpl implements TutorAssignmentService {
     private final SessionRepository sessionRepository;
     private final ConflictValidationService conflictService;
     private final ClassScheduleService scheduleService;
+    private final ClassDiscountSettlementService discountSettlement;
     private final Clock clock;
 
     @Override
@@ -53,7 +56,10 @@ public class TutorAssignmentServiceImpl implements TutorAssignmentService {
         requireFutureSessions(sessions);
         conflictService.assertTutorAvailable(tutorId, sessions);
         updateSessions(sessions, tutorId, null);
-        if (confirm) classGroup.setStatus(ClassStatus.ASSIGNED);
+        if (confirm) {
+            classGroup.setStatus(ClassStatus.ASSIGNED);
+            discountSettlement.settle(classGroup);
+        }
         return createAssignment(classGroup, tutor, admin, null);
     }
 
@@ -101,12 +107,28 @@ public class TutorAssignmentServiceImpl implements TutorAssignmentService {
         Long primaryTutorId = assignmentRepository.findByClassGroupIdAndStatus(classId, AssignmentStatus.ACTIVE)
                 .map(TutorAssignment::getTutorId).orElse(null);
         List<Session> requested = future.stream().filter(session -> followsPrimaryTutor(session, primaryTutorId)).toList();
-        List<User> tutors = userRepository.findByRoleOrderByIdAsc("ROLE_TUTOR");
+        return rank(userRepository.findByRoleOrderByIdAsc("ROLE_TUTOR"), requested, slot -> true);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AvailableTutorResponse> availableSubstitutes(Long sessionId) {
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));
+        Long teacher = session.getActualTutorId() != null ? session.getActualTutorId() : session.getScheduledTutorId();
+        List<User> tutors = userRepository.findByRoleOrderByIdAsc("ROLE_TUTOR").stream()
+                .filter(tutor -> !tutor.getId().equals(teacher)).toList();
+        return rank(tutors, List.of(session), slot -> slot.getAvailableDate().equals(session.getSessionDate()));
+    }
+
+    private List<AvailableTutorResponse> rank(List<User> tutors, List<Session> requested,
+                                              Predicate<TutorAvailability> shownAvailability) {
         if (tutors.isEmpty()) {
             return List.of();
         }
         Map<Long, List<TutorAvailability>> availabilityByTutor = availabilityRepository
                 .findByTutorIdIn(tutors.stream().map(User::getId).toList()).stream()
+                .filter(shownAvailability)
                 .collect(Collectors.groupingBy(TutorAvailability::getTutorId));
         return tutors.stream().map(tutor -> {
             var availability = availabilityByTutor.getOrDefault(tutor.getId(), List.of()).stream()

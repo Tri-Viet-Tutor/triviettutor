@@ -89,6 +89,8 @@ public class SecurityConfig {
                         // Catalog (courses on sale, open classes, subjects) is public so guests can browse before signing up.
                         // An invalid or expired token is still rejected with 401 by JwtAuthFilter.
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalog/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/files/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/users/*/avatar").permitAll()
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
                         // Everything else requires authentication
                         .anyRequest().authenticated()
