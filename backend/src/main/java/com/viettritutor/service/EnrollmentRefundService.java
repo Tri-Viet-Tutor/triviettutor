@@ -30,7 +30,7 @@ public class EnrollmentRefundService {
     private final WalletService wallet;
 
     @Transactional
-    public EnrollmentResponse cancel(Long enrollmentId, String reason, User student) {
+    public void cancel(Long enrollmentId, String reason, User student) {
         support.student(student);
         Enrollment enrollment = find(enrollmentId);
         support.owner(enrollment.getStudentId(), student);
@@ -39,11 +39,10 @@ public class EnrollmentRefundService {
         entityManager.refresh(enrollment, LockModeType.PESSIMISTIC_WRITE);
         if (enrollment.getStatus() != EnrollmentStatus.ACTIVE) {
             if (!Objects.equals(enrollment.getCancellationReason(), reason.trim())) throw new BusinessException(ErrorCode.REFUND_ALREADY_SETTLED);
-            return EnrollmentResponse.from(enrollment);
+            return;
         }
         if (!support.fullRefundRequired(classGroup)) throw new BusinessException(ErrorCode.REFUND_NOT_ALLOWED);
         settle(enrollment, 100, reason, student);
-        return EnrollmentResponse.from(enrollment);
     }
 
     @Transactional

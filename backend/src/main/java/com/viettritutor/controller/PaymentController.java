@@ -27,6 +27,7 @@ import java.time.LocalDate;
 public class PaymentController {
     private final PaymentIntentService intents;
     private final PaymentReadService reads;
+    private final VnpayPaymentService vnpay;
 
     @PostMapping("/payment-intents")
     @ResponseStatus(HttpStatus.CREATED)
@@ -47,6 +48,15 @@ public class PaymentController {
                                                             @RequestHeader(value = "Idempotency-Key", required = false) String key,
                                                             @CurrentUser User student) {
         return ApiResponse.ok(intents.confirm(intentId, key, student));
+    }
+
+    @PostMapping("/payment-intents/{intentId}/reconcile")
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(summary = "Ask VNPay for the result of an owned tuition payment whose confirmation has not arrived",
+            description = "Queries VNPay querydr and, when VNPay reports a completed payment, settles it exactly like the IPN. "
+                    + "Safe to repeat: an already confirmed intent is returned unchanged; a pending result changes nothing.")
+    public ApiResponse<PaymentIntentDetailResponse> reconcile(@PathVariable @Min(1) Long intentId, @CurrentUser User student) {
+        return ApiResponse.ok(vnpay.reconcile(intentId, student));
     }
 
     @GetMapping("/admin/payments")

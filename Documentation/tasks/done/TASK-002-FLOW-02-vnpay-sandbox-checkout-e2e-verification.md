@@ -5,9 +5,9 @@ flow: FLOW-02-ENROLLMENT-PAYMENT
 step_in_flow: Step 2 of 4 (Enrollment & Checkout Integrity)
 assigned_to: backend-dev
 reviewer: tech-lead
-status: TODO
+status: DONE
 created_at: 2026-10-25
-updated_at: 2026-10-25
+updated_at: 2026-10-29
 inputs:
   - Documentation/01-Business-Logic/02-Pricing-and-Subscription-Rules.md
   - Documentation/01-Business-Logic/03-Scheduling-and-Conflict-Validation.md
@@ -28,19 +28,26 @@ dependencies:
 - **Next Step Triggered**: `TASK-003`
 
 ## 2. Acceptance Criteria (Product Owner)
-- [ ] Student cannot initiate payment intent if their existing active sessions overlap by $\ge 1$ minute with the target class schedule (`BR-03.31`).
-- [ ] Pricing calculation adheres strictly to the progressive enrollment discount matrix:
+- [x] Student cannot initiate payment intent if their existing active sessions overlap by $\ge 1$ minute with the target class schedule (`BR-03.31`).
+- [x] Pricing calculation adheres strictly to the progressive enrollment discount matrix:
   - 1 student (`ONE_ON_ONE`): 0% discount ($100\% \times P_{\text{1on1}}$).
   - 2–3 students: 20% discount ($80\% \times P_{\text{1on1}}$).
   - 4–5 students: 35% discount ($65\% \times P_{\text{1on1}}$).
   - 6–8 students: 40% discount ($60\% \times P_{\text{1on1}}$).
-- [ ] Successful VNPay IPN or Mock confirmation atomically creates an `Enrollment` with status `ACTIVE` and increments class `currentStudents`.
-- [ ] If class reaches capacity (1 for `ONE_ON_ONE`, 8 for `GROUP`), subsequent checkout attempts are rejected with `CLASS_FULL`.
+- [x] Successful VNPay IPN or Mock confirmation atomically creates an `Enrollment` with status `ACTIVE` and increments class `currentStudents`.
+- [x] If class reaches capacity (1 for `ONE_ON_ONE`, 8 for `GROUP`), subsequent checkout attempts are rejected with `CLASS_FULL`.
 
 ## 3. Technical Constraints (Tech Lead)
 - Idempotency key verification on payment webhooks to prevent duplicate enrollment creation on retried IPN calls.
 - Strict HMAC-SHA512 checksum validation for VNPay sandbox callbacks.
 - Retrieve VNPay hash secrets only from environment variables (`VNPAY_HASH_SECRET`).
+
+## 3a. Completion Notes (2026-10-29, branch `fix/flows/enrollment-payment`)
+- Overlap pre-validation runs in `EnrollmentPaymentSupport.admission` (via `ConflictValidationService.checkStudent`) on quote, VNPay start, wallet/mock confirm and IPN.
+- Discount matrix lives in `PricingService`; a GROUP class's first seat uses the documented provisional 20%. Wallet tuition and cart orders now charge the same discounted amount (they previously used the undiscounted price), and the quoted rate is stored on the intent (V23) so the IPN records the rate behind the fee.
+- There is no `currentStudents` column: class size is derived from active learning schedules, which the enrollment transaction creates atomically.
+- Lost IPN recovery: `POST /payment-intents/{id}/reconcile` (VNPay querydr, same settlement code as the IPN); covered by `EnrollmentPaymentFlowTest`.
+- Students now see refund status and whether self-cancel is allowed (BR-02.32).
 
 ## 4. Blocker & Escalation Section
 - Status: CLEAR
@@ -48,10 +55,10 @@ dependencies:
 - PO/BA Preliminary Decision & Proposal: Multi-class cart checkout is deferred to post-MVP; single-class payment intent is the canonical payment flow.
 
 ## 5. Work Execution Checklist (Assignee)
-- [ ] Audit `PaymentIntentService` conflict pre-validation logic.
-- [ ] Execute `VnpayPaymentIntegrationTest` to ensure HMAC validation and transaction state transitions.
-- [ ] Verify frontend checkout handling for error responses in `CheckoutFlow.tsx`.
-- [ ] Verify test suite passes with `mvn test-compile`.
+- [x] Audit `PaymentIntentService` conflict pre-validation logic.
+- [x] Execute `VnpayPaymentIntegrationTest` to ensure HMAC validation and transaction state transitions.
+- [x] Verify frontend checkout handling for error responses in `CheckoutFlow.tsx`.
+- [x] Verify test suite passes with `mvn test-compile`.
 
 ## 6. Review & Sign-Off (Reviewer)
 - [ ] Idempotency on callback validated.

@@ -17,6 +17,7 @@ import {
   getTuitionClass,
   listTuitionClasses,
   quoteTuition,
+  reconcileIntent,
   startVnpay,
   verifyVnpayReturn,
 } from "@/services/tuitionPaymentService";
@@ -231,6 +232,14 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
       window.location.assign(value.paymentUrl);
     },
   });
+  // IPN chưa về (máy chủ ngủ, sai URL...): hỏi thẳng VNPay kết quả giao dịch rồi ghi danh như IPN
+  const recheck = useMutation({
+    mutationFn: () => reconcileIntent(intentId!),
+    onSuccess: (value) => {
+      cache.setQueryData(["tuition-intent", userId, value.intent.intentId], value);
+      void cache.invalidateQueries({ queryKey: ["tuition-classes"] });
+    },
+  });
   const payWallet = useMutation({
     mutationFn: async () => {
       await walletService.payTuition(intentId!, `wallet-payment-${intentId}`);
@@ -252,16 +261,23 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
     resume.reset();
     cancel.reset();
     payWallet.reset();
+    recheck.reset();
     navigate(ROUTES.studentCheckout, { replace: true });
     void cache.invalidateQueries({ queryKey: ["tuition-classes"] });
   }
-  const paymentError = start.error ?? resume.error ?? payWallet.error ?? cancel.error ?? returned.error ?? detail.error;
+  const paymentError = start.error ?? resume.error ?? payWallet.error ?? cancel.error ?? recheck.error ?? returned.error ?? detail.error;
+  // Same cases the backend reconcile can still settle: nothing paid yet, or only a failed VNPay result recorded
+  const canRecheck =
+    Boolean(intentId) &&
+    (state?.payment
+      ? state.payment.method === "VNPAY" && state.payment.status === "FAILED"
+      : paymentMethod === "VNPAY" && (state?.intent.status === "PENDING" || state?.intent.status === "EXPIRED"));
   const paid = state?.payment;
   const outcome =
     paid?.status === "REQUIRES_REFUND"
       ? "VNPay đã ghi nhận thanh toán. Yêu cầu cần hoàn tiền; trung tâm sẽ xử lý."
       : paid?.status === "FAILED"
-        ? "Thanh toán không thành công. Bạn có thể tạo yêu cầu mới."
+        ? "Thanh toán không thành công. Bạn có thể tạo yêu cầu mới, hoặc bấm “Kiểm tra lại” nếu tài khoản đã bị trừ tiền."
         : paid?.status === "REFUNDED"
           ? "Học phí đã được hoàn lại."
           : paid?.status === "PARTIALLY_REFUNDED"
@@ -269,7 +285,7 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
             : state?.enrollment?.status === "ACTIVE"
               ? "Thanh toán thành công. Bạn đã được ghi danh vào lớp."
               : state?.intent.status === "EXPIRED"
-                ? "Yêu cầu đã hết hạn hoặc được hủy; chỗ giữ đã được giải phóng."
+                ? "Yêu cầu đã hết hạn hoặc được hủy; chỗ giữ đã được giải phóng. Nếu bạn đã thanh toán trên VNPay, bấm “Kiểm tra lại”."
                 : null;
 
   return (
@@ -399,6 +415,19 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
             <button onClick={() => void detail.refetch()} className={PORTAL_BTN_SECONDARY}>
               Kiểm tra trạng thái
             </button>
+          )}
+          {canRecheck && (
+            <div className="space-y-1">
+              <button onClick={() => recheck.mutate()} disabled={recheck.isPending} className={PORTAL_BTN_SECONDARY}>
+                {recheck.isPending ? "Đang hỏi VNPay…" : "Kiểm tra lại"}
+              </button>
+              <p className="text-xs text-brand-muted">
+                Đã thanh toán nhưng chưa được ghi danh? Hệ thống sẽ hỏi lại VNPay kết quả giao dịch.
+              </p>
+              {recheck.isSuccess && recheck.data.intent.status !== "COMPLETED" && (
+                <p className="text-sm text-brand-muted">VNPay chưa ghi nhận giao dịch thành công cho yêu cầu này.</p>
+              )}
+            </div>
           )}
           {(!pending || detail.isError || returned.isError) && (
             <button onClick={reset} className={PORTAL_BTN_SECONDARY}>
