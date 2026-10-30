@@ -130,8 +130,7 @@ public class TutorRatingServiceImpl implements TutorRatingService {
 
         BigDecimal averageRating = average == null
                 ? BigDecimal.ZERO
-                : BigDecimal.valueOf(average)
-                .setScale(2, java.math.RoundingMode.HALF_UP);
+                : BigDecimal.valueOf(average).setScale(2, java.math.RoundingMode.HALF_UP);
 
         return new TutorRatingSummaryResponse(
                 tutorId,

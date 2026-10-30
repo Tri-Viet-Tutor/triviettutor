@@ -4,11 +4,13 @@ import com.viettritutor.common.api.ApiResponse;
 import com.viettritutor.common.api.PageResponse;
 import com.viettritutor.dto.user.*;
 import com.viettritutor.service.AdminUserService;
+import com.viettritutor.service.AvatarService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final AdminUserService adminUserService;
+    private final AvatarService avatarService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -66,5 +69,19 @@ public class UserController {
         return ApiResponse.ok(
                 adminUserService.updateTutorProfile(userId, request)
         );
+    }
+
+    @GetMapping("/users/{userId}/avatar")
+    @Operation(summary = "Get user avatar")
+    public ResponseEntity<byte[]> getAvatar(
+            @PathVariable Long userId
+    ) {
+        AvatarImageResponse avatar = avatarService.getAvatar(userId);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(
+                        avatar.contentType()
+                ))
+                .body(avatar.data());
     }
 }

@@ -49,6 +49,9 @@ public class UserProfileServiceImpl implements UserProfileService {
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
+                user.getAvatar() != null
+                        ? "/api/v1/users/" + user.getId() + "/avatar"
+                        : null,
                 user.getRole(),
                 user.getCreatedAt(),
                 profile

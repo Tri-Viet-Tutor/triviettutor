@@ -86,8 +86,8 @@ public interface SessionRepository extends JpaRepository<Session, Long>, JpaSpec
 
     @Query("""
             select s from Session s
-            where (:from is null or s.sessionDate >= :from)
-              and (:to is null or s.sessionDate <= :to)
+            where (cast(:from as LocalDate) is null or s.sessionDate >= :from)
+              and (cast(:to as LocalDate) is null or s.sessionDate <= :to)
               and (:status is null or s.status = :status)
               and (:classGroupId is null or s.classGroupId = :classGroupId)
               and (
@@ -112,8 +112,8 @@ public interface SessionRepository extends JpaRepository<Session, Long>, JpaSpec
 
     @Query("""
             select s from Session s
-            where (:from is null or s.sessionDate >= :from)
-              and (:to is null or s.sessionDate <= :to)
+            where (cast(:from as LocalDate) is null or s.sessionDate >= :from)
+              and (cast(:to as LocalDate) is null or s.sessionDate <= :to)
               and (:status is null or s.status = :status)
               and (:classGroupId is null or s.classGroupId = :classGroupId)
               and (:tutorId is null or s.scheduledTutorId = :tutorId or s.actualTutorId = :tutorId)

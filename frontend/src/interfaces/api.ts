@@ -129,6 +129,8 @@ export type ErrorCode =
   | "ORDER_EXPIRED"
   | "ORDER_NOT_PENDING"
   | "PAYMENT_MOCK_DISABLED"
+  | "ASSISTANT_RATE_LIMITED"
+  | "ASSISTANT_UNAVAILABLE"
   | "INTERNAL_ERROR";
 
 // ── Người dùng & đăng nhập (dto.auth, entity.User) ───────────────────────────
@@ -398,7 +400,7 @@ export interface MeetingParticipantLogDto {
   eventHistory?: Array<{
     event: string;
     timestamp: string;
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
   }>;
 }
 

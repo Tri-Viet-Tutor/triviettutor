@@ -392,6 +392,74 @@
   }
 }
 
+/*7. Chú kiến mở trợ lý AI (components/assistant/ChatWidget.tsx) */
+/* Nhún nhẹ liên tục; mỗi 6 giây nhảy lên lắc mình một cái. Câu "Hỏi mình nhé!" hiện mỗi 9 giây. */
+
+.chat-pet-body {
+  transform-origin: 50% 100%;
+  animation: pet-hop 6s ease-in-out infinite;
+}
+.chat-pet:hover .chat-pet-body,
+.chat-pet[aria-expanded="true"] .chat-pet-body {
+  animation-play-state: paused;
+}
+.chat-pet-bubble {
+  opacity: 0;
+  animation: pet-say 9s ease-out 1.5s infinite;
+}
+.chat-pet:hover .chat-pet-bubble {
+  opacity: 1;
+  animation: none;
+}
+
+@keyframes pet-hop {
+  0%,
+  30%,
+  60%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  15%,
+  45% {
+    transform: translateY(-3px) scale(1, 1);
+  }
+  /* Nhún xuống lấy đà, bật lên, lắc qua lại rồi đáp */
+  68% {
+    transform: translateY(0) scale(1.08, 0.9);
+  }
+  75% {
+    transform: translateY(-16px) scale(0.95, 1.06) rotate(-8deg);
+  }
+  80% {
+    transform: translateY(-16px) rotate(8deg);
+  }
+  85% {
+    transform: translateY(-8px) rotate(-5deg);
+  }
+  90% {
+    transform: translateY(0) scale(1.06, 0.93);
+  }
+  95% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+@keyframes pet-say {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.8);
+  }
+  5%,
+  40% {
+    opacity: 1;
+    transform: none;
+  }
+  46% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.8);
+  }
+}
+
 /*. Người dùng bật "giảm chuyển động": tắt hết, hiện sẵn nội dung */
 
 @media (prefers-reduced-motion: reduce) {
@@ -408,7 +476,9 @@
   .ant-lane.is-active .ant-body,
   .ant-lane.is-active .ant-legs-a,
   .ant-lane.is-active .ant-legs-b,
-  .ant-lane.is-active .ant-bubble {
+  .ant-lane.is-active .ant-bubble,
+  .chat-pet-body,
+  .chat-pet-bubble {
     animation: none;
   }
 
