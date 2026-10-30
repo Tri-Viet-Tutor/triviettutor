@@ -116,6 +116,7 @@ public class HomeworkAccessService {
     public String resourceUrl(String value) {
         String normalized = text(value);
         if (normalized == null) return null;
+        if (normalized.matches("/api/v1/files/[0-9a-fA-F-]{36}(\\?name=[^\\s]{0,1000})?")) return normalized;
         try {
             URI uri = new URI(normalized);
             if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null || uri.getUserInfo() != null)

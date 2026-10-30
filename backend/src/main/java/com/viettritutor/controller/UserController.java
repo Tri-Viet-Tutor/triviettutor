@@ -86,4 +86,20 @@ public class UserController {
                 adminUserService.updateTutorProfile(userId, request)
         );
     }
+
+    @PutMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Update a user's name and email", description = "Admin only. Email must stay unique.")
+    public ApiResponse<AdminUserResponse> updateUser(@PathVariable Long userId, @Valid @RequestBody UpdateUserRequest request) {
+        return ApiResponse.ok(adminUserService.updateUser(userId, request));
+    }
+
+    @DeleteMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Delete a user without learning, payment or teaching history",
+            description = "Admin only. Returns 409 USER_IN_USE when other records still reference the account.")
+    public ApiResponse<Void> deleteUser(@PathVariable Long userId, @CurrentUser User admin) {
+        adminUserService.deleteUser(userId, admin.getId());
+        return ApiResponse.ok(null);
+    }
 }

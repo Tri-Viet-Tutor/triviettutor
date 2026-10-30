@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueries } from "@tanstack/react-query";
 import { FilterTabs } from "@/components/dashboard/FilterTabs";
 import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
@@ -23,11 +23,14 @@ import { ROUTES } from "@/constants/routes";
 import { useMyEnrollments, useRefreshMine } from "@/hooks/useManagementData";
 import { useMySessions } from "@/hooks/usePortalData";
 import { cancelEnrollment } from "@/services/managementService";
+import { getTuitionClass } from "@/services/tuitionPaymentService";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { formatVnd } from "@/utils/currency";
 import { formatDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 import { formatTimeRange, nextSession, splitSessions, teacherOf } from "@/utils/sessions";
 import type { EnrollmentResponse, EnrollmentStatus } from "@/interfaces/api";
+import { displayCode } from "@/utils/classes";
 
 /** Câu báo đúng với kết quả hủy: hoàn ngay (ví/mock) hay đang chờ VNPay hoàn tiền */
 function cancelNotice(result: EnrollmentResponse): string {
@@ -65,6 +68,17 @@ export function StudentEnrollmentsPage() {
   });
 
   const all = enrollments.data?.content ?? [];
+  // Tên khóa và gia sư của từng lớp đã ghi danh (GET /catalog/classes/{id})
+  const classIds = [...new Set(all.map((item) => item.classGroupId))];
+  const classDetails = useQueries({
+    queries: classIds.map((id) => ({
+      queryKey: ["catalog-class", id],
+      queryFn: () => getTuitionClass(id),
+      staleTime: 60_000,
+      retry: false,
+    })),
+  });
+  const classById = new Map(classIds.map((id, index) => [id, classDetails[index]?.data]));
   const shown = filter === "ALL" ? all : all.filter((item) => item.status === filter);
   const active = all.filter((item) => item.status === "ACTIVE");
   const paid = all.reduce((sum, item) => sum + item.feeCharged, 0);
@@ -140,7 +154,7 @@ export function StudentEnrollmentsPage() {
       ) : shown.length === 0 ? (
         <PortalEmpty
           icon="local_library"
-          title={all.length === 0 ? "Bạn chưa đăng ký lớp nào" : "Không có lớp ở trạng thái này"}
+          title={all.length === 0 ? "Bạn chưa đăng ký lớp nào." : "Không có lớp ở trạng thái này."}
           description="Chọn một khóa học đang mở và thanh toán qua VNPay để giữ chỗ trong lớp."
           action={
             <Link to={ROUTES.studentCatalog} className={PORTAL_BTN_ACCENT}>
@@ -164,9 +178,21 @@ export function StudentEnrollmentsPage() {
                     </span>
                     <div>
                       <p className="text-[12.5px] font-bold uppercase tracking-wide text-brand-orangeHover">
-                        Mã ghi danh #{item.enrollmentId}
+                        Mã ghi danh {displayCode("enrollment", item.enrollmentId)}
                       </p>
-                      <h2 className="text-[17px] font-bold text-brand-ink">Lớp #{item.classGroupId}</h2>
+                      <h2 className="text-[17px] font-bold text-brand-ink">
+                        {classById.get(item.classGroupId)?.courseName ?? `Lớp ${displayCode("class", item.classGroupId)}`}
+                      </h2>
+                      {classById.get(item.classGroupId)?.tutorName && (
+                        <p className="mt-0.5 flex items-center gap-1.5 text-[13.5px] text-brand-muted">
+                          <UserAvatar
+                            userId={classById.get(item.classGroupId)?.tutorId}
+                            name={classById.get(item.classGroupId)?.tutorName ?? ""}
+                            size={20}
+                          />
+                          Gia sư <span className="font-semibold text-brand-ink">{classById.get(item.classGroupId)?.tutorName}</span>
+                        </p>
+                      )}
                     </div>
                   </div>
                   <StatusChip tone={status.tone} icon={status.icon}>
@@ -182,7 +208,7 @@ export function StudentEnrollmentsPage() {
                     </div>
                     {item.discountRate > 0 && (
                       <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[12.5px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/15">
-                        Ưu đãi lớp nhóm −{Math.round(item.discountRate * 100)}%
+                        Đã hoàn {Math.round(item.discountRate * 100)}% vào ví
                       </span>
                     )}
                   </div>

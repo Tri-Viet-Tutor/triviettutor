@@ -2,6 +2,7 @@ import { AUTH_LABEL, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT } from "@/c
 import { SESSION_STATUS } from "@/constants/labels";
 import type { SessionFiltersProps } from "@/interfaces/admin";
 import type { SessionStatus } from "@/interfaces/api";
+import { DateField } from "@/components/ui/DateField";
 
 /** Mọi trạng thái buổi học, theo thứ tự khai báo nhãn */
 const STATUS_OPTIONS = Object.keys(SESSION_STATUS) as SessionStatus[];
@@ -18,12 +19,11 @@ export function SessionFilters({ values, tutors, onChange, onReset }: SessionFil
         <label htmlFor="filter-from" className={`mb-1.5 ${AUTH_LABEL}`}>
           Từ ngày
         </label>
-        <input
+        <DateField
           id="filter-from"
-          type="date"
           value={values.from}
           max={values.to || undefined}
-          onChange={(event) => onChange({ from: event.target.value })}
+          onChange={(value) => onChange({ from: value })}
           className={PORTAL_INPUT}
         />
       </div>
@@ -31,12 +31,11 @@ export function SessionFilters({ values, tutors, onChange, onReset }: SessionFil
         <label htmlFor="filter-to" className={`mb-1.5 ${AUTH_LABEL}`}>
           Đến ngày
         </label>
-        <input
+        <DateField
           id="filter-to"
-          type="date"
           value={values.to}
           min={values.from || undefined}
-          onChange={(event) => onChange({ to: event.target.value })}
+          onChange={(value) => onChange({ to: value })}
           className={PORTAL_INPUT}
         />
       </div>
@@ -71,7 +70,7 @@ export function SessionFilters({ values, tutors, onChange, onReset }: SessionFil
           <option value="">Tất cả</option>
           {tutors.map((tutor) => (
             <option key={tutor.id} value={tutor.id}>
-              {tutor.fullName} (#{tutor.id})
+              {tutor.fullName}
             </option>
           ))}
         </select>

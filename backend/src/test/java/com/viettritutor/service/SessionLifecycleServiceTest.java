@@ -62,7 +62,7 @@ class SessionLifecycleServiceTest {
     void setUp() {
         service = new SessionLifecycleServiceImpl(
                 repository, CLOCK, Optional.of(classLifecycle), eventPublisher,
-                classGroupRepository, Optional.of(classAuditService), classQueryService, operations,
+                classGroupRepository, Optional.of(classAuditService), Optional.empty(), classQueryService, operations,
                 classSchedule, Optional.of(payrollGuard), new TransactionTemplate(mock(PlatformTransactionManager.class)));
     }
 

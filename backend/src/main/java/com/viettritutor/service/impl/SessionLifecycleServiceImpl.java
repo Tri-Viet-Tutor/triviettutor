@@ -4,6 +4,7 @@ import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.entity.ClassGroup;
 import com.viettritutor.entity.LeaveRequest;
 import com.viettritutor.entity.Session;
+import com.viettritutor.enums.AssignmentStatus;
 import com.viettritutor.enums.ClassStatus;
 import com.viettritutor.enums.ClassType;
 import com.viettritutor.enums.LeaveResolution;
@@ -11,6 +12,7 @@ import com.viettritutor.enums.SessionChangeType;
 import com.viettritutor.enums.SessionStatus;
 import com.viettritutor.repository.ClassGroupRepository;
 import com.viettritutor.repository.SessionRepository;
+import com.viettritutor.repository.TutorAssignmentRepository;
 import com.viettritutor.service.ClassAuditService;
 import com.viettritutor.service.ClassLifecycle;
 import com.viettritutor.service.ClassQueryService;
@@ -29,6 +31,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -57,6 +60,7 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
     private final ApplicationEventPublisher eventPublisher;
     private final ClassGroupRepository classGroupRepository;
     private final Optional<ClassAuditService> classAuditService;
+    private final Optional<TutorAssignmentRepository> tutorAssignments;
     private final ClassQueryService classQueryService;
     private final SessionOperationSupport operations;
     private final ClassScheduleService classSchedule;
@@ -196,6 +200,7 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
         }
         if (students == 1 && classGroup.getClassType() == ClassType.GROUP) {
             classGroup.setStatus(ClassStatus.FAILED_TO_OPEN);
+            releaseTutor(classGroupId, "Failed to open: only 1 enrollment after deadline");
             classGroupRepository.save(classGroup);
             log.warn("Class {} failed to open: registration deadline {} crossed with only 1 enrollment. Admin remediation required (reopen, refund, or convert).",
                     classGroupId, deadline);
@@ -288,5 +293,26 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
         classLifecycle.ifPresentOrElse(
                 lifecycle -> lifecycle.markCompleted(classGroupId),
                 () -> eventPublisher.publishEvent(new ClassTeachingCompletedEvent(classGroupId)));
+    }
+
+    /** A class that failed to open may be reopened later, so its tutor and session slots are freed. */
+    private void releaseTutor(Long classGroupId, String reason) {
+        tutorAssignments.flatMap(repo -> repo.findByClassGroupIdAndStatus(classGroupId, AssignmentStatus.ACTIVE)
+                .map(assignment -> {
+                    assignment.setStatus(AssignmentStatus.TERMINATED);
+                    assignment.setTerminatedBy(assignment.getAssignedBy());
+                    assignment.setTerminatedAt(OffsetDateTime.now(clock));
+                    assignment.setTerminationReason(reason);
+                    repo.saveAndFlush(assignment);
+                    return assignment;
+                })).ifPresent(released -> {
+                    List<Session> sessions = sessionRepository.findByClassGroupIdOrderBySessionNumberAsc(classGroupId);
+                    for (Session s : sessions) {
+                        s.setScheduledTutorId(null);
+                        s.setActualTutorId(null);
+                        s.setActualTutorOverridden(false);
+                    }
+                    sessionRepository.saveAll(sessions);
+                });
     }
 }

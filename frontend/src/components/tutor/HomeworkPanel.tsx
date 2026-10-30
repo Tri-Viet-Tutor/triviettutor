@@ -89,7 +89,7 @@ export function HomeworkPanel({ sessionId, cancelled }: HomeworkPanelProps) {
                     <p className="text-[15px] font-semibold text-brand-ink">{homework.title}</p>
                     <p className="text-[13px] text-brand-muted">
                       Hạn nộp {formatDateTime(new Date(homework.dueAt))}
-                      {!beforeDeadline && " (đã quá hạn)"} · Tối đa {homework.maxScore} điểm
+                      {!beforeDeadline && " (đã quá hạn)"} - Tối đa {homework.maxScore} điểm
                     </p>
                   </div>
                   <StatusChip tone={style.tone} icon={style.icon}>

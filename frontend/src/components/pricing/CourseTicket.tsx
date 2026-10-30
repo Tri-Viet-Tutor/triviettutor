@@ -121,7 +121,7 @@ export function CourseTicket({
           >
             <Icon name="expand_more" className="text-[19px] transition-transform duration-200 group-open:rotate-180" />
             Lộ trình {course.steps.length} chặng
-            {upcoming && ` · chốt đăng ký ${formatDayMonth(upcoming.deadline)}`}
+            {upcoming && ` - chốt đăng ký ${formatDayMonth(upcoming.deadline)}`}
           </summary>
           <ol className="mt-3 space-y-2">
             {course.steps.map((step, index) => (

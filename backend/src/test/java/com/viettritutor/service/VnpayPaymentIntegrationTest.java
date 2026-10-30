@@ -262,29 +262,29 @@ class VnpayPaymentIntegrationTest {
     }
 
     @Test
-    void groupClassProgressiveDiscountMatrixAndCapacityLimit() throws Exception {
+    void groupClassChargesFullPriceAtEnrollmentAndCapacityLimit() throws Exception {
         BigDecimal base = new BigDecimal("1000000");
         ClassGroup groupClass = newGroupClass(base);
 
         BigDecimal[] expectedAmounts = {
-                new BigDecimal("800000"),
-                new BigDecimal("800000"),
-                new BigDecimal("800000"),
-                new BigDecimal("650000"),
-                new BigDecimal("650000"),
-                new BigDecimal("600000"),
-                new BigDecimal("600000"),
-                new BigDecimal("600000")
+                new BigDecimal("1000000"),
+                new BigDecimal("1000000"),
+                new BigDecimal("1000000"),
+                new BigDecimal("1000000"),
+                new BigDecimal("1000000"),
+                new BigDecimal("1000000"),
+                new BigDecimal("1000000"),
+                new BigDecimal("1000000")
         };
         BigDecimal[] expectedDiscounts = {
-                new BigDecimal("0.20"),
-                new BigDecimal("0.20"),
-                new BigDecimal("0.20"),
-                new BigDecimal("0.35"),
-                new BigDecimal("0.35"),
-                new BigDecimal("0.40"),
-                new BigDecimal("0.40"),
-                new BigDecimal("0.40")
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO
         };
 
         for (int i = 0; i < 8; i++) {

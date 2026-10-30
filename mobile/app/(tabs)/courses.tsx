@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,26 +8,50 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '@/components/common/AppHeader';
 import { CourseCard } from '@/components/common/CourseCard';
 import { BrandColors } from '@/constants/Colors';
-import { MOCK_COURSES } from '@/constants/data';
-import { DeliveryMode, GradeLevel } from '@/types';
+import { fetchOpenClasses } from '@/services/catalog';
+import { CourseItem, DeliveryMode, GradeLevel } from '@/types';
 
 export default function CoursesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGrade, setSelectedGrade] = useState<GradeLevel | 'ALL'>('ALL');
   const [selectedDelivery, setSelectedDelivery] = useState<DeliveryMode | 'ALL'>('ALL');
 
+  // Lớp đang mở đăng ký lấy từ máy chủ (GET /catalog/classes, xem được khi chưa đăng nhập)
+  const [courses, setCourses] = useState<CourseItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      setCourses(await fetchOpenClasses());
+      setLoadError(null);
+    } catch {
+      setLoadError('Không tải được danh sách lớp. Kéo xuống để thử lại.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
   const filteredCourses = useMemo(() => {
-    return MOCK_COURSES.filter((course) => {
+    const keyword = searchQuery.toLowerCase();
+    return courses.filter((course) => {
       const matchSearch =
-        course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.subjectLabel.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.tutor.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.code.toLowerCase().includes(searchQuery.toLowerCase());
+        course.title.toLowerCase().includes(keyword) ||
+        course.subjectLabel.toLowerCase().includes(keyword) ||
+        course.code.toLowerCase().includes(keyword);
 
       const matchGrade =
         selectedGrade === 'ALL' || course.gradeLevel === selectedGrade;
@@ -37,7 +61,7 @@ export default function CoursesScreen() {
 
       return matchSearch && matchGrade && matchDelivery;
     });
-  }, [searchQuery, selectedGrade, selectedDelivery]);
+  }, [courses, searchQuery, selectedGrade, selectedDelivery]);
 
   const handleResetFilters = () => {
     setSearchQuery('');
@@ -57,7 +81,7 @@ export default function CoursesScreen() {
             <Ionicons name="search" size={18} color={BrandColors.muted} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Tìm theo môn, chuyên đề, tên gia sư..."
+              placeholder="Tìm theo tên khóa, môn hoặc mã lớp..."
               placeholderTextColor={BrandColors.muted}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -140,8 +164,42 @@ export default function CoursesScreen() {
         <ScrollView
           style={styles.courseList}
           contentContainerStyle={styles.courseListContent}
-          showsVerticalScrollIndicator={false}>
-          {filteredCourses.length > 0 ? (
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                load();
+              }}
+              colors={[BrandColors.navy]}
+              tintColor={BrandColors.navy}
+            />
+          }>
+          {loading ? (
+            <View style={styles.emptyContainer}>
+              <ActivityIndicator size="large" color={BrandColors.navy} />
+              <Text style={styles.emptyDesc}>Đang tải các lớp đang mở…</Text>
+            </View>
+          ) : loadError ? (
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconBox}>
+                <Ionicons name="cloud-offline-outline" size={40} color={BrandColors.muted} />
+              </View>
+              <Text style={styles.emptyTitle}>{loadError}</Text>
+              <TouchableOpacity style={styles.resetBtn} onPress={load} activeOpacity={0.8}>
+                <Text style={styles.resetBtnText}>Thử lại</Text>
+              </TouchableOpacity>
+            </View>
+          ) : courses.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconBox}>
+                <Ionicons name="school-outline" size={40} color={BrandColors.muted} />
+              </View>
+              <Text style={styles.emptyTitle}>Hiện chưa có lớp nào mở đăng ký</Text>
+              <Text style={styles.emptyDesc}>Trung tâm sẽ mở lớp mới sớm, bạn quay lại sau nhé.</Text>
+            </View>
+          ) : filteredCourses.length > 0 ? (
             filteredCourses.map((course) => (
               <CourseCard key={course.id} course={course} />
             ))

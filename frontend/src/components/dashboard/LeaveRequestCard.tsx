@@ -5,13 +5,14 @@ import { LEAVE_RESOLUTION, LEAVE_STATUS } from "@/constants/labels";
 import { formatClockTime, formatDate, formatDayMonth, parseIsoDate, weekdayName } from "@/utils/date";
 import { formatLongDate, formatTimeRange } from "@/utils/sessions";
 import type { LeaveRequestCardProps } from "@/interfaces/portal";
+import { displayCode } from "@/utils/classes";
 
 /** Một đơn xin nghỉ: buổi nào, lý do, trạng thái duyệt và cách trung tâm xử lý. */
 export function LeaveRequestCard({ request, session, compact = false, scheduleTo }: LeaveRequestCardProps) {
   const status = LEAVE_STATUS[request.status];
   const requestedAt = new Date(request.requestedAt);
   // Có thông tin buổi thì ghi ngày giờ, không thì chỉ ghi mã buổi
-  const title = session ? `${formatLongDate(parseIsoDate(session.date))}, ${formatTimeRange(session)}` : `Buổi học #${request.sessionId}`;
+  const title = session ? `${formatLongDate(parseIsoDate(session.date))}, ${formatTimeRange(session)}` : `Buổi học ${displayCode("session", request.sessionId)}`;
 
   // Bản gọn: một dòng ngày giờ + trạng thái
   if (compact) {
@@ -34,7 +35,7 @@ export function LeaveRequestCard({ request, session, compact = false, scheduleTo
           <p className="text-[16px] font-semibold text-brand-ink">{title}</p>
           {session && (
             <p className="text-[14px] text-brand-muted">
-              Lớp #{session.classGroupId}, buổi {session.sessionNumber}
+              Lớp {displayCode("class", session.classGroupId)}, buổi {session.sessionNumber}
             </p>
           )}
         </div>

@@ -113,7 +113,7 @@ export function SubmissionList({ homework }: SubmissionListProps) {
         open={grading !== null}
         onClose={() => setGrading(null)}
         title="Chấm điểm bài làm"
-        description={grading ? `${studentLabel(grading.studentId)} · ${homework.title}. Điểm đã chấm không sửa lại được.` : undefined}
+        description={grading ? `${studentLabel(grading.studentId)} - ${homework.title}. Điểm đã chấm không sửa lại được.` : undefined}
       >
         <form noValidate onSubmit={handleSubmit} className="space-y-4">
           <div>

@@ -17,6 +17,7 @@ import { useRefreshAdmin } from "@/hooks/useAdminData";
 import { finalizePayroll } from "@/services/managementService";
 import { formatVnd } from "@/utils/currency";
 import { portalErrorMessage } from "@/utils/errors";
+import { displayCode } from "@/utils/classes";
 
 /** Tháng trước của (năm, tháng) */
 function shiftMonth(year: number, month: number, delta: number) {
@@ -156,7 +157,7 @@ export function AdminPayrollPage() {
                   <span className="font-mono">
                     {payroll.data.blockingSessionIds
                       .slice(0, 8)
-                      .map((id) => `#${id}`)
+                      .map((id) => displayCode("session", id))
                       .join(", ")}
                     {payroll.data.blockingSessionIds.length > 8 && "…"}
                   </span>
@@ -171,7 +172,7 @@ export function AdminPayrollPage() {
           {payroll.data.lines.length === 0 ? (
             <PortalEmpty
               icon="receipt_long"
-              title="Tháng này chưa có dòng lương nào"
+              title="Tháng này chưa có dòng lương nào."
               description="Chưa có gia sư nào dạy buổi học trong tháng đã chọn."
             />
           ) : (
@@ -196,7 +197,7 @@ export function AdminPayrollPage() {
                         <tr className="hover:bg-brand-tint/40">
                           <td className="px-5 py-3.5">
                             <p className="font-semibold text-brand-ink">{line.tutorName}</p>
-                            <p className="text-[12.5px] text-brand-muted">Mã #{line.tutorId}</p>
+                            <p className="text-[12.5px] text-brand-muted">Mã {displayCode("tutor", line.tutorId)}</p>
                             <button
                               type="button"
                               aria-expanded={expanded === line.tutorId}

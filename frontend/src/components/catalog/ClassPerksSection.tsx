@@ -48,7 +48,7 @@ export function ClassPerksSection() {
           </div>
           <Link
             to={ROUTES.pricing}
-            className="inline-flex shrink-0 items-center gap-1 text-[15px] font-semibold text-brand-navy underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+            className="inline-flex shrink-0 items-center gap-1 text-[15px] font-semibold text-brand-navy hover:text-brand-navyDeep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
           >
             Mua khóa học
             <Icon name="arrow_forward" className="text-[18px]" />

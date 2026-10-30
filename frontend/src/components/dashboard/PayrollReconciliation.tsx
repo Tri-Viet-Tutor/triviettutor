@@ -1,5 +1,6 @@
 import type { TeachingPeriodSummary, TeachingSessionResponse } from "@/interfaces/api";
 import { formatDate, parseIsoDate } from "@/utils/date";
+import { displayCode } from "@/utils/classes";
 
 /** Các nhóm buổi trong bảng đối soát, theo thứ tự hiển thị */
 const GROUPS: {
@@ -15,8 +16,8 @@ const GROUPS: {
 
 function sessionLine(session: TeachingSessionResponse): string {
   const time = `${session.startTime.slice(0, 5)} – ${session.endTime.slice(0, 5)}`;
-  const makeup = session.originalSessionId !== null ? ` · học bù cho #${session.originalSessionId}` : "";
-  return `${formatDate(parseIsoDate(session.date))}, ${time} · Lớp #${session.classGroupId} · Buổi #${session.sessionId}${makeup}`;
+  const makeup = session.originalSessionId !== null ? ` - học bù cho ${displayCode("session", session.originalSessionId)}` : "";
+  return `${formatDate(parseIsoDate(session.date))}, ${time} - Lớp ${displayCode("class", session.classGroupId)} - Buổi ${displayCode("session", session.sessionId)}${makeup}`;
 }
 
 /** Danh sách các buổi dạy của một dòng lương, chia theo nhóm hợp lệ / chưa chốt / hủy / được dạy thay */
@@ -39,7 +40,7 @@ export function PayrollReconciliation({ summary }: { summary: TeachingPeriodSumm
             {summary[group.key].map((session) => (
               <li key={session.sessionId} className="tabular-nums">
                 {sessionLine(session)}
-                {session.cancellationReason && <span className="text-brand-muted"> · Lý do: {session.cancellationReason}</span>}
+                {session.cancellationReason && <span className="text-brand-muted"> - Lý do: {session.cancellationReason}</span>}
               </li>
             ))}
           </ul>

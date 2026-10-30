@@ -106,8 +106,8 @@ public class EnrollmentPaymentSupport {
         }
         LocalDate start = original.stream().map(Session::getSessionDate).min(LocalDate::compareTo).orElseThrow();
         LocalDate end = original.stream().map(Session::getSessionDate).max(LocalDate::compareTo).orElseThrow();
-        BigDecimal discountRate = pricing.discount(classGroup.getClassType(), existing);
-        BigDecimal expectedAmount = pricing.estimate(course.getBasePrice1on1(), discountRate);
+        BigDecimal discountRate = BigDecimal.ZERO;
+        BigDecimal expectedAmount = course.priceFor(expectedSessions);
         return new Admission(course, List.copyOf(payable), (int) existing + 1, start, end, discountRate, expectedAmount);
     }
 

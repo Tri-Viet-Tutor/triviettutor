@@ -33,10 +33,18 @@ public class ClassResponse {
     private long reservedStudents;
     private long spotsLeft;
     private boolean full;
+    /** Học phí 1 kèm 1 cả lớp = giá mỗi buổi × số buổi của lớp */
     private BigDecimal basePrice1on1;
+    private BigDecimal pricePerSession;
     private BigDecimal estimatedFee;
     private BigDecimal discountRate;
     private String meetingUrl; // Admin responses only.
+    /** Gia sư chính đang được phân công (null nếu chưa phân công). Admin responses only. */
+    private Long tutorId;
+    private String tutorName;
+    /** Điểm đánh giá trung bình của gia sư (1-5, 2 chữ số thập phân); chưa có đánh giá thì null */
+    private BigDecimal tutorRating;
+    private long tutorRatingCount;
     private LocalDateTime createdAt;
     private List<SessionPreview> sessions;
 

@@ -6,6 +6,8 @@ import { createMakeup } from "@/services/admin";
 import { startOfToday, toIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 import type { MakeupFormProps } from "@/interfaces/admin";
+import { DateField } from "@/components/ui/DateField";
+import { TimeField } from "@/components/ui/TimeField";
 
 /** Form chọn ngày giờ học bù cho một buổi (theo đơn xin nghỉ, hoặc cho buổi đã hủy khi không có đơn) */
 export function MakeupForm({ idPrefix, sessionId, leaveRequestId, note, onDone, onCancel }: MakeupFormProps) {
@@ -37,13 +39,12 @@ export function MakeupForm({ idPrefix, sessionId, leaveRequestId, note, onDone, 
           <label htmlFor={`${idPrefix}-date`} className={`mb-1.5 ${AUTH_LABEL}`}>
             Ngày học bù
           </label>
-          <input
+          <DateField
             id={`${idPrefix}-date`}
-            type="date"
             required
             min={toIsoDate(startOfToday())}
             value={makeupDate}
-            onChange={(event) => setMakeupDate(event.target.value)}
+            onChange={(value) => setMakeupDate(value)}
             className={PORTAL_INPUT}
           />
         </div>
@@ -51,12 +52,11 @@ export function MakeupForm({ idPrefix, sessionId, leaveRequestId, note, onDone, 
           <label htmlFor={`${idPrefix}-start`} className={`mb-1.5 ${AUTH_LABEL}`}>
             Từ
           </label>
-          <input
+          <TimeField
             id={`${idPrefix}-start`}
-            type="time"
             required
             value={startTime}
-            onChange={(event) => setStartTime(event.target.value)}
+            onChange={(value) => setStartTime(value)}
             className={PORTAL_INPUT}
           />
         </div>
@@ -64,12 +64,11 @@ export function MakeupForm({ idPrefix, sessionId, leaveRequestId, note, onDone, 
           <label htmlFor={`${idPrefix}-end`} className={`mb-1.5 ${AUTH_LABEL}`}>
             Đến
           </label>
-          <input
+          <TimeField
             id={`${idPrefix}-end`}
-            type="time"
             required
             value={endTime}
-            onChange={(event) => setEndTime(event.target.value)}
+            onChange={(value) => setEndTime(value)}
             className={PORTAL_INPUT}
           />
         </div>

@@ -17,7 +17,7 @@ export function TutorProfilePanel({ tutor, onSelect }: TutorProfilePanelProps) {
   // Ba dòng thông tin nhanh
   const facts = [
     { icon: "school", label: "Phụ trách", value: GRADE_LIST_LABEL },
-    { icon: "devices", label: "Hình thức", value: DELIVERY_MODE_OPTIONS.map((mode) => mode.label).join(" · ") },
+    { icon: "devices", label: "Hình thức", value: DELIVERY_MODE_OPTIONS.map((mode) => mode.label).join(" - ") },
     { icon: "groups", label: "Sĩ số", value: `${CLASS_SIZE.min} – ${CLASS_SIZE.max} học viên mỗi lớp` },
   ];
 

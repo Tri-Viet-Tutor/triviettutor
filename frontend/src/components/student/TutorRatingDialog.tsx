@@ -8,6 +8,7 @@ import { useUserId } from "@/hooks/usePortalData";
 import type { TutorRatingBadgeProps, TutorRatingDialogProps, TutorRatingRequest } from "@/interfaces/learning";
 import { createTutorRating, updateTutorRating } from "@/services/learningService";
 import { portalErrorMessage } from "@/utils/errors";
+import { displayCode } from "@/utils/classes";
 
 /** Độ dài tối đa của nhận xét */
 const MAX_COMMENT = 2000;
@@ -18,7 +19,7 @@ export function TutorRatingBadge({ tutorId }: TutorRatingBadgeProps) {
   const data = summary.data;
   return (
     <span className="inline-flex flex-wrap items-center gap-x-2 text-[14px] text-brand-ink">
-      <span className="font-semibold">{data?.tutorName || `Gia sư #${tutorId}`}</span>
+      <span className="font-semibold">{data?.tutorName || `Gia sư ${displayCode("tutor", tutorId)}`}</span>
       {data && data.totalRatings > 0 && (
         <span className="inline-flex items-center gap-1 text-[13px] font-semibold">
           <Icon name="star" className="text-[17px] text-brand-orange" />

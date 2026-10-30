@@ -15,12 +15,13 @@ import { parseIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 import { formatLongDate, formatTimeRange, hasSubstituteTutor, sessionStart } from "@/utils/sessions";
 import type { AdminSessionDetailProps } from "@/interfaces/admin";
+import { displayCode } from "@/utils/classes";
 
 export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
   const refresh = useRefreshAdmin();
   const { nameOf, tutors } = useUserDirectory();
 
-  const tutorLabel = (tutorId: number) => [nameOf(tutorId), `(#${tutorId})`].filter(Boolean).join(" ");
+  const tutorLabel = (tutorId: number) => nameOf(tutorId) ?? `Gia sư ${displayCode("tutor", tutorId)}`;
   const [makeupOpen, setMakeupOpen] = useState(false);
   const [url, setUrl] = useState(session.meetingUrl ?? "");
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -54,7 +55,7 @@ export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2.5 text-[14.5px] sm:grid-cols-2">
         <div className="flex gap-2">
           <dt className="w-24 shrink-0 text-brand-muted">Mã buổi</dt>
-          <dd className="font-medium text-brand-ink">#{session.sessionId}</dd>
+          <dd className="font-medium text-brand-ink">{displayCode("session", session.sessionId)}</dd>
         </div>
         <div className="flex gap-2">
           <dt className="w-24 shrink-0 text-brand-muted">Ngày giờ</dt>
@@ -65,8 +66,8 @@ export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
         <div className="flex gap-2">
           <dt className="w-24 shrink-0 text-brand-muted">Lớp</dt>
           <dd className="font-medium text-brand-ink">
-            #{session.classGroupId}, buổi số {session.sessionNumber}
-            {session.originalSessionId !== null && ` (học bù cho buổi #${session.originalSessionId})`}
+            {displayCode("class", session.classGroupId)}, buổi số {session.sessionNumber}
+            {session.originalSessionId !== null && ` (học bù cho buổi ${displayCode("session", session.originalSessionId)})`}
           </dd>
         </div>
         <div className="flex gap-2">
@@ -171,7 +172,7 @@ export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
           note={
             session.originalSessionId === null
               ? "Buổi học bù được tạo cho cả lớp thay cho buổi đã hủy này."
-              : `Buổi bù này đã hủy; buổi bù mới sẽ thay cho buổi gốc #${session.originalSessionId}.`
+              : `Buổi bù này đã hủy; buổi bù mới sẽ thay cho buổi gốc ${displayCode("session", session.originalSessionId)}.`
           }
           onDone={() => {
             setMakeupOpen(false);

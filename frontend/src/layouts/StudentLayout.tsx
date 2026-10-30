@@ -7,5 +7,5 @@ import { PortalLayout } from "@/layouts/PortalLayout";
  * Mua khóa học và thanh toán cũng nằm trong khu này.
  */
 export function StudentLayout() {
-  return <PortalLayout areaLabel="Khu học viên" homeTo={ROUTES.student} profileTo={ROUTES.studentProfile} navItems={STUDENT_NAV} />;
+  return <PortalLayout areaLabel="Học viên" homeTo={ROUTES.student} profileTo={ROUTES.studentProfile} navItems={STUDENT_NAV} />;
 }

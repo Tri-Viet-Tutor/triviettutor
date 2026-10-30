@@ -31,7 +31,7 @@ export function CartBar({ courses, onClear, checkoutTo = ROUTES.checkout, inStud
           </span>
           <p className="min-w-0 leading-tight">
             <span className="block truncate text-[13.5px] text-brand-muted">
-              <span className="sm:hidden">{courses.length} khóa · </span>
+              <span className="sm:hidden">{courses.length} khóa - </span>
               {courses.map((course) => course.name).join(", ")}
             </span>
             <span className="block text-[20px] font-bold tracking-tight text-brand-navy">{formatVnd(cartTotal(courses))}</span>

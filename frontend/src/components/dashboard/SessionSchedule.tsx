@@ -107,7 +107,7 @@ export function SessionSchedule({
       ) : list.length === 0 ? (
         <PortalEmpty
           icon={tab === "upcoming" ? "event_available" : "history"}
-          title={tab === "upcoming" ? "Không còn buổi nào sắp tới" : "Chưa có buổi nào đã qua"}
+          title={tab === "upcoming" ? "Không còn buổi nào sắp tới." : "Chưa có buổi nào đã qua."}
         />
       ) : (
         <div className="space-y-6">

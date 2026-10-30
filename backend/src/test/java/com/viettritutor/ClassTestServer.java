@@ -36,12 +36,13 @@ public class ClassTestServer {
    ClassService service, com.viettritutor.service.SubjectService subjects, PlatformTransactionManager manager, Clock clock) {
    return args -> new TransactionTemplate(manager).executeWithoutResult(tx -> {
     String hash=encoder.encode(System.getenv("CLASS_TEST_PASSWORD"));
-    User admin=null, student=null;
+    User admin=null, student=null, tutor=null;
     for(String role:new String[]{"ADMIN","TUTOR","STUDENT"}) {
      User u=users.saveAndFlush(User.builder().email(role.toLowerCase()+"@class-test.local").password(hash)
       .fullName("Class Test "+role).role("ROLE_"+role).enabled(true).build());
      if(role.equals("ADMIN")) admin=u;
      if(role.equals("STUDENT")) student=u;
+     if(role.equals("TUTOR")) tutor=u;
     }
     int index=0;
     for(String fixture:new String[]{"REOPEN","KEEP","COLLECT","REFUND"}) {
@@ -49,7 +50,7 @@ public class ClassTestServer {
       .gradeLevel(GradeLevel.GRADE_10).basePrice1on1(new BigDecimal("8000000")).totalSessions(4).durationMinutes(120).build());
      CreateClassRequest r=new CreateClassRequest();r.setCourseId(course.getId());r.setClassType(ClassType.GROUP);
      r.setDeliveryMode(DeliveryMode.ONLINE);r.setSchedulePattern(SchedulePattern.MON_WED_FRI);r.setTimeSlot(TimeSlot.SLOT_MORNING);
-     r.setStartDate(LocalDate.now(clock).plusDays(30+21L*index++));
+     r.setStartDate(LocalDate.now(clock).plusDays(30+21L*index++));r.setTutorId(tutor.getId());
      Long id=service.create(r,admin).getId();
      ChangeClassStatusRequest status=new ChangeClassStatusRequest();status.setNewStatus(ClassStatus.PUBLISHED);service.changeStatus(id,status,admin);
      status.setNewStatus(ClassStatus.ENROLLING);service.changeStatus(id,status,admin);

@@ -47,6 +47,7 @@ class AttendanceEditWindowTest {
     @Mock private SessionOperationSupport operations;
     @Mock private PayrollGuard payrollGuard;
     @Mock private EntityManager entityManager;
+    @Mock private UserRepository userRepository;
 
     private AttendanceService service;
     private final ClassGroup classGroup = ClassGroup.builder().id(CLASS_ID).status(ClassStatus.IN_PROGRESS).build();
@@ -57,7 +58,7 @@ class AttendanceEditWindowTest {
     void setUp() {
         service = new AttendanceServiceImpl(sessionRepository, classGroupRepository, learningScheduleRepository,
                 recordRepository, rosterRepository, changeRepository, leaveRequestRepository, operations,
-                Optional.of(payrollGuard), entityManager, CLOCK);
+                Optional.of(payrollGuard), entityManager, userRepository, CLOCK);
     }
 
     /** A session that ended {@code hoursAgo} hours before the fixed clock and was completed by a full submit. */

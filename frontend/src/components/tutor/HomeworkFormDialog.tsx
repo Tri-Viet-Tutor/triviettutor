@@ -10,6 +10,8 @@ import { createHomework, updateHomework } from "@/services/learningService";
 import { addDays, toDateTimeLocal } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 import { isValidScore, parseScore } from "@/utils/text";
+import { DateField } from "@/components/ui/DateField";
+import { TimeField } from "@/components/ui/TimeField";
 
 /** Giá trị đang nhập trong form */
 interface HomeworkDraft {
@@ -65,7 +67,7 @@ export function HomeworkFormDialog({ open, sessionId, homework, onClose }: Homew
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    // Ô datetime-local bỏ mất giây: không đổi hạn nộp thì giữ nguyên giá trị cũ để bài đã công bố không bị coi là rút hạn
+    // Ô ngày giờ bỏ mất giây: không đổi hạn nộp thì giữ nguyên giá trị cũ để bài đã công bố không bị coi là rút hạn
     const unchangedDue = homework !== null && draft.dueAt === toDateTimeLocal(new Date(homework.dueAt));
     const due = unchangedDue ? new Date(homework.dueAt) : new Date(draft.dueAt);
     const maxScore = parseScore(draft.maxScore);
@@ -149,13 +151,20 @@ export function HomeworkFormDialog({ open, sessionId, homework, onClose }: Homew
             <label htmlFor="homework-due" className={PORTAL_LABEL}>
               Hạn nộp
             </label>
-            <input
-              id="homework-due"
-              type="datetime-local"
-              value={draft.dueAt}
-              onChange={(event) => set("dueAt", event.target.value)}
-              className={PORTAL_INPUT}
-            />
+            <div className="grid grid-cols-[minmax(0,1fr)_112px] gap-2">
+              <DateField
+                id="homework-due"
+                value={draft.dueAt.slice(0, 10)}
+                onChange={(value) => set("dueAt", value ? `${value}T${draft.dueAt.slice(11, 16) || "21:00"}` : "")}
+                className={PORTAL_INPUT}
+              />
+              <TimeField
+                aria-label="Giờ hạn nộp"
+                value={draft.dueAt.slice(11, 16)}
+                onChange={(value) => set("dueAt", `${draft.dueAt.slice(0, 10) || toDateTimeLocal(new Date()).slice(0, 10)}T${value}`)}
+                className={PORTAL_INPUT}
+              />
+            </div>
           </div>
           <div>
             <label htmlFor="homework-max" className={PORTAL_LABEL}>

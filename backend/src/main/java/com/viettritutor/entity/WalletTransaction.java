@@ -25,6 +25,8 @@ public class WalletTransaction {
     private Long paymentId;
     @Column(name = "refund_id", unique = true)
     private Long refundId;
+    @Column(name = "enrollment_id", unique = true)
+    private Long enrollmentId;
     @Column(nullable = false, length = 1000)
     private String description;
     @Column(name = "created_at", nullable = false)

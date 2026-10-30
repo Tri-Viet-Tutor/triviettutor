@@ -1,4 +1,4 @@
-import type { DeliveryMode, GradeLevel, SchedulePattern, TuitionClass } from "@/interfaces/api";
+import type { CourseResponse, DeliveryMode, GradeLevel, SchedulePattern, TuitionClass } from "@/interfaces/api";
 import type { PurchasableCourse } from "@/interfaces/checkout";
 import type { Course } from "@/interfaces/course";
 
@@ -45,6 +45,8 @@ export interface ClassShopFilters {
   grade: GradeLevel | "";
   mode: DeliveryMode | "";
   schedule: SchedulePattern | "";
+  /** Id gia sư phụ trách (dạng chuỗi của ô chọn); rỗng = mọi gia sư */
+  tutor: string;
 }
 
 /** Cách sắp xếp danh sách lớp đang mở */
@@ -58,6 +60,11 @@ export interface ClassTicketProps {
   /** Tài khoản hiện tại được đăng ký lớp không (chỉ học viên) */
   canBuy: boolean;
   onBuy: () => void;
+  /** Thêm môn của lớp vào giỏ hàng (chọn lớp cụ thể lúc thanh toán giỏ) */
+  onAddToCart?: () => void;
+  /** Môn của lớp đã có trong giỏ */
+  inCart?: boolean;
+  adding?: boolean;
   surfaceClassName?: string;
 }
 
@@ -70,6 +77,16 @@ export interface CourseOfferListProps {
   /** Tài khoản hiện tại được đăng ký lớp không (chỉ học viên) */
   canBuy: boolean;
   onBuy: (item: TuitionClass) => void;
+  /** Thêm môn vào giỏ hàng (giỏ giữ theo môn, chọn lớp lúc thanh toán giỏ) */
+  onAddToCart?: (subjectId: number, item?: TuitionClass, course?: CourseResponse) => void;
+  /** Mã môn (subject code) đã có trong giỏ */
+  cartSubjects?: Set<string>;
+  /** Khóa (cartCourseKey) đúng là khóa học viên đã thêm vào giỏ — giỏ giữ theo môn nên các khóa cùng môn không tính */
+  isCourseInCart?: (courseKey: string) => boolean;
+  /** Lớp đúng là lớp học viên đã thêm vào giỏ */
+  isClassInCart?: (item: TuitionClass) => boolean;
+  /** Id môn đang được thêm vào giỏ */
+  addingSubjectId?: number;
   surfaceClassName?: string;
   /** Bấm "Xóa bộ lọc" khi không có khóa phù hợp */
   onResetFilters: () => void;
@@ -89,7 +106,7 @@ export interface CartBarProps {
 
 /** Props của CourseShopSection */
 export interface CourseShopSectionProps {
-  /** "public": trang công khai · "student": nhúng trong khu học viên */
+  /** "public": trang công khai - "student": nhúng trong khu học viên */
   variant?: "public" | "student";
 }
 

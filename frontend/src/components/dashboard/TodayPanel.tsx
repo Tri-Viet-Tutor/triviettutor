@@ -9,6 +9,7 @@ import type { SessionResponse } from "@/interfaces/api";
 import { diffDays, formatDayMonth, parseIsoDate, startOfToday, weekdayName } from "@/utils/date";
 import { canJoinNow, canRequestLeave, dayLabel, formatTimeRange, sessionEnd, sessionStart } from "@/utils/sessions";
 import type { TodayPanelProps } from "@/interfaces/portal";
+import { displayCode } from "@/utils/classes";
 
 /** "Còn 2 giờ 15 phút", "Còn 3 ngày", hoặc "Đang diễn ra" */
 function countdown(session: SessionResponse, now: Date): string {
@@ -80,7 +81,7 @@ export function TodayPanel({
                 </span>
                 <div className="min-w-0">
                   <p className="text-[16px] font-bold leading-tight text-brand-ink">
-                    Lớp #{session.classGroupId}, buổi {session.sessionNumber}
+                    Lớp {displayCode("class", session.classGroupId)}, buổi {session.sessionNumber}
                     {session.originalSessionId !== null && " (học bù)"}
                   </p>
                   <p className="mt-0.5 text-[14px] tabular-nums text-brand-muted">

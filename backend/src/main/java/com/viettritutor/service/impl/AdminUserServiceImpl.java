@@ -7,6 +7,7 @@ import com.viettritutor.dto.user.AdminUserResponse;
 import com.viettritutor.dto.user.CreateTutorRequest;
 import com.viettritutor.dto.user.MeResponse;
 import com.viettritutor.dto.user.UpdateTutorProfileRequest;
+import com.viettritutor.dto.user.UpdateUserRequest;
 import com.viettritutor.entity.TutorProfile;
 import com.viettritutor.entity.User;
 import com.viettritutor.repository.TutorProfileRepository;
@@ -106,6 +107,35 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         user.setLocked(locked);
         return AdminUserResponse.from(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public AdminUserResponse updateUser(Long userId, UpdateUserRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        if (!email.equalsIgnoreCase(user.getEmail()) && userRepository.existsByEmailIgnoreCase(email)) {
+            throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
+        }
+        user.setFullName(request.fullName().trim());
+        user.setEmail(email);
+        return AdminUserResponse.from(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(Long userId, Long actorId) {
+        if (userId.equals(actorId)) throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        try {
+            tutorProfileRepository.findById(userId).ifPresent(tutorProfileRepository::delete);
+            userRepository.delete(user);
+            userRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.USER_IN_USE);
+        }
     }
 
     @Override

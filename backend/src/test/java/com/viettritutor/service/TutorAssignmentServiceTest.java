@@ -65,6 +65,9 @@ class TutorAssignmentServiceTest {
     private ConflictValidationService conflictService;
 
     @Mock
+    private ClassScheduleService scheduleService;
+
+    @Mock
     private SessionOperationSupport operations;
 
     private TutorAssignmentService assignmentService;
@@ -84,6 +87,8 @@ class TutorAssignmentServiceTest {
                 learningScheduleRepository,
                 sessionRepository,
                 conflictService,
+                scheduleService,
+                org.mockito.Mockito.mock(ClassDiscountSettlementService.class),
                 operations,
                 FIXED_CLOCK
         );
@@ -165,6 +170,41 @@ class TutorAssignmentServiceTest {
         assertThat(session1.getScheduledTutorId()).isEqualTo(10L);
         assertThat(session1.getActualTutorId()).isEqualTo(10L);
         verify(sessionRepository).saveAll(List.of(session1));
+    }
+
+    @Test
+    @DisplayName("Assign tutor while the class is still enrolling pre-assigns and keeps the class ENROLLING")
+    void assign_whileEnrolling_preAssignsWithoutConfirming() {
+        groupClass.setEnrollmentDeadline(LocalDate.of(2026, 10, 30));
+        when(classRepository.findForUpdate(100L)).thenReturn(Optional.of(groupClass));
+        when(userRepository.findForUpdate(10L)).thenReturn(Optional.of(tutor1));
+        when(assignmentRepository.findByClassGroupIdAndStatus(100L, AssignmentStatus.ACTIVE)).thenReturn(Optional.empty());
+        when(learningScheduleRepository.countActiveStudents(eq(100L), any(LocalDate.class))).thenReturn(0L);
+        Session session1 = Session.builder().id(1L).classGroupId(100L).sessionNumber(1)
+                .sessionDate(LocalDate.of(2026, 11, 2)).startTime(LocalTime.of(18, 0)).endTime(LocalTime.of(20, 0))
+                .status(SessionStatus.SCHEDULED).build();
+        when(sessionRepository.findClassSessionsForUpdate(100L)).thenReturn(List.of(session1));
+        when(assignmentRepository.save(any(TutorAssignment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AssignmentResponse response = assignmentService.assign(100L, 10L, admin);
+
+        assertThat(response.tutorId()).isEqualTo(10L);
+        assertThat(groupClass.getStatus()).isEqualTo(ClassStatus.ENROLLING);
+        assertThat(session1.getScheduledTutorId()).isEqualTo(10L);
+        verify(scheduleService).ensureGenerated(groupClass);
+    }
+
+    @Test
+    @DisplayName("Assign tutor is refused once the class has finished")
+    void assign_completedClass_notAssignable() {
+        groupClass.setStatus(ClassStatus.COMPLETED);
+        when(classRepository.findForUpdate(100L)).thenReturn(Optional.of(groupClass));
+        when(userRepository.findForUpdate(10L)).thenReturn(Optional.of(tutor1));
+        when(assignmentRepository.findByClassGroupIdAndStatus(100L, AssignmentStatus.ACTIVE)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> assignmentService.assign(100L, 10L, admin))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.CLASS_NOT_ASSIGNABLE));
     }
 
     @Test
@@ -393,7 +433,7 @@ class TutorAssignmentServiceTest {
     }
 
     @Test
-    @DisplayName("Assign is refused for an already assigned class, a non-tutor, or a group class before its deadline")
+    @DisplayName("Assign is refused for an already assigned class, a non-tutor, or a finished class")
     void assign_preconditions_rejected() {
         when(classRepository.findForUpdate(100L)).thenReturn(Optional.of(groupClass));
         when(userRepository.findForUpdate(10L)).thenReturn(Optional.of(tutor1));
@@ -404,8 +444,8 @@ class TutorAssignmentServiceTest {
                 .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.CLASS_ALREADY_ASSIGNED);
 
         when(assignmentRepository.findByClassGroupIdAndStatus(100L, AssignmentStatus.ACTIVE)).thenReturn(Optional.empty());
-        groupClass.setEnrollmentDeadline(LocalDate.of(2026, 10, 25));
-        when(learningScheduleRepository.countActiveStudents(eq(100L), any(LocalDate.class))).thenReturn(4L);
+        // Lớp đang tuyển sinh được phân công trước (xem assign_whileEnrolling_preAssignsWithoutConfirming); lớp đã xong thì không
+        groupClass.setStatus(ClassStatus.COMPLETED);
         assertThatThrownBy(() -> assignmentService.assign(100L, 10L, admin))
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.CLASS_NOT_ASSIGNABLE);
@@ -450,7 +490,7 @@ class TutorAssignmentServiceTest {
     }
 
     @Test
-    @DisplayName("Reassign is refused for the current tutor or a class that is not assigned yet")
+    @DisplayName("Reassign is refused for the current tutor or a finished class")
     void reassign_preconditions_rejected() {
         groupClass.setStatus(ClassStatus.ASSIGNED);
         when(classRepository.findForUpdate(100L)).thenReturn(Optional.of(groupClass));
@@ -461,8 +501,8 @@ class TutorAssignmentServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.TUTOR_ALREADY_ASSIGNED);
 
-        groupClass.setStatus(ClassStatus.ENROLLING);
-        assertThatThrownBy(() -> assignmentService.reassign(100L, 10L, "Early", admin))
+        groupClass.setStatus(ClassStatus.COMPLETED);
+        assertThatThrownBy(() -> assignmentService.reassign(100L, 10L, "Late", admin))
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.CLASS_NOT_ASSIGNABLE);
         verify(conflictService, never()).assertTutorAvailable(any(), any());

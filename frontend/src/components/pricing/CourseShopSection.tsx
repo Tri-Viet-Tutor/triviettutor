@@ -8,7 +8,9 @@ import { CONTAINER, FOCUS_RING, PORTAL_SURFACE } from "@/constants/classNames";
 import { DELIVERY_MODE_OPTIONS, GRADE_OPTIONS, SCHEDULE_PATTERN_OPTIONS } from "@/constants/classOptions";
 import { PURCHASE_STEPS } from "@/constants/pricing";
 import { ROUTES } from "@/constants/routes";
-import type { DeliveryMode, GradeLevel, SchedulePattern, TuitionClass } from "@/interfaces/api";
+import { useCart, useCartMutations } from "@/hooks/useCart";
+import { cartCourseKey, preferredCartClass, preferredCartCourse, rememberCartCourse } from "@/utils/cartPreference";
+import type { CourseResponse, DeliveryMode, GradeLevel, SchedulePattern, TuitionClass } from "@/interfaces/api";
 import type { ClassShopFilters, ClassShopSort, CourseShopSectionProps } from "@/interfaces/pricing";
 import { listCatalogCourses, listTuitionClasses } from "@/services/tuitionPaymentService";
 import { useAuthStore } from "@/stores/authStore";
@@ -19,7 +21,7 @@ const PAGE_SIZE = 6;
 /** Backend cho tối đa 100 lớp mỗi trang */
 const CATALOG_LIMIT = 100;
 
-const DEFAULT_FILTERS: ClassShopFilters = { query: "", subject: "", grade: "", mode: "", schedule: "" };
+const DEFAULT_FILTERS: ClassShopFilters = { query: "", subject: "", grade: "", mode: "", schedule: "", tutor: "" };
 
 const SORT_OPTIONS: { value: ClassShopSort; label: string }[] = [
   { value: "DEFAULT", label: "Mặc định" },
@@ -39,7 +41,8 @@ function filterClasses(items: TuitionClass[], filters: ClassShopFilters): Tuitio
       (!filters.grade || item.gradeLevel === filters.grade) &&
       (!filters.mode || item.deliveryMode === filters.mode) &&
       (!filters.schedule || item.schedulePattern === filters.schedule) &&
-      (!keyword || normalizeText(`${item.courseName} ${item.classCode} ${item.subject}`).includes(keyword)),
+      (!filters.tutor || String(item.tutorId ?? "") === filters.tutor) &&
+      (!keyword || normalizeText(`${item.courseName} ${item.classCode} ${item.subject} ${item.tutorName ?? ""}`).includes(keyword)),
   );
 }
 
@@ -63,6 +66,43 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const isStudent = user?.role === "ROLE_STUDENT";
+  const cart = useCart();
+  const { add } = useCartMutations();
+  const cartSubjects = new Set((cart.data?.items ?? []).map((cartItem) => cartItem.subjectName));
+
+  // Đổi khi học viên chọn khóa / lớp khác cho môn đã có trong giỏ (lựa chọn nằm trong bộ nhớ trình duyệt)
+  const [, setCartPick] = useState(0);
+
+  /**
+   * Giỏ hàng của backend giữ theo môn, nên thêm khóa Toán 10 thì môn Toán vào giỏ — không được đánh dấu
+   * mọi khóa Toán khác là "Đã trong giỏ". Nhớ đúng khóa (và lớp, nếu thêm từ một lớp) học viên đã chọn;
+   * chọn khóa khác cùng môn thì chỉ đổi lựa chọn, không thêm dòng giỏ mới.
+   * Khách chưa đăng nhập thì đăng nhập rồi quay lại danh mục.
+   */
+  function addToCart(subjectId: number | undefined, item?: TuitionClass, course?: CourseResponse) {
+    if (!user) return navigate(ROUTES.login, { state: { returnTo: ROUTES.studentCatalog } });
+    if (item) rememberCartCourse(user.id, item.subject, cartCourseKey(item.courseName, item.subject, item.gradeLevel), item.id);
+    else if (course) rememberCartCourse(user.id, course.subject, cartCourseKey(course.name, course.subject, course.gradeLevel));
+    setCartPick((value) => value + 1);
+    const subject = item?.subject ?? course?.subject;
+    if (subjectId !== undefined && !(subject && cartSubjects.has(subject))) add.mutate(subjectId);
+  }
+
+  /** Khóa trong giỏ = khóa đã nhớ cho môn; giỏ cũ chưa nhớ khóa thì suy từ lớp đã nhớ */
+  function pickedCourse(subject: string): string | undefined {
+    const remembered = preferredCartCourse(user?.id, subject);
+    if (remembered) return remembered;
+    const classId = preferredCartClass(user?.id, subject);
+    const group = classes.find((item) => item.id === classId);
+    return group ? cartCourseKey(group.courseName, group.subject, group.gradeLevel) : undefined;
+  }
+  const isCourseInCart = (key: string) => {
+    const subject = key.split("|")[0];
+    return cartSubjects.has(subject) && pickedCourse(subject) === key;
+  };
+  const isClassInCart = (item: TuitionClass) =>
+    cartSubjects.has(item.subject) && preferredCartClass(user?.id, item.subject) === item.id;
+  const addingSubjectId = add.isPending ? add.variables : undefined;
 
   const [filters, setFilters] = useState<ClassShopFilters>(DEFAULT_FILTERS);
   const [sort, setSort] = useState<ClassShopSort>("DEFAULT");
@@ -71,7 +111,6 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
   const catalog = useQuery({
     queryKey: ["catalog-classes", user?.id],
     queryFn: () => listTuitionClasses({ page: 0, size: CATALOG_LIMIT }),
-    enabled: Boolean(user),
   });
   const classes = useMemo(() => catalog.data?.content ?? [], [catalog.data]);
 
@@ -79,12 +118,18 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
   const courses = useQuery({
     queryKey: ["catalog-courses", user?.id],
     queryFn: () => listCatalogCourses({ size: CATALOG_LIMIT }),
-    enabled: Boolean(user) && inStudentArea,
+    enabled: inStudentArea,
   });
   const subjects = useMemo(
     () => [...new Set([...classes.map((item) => item.subject), ...(courses.data?.content ?? []).map((course) => course.subject)])].sort(),
     [classes, courses.data],
   );
+  /** Thầy cô đang phụ trách các lớp đang mở, để học viên lọc theo gia sư mình muốn */
+  const tutors = useMemo(() => {
+    const byId = new Map<number, string>();
+    for (const item of classes) if (item.tutorId && item.tutorName) byId.set(item.tutorId, item.tutorName);
+    return [...byId].map(([id, name]) => ({ id, name })).sort((first, second) => first.name.localeCompare(second.name, "vi"));
+  }, [classes]);
   const results = useMemo(() => sortClasses(filterClasses(classes, filters), sort), [classes, filters, sort]);
   const hasFilters = JSON.stringify(filters) !== JSON.stringify(DEFAULT_FILTERS);
 
@@ -93,8 +138,11 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
     setVisibleCount(PAGE_SIZE);
   }
 
+  /** Mua đúng một lớp; khách chưa đăng nhập thì đăng nhập xong quay lại trang thanh toán của lớp đó */
   function buy(item: TuitionClass) {
-    navigate(`${ROUTES.studentCheckout}?lop=${item.id}`);
+    const checkout = `${ROUTES.studentCheckout}?lop=${item.id}`;
+    if (!user) navigate(ROUTES.login, { state: { returnTo: checkout } });
+    else navigate(checkout);
   }
 
   return (
@@ -124,7 +172,7 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
                 type="search"
                 value={filters.query}
                 onChange={(event) => updateFilters({ query: event.target.value })}
-                placeholder={inStudentArea ? "Tên khóa học hoặc môn học" : "Tên khóa, mã lớp hoặc môn học"}
+                placeholder={inStudentArea ? "Tên khóa, môn học hoặc gia sư" : "Tên khóa, mã lớp, môn hoặc gia sư"}
                 className="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-[15.5px] text-brand-ink outline-none placeholder:text-slate-400 focus:ring-0"
               />
               {filters.query && (
@@ -141,12 +189,15 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
           )}
         </div>
 
-        {!user ? (
-          <div className="mt-8 rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center">
-            <Icon name="lock" className="text-[40px] text-brand-navy/50" />
-            <p className="mt-2 text-[18px] font-bold text-brand-navy">Đăng nhập để xem các lớp đang mở đăng ký</p>
-            <p className="mt-1 text-[14.5px] text-brand-muted">Lịch học, học phí và số chỗ còn lại được cập nhật trực tiếp từ trung tâm.</p>
-            <div className="mt-5 flex flex-wrap justify-center gap-3">
+        {!user && (
+          <div className="mt-8 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[16px] font-bold text-brand-navy">Đăng nhập để đăng ký lớp</p>
+              <p className="mt-0.5 text-[14px] text-brand-muted">
+                Bạn vẫn xem được lịch học, học phí và số chỗ còn lại của mọi lớp đang mở.
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-3">
               <Link
                 to={ROUTES.login}
                 state={{ returnTo: ROUTES.studentCatalog }}
@@ -163,193 +214,211 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
               </Link>
             </div>
           </div>
-        ) : (
-          <div className={`grid grid-cols-1 items-start gap-6 lg:grid-cols-[264px_1fr] lg:gap-8 ${inStudentArea ? "mt-6" : "mt-8"}`}>
-            <aside
-              className={`rounded-2xl border border-slate-200 bg-white p-5 lg:sticky ${inStudentArea ? "lg:top-24" : "lg:top-[150px]"}`}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-[16px] font-bold text-brand-navy">Bộ lọc</h3>
-                {hasFilters && (
+        )}
+        <div className={`grid grid-cols-1 items-start gap-6 lg:grid-cols-[264px_1fr] lg:gap-8 ${inStudentArea ? "mt-6" : "mt-8"}`}>
+          <aside className={`rounded-2xl border border-slate-200 bg-white p-5 lg:sticky ${inStudentArea ? "lg:top-24" : "lg:top-[150px]"}`}>
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-[16px] font-bold text-brand-navy">Bộ lọc</h3>
+              {hasFilters && (
+                <button
+                  type="button"
+                  onClick={() => updateFilters(DEFAULT_FILTERS)}
+                  className={`rounded text-[13.5px] font-semibold text-brand-navy underline-offset-4 hover:underline ${FOCUS_RING}`}
+                >
+                  Xóa bộ lọc
+                </button>
+              )}
+            </div>
+            <label className="mt-5 block text-[13.5px] font-semibold text-brand-ink">
+              Môn học
+              <select value={filters.subject} onChange={(event) => updateFilters({ subject: event.target.value })} className={SELECT}>
+                <option value="">Tất cả môn</option>
+                {subjects.map((subject) => (
+                  <option key={subject} value={subject}>
+                    {subject}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {tutors.length > 0 && (
+              <label className="mt-5 block text-[13.5px] font-semibold text-brand-ink">
+                Gia sư
+                <select value={filters.tutor} onChange={(event) => updateFilters({ tutor: event.target.value })} className={SELECT}>
+                  <option value="">Tất cả thầy cô</option>
+                  {tutors.map((tutor) => (
+                    <option key={tutor.id} value={String(tutor.id)}>
+                      {tutor.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label className="mt-5 block text-[13.5px] font-semibold text-brand-ink">
+              Khối lớp
+              <select
+                value={filters.grade}
+                onChange={(event) => updateFilters({ grade: event.target.value as GradeLevel | "" })}
+                className={SELECT}
+              >
+                <option value="">Tất cả</option>
+                {GRADE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="mt-5 block text-[13.5px] font-semibold text-brand-ink">
+              Hình thức
+              <select
+                value={filters.mode}
+                onChange={(event) => updateFilters({ mode: event.target.value as DeliveryMode | "" })}
+                className={SELECT}
+              >
+                <option value="">Tất cả</option>
+                {DELIVERY_MODE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="mt-5 block text-[13.5px] font-semibold text-brand-ink">
+              Học thứ mấy
+              <select
+                value={filters.schedule}
+                onChange={(event) => updateFilters({ schedule: event.target.value as SchedulePattern | "" })}
+                className={SELECT}
+              >
+                <option value="">Thứ nào cũng được</option>
+                {SCHEDULE_PATTERN_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </aside>
+
+          {inStudentArea ? (
+            <div>
+              {user && !isStudent && (
+                <p className="mb-4 rounded-lg bg-brand-orange/15 px-4 py-3 text-[14px] text-brand-navyDeep">
+                  Bạn đang xem bằng tài khoản không phải học viên — chỉ tài khoản học viên mới đăng ký được lớp.
+                </p>
+              )}
+              {catalog.isError && (
+                <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-[14px] text-red-800">
+                  Không tải được danh sách lớp.{" "}
+                  <button type="button" onClick={() => void catalog.refetch()} className="font-semibold underline">
+                    Thử lại
+                  </button>
+                </p>
+              )}
+              <CourseOfferList
+                classes={results}
+                filters={filters}
+                canBuy={isStudent || !user}
+                onBuy={buy}
+                onAddToCart={addToCart}
+                cartSubjects={cartSubjects}
+                isCourseInCart={isCourseInCart}
+                isClassInCart={isClassInCart}
+                addingSubjectId={addingSubjectId}
+                surfaceClassName={PORTAL_SURFACE}
+                onResetFilters={() => updateFilters(DEFAULT_FILTERS)}
+              />
+            </div>
+          ) : (
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p aria-live="polite" className="text-[14.5px] text-brand-muted">
+                  <strong className="text-[18px] font-bold text-brand-navy">{results.length}</strong> lớp đang mở
+                </p>
+                <label className="flex items-center gap-2.5 text-[14px] text-brand-muted">
+                  Sắp xếp
+                  <select
+                    value={sort}
+                    onChange={(event) => setSort(event.target.value as ClassShopSort)}
+                    className="h-10 rounded-md border border-slate-300 bg-white pl-3 pr-9 text-[14.5px] font-semibold text-brand-ink outline-none focus:border-brand-navy focus:ring-1 focus:ring-brand-navy"
+                  >
+                    {SORT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              {user && !isStudent && (
+                <p className="mt-4 rounded-lg bg-brand-orange/15 px-4 py-3 text-[14px] text-brand-navyDeep">
+                  Bạn đang xem bằng tài khoản không phải học viên — chỉ tài khoản học viên mới đăng ký được lớp.
+                </p>
+              )}
+
+              {catalog.isPending && <p className="mt-6 text-brand-muted">Đang tải các lớp đang mở…</p>}
+
+              {catalog.isError && (
+                <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-6 py-6 text-center text-[14.5px] text-red-800">
+                  Không tải được danh sách lớp.{" "}
+                  <button type="button" onClick={() => void catalog.refetch()} className="font-semibold underline">
+                    Thử lại
+                  </button>
+                </div>
+              )}
+
+              {catalog.isSuccess &&
+                (results.length > 0 ? (
+                  <ul className="mt-4 space-y-4">
+                    {results.slice(0, visibleCount).map((item, index) => (
+                      <li key={item.id}>
+                        <ClassTicket
+                          item={item}
+                          index={index}
+                          canBuy={isStudent || !user}
+                          onBuy={() => buy(item)}
+                          onAddToCart={item.subjectId !== undefined ? () => addToCart(item.subjectId, item) : undefined}
+                          inCart={isClassInCart(item)}
+                          adding={add.isPending && add.variables === item.subjectId}
+                          surfaceClassName={inStudentArea ? PORTAL_SURFACE : undefined}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-dashed border-brand-navy/30 px-6 py-12 text-center">
+                    <Icon name="search_off" className="text-[44px] text-brand-navy/40" />
+                    <p className="mt-2 text-[17px] font-bold text-brand-navy">
+                      {classes.length === 0 ? "Hiện chưa có lớp nào mở đăng ký." : "Không có lớp phù hợp."}
+                    </p>
+                    {hasFilters && (
+                      <button
+                        type="button"
+                        onClick={() => updateFilters(DEFAULT_FILTERS)}
+                        className={`mt-4 inline-flex h-10 items-center rounded-md bg-brand-navy px-5 text-[14.5px] font-semibold text-white transition-colors hover:bg-brand-navyDeep ${FOCUS_RING}`}
+                      >
+                        Xóa bộ lọc
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+              {results.length > visibleCount && (
+                <div className="mt-6 text-center">
                   <button
                     type="button"
-                    onClick={() => updateFilters(DEFAULT_FILTERS)}
-                    className={`rounded text-[13.5px] font-semibold text-brand-navy underline-offset-4 hover:underline ${FOCUS_RING}`}
+                    onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+                    className={`inline-flex h-11 items-center gap-2 rounded-md border border-brand-navy px-6 text-[14.5px] font-semibold text-brand-navy transition-colors hover:bg-brand-navy hover:text-white ${FOCUS_RING}`}
                   >
-                    Xóa bộ lọc
+                    Xem thêm {Math.min(PAGE_SIZE, results.length - visibleCount)} lớp
+                    <Icon name="expand_more" className="text-[19px]" />
                   </button>
-                )}
-              </div>
-              <label className="mt-5 block text-[13.5px] font-semibold text-brand-ink">
-                Môn học
-                <select value={filters.subject} onChange={(event) => updateFilters({ subject: event.target.value })} className={SELECT}>
-                  <option value="">Tất cả môn</option>
-                  {subjects.map((subject) => (
-                    <option key={subject} value={subject}>
-                      {subject}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="mt-5 block text-[13.5px] font-semibold text-brand-ink">
-                Khối lớp
-                <select
-                  value={filters.grade}
-                  onChange={(event) => updateFilters({ grade: event.target.value as GradeLevel | "" })}
-                  className={SELECT}
-                >
-                  <option value="">Tất cả</option>
-                  {GRADE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="mt-5 block text-[13.5px] font-semibold text-brand-ink">
-                Hình thức
-                <select
-                  value={filters.mode}
-                  onChange={(event) => updateFilters({ mode: event.target.value as DeliveryMode | "" })}
-                  className={SELECT}
-                >
-                  <option value="">Tất cả</option>
-                  {DELIVERY_MODE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="mt-5 block text-[13.5px] font-semibold text-brand-ink">
-                Học thứ mấy
-                <select
-                  value={filters.schedule}
-                  onChange={(event) => updateFilters({ schedule: event.target.value as SchedulePattern | "" })}
-                  className={SELECT}
-                >
-                  <option value="">Thứ nào cũng được</option>
-                  {SCHEDULE_PATTERN_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </aside>
-
-            {inStudentArea ? (
-              <div>
-                {!isStudent && (
-                  <p className="mb-4 rounded-lg bg-brand-orange/15 px-4 py-3 text-[14px] text-brand-navyDeep">
-                    Bạn đang xem bằng tài khoản không phải học viên — chỉ tài khoản học viên mới đăng ký được lớp.
-                  </p>
-                )}
-                {catalog.isError && (
-                  <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-[14px] text-red-800">
-                    Không tải được danh sách lớp.{" "}
-                    <button type="button" onClick={() => void catalog.refetch()} className="font-semibold underline">
-                      Thử lại
-                    </button>
-                  </p>
-                )}
-                <CourseOfferList
-                  classes={results}
-                  filters={filters}
-                  canBuy={isStudent}
-                  onBuy={buy}
-                  surfaceClassName={PORTAL_SURFACE}
-                  onResetFilters={() => updateFilters(DEFAULT_FILTERS)}
-                />
-              </div>
-            ) : (
-              <div>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p aria-live="polite" className="text-[14.5px] text-brand-muted">
-                    <strong className="text-[18px] font-bold text-brand-navy">{results.length}</strong> lớp đang mở
-                  </p>
-                  <label className="flex items-center gap-2.5 text-[14px] text-brand-muted">
-                    Sắp xếp
-                    <select
-                      value={sort}
-                      onChange={(event) => setSort(event.target.value as ClassShopSort)}
-                      className="h-10 rounded-md border border-slate-300 bg-white pl-3 pr-9 text-[14.5px] font-semibold text-brand-ink outline-none focus:border-brand-navy focus:ring-1 focus:ring-brand-navy"
-                    >
-                      {SORT_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
                 </div>
-
-                {!isStudent && (
-                  <p className="mt-4 rounded-lg bg-brand-orange/15 px-4 py-3 text-[14px] text-brand-navyDeep">
-                    Bạn đang xem bằng tài khoản không phải học viên — chỉ tài khoản học viên mới đăng ký được lớp.
-                  </p>
-                )}
-
-                {catalog.isPending && <p className="mt-6 text-brand-muted">Đang tải các lớp đang mở…</p>}
-
-                {catalog.isError && (
-                  <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-6 py-6 text-center text-[14.5px] text-red-800">
-                    Không tải được danh sách lớp.{" "}
-                    <button type="button" onClick={() => void catalog.refetch()} className="font-semibold underline">
-                      Thử lại
-                    </button>
-                  </div>
-                )}
-
-                {catalog.isSuccess &&
-                  (results.length > 0 ? (
-                    <ul className="mt-4 space-y-4">
-                      {results.slice(0, visibleCount).map((item, index) => (
-                        <li key={item.id}>
-                          <ClassTicket
-                            item={item}
-                            index={index}
-                            canBuy={isStudent}
-                            onBuy={() => buy(item)}
-                            surfaceClassName={inStudentArea ? PORTAL_SURFACE : undefined}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="mt-4 rounded-2xl border border-dashed border-brand-navy/30 px-6 py-12 text-center">
-                      <Icon name="search_off" className="text-[44px] text-brand-navy/40" />
-                      <p className="mt-2 text-[17px] font-bold text-brand-navy">
-                        {classes.length === 0 ? "Hiện chưa có lớp nào mở đăng ký" : "Không có lớp phù hợp"}
-                      </p>
-                      {hasFilters && (
-                        <button
-                          type="button"
-                          onClick={() => updateFilters(DEFAULT_FILTERS)}
-                          className={`mt-4 inline-flex h-10 items-center rounded-md bg-brand-navy px-5 text-[14.5px] font-semibold text-white transition-colors hover:bg-brand-navyDeep ${FOCUS_RING}`}
-                        >
-                          Xóa bộ lọc
-                        </button>
-                      )}
-                    </div>
-                  ))}
-
-                {results.length > visibleCount && (
-                  <div className="mt-6 text-center">
-                    <button
-                      type="button"
-                      onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
-                      className={`inline-flex h-11 items-center gap-2 rounded-md border border-brand-navy px-6 text-[14.5px] font-semibold text-brand-navy transition-colors hover:bg-brand-navy hover:text-white ${FOCUS_RING}`}
-                    >
-                      Xem thêm {Math.min(PAGE_SIZE, results.length - visibleCount)} lớp
-                      <Icon name="expand_more" className="text-[19px]" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );

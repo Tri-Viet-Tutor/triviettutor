@@ -43,11 +43,18 @@ export function useAssignableClasses(from: IsoDate) {
     }),
   });
 
+  // Thông tin từng lớp (tên khóa, lịch, sĩ số, gia sư đã phân công trước khi có buổi)
+  const infoById = new Map(classQueries.flatMap((query) => query.data?.content ?? []).map((item) => [item.id, item]));
   const classes: ClassSummary[] = assignableIds
     ? [
         ...scanned.filter((item) => assignableIds.has(item.classId)),
         ...missingQueries.flatMap((query) => summarizeClasses(query.data?.content ?? [])),
-      ].sort((a, b) => Number(a.tutorId !== null) - Number(b.tutorId !== null) || a.classId - b.classId)
+      ]
+        .map((item) => {
+          const info = infoById.get(item.classId);
+          return { ...item, info, tutorId: item.tutorId ?? info?.tutorId ?? null };
+        })
+        .sort((a, b) => Number(a.tutorId !== null) - Number(b.tutorId !== null) || a.classId - b.classId)
     : [];
   const all = [sessionsQuery, ...classQueries, ...missingQueries];
   return {

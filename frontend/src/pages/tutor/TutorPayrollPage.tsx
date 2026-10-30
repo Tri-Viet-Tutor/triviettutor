@@ -37,7 +37,7 @@ export function TutorPayrollPage() {
       ) : !latest ? (
         <PortalEmpty
           icon="receipt_long"
-          title="Chưa có bảng lương"
+          title="Chưa có bảng lương."
           description="Bảng lương xuất hiện sau tháng đầu tiên bạn có buổi dạy."
         />
       ) : (
@@ -102,9 +102,9 @@ export function TutorPayrollPage() {
                       <div>
                         <p className="font-bold text-brand-ink">{monthLabel(line.year, line.month)}</p>
                         <p className="text-[13.5px] text-brand-muted">
-                          {line.validSessions} buổi hợp lệ · {line.cancelledSessions} hủy · {line.substitutedOutSessions} được dạy thay
+                          {line.validSessions} buổi hợp lệ - {line.cancelledSessions} hủy - {line.substitutedOutSessions} được dạy thay
                           {line.unfinalizedSessions > 0 && (
-                            <span className="font-semibold text-red-600"> · {line.unfinalizedSessions} chưa chốt</span>
+                            <span className="font-semibold text-red-600"> - {line.unfinalizedSessions} chưa chốt</span>
                           )}
                         </p>
                       </div>

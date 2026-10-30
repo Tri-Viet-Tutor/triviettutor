@@ -7,6 +7,7 @@ import { portalKeys, useUserId } from "@/hooks/usePortalData";
 import { changeActualTutor } from "@/services/admin";
 import { teacherOf } from "@/utils/sessions";
 import type { AdminActualTutorFormProps } from "@/interfaces/admin";
+import { displayCode } from "@/utils/classes";
 
 /**
  * Đổi gia sư thực dạy của buổi đã bắt đầu (vd. gia sư được phân công vắng, gia sư khác dạy thay).
@@ -56,7 +57,7 @@ export function AdminActualTutorForm({ session, tutors, onDone }: AdminActualTut
           <option value="">Chọn gia sư</option>
           {options.map((tutor) => (
             <option key={tutor.id} value={tutor.id}>
-              {tutor.fullName} (#{tutor.id})
+              {tutor.fullName} ({displayCode("tutor", tutor.id)})
             </option>
           ))}
         </select>

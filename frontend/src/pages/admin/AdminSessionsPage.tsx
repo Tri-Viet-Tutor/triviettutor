@@ -15,6 +15,7 @@ import { PORTAL_TEXT_LINK } from "@/constants/classNames";
 import { useNow } from "@/hooks/useNow";
 import type { SessionResponse, SessionStatus } from "@/interfaces/api";
 import { startOfToday, toIsoDate } from "@/utils/date";
+import { displayCode } from "@/utils/classes";
 
 /** Số buổi mỗi trang */
 const PAGE_SIZE = 20;
@@ -137,7 +138,7 @@ export function AdminSessionsPage() {
       {linkedId !== null && (
         <section aria-label="Buổi đang xem" className="mb-6">
           <div className="mb-2.5 flex items-baseline justify-between gap-3">
-            <h2 className="text-[15px] font-semibold text-brand-muted">Buổi #{linkedId}</h2>
+            <h2 className="text-[15px] font-semibold text-brand-muted">Buổi {displayCode("session", linkedId)}</h2>
             <Link to={ROUTES.adminSessions} className={`text-[14px] ${PORTAL_TEXT_LINK}`}>
               Xem tất cả buổi học
             </Link>
@@ -145,7 +146,7 @@ export function AdminSessionsPage() {
           {linkedQuery.isPending ? (
             <PortalLoading label="Đang tải buổi học" rows={1} />
           ) : linkedQuery.isError || !linkedQuery.data ? (
-            <PortalError message={`Không tìm thấy buổi học #${linkedId}.`} onRetry={() => void linkedQuery.refetch()} />
+            <PortalError message={`Không tìm thấy buổi học ${displayCode("session", linkedId)}.`} onRetry={() => void linkedQuery.refetch()} />
           ) : (
             <ul>{renderRow(linkedQuery.data)}</ul>
           )}
@@ -167,7 +168,7 @@ export function AdminSessionsPage() {
         ) : list.content.length === 0 ? (
           <PortalEmpty
             icon="calendar_month"
-            title="Không có buổi học nào khớp bộ lọc"
+            title="Không có buổi học nào khớp bộ lọc."
             description="Thử nới khoảng ngày hoặc bỏ bớt điều kiện lọc."
           />
         ) : (

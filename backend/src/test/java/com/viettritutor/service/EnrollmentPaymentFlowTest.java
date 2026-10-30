@@ -32,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * FLOW-02 enrollment payment gaps: wallet payment of group classes, VNPay querydr reconciliation when the IPN is lost,
- * the quoted discount rate at IPN time, and the refund/cancel state exposed to students. VNPay is a mock; H2 database.
+ * full-price charging at IPN time, and the refund/cancel state exposed to students. VNPay is a mock; H2 database.
  */
 @SpringBootTest(properties = {
         "spring.datasource.url=jdbc:h2:mem:enrollment-payment-flow;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
@@ -161,18 +161,18 @@ class EnrollmentPaymentFlowTest {
         throw new AssertionError("Enrollment " + enrollmentId + " not listed");
     }
 
-    @Test void walletPaysGroupClassAtDiscountedPrice() throws Exception {
+    @Test void walletPaysGroupClassAtFullPrice() throws Exception {
         ClassGroup group = newClass(ClassType.GROUP, "1000000");
         wallets.saveAndFlush(Wallet.builder().studentId(student.getId()).balance(new BigDecimal("1000000"))
                 .createdAt(OffsetDateTime.now(clock)).build());
         long id = quote(student, group);
-        assertThat(intents.findById(id).orElseThrow().getAmount()).isEqualByComparingTo("800000");
+        assertThat(intents.findById(id).orElseThrow().getAmount()).isEqualByComparingTo("1000000");
         JsonNode result = request("POST", "/api/v1/payment-intents/" + id + "/wallet", null, student, "wallet-" + id, 200);
         assertThat(result.path("enrollment").path("status").asText()).isEqualTo("ACTIVE");
         Enrollment enrollment = enrollments.findByPaymentId(payments.findByIntentId(id).orElseThrow().getId()).orElseThrow();
-        assertThat(enrollment.getFeeCharged()).isEqualByComparingTo("800000");
-        assertThat(enrollment.getDiscountRate()).isEqualByComparingTo("0.20");
-        assertThat(wallets.findByStudentId(student.getId()).orElseThrow().getBalance()).isEqualByComparingTo("200000");
+        assertThat(enrollment.getFeeCharged()).isEqualByComparingTo("1000000");
+        assertThat(enrollment.getDiscountRate()).isEqualByComparingTo("0");
+        assertThat(wallets.findByStudentId(student.getId()).orElseThrow().getBalance()).isEqualByComparingTo("0");
     }
 
     @Test void reconcileSettlesPaidIntentWhenIpnNeverArrivesAndIsIdempotent() throws Exception {
@@ -239,7 +239,7 @@ class EnrollmentPaymentFlowTest {
         assertThat(reconcile(id, student, 200).path("enrollment").path("status").asText()).isEqualTo("ACTIVE");
     }
 
-    @Test void ipnRecordsTheQuotedDiscountRateEvenIfTheClassGrewMeanwhile() throws Exception {
+    @Test void ipnChargesFullPriceEvenIfTheClassGrewMeanwhile() throws Exception {
         ClassGroup group = newClass(ClassType.GROUP, "1000000");
         long held = started(student, group);
         for (int i = 0; i < 3; i++) {
@@ -249,8 +249,8 @@ class EnrollmentPaymentFlowTest {
         }
         ipn(paid(held), "00");
         Enrollment enrollment = enrollments.findByPaymentId(payments.findByIntentId(held).orElseThrow().getId()).orElseThrow();
-        assertThat(enrollment.getFeeCharged()).isEqualByComparingTo("800000");
-        assertThat(enrollment.getDiscountRate()).isEqualByComparingTo("0.20");
+        assertThat(enrollment.getFeeCharged()).isEqualByComparingTo("1000000");
+        assertThat(enrollment.getDiscountRate()).isEqualByComparingTo("0");
         assertThat(enrollment.getEnrollmentSizeAtTime()).isEqualTo(4);
     }
 
@@ -289,7 +289,7 @@ class EnrollmentPaymentFlowTest {
 
     @Test void cancellingOnTheEnrollmentDeadlineDayRefundsInFullButNotTheDayAfter() throws Exception {
         ClassGroup group = newClass(ClassType.GROUP, "1000000");
-        wallets.saveAndFlush(Wallet.builder().studentId(student.getId()).balance(new BigDecimal("1600000"))
+        wallets.saveAndFlush(Wallet.builder().studentId(student.getId()).balance(new BigDecimal("2000000"))
                 .createdAt(OffsetDateTime.now(clock)).build());
         // Enrollment stays open through the deadline day; a student who pays that day may still cancel (BR-02.31).
         clock.value = group.getEnrollmentDeadline().atTime(10, 0).atZone(clock.getZone()).toInstant();
@@ -298,7 +298,7 @@ class EnrollmentPaymentFlowTest {
         long enrollmentId = enrollments.findByPaymentId(payments.findByIntentId(first).orElseThrow().getId()).orElseThrow().getId();
         assertThat(myEnrollment(student, enrollmentId).path("cancellable").asBoolean()).isTrue();
         request("DELETE", "/api/v1/enrollments/" + enrollmentId, Map.of("reason", "Đổi lịch"), student, null, 200);
-        assertThat(wallets.findByStudentId(student.getId()).orElseThrow().getBalance()).isEqualByComparingTo("1600000");
+        assertThat(wallets.findByStudentId(student.getId()).orElseThrow().getBalance()).isEqualByComparingTo("2000000");
 
         long second = quote(student, group);
         request("POST", "/api/v1/payment-intents/" + second + "/wallet", null, student, "wallet-" + second, 200);
@@ -306,6 +306,6 @@ class EnrollmentPaymentFlowTest {
         clock.value = clock.value.plus(Duration.ofDays(1));
         assertThat(myEnrollment(student, kept).path("cancellable").asBoolean()).isFalse();
         request("DELETE", "/api/v1/enrollments/" + kept, Map.of("reason", "Đổi lịch"), student, null, 422);
-        assertThat(wallets.findByStudentId(student.getId()).orElseThrow().getBalance()).isEqualByComparingTo("800000");
+        assertThat(wallets.findByStudentId(student.getId()).orElseThrow().getBalance()).isEqualByComparingTo("1000000");
     }
 }

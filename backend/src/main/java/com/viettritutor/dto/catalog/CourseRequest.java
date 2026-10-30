@@ -26,20 +26,27 @@ public class CourseRequest {
     private GradeLevel gradeLevel;
 
     @NotNull
-    @DecimalMin(value = "0", inclusive = false)
+    @DecimalMin(value = "100000", message = "must be at least 100000 VND")
     @Digits(integer = 15, fraction = 0)
-    @Schema(example = "8000000", description = "Full course price for one-to-one tuition, in whole VND")
+    @Schema(example = "300000", minimum = "100000",
+            description = "One-to-one tuition in whole VND. Without totalSessions it is the price PER SESSION; a class costs "
+                    + "this price x the class's own session count. Legacy clients sending totalSessions give the price for "
+                    + "that many sessions. Group seats get 20-40% off.")
     private BigDecimal basePrice1on1;
 
-    @NotNull
     @Positive
-    @Schema(example = "36")
+    @Max(200)
+    @Schema(example = "36", maximum = "200", nullable = true,
+            description = "Optional (legacy). Session count is now set per class; omit it so basePrice1on1 is a per-session price.")
     @JsonDeserialize(using = WholeNumberDeserializer.class)
     private Integer totalSessions;
 
     @NotNull
-    @Positive
-    @Schema(example = "120", defaultValue = "120")
+    @Min(value = 120, message = "must be 120: classes use fixed two-hour time slots")
+    @Max(value = 120, message = "must be 120: classes use fixed two-hour time slots")
+    @Schema(example = "120", defaultValue = "120", allowableValues = "120",
+            description = "Session length in minutes. Fixed at 120 because every class time slot is two hours; "
+                    + "class creation rejects any other value.")
     @JsonDeserialize(using = WholeNumberDeserializer.class)
     private Integer durationMinutes = 120;
 

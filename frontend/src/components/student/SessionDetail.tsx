@@ -6,6 +6,7 @@ import { ATTENDANCE_STATUS } from "@/constants/labels";
 import { ROUTES } from "@/constants/routes";
 import { useSessionAttendance } from "@/hooks/usePortalData";
 import { formatClockTime, parseIsoDate } from "@/utils/date";
+import { useState } from "react";
 import {
   canJoinNow,
   canRequestLeave,
@@ -15,8 +16,12 @@ import {
   joinOpensAt,
   joinOpensLater,
   sessionStart,
+  teacherOf,
 } from "@/utils/sessions";
+import { RateTutorDialog } from "@/components/student/RateTutor";
+import { type StudentTutor, useStudentTutors } from "@/hooks/useRatingData";
 import type { SessionDetailProps } from "@/interfaces/portal";
+import { displayCode } from "@/utils/classes";
 
 /** Khung chung của hai nút "Vào lớp" và "Xin nghỉ" (màu thêm ở từng nút) */
 const LINK =
@@ -40,6 +45,10 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
   // Hiện khu vực vào lớp khi phòng đang mở hoặc sắp mở
   const canJoin = joinNow || opensLater;
   const canLeave = canRequestLeave(session, now);
+  // Buổi đã học xong: mời chấm sao gia sư dạy buổi đó
+  const { tutors } = useStudentTutors();
+  const tutor = session.status === "COMPLETED" ? tutors.find((item) => item.id === teacherOf(session)) : undefined;
+  const [rating, setRating] = useState<StudentTutor | null>(null);
 
   return (
     <div className="border-t border-brand-sandLine bg-brand-sand/60/70 px-4 py-4 sm:px-5">
@@ -55,7 +64,7 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
         <div className="flex gap-2">
           <dt className="w-20 shrink-0 text-brand-muted">Lớp</dt>
           <dd className="font-medium text-brand-ink">
-            #{session.classGroupId}, buổi số {session.sessionNumber}
+            {displayCode("class", session.classGroupId)}, buổi số {session.sessionNumber}
           </dd>
         </div>
         {showAttendance && (
@@ -101,6 +110,16 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
 
       {(canJoin || canLeave || hasPendingLeave) && (
         <div className="mt-4 flex flex-wrap items-center gap-2.5">
+          {tutor && (
+            <button
+              type="button"
+              onClick={() => setRating(tutor)}
+              className={`${LINK} bg-amber-400 text-brand-navyDeep hover:bg-amber-300`}
+            >
+              <Icon name="star" className="text-[19px] [font-variation-settings:'FILL'_1]" />
+              Đánh giá gia sư
+            </button>
+          )}
           {joinNow && (
             <Link
               to={`/classroom/${session.sessionId}`}
@@ -131,6 +150,7 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
           )}
         </div>
       )}
+      <RateTutorDialog tutor={rating} onClose={() => setRating(null)} />
     </div>
   );
 }

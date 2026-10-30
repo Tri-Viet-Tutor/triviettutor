@@ -21,7 +21,7 @@ export function SessionHomeworkList({ sessionId }: SessionHomeworkListProps) {
           <li key={homework.id} className="flex flex-wrap items-center gap-x-2">
             <Icon name="assignment" className="text-[18px] text-brand-navy" />
             <span className="font-medium">{homework.title}</span>
-            <span className="text-brand-muted">· hạn nộp {formatDateTime(new Date(homework.dueAt))}</span>
+            <span className="text-brand-muted">- hạn nộp {formatDateTime(new Date(homework.dueAt))}</span>
           </li>
         ))}
       </ul>

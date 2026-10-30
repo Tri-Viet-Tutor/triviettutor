@@ -20,6 +20,7 @@ import type { StudentHomeworkCardProps, StudentHomeworkResponse, SubmissionRespo
 import { saveSubmissionDraft, startSubmission, submitSubmission } from "@/services/learningService";
 import { formatDate, formatDateTime, parseIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
+import { displayCode } from "@/utils/classes";
 
 /** Thao tác ghi bài làm */
 type SaveAction = "draft" | "submit";
@@ -110,12 +111,12 @@ export function StudentHomeworkCard({ item, now }: StudentHomeworkCardProps) {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-[12.5px] font-bold uppercase tracking-wide text-brand-orangeHover">
-            Lớp #{item.classGroupId} · buổi {formatDate(parseIsoDate(item.sessionDate))}
+            Lớp {displayCode("class", item.classGroupId)} - buổi {formatDate(parseIsoDate(item.sessionDate))}
           </p>
           <h2 className="text-[17px] font-bold text-brand-ink">{homework.title}</h2>
           <p className={`text-[13.5px] ${accepting ? "text-brand-muted" : "text-red-700"}`}>
             Hạn nộp {formatDateTime(due)}
-            {closedNote && ` · ${closedNote}`} · Tối đa {homework.maxScore} điểm
+            {closedNote && ` - ${closedNote}`} - Tối đa {homework.maxScore} điểm
           </p>
         </div>
         <StatusChip tone={style.tone} icon={style.icon}>

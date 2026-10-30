@@ -86,7 +86,7 @@ class CourseControllerTest {
         replacement.put("gradeLevel", "GRADE_12");
         replacement.put("basePrice1on1", 9000000);
         replacement.put("totalSessions", 40);
-        replacement.put("durationMinutes", 90);
+        replacement.put("durationMinutes", 120);
         replacement.remove("description");
         mvc.perform(put(BASE + "/" + id).header("Authorization", admin)
                         .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(replacement)))
@@ -96,7 +96,7 @@ class CourseControllerTest {
                 .andExpect(jsonPath("$.data.gradeLevel").value("GRADE_12"))
                 .andExpect(jsonPath("$.data.basePrice1on1").value(9000000))
                 .andExpect(jsonPath("$.data.totalSessions").value(40))
-                .andExpect(jsonPath("$.data.durationMinutes").value(90))
+                .andExpect(jsonPath("$.data.durationMinutes").value(120))
                 .andExpect(jsonPath("$.data.active").value(false))
                 .andExpect(jsonPath("$.data.createdAt").value(created.get("createdAt").asText()));
         var stored = courses.findById(id).orElseThrow();
@@ -149,10 +149,11 @@ class CourseControllerTest {
 
     static Stream<Map<String, Object>> invalidBodies() {
         var cases = new java.util.ArrayList<Map<String, Object>>();
-        for (String key : new String[]{"name", "subject", "gradeLevel", "basePrice1on1", "totalSessions"}) {
+        // totalSessions không còn bắt buộc: số buổi đặt ở từng lớp
+        for (String key : new String[]{"name", "subject", "gradeLevel", "basePrice1on1"}) {
             var missing = valid(); missing.remove(key); cases.add(missing);
         }
-        for (String key : new String[]{"name", "subject", "gradeLevel", "basePrice1on1", "totalSessions", "durationMinutes"}) {
+        for (String key : new String[]{"name", "subject", "gradeLevel", "basePrice1on1", "durationMinutes"}) {
             var missing = valid(); missing.put(key, null); cases.add(missing);
         }
         Object[][] values = {
@@ -162,6 +163,7 @@ class CourseControllerTest {
                 {"basePrice1on1", "1000000000000000"}, {"totalSessions", 0}, {"totalSessions", -1},
                 {"totalSessions", 1.5}, {"totalSessions", 2147483648L},
                 {"durationMinutes", 0}, {"durationMinutes", -1}, {"durationMinutes", 1.5},
+                {"basePrice1on1", 99999}, {"totalSessions", 201}, {"durationMinutes", 90}, {"durationMinutes", 150},
                 {"description", "a".repeat(10001)}, {"active", false}, {"id", 99}
         };
         for (Object[] pair : values) {
@@ -252,6 +254,61 @@ class CourseControllerTest {
                 .andExpect(status().isBadRequest());
         assertEquals(1, courses.count());
         assertEquals("GRADE_10", courses.findById(id).orElseThrow().getGradeLevel().name());
+    }
+
+    @Test
+    void responseCarriesPricePerStudentForEveryClassSizeTier() throws Exception {
+        JsonNode tiers = create(valid()).get("priceTiers");
+        assertEquals(4, tiers.size());
+        long[][] expected = {{1, 1, 8000000}, {2, 3, 6400000}, {4, 5, 5200000}, {6, 8, 4800000}};
+        for (int i = 0; i < expected.length; i++) {
+            assertEquals(expected[i][0], tiers.get(i).get("minStudents").asLong());
+            assertEquals(expected[i][1], tiers.get(i).get("maxStudents").asLong());
+            assertEquals(expected[i][2], tiers.get(i).get("pricePerStudent").asLong());
+        }
+    }
+
+    @Test
+    void setActiveIsIdempotentAndSummaryCountsBothStates() throws Exception {
+        long id = create(valid()).get("id").asLong();
+        JsonNode before = summary();
+        for (int attempt = 0; attempt < 2; attempt++) {
+            mvc.perform(put(BASE + "/" + id + "/active").header("Authorization", admin)
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}"))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.data.active").value(false));
+        }
+        JsonNode after = summary();
+        assertEquals(before.get("total").asLong(), after.get("total").asLong());
+        assertEquals(before.get("active").asLong() - 1, after.get("active").asLong());
+        assertEquals(before.get("inactive").asLong() + 1, after.get("inactive").asLong());
+        mvc.perform(put(BASE + "/" + id + "/active").header("Authorization", admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void listMatchesNameKeywordCaseInsensitivelyAndTreatsWildcardsLiterally() throws Exception {
+        var wanted = valid();
+        wanted.put("name", "Hoa hoc 12 - On thi 100%_dat");
+        create(wanted);
+        var other = valid();
+        other.put("name", "Toan 10 - Nen tang");
+        create(other);
+        JsonNode found = list("ON THI 100%_");
+        assertEquals(1, found.get("totalElements").asLong());
+        assertEquals("Hoa hoc 12 - On thi 100%_dat", found.get("content").get(0).get("name").asText());
+        assertEquals(0, list("toan 1_").get("totalElements").asLong());
+    }
+
+    private JsonNode summary() throws Exception {
+        String body = mvc.perform(get(BASE + "/summary").header("Authorization", admin))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return json.readTree(body).get("data");
+    }
+
+    private JsonNode list(String keyword) throws Exception {
+        String body = mvc.perform(get(BASE).header("Authorization", admin).param("q", keyword))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return json.readTree(body).get("data");
     }
 
     @Test

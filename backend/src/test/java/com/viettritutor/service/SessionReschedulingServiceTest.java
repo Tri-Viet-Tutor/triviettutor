@@ -62,6 +62,8 @@ class SessionReschedulingServiceTest {
     @Mock private ConflictValidationService conflictService;
     @Mock private EntityManager entityManager;
     @Mock private PayrollGuard payrollGuard;
+    @Mock private ClassScheduleService scheduleService;
+    @Mock private ClassDiscountSettlementService discountSettlement;
 
     private SessionReschedulingService service;
     private TutorAssignmentService assignmentService;
@@ -82,8 +84,8 @@ class SessionReschedulingServiceTest {
                 leaveRepository,
                 learningScheduleRepository, conflictService, operations, FIXED_CLOCK);
         assignmentService = new TutorAssignmentServiceImpl(classRepository, userRepository, assignmentRepository,
-                availabilityRepository, learningScheduleRepository, sessionRepository, conflictService, operations,
-                FIXED_CLOCK);
+                availabilityRepository, learningScheduleRepository, sessionRepository, conflictService, scheduleService,
+                discountSettlement, operations, FIXED_CLOCK);
 
         admin = User.builder().id(1L).fullName("Admin").role("ROLE_ADMIN").build();
         tutor = User.builder().id(10L).fullName("Tutor One").role("ROLE_TUTOR").build();

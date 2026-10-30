@@ -52,7 +52,7 @@ export function CourseDiary() {
         className="diary-flip lg:min-h-[390px]"
       >
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-          <p className="text-[13px] font-semibold italic text-brand-muted">Nhật ký lộ trình · Khóa {course.name}</p>
+          <p className="text-[13px] font-semibold italic text-brand-muted">Nhật ký lộ trình - Khóa {course.name}</p>
           {/* Hai con dấu hình thức học */}
           <p className="flex flex-wrap gap-2 text-[12px] font-bold uppercase tracking-[0.04em]">
             <span className="-rotate-2 rounded-md border-2 border-brand-navy/70 px-2 py-0.5 text-brand-navy">Tại trung tâm</span>
