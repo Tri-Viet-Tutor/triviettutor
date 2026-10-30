@@ -9,11 +9,14 @@ import { LEAVE_RESOLUTION, LEAVE_STATUS, SESSION_STATUS } from "@/constants/labe
 import { ROUTES } from "@/constants/routes";
 import { adminKeys, useAdminSession, useRefreshAdmin, useUserDirectory } from "@/hooks/useAdminData";
 import type { AdminLeaveRequestsQuery, Role } from "@/interfaces/api";
-import { assignSubstitute, cancelSession, createMakeup, fetchAdminLeaveRequests, rejectLeaveRequest } from "@/services/admin";
+import { assignSubstitute, cancelSession, createMakeup, excuseLeaveRequest, fetchAdminLeaveRequests, rejectLeaveRequest } from "@/services/admin";
 import { formatClockTime, formatDate, parseIsoDate, startOfToday, toIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 import { formatLongDate, formatTimeRange, teacherOf } from "@/utils/sessions";
 import type { AdminLeaveCardProps, LeaveCardAction } from "@/interfaces/admin";
+import { displayCode } from "@/utils/classes";
+import { DateField } from "@/components/ui/DateField";
+import { TimeField } from "@/components/ui/TimeField";
 
 export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
   const refresh = useRefreshAdmin();
@@ -33,6 +36,7 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
     void refresh();
   };
   const reject = useMutation({ mutationFn: (reason: string) => rejectLeaveRequest(request.leaveRequestId, reason), onSuccess: done });
+  const excuse = useMutation({ mutationFn: (reason: string) => excuseLeaveRequest(request.leaveRequestId, reason), onSuccess: done });
   const cancel = useMutation({
     mutationFn: (reason: string) => cancelSession(request.sessionId, { reason, leaveRequestId: request.leaveRequestId }),
     onSuccess: done,
@@ -69,6 +73,8 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
   const canReschedule =
     fromTutor || (studentReschedules && sessionPending.data?.content.every((other) => other.requesterRole !== "ROLE_TUTOR") === true);
   const pending = request.status === "PENDING";
+  // Học viên lớp nhóm báo nghỉ trước ≥ 24 giờ: trung tâm duyệt có phép → học viên được miễn điểm danh buổi đó
+  const canExcuse = !fromTutor && pending && !request.isLateNotice && session !== undefined && session.status !== "PENDING_RESCHEDULE" && session.status !== "CANCELLED";
   // Không cho chọn chính người đang dạy buổi đó làm người dạy thay
   const currentTeacher = session ? teacherOf(session) : null;
   const substituteOptions = tutors.filter((tutor) => tutor.id !== currentTeacher);
@@ -77,6 +83,7 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
   /** Mở form của một cách xử lý, xóa lỗi cũ của các form khác */
   function open(next: LeaveCardAction) {
     reject.reset();
+    excuse.reset();
     cancel.reset();
     substitute.reset();
     makeup.reset();
@@ -91,11 +98,11 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
           <p className="text-[14px] text-brand-muted">
             {session ? (
               <>
-                Nghỉ buổi {formatLongDate(parseIsoDate(session.date))}, {formatTimeRange(session)} (lớp #{session.classGroupId}, buổi{" "}
+                Nghỉ buổi {formatLongDate(parseIsoDate(session.date))}, {formatTimeRange(session)} (lớp {displayCode("class", session.classGroupId)}, buổi{" "}
                 {session.sessionNumber})
               </>
             ) : (
-              `Buổi học #${request.sessionId}`
+              `Buổi học ${displayCode("session", request.sessionId)}`
             )}
           </p>
         </div>
@@ -125,7 +132,7 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
       {request.resolutionReason && <p className="mt-1 text-[14.5px] text-brand-ink">Ghi chú xử lý: {request.resolutionReason}</p>}
 
       <p className="mt-3 text-[13px] text-brand-muted">
-        Gửi lúc {formatClockTime(requestedAt)} ngày {formatDate(requestedAt)} ·{" "}
+        Gửi lúc {formatClockTime(requestedAt)} ngày {formatDate(requestedAt)} -{" "}
         <Link to={`${ROUTES.adminSessions}?buoi=${request.sessionId}`} className={PORTAL_TEXT_LINK}>
           Mở buổi học
         </Link>
@@ -135,8 +142,11 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
         <div className="mt-4 border-t border-brand-sandLine pt-4">
           {!fromTutor && (
             <p className="mb-3 text-[14px] leading-relaxed text-brand-muted">
-              Để duyệt nghỉ có phép: khi buổi học đã bắt đầu, mở buổi học và điểm danh "Nghỉ có phép" cho học viên này. Đơn báo trễ (dưới 24
-              giờ) không duyệt có phép được.
+              {canExcuse
+                ? "Duyệt có phép thì học viên được miễn điểm danh buổi này; gia sư sẽ thấy em đã nghỉ có phép."
+                : request.isLateNotice
+                  ? "Đơn báo trễ (dưới 24 giờ) không duyệt có phép được."
+                  : "Đơn này cần xếp lại buổi học (lớp 1 kèm 1)."}
             </p>
           )}
           {action === null && (
@@ -156,12 +166,29 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
                   </button>
                 </>
               )}
+              {canExcuse && (
+                <button type="button" onClick={() => open("excuse")} className={PORTAL_BTN_PRIMARY}>
+                  Duyệt nghỉ có phép
+                </button>
+              )}
               <button type="button" onClick={() => open("reject")} className={PORTAL_BTN_SECONDARY}>
                 Từ chối
               </button>
             </div>
           )}
 
+          {action === "excuse" && (
+            <ReasonForm
+              id={`excuse-${request.leaveRequestId}`}
+              label="Ghi chú gửi kèm (ví dụ: đã có giấy xin phép của phụ huynh)"
+              submitLabel="Duyệt nghỉ có phép"
+              isPending={excuse.isPending}
+              error={excuse.error}
+              errorFallback="Chưa duyệt được. Vui lòng thử lại."
+              onSubmit={(reason) => excuse.mutate(reason)}
+              onCancel={() => setAction(null)}
+            />
+          )}
           {action === "reject" && (
             <ReasonForm
               id={`reject-${request.leaveRequestId}`}
@@ -214,7 +241,7 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
                   <option value="">Chọn gia sư</option>
                   {substituteOptions.map((tutor) => (
                     <option key={tutor.id} value={tutor.id}>
-                      {tutor.fullName} (#{tutor.id})
+                      {tutor.fullName}
                     </option>
                   ))}
                 </select>
@@ -234,13 +261,12 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
                   <label htmlFor={`makeup-date-${request.leaveRequestId}`} className={`mb-1.5 ${AUTH_LABEL}`}>
                     Ngày học bù
                   </label>
-                  <input
+                  <DateField
                     id={`makeup-date-${request.leaveRequestId}`}
-                    type="date"
                     required
                     min={toIsoDate(startOfToday())}
                     value={makeupDate}
-                    onChange={(event) => setMakeupDate(event.target.value)}
+                    onChange={(value) => setMakeupDate(value)}
                     className={PORTAL_INPUT}
                   />
                 </div>
@@ -248,12 +274,11 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
                   <label htmlFor={`makeup-start-${request.leaveRequestId}`} className={`mb-1.5 ${AUTH_LABEL}`}>
                     Từ
                   </label>
-                  <input
+                  <TimeField
                     id={`makeup-start-${request.leaveRequestId}`}
-                    type="time"
                     required
                     value={startTime}
-                    onChange={(event) => setStartTime(event.target.value)}
+                    onChange={(value) => setStartTime(value)}
                     className={PORTAL_INPUT}
                   />
                 </div>
@@ -261,12 +286,11 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
                   <label htmlFor={`makeup-end-${request.leaveRequestId}`} className={`mb-1.5 ${AUTH_LABEL}`}>
                     Đến
                   </label>
-                  <input
+                  <TimeField
                     id={`makeup-end-${request.leaveRequestId}`}
-                    type="time"
                     required
                     value={endTime}
-                    onChange={(event) => setEndTime(event.target.value)}
+                    onChange={(value) => setEndTime(value)}
                     className={PORTAL_INPUT}
                   />
                 </div>

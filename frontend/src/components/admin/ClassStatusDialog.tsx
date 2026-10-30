@@ -9,6 +9,7 @@ import { addDays, startOfToday, toIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 import type { AdminClassResponse } from "@/interfaces/api";
 import type { ClassStatusDialogProps } from "@/interfaces/admin";
+import { DateField } from "@/components/ui/DateField";
 
 /**
  * Cập nhật lớp: chỉ đưa ra các bước hợp lệ lúc này (Mở đăng ký, Chốt lớp, Bắt đầu học, Kết thúc, Hủy…)
@@ -62,7 +63,7 @@ export function ClassStatusDialog({ classItem, mode, onClose, onSaved }: ClassSt
       open={classItem !== null}
       onClose={onClose}
       title={mode === "reopen" ? "Mở lại lớp" : "Cập nhật lớp"}
-      description={classItem ? `${classItem.classCode} · ${classItem.courseName}` : undefined}
+      description={classItem ? `${classItem.classCode} - ${classItem.courseName}` : undefined}
     >
       {classItem && (
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
@@ -104,11 +105,10 @@ export function ClassStatusDialog({ classItem, mode, onClose, onSaved }: ClassSt
                 <label htmlFor="reopen-start" className={PORTAL_LABEL}>
                   Ngày khai giảng mới
                 </label>
-                <input
+                <DateField
                   id="reopen-start"
-                  type="date"
                   value={startDate}
-                  onChange={(event) => setStartDate(event.target.value)}
+                  onChange={(value) => setStartDate(value)}
                   className={PORTAL_INPUT}
                 />
               </div>
@@ -116,11 +116,10 @@ export function ClassStatusDialog({ classItem, mode, onClose, onSaved }: ClassSt
                 <label htmlFor="reopen-deadline" className={PORTAL_LABEL}>
                   Hạn đăng ký mới
                 </label>
-                <input
+                <DateField
                   id="reopen-deadline"
-                  type="date"
                   value={deadline}
-                  onChange={(event) => setDeadline(event.target.value)}
+                  onChange={(value) => setDeadline(value)}
                   className={PORTAL_INPUT}
                 />
               </div>

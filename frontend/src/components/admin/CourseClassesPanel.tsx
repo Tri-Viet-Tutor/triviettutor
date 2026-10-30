@@ -62,7 +62,7 @@ export function CourseClassesPanel({ course, onCreate, onChangeStatus }: CourseC
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[14px] font-semibold text-brand-ink">{item.classCode}</p>
                   <p className="text-[12.5px] text-brand-muted">
-                    {patternLabel(item.schedulePattern)} · {item.timeSlotLabel} · khai giảng {formatDate(parseIsoDate(item.startDate))}
+                    {patternLabel(item.schedulePattern)} - {item.timeSlotLabel} - khai giảng {formatDate(parseIsoDate(item.startDate))}
                   </p>
                 </div>
                 <span className="shrink-0 text-[13px] font-semibold tabular-nums text-brand-ink">

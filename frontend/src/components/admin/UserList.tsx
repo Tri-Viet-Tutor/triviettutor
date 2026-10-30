@@ -1,74 +1,184 @@
-import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { type FormEvent, useState } from "react";
+import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
+import { AuthNotice } from "@/components/auth/AuthNotice";
+import { PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
+import { useRefreshAdmin } from "@/hooks/useAdminData";
+import { deleteUser, updateUser } from "@/services/admin";
+import { useAuthStore } from "@/stores/authStore";
+import { portalErrorMessage } from "@/utils/errors";
+import type { AdminUserResponse } from "@/interfaces/api";
 import { TutorProfileForm } from "@/components/admin/TutorForms";
 import { StatusChip } from "@/components/dashboard/StatusChip";
-import { PORTAL_BTN_SECONDARY, PORTAL_CARD } from "@/constants/classNames";
+import { Icon } from "@/components/ui/Icon";
+import { UserAvatar } from "@/components/ui/UserAvatar";
+import { PORTAL_CARD } from "@/constants/classNames";
 import { ROLE_NAME } from "@/constants/labels";
 import type { Role } from "@/interfaces/api";
 import type { Tone } from "@/interfaces/ui";
+import { displayCode } from "@/utils/classes";
 import { formatDate } from "@/utils/date";
 import type { UserListProps } from "@/interfaces/admin";
 
 /** Màu nhãn vai trò */
 const ROLE_TONE: Record<Role, Tone> = { ROLE_STUDENT: "navy", ROLE_TUTOR: "green", ROLE_ADMIN: "amber" };
+/** Mã hiển thị theo vai trò: HV003, GV012, ND001 */
+const codeOf = (role: Role, id: number) => displayCode(role === "ROLE_STUDENT" ? "student" : role === "ROLE_TUTOR" ? "tutor" : "user", id);
 
-/** Danh sách người dùng của khu quản trị; dòng của gia sư có nút mở form sửa hồ sơ ngay bên dưới. */
+const GRID = "lg:grid lg:grid-cols-[88px_minmax(0,1fr)_130px_120px_100px] lg:items-center lg:gap-x-4";
+const ICON_BTN =
+  "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-brand-sandLine bg-white px-2.5 text-[13px] font-semibold text-brand-navy transition-colors hover:border-brand-navy/40 hover:bg-brand-tint focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+
+/** Form sửa họ tên / email ngay dưới dòng; gia sư có thêm phần lương và giới thiệu (TutorProfileForm) */
+function EditUserPanel({ user, onClose }: { user: AdminUserResponse; onClose: () => void }) {
+  const refresh = useRefreshAdmin();
+  const [fullName, setFullName] = useState(user.fullName);
+  const [email, setEmail] = useState(user.email);
+  const [saved, setSaved] = useState(false);
+  const save = useMutation({
+    mutationFn: () => updateUser(user.id, { fullName: fullName.trim(), email: email.trim() }),
+    onSuccess: () => {
+      setSaved(true);
+      void refresh();
+    },
+  });
+  const valid = fullName.trim() !== "" && /\S+@\S+\.\S+/.test(email.trim());
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (valid) save.mutate();
+  }
+
+  return (
+    <div className="border-t border-brand-sandLine bg-brand-sand/30">
+      <form onSubmit={submit} className="grid gap-3 px-5 py-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+        <div>
+          <label htmlFor={`user-name-${user.id}`} className={PORTAL_LABEL}>
+            Họ và tên
+          </label>
+          <input id={`user-name-${user.id}`} value={fullName} onChange={(event) => { setFullName(event.target.value); setSaved(false); }} className={PORTAL_INPUT} />
+        </div>
+        <div>
+          <label htmlFor={`user-email-${user.id}`} className={PORTAL_LABEL}>
+            Email
+          </label>
+          <input id={`user-email-${user.id}`} type="email" value={email} onChange={(event) => { setEmail(event.target.value); setSaved(false); }} className={PORTAL_INPUT} />
+        </div>
+        <div className="flex gap-2">
+          <button type="button" onClick={onClose} className={PORTAL_BTN_SECONDARY}>
+            Đóng
+          </button>
+          <button type="submit" disabled={!valid || save.isPending} className={PORTAL_BTN_PRIMARY}>
+            {save.isPending ? "Đang lưu…" : "Lưu"}
+          </button>
+        </div>
+        {(saved || save.error) && (
+          <div className="sm:col-span-3">
+            {saved ? (
+              <AuthNotice tone="success">Đã lưu thông tin tài khoản.</AuthNotice>
+            ) : (
+              <AuthNotice tone="error">{portalErrorMessage(save.error, "Chưa lưu được. Vui lòng thử lại.")}</AuthNotice>
+            )}
+          </div>
+        )}
+      </form>
+      {user.role === "ROLE_TUTOR" && <TutorProfileForm tutor={user} onClose={onClose} />}
+    </div>
+  );
+}
+
+/**
+ * Bảng người dùng của khu quản trị: mã theo vai trò, ảnh + họ tên + email, vai trò, ngày tạo và thao tác
+ * Chỉnh sửa (họ tên, email; gia sư thêm lương / giới thiệu) và Xóa (chỉ tài khoản chưa có dữ liệu, không xóa chính mình).
+ */
 export function UserList({ users }: UserListProps) {
-  // Gia sư đang mở form sửa hồ sơ (mỗi lúc chỉ mở một)
+  const me = useAuthStore((state) => state.user?.id);
+  const refresh = useRefreshAdmin();
+  // Người đang mở form chỉnh sửa (mỗi lúc chỉ mở một) và người đang chờ xác nhận xóa
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [removing, setRemoving] = useState<AdminUserResponse | null>(null);
 
   return (
     <div className={`overflow-hidden ${PORTAL_CARD}`}>
-      {/* Hàng tiêu đề cột — chỉ hiện ở màn hình rộng, nơi các cột có độ rộng cố định và thẳng hàng */}
+      {/* Hàng tiêu đề cột — chỉ hiện ở màn hình rộng */}
       <div
         aria-hidden="true"
-        className="hidden items-center gap-x-4 border-b border-brand-sandLine bg-brand-sand/70 px-5 py-3 text-[12.5px] font-bold uppercase tracking-wide text-brand-muted lg:flex"
+        className={`hidden border-b border-brand-sandLine bg-brand-sand/60 px-5 py-3 text-[12px] font-bold uppercase tracking-wide text-brand-muted ${GRID}`}
       >
-        <span className="w-[52px] shrink-0">Mã</span>
-        <span className="min-w-0 flex-1">Người dùng</span>
-        <div className="flex items-center gap-x-3">
-          <span className="w-[118px]">Vai trò</span>
-          <span className="w-[150px]">Ngày tạo</span>
-          <span className="w-[104px] text-right">Thao tác</span>
-        </div>
+        <span>Mã</span>
+        <span>Người dùng</span>
+        <span>Vai trò</span>
+        <span>Ngày tạo</span>
+        <span className="text-right">Thao tác</span>
       </div>
       <ul className="divide-y divide-brand-sandLine">
         {users.map((user) => {
           const editing = editingId === user.id;
           return (
-            <li key={user.id}>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3.5 sm:px-5">
-                <span className="w-10 shrink-0 text-[13.5px] font-semibold tabular-nums text-brand-muted lg:w-[52px]">{user.id}</span>
-                <div className="min-w-0 flex-1 basis-[180px]">
-                  <p className="truncate text-[15.5px] font-semibold text-brand-ink">{user.fullName}</p>
-                  <p className="truncate text-[14px] text-brand-muted">{user.email}</p>
+            <li key={user.id} className={editing ? "bg-brand-tint/30" : "transition-colors hover:bg-brand-sand/30"}>
+              <div className={`flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 sm:px-5 ${GRID}`}>
+                <span className="order-2 rounded-md bg-brand-sand px-2 py-0.5 font-mono text-[12px] font-bold text-brand-muted lg:order-none lg:justify-self-start">
+                  {codeOf(user.role, user.id)}
+                </span>
+                <div className="order-1 flex min-w-0 flex-1 basis-full items-center gap-3 lg:order-none lg:basis-auto">
+                  <UserAvatar userId={user.id} name={user.fullName} size={38} />
+                  <div className="min-w-0">
+                    <p className="truncate text-[15px] font-bold text-brand-ink">{user.fullName}</p>
+                    <p className="truncate text-[13px] text-brand-muted">{user.email}</p>
+                  </div>
                 </div>
-                {/* Màn hình rộng: ba cột rộng cố định để các dòng thẳng hàng */}
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                  <span className="lg:w-[118px]">
-                    <StatusChip tone={ROLE_TONE[user.role]}>{ROLE_NAME[user.role]}</StatusChip>
-                  </span>
-                  <span className="text-[13.5px] tabular-nums text-brand-muted lg:w-[150px]">
-                    Tạo ngày {formatDate(new Date(user.createdAt))}
-                  </span>
-                  <span className="lg:w-[104px] lg:text-right">
-                    {user.role === "ROLE_TUTOR" && (
-                      <button
-                        type="button"
-                        aria-expanded={editing}
-                        onClick={() => setEditingId(editing ? null : user.id)}
-                        className={PORTAL_BTN_SECONDARY}
-                      >
-                        {editing ? "Đóng" : "Sửa hồ sơ"}
-                      </button>
-                    )}
-                  </span>
+                <span className="order-2 lg:order-none">
+                  <StatusChip tone={ROLE_TONE[user.role]}>{ROLE_NAME[user.role]}</StatusChip>
+                </span>
+                <span className="order-2 text-[13.5px] tabular-nums text-brand-muted lg:order-none">
+                  <span className="lg:hidden">Tạo ngày </span>
+                  {formatDate(new Date(user.createdAt))}
+                </span>
+                <div className="order-3 flex basis-full flex-wrap justify-end gap-1.5 lg:order-none lg:basis-auto lg:flex-nowrap">
+                  <button
+                    type="button"
+                    aria-expanded={editing}
+                    onClick={() => setEditingId(editing ? null : user.id)}
+                    title={editing ? "Đóng" : "Chỉnh sửa"}
+                    aria-label={editing ? `Đóng chỉnh sửa ${user.fullName}` : `Chỉnh sửa ${user.fullName}`}
+                    className={`${ICON_BTN} w-9 px-0 ${editing ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navyDeep" : ""}`}
+                  >
+                    <Icon name={editing ? "close" : "edit"} className="text-[18px]" />
+                  </button>
+                  {user.id !== me && (
+                    <button
+                      type="button"
+                      onClick={() => setRemoving(user)}
+                      title="Xóa"
+                      aria-label={`Xóa ${user.fullName}`}
+                      className={`${ICON_BTN} w-9 px-0 text-red-700 hover:border-red-300 hover:bg-red-50`}
+                    >
+                      <Icon name="delete" className="text-[18px]" />
+                    </button>
+                  )}
                 </div>
               </div>
-              {editing && <TutorProfileForm tutor={user} onClose={() => setEditingId(null)} />}
+              {editing && <EditUserPanel user={user} onClose={() => setEditingId(null)} />}
             </li>
           );
         })}
       </ul>
+      <ConfirmDeleteDialog
+        open={removing !== null}
+        title="Xóa người dùng"
+        message={
+          removing
+            ? `Xóa tài khoản ${removing.fullName} (${removing.email})? Chỉ xóa được tài khoản chưa có lớp học, thanh toán, ví hay buổi dạy.`
+            : ""
+        }
+        onClose={() => setRemoving(null)}
+        onConfirm={async () => {
+          if (!removing) return;
+          await deleteUser(removing.id);
+          setRemoving(null);
+          void refresh();
+        }}
+      />
     </div>
   );
 }

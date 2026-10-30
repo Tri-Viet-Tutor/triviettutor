@@ -6,6 +6,7 @@ import { SESSION_STATUS } from "@/constants/labels";
 import { formatDayMonth, parseIsoDate } from "@/utils/date";
 import { dayLabel, formatTimeRange } from "@/utils/sessions";
 import type { UpcomingListProps } from "@/interfaces/portal";
+import { displayCode } from "@/utils/classes";
 
 /** Vài buổi sắp tới ở trang Tổng quan; bấm một buổi để mở nó ở trang lịch. */
 export function UpcomingList({ title, sessions, today, scheduleTo, emptyText }: UpcomingListProps) {
@@ -39,7 +40,7 @@ export function UpcomingList({ title, sessions, today, scheduleTo, emptyText }: 
                   <span className="min-w-0 flex-1">
                     <span className="block text-[15px] font-semibold tabular-nums text-brand-ink">{formatTimeRange(session)}</span>
                     <span className="block truncate text-[13.5px] text-brand-muted">
-                      Lớp #{session.classGroupId}, buổi {session.sessionNumber}
+                      Lớp {displayCode("class", session.classGroupId)}, buổi {session.sessionNumber}
                     </span>
                     {session.status !== "SCHEDULED" && (
                       <span className="mt-1 block sm:hidden">

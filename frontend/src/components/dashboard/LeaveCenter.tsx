@@ -92,7 +92,7 @@ export function LeaveCenter({ role, scheduleTo, isEligible }: LeaveCenterProps) 
           ) : listQuery.isError || !list ? (
             <PortalError message="Không tải được đơn xin nghỉ." onRetry={() => void listQuery.refetch()} />
           ) : list.content.length === 0 ? (
-            <PortalEmpty icon="inbox" title={status ? "Không có đơn nào ở trạng thái này" : "Bạn chưa gửi đơn xin nghỉ nào"} />
+            <PortalEmpty icon="inbox" title={status ? "Không có đơn nào ở trạng thái này." : "Bạn chưa gửi đơn xin nghỉ nào."} />
           ) : (
             <>
               <ul className="space-y-3">

@@ -56,6 +56,15 @@ export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | 
     queries: classIds.map((id) => ({ queryKey: ["catalog-class", id], queryFn: () => getTuitionClass(id), staleTime: 5 * 60_000, retry: false })),
   });
   const classInfo = new Map<number, TuitionClass | undefined>(classIds.map((id, index) => [id, classQueries[index]?.data]));
+  /**
+   * Lớp còn đang bán (chưa mở / đang tuyển sinh) hoặc chưa công khai: lịch chỉ là dự kiến —
+   * lớp chạy khi có học viên, không có ai đăng ký thì trung tâm hủy lớp.
+   */
+  const tentativeOf = (classId: number) => {
+    const query = classQueries[classIds.indexOf(classId)];
+    const status = query?.data?.status;
+    return status === "PUBLISHED" || status === "ENROLLING" || status === "DRAFT" || Boolean(query?.isError);
+  };
   const colorOf = (classId: number) => CLASS_COLORS[Math.max(0, classIds.indexOf(classId)) % CLASS_COLORS.length];
 
   // Mở sẵn buổi được dẫn tới qua ?buoi=: chuyển tới đúng tuần
@@ -73,10 +82,14 @@ export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | 
   const slots = [...new Set([...FIXED_SLOTS, ...weekSessions.map(slotOf)])].sort();
   const todayIso = toIsoDate(now);
 
-  const active = weekSessions.filter((session) => session.status !== "CANCELLED");
+  const active = weekSessions.filter((session) => session.status !== "CANCELLED" && !tentativeOf(session.classGroupId));
+  const tentativeCount = weekSessions.filter((session) => session.status !== "CANCELLED" && tentativeOf(session.classGroupId)).length;
+  const tentativeClasses = classIds.filter(tentativeOf);
   const toMark = sessions.filter((session) => needsAttendance(session, tutorId, now)).length;
   const next = sessions
-    .filter((session) => session.status === "SCHEDULED" && new Date(`${session.date}T${session.startTime}`) > now)
+    .filter(
+      (session) => session.status === "SCHEDULED" && !tentativeOf(session.classGroupId) && new Date(`${session.date}T${session.startTime}`) > now,
+    )
     .sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`))[0];
   const openSession = sessions.find((session) => session.sessionId === openId) ?? null;
 
@@ -86,126 +99,135 @@ export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | 
     return (
       <PortalEmpty
         icon="calendar_month"
-        title="Bạn chưa có buổi dạy nào"
+        title="Bạn chưa có buổi dạy nào."
         description="Thời khóa biểu sẽ hiện ở đây sau khi trung tâm phân công lớp cho bạn."
       />
     );
 
   return (
     <div className="space-y-5">
-      {/* Tổng quan */}
-      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat icon="event" label="Buổi dạy tuần này" value={`${active.length} buổi`} />
-        <Stat icon="groups" label="Lớp đang dạy" value={`${classIds.length} lớp`} />
+      {/* Tổng quan: một dải bốn ô */}
+      <dl className={`grid grid-cols-2 divide-brand-sandLine overflow-hidden lg:grid-cols-4 lg:divide-x ${PORTAL_CARD}`}>
+        <Stat
+          icon="event"
+          label="Buổi dạy tuần này"
+          value={`${active.length} buổi`}
+          sub={tentativeCount > 0 ? `+${tentativeCount} buổi dự kiến` : undefined}
+        />
+        <Stat
+          icon="groups"
+          label="Lớp đang dạy"
+          value={`${classIds.length - tentativeClasses.length} lớp`}
+          sub={tentativeClasses.length > 0 ? `+${tentativeClasses.length} lớp đang tuyển sinh` : undefined}
+        />
         <Stat icon="fact_check" label="Cần điểm danh" value={`${toMark} buổi`} warn={toMark > 0} />
         <Stat
           icon="schedule"
           label="Buổi tiếp theo"
-          value={next ? `${shortDate(parseIsoDate(next.date))} · ${next.startTime.slice(0, 5)}` : "—"}
+          value={next ? `${shortDate(parseIsoDate(next.date))} - ${next.startTime.slice(0, 5)}` : "—"}
           sub={next ? (classInfo.get(next.classGroupId)?.courseName ?? displayCode("class", next.classGroupId)) : undefined}
         />
       </dl>
 
-      {/* Chọn tuần */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-[17px] font-bold text-brand-navy">
-          Tuần {shortDate(days[0])} – {shortDate(days[6])}/{days[6].getFullYear()}
-        </h2>
-        <div className="flex items-center gap-1 rounded-xl border border-brand-sandLine bg-white p-1">
-          <WeekButton icon="chevron_left" label="Tuần trước" onClick={() => setWeekStart(addDays(weekStart, -7))} />
-          <button
-            type="button"
-            onClick={() => setWeekStart(startOfWeek(now))}
-            className={`h-9 rounded-lg px-3 text-[13.5px] font-semibold text-brand-navy hover:bg-brand-tint ${FOCUS_RING}`}
-          >
-            Tuần này
-          </button>
-          <WeekButton icon="chevron_right" label="Tuần sau" onClick={() => setWeekStart(addDays(weekStart, 7))} />
-        </div>
-      </div>
-
       {/* Thời khóa biểu */}
-      <div className={`overflow-x-auto ${PORTAL_CARD}`}>
-        <table className="w-full min-w-[920px] table-fixed border-collapse text-left">
-          <thead>
-            <tr>
-              <th scope="col" className="w-[148px] border-b border-brand-sandLine bg-brand-sand/40 px-3 py-3 text-[12px] font-semibold text-brand-muted">
-                Ca học
-              </th>
-              {days.map((day, index) => {
-                const isToday = dayIsos[index] === todayIso;
-                return (
-                  <th
-                    key={dayIsos[index]}
-                    scope="col"
-                    className={`border-b border-l border-brand-sandLine px-2 py-3 text-center ${isToday ? "bg-brand-tint" : "bg-brand-sand/40"}`}
-                  >
-                    <span className={`block text-[12.5px] font-semibold ${isToday ? "text-brand-navy" : "text-brand-muted"}`}>{WEEKDAYS[index]}</span>
-                    <span
-                      className={`mt-0.5 inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[14px] font-bold tabular-nums ${
-                        isToday ? "bg-brand-navy text-white" : "text-brand-ink"
-                      }`}
-                    >
-                      {shortDate(day)}
-                    </span>
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
-          <tbody>
-            {slots.map((slot) => {
-              const [start, end] = slot.split("-");
-              const fixedIndex = FIXED_SLOTS.indexOf(slot);
-              return (
-                <tr key={slot}>
-                  <th scope="row" className="border-b border-brand-sandLine bg-brand-sand/20 px-3 py-2 align-middle">
-                    <span className="flex items-center gap-2">
+      <section className={`overflow-hidden ${PORTAL_CARD}`}>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-sandLine px-4 py-3.5 sm:px-5">
+          <div>
+            <h2 className="text-[17px] font-extrabold text-brand-navy">
+              Tuần {shortDate(days[0])} – {shortDate(days[6])}
+              <span className="font-semibold text-brand-muted">/{days[6].getFullYear()}</span>
+            </h2>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-brand-muted">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-sm bg-brand-navy" /> Đã chốt lớp
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-sm border border-dashed border-amber-500" /> Dự kiến — lớp đang tuyển sinh, không có học viên sẽ bị hủy
+              </span>
+            </p>
+          </div>
+          <div className="flex items-center gap-1 rounded-xl bg-brand-sand/70 p-1">
+            <WeekButton icon="chevron_left" label="Tuần trước" onClick={() => setWeekStart(addDays(weekStart, -7))} />
+            <button
+              type="button"
+              onClick={() => setWeekStart(startOfWeek(now))}
+              className={`h-8 rounded-lg bg-white px-3 text-[13px] font-semibold text-brand-navy shadow-sm hover:bg-brand-tint ${FOCUS_RING}`}
+            >
+              Tuần này
+            </button>
+            <WeekButton icon="chevron_right" label="Tuần sau" onClick={() => setWeekStart(addDays(weekStart, 7))} />
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[920px] table-fixed border-collapse text-left">
+            <thead>
+              <tr>
+                <th scope="col" className="w-[120px] px-3 py-3 text-[11.5px] font-bold uppercase tracking-wide text-brand-muted">
+                  Ca học
+                </th>
+                {days.map((day, index) => {
+                  const isToday = dayIsos[index] === todayIso;
+                  return (
+                    <th key={dayIsos[index]} scope="col" className="px-1.5 py-2.5 text-center">
+                      <span className={`block text-[12px] font-semibold ${isToday ? "text-brand-navy" : "text-brand-muted"}`}>{WEEKDAYS[index]}</span>
                       <span
-                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[13px] font-bold tabular-nums ${
-                          fixedIndex >= 0 ? "bg-brand-navy text-white" : "bg-slate-200 text-slate-600"
+                        className={`mt-1 inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-[14px] font-extrabold tabular-nums ${
+                          isToday ? "bg-brand-navy text-white shadow-[0_6px_14px_-6px_rgba(11,58,140,0.8)]" : "text-brand-ink"
                         }`}
                       >
-                        {fixedIndex >= 0 ? fixedIndex + 1 : "+"}
+                        {day.getDate()}
                       </span>
-                      <span className="whitespace-nowrap text-[13.5px] font-semibold tabular-nums text-brand-ink">
-                        {start} – {end}
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {slots.map((slot) => {
+                const [start, end] = slot.split("-");
+                const fixedIndex = FIXED_SLOTS.indexOf(slot);
+                return (
+                  <tr key={slot} className="border-t border-brand-sandLine">
+                    <th scope="row" className="px-3 py-2 align-top">
+                      <span className="block text-[11px] font-bold uppercase tracking-wide text-brand-muted">
+                        {fixedIndex >= 0 ? `Ca ${fixedIndex + 1}` : "Ca thêm"}
                       </span>
-                    </span>
-                  </th>
-                  {dayIsos.map((iso) => {
-                    const cell = weekSessions.filter((session) => session.date === iso && slotOf(session) === slot);
-                    return (
-                      <td
-                        key={iso}
-                        className={`h-[112px] border-b border-l border-brand-sandLine p-1.5 align-top ${iso === todayIso ? "bg-brand-tint/40" : ""}`}
-                      >
-                        <div className="space-y-1.5">
-                          {cell.map((session) => (
-                            <SessionCard
-                              key={session.sessionId}
-                              session={session}
-                              info={classInfo.get(session.classGroupId)}
-                              color={colorOf(session.classGroupId)}
-                              mark={needsAttendance(session, tutorId, now)}
-                              substitute={teacherOf(session) !== tutorId}
-                              leave={Boolean(pendingLeaveOf(session.sessionId, leaveRequests))}
-                              onOpen={() => setOpenId(session.sessionId)}
-                            />
-                          ))}
-                        </div>
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {active.length === 0 && (
+                      <span className="block text-[14px] font-extrabold tabular-nums text-brand-ink">{start}</span>
+                      <span className="block text-[12px] tabular-nums text-brand-muted">đến {end}</span>
+                    </th>
+                    {dayIsos.map((iso) => {
+                      const cell = weekSessions.filter((session) => session.date === iso && slotOf(session) === slot);
+                      return (
+                        <td key={iso} className={`h-[104px] border-l border-brand-sandLine/70 p-1.5 align-top ${iso === todayIso ? "bg-brand-tint/35" : ""}`}>
+                          <div className="space-y-1.5">
+                            {cell.map((session) => (
+                              <SessionCard
+                                key={session.sessionId}
+                                session={session}
+                                info={classInfo.get(session.classGroupId)}
+                                color={colorOf(session.classGroupId)}
+                                tentative={tentativeOf(session.classGroupId)}
+                                mark={needsAttendance(session, tutorId, now)}
+                                substitute={teacherOf(session) !== tutorId}
+                                leave={Boolean(pendingLeaveOf(session.sessionId, leaveRequests))}
+                                onOpen={() => setOpenId(session.sessionId)}
+                              />
+                            ))}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {active.length === 0 && tentativeCount === 0 && (
           <p className="border-t border-brand-sandLine px-4 py-3 text-center text-[13.5px] text-brand-muted">Tuần này không có buổi dạy.</p>
         )}
-      </div>
+      </section>
 
       {/* Các lớp đang dạy */}
       <section>
@@ -217,16 +239,22 @@ export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | 
             const own = sessions.filter((session) => session.classGroupId === id && session.originalSessionId === null);
             const done = own.filter((session) => session.status === "COMPLETED").length;
             const total = info?.totalSessions || own.length;
+            const tentative = tentativeOf(id);
             return (
-              <li key={id} className={`flex gap-3 p-4 ${PORTAL_CARD}`}>
+              <li key={id} className={`flex gap-3 p-4 ${PORTAL_CARD} ${tentative ? "border-dashed border-amber-300" : ""}`}>
                 <span className={`mt-1 h-10 w-1.5 shrink-0 rounded-full ${color.bar}`} aria-hidden="true" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[15px] font-bold text-brand-ink">{info?.courseName ?? `Lớp ${displayCode("class", id)}`}</p>
+                  <p className="flex items-center gap-2">
+                    <span className="truncate text-[15px] font-bold text-brand-ink">{info?.courseName ?? `Lớp ${displayCode("class", id)}`}</span>
+                    {tentative && (
+                      <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800">Đang xếp lịch</span>
+                    )}
+                  </p>
                   <p className="mt-0.5 truncate text-[12.5px] text-brand-muted">
                     {displayCode("class", id)}
                     {info && (
                       <>
-                        {" "}· {subjectLabel(info.subject)} {gradeLabel(info.gradeLevel)} · {patternLabel(info.schedulePattern)} {info.timeSlotLabel}
+                        {" "}- {subjectLabel(info.subject)} {gradeLabel(info.gradeLevel)} - {patternLabel(info.schedulePattern)} {info.timeSlotLabel}
                       </>
                     )}
                   </p>
@@ -242,7 +270,7 @@ export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | 
                     <p className="mt-1.5 flex items-center gap-3 text-[12.5px] text-brand-muted">
                       <span className="flex items-center gap-1">
                         <Icon name="groups" className="text-[15px]" />
-                        {info.currentStudents} học viên
+                        {tentative ? `${info.currentStudents}/${info.maxStudents} đã đăng ký` : `${info.currentStudents} học viên`}
                       </span>
                       <span className="flex items-center gap-1">
                         <Icon name={info.deliveryMode === "ONLINE" ? "videocam" : "location_on"} className="text-[15px]" />
@@ -263,10 +291,10 @@ export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | 
         title={openSession ? (classInfo.get(openSession.classGroupId)?.courseName ?? `Lớp ${displayCode("class", openSession.classGroupId)}`) : ""}
         description={
           openSession
-            ? `${displayCode("class", openSession.classGroupId)} · Buổi ${openSession.sessionNumber} · ${shortDate(parseIsoDate(openSession.date))} ${openSession.startTime.slice(0, 5)}–${openSession.endTime.slice(0, 5)}`
+            ? `${displayCode("class", openSession.classGroupId)} - Buổi ${openSession.sessionNumber} - ${shortDate(parseIsoDate(openSession.date))} ${openSession.startTime.slice(0, 5)}–${openSession.endTime.slice(0, 5)}`
             : undefined
         }
-        widthClassName="max-w-[640px]"
+        widthClassName="max-w-[780px]"
       >
         {openSession && (
           <TutorSessionDetail
@@ -281,11 +309,12 @@ export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | 
   );
 }
 
-/** Một buổi trong ô thời khóa biểu */
+/** Một buổi trong ô thời khóa biểu: thẻ trắng có dải màu theo lớp; lớp còn tuyển sinh thì viền đứt cam */
 function SessionCard({
   session,
   info,
   color,
+  tentative,
   mark,
   substitute,
   leave,
@@ -294,6 +323,8 @@ function SessionCard({
   session: SessionResponse;
   info: TuitionClass | undefined;
   color: (typeof CLASS_COLORS)[number];
+  /** Lớp còn đang tuyển sinh: lịch dự kiến */
+  tentative: boolean;
   mark: boolean;
   substitute: boolean;
   leave: boolean;
@@ -305,32 +336,42 @@ function SessionCard({
     <button
       type="button"
       onClick={onOpen}
-      className={`relative block w-full overflow-hidden rounded-lg py-1.5 pl-3 pr-2 text-left transition-shadow hover:shadow-md ${FOCUS_RING} ${
-        cancelled ? "bg-slate-50 opacity-60" : color.bg
+      className={`group relative block w-full overflow-hidden rounded-xl text-left transition-all hover:-translate-y-px hover:shadow-[0_10px_20px_-12px_rgba(11,58,140,0.6)] ${FOCUS_RING} ${
+        cancelled
+          ? "border border-slate-200 bg-slate-50 opacity-60"
+          : tentative
+            ? "border border-dashed border-amber-400 bg-white"
+            : `border border-transparent ${color.bg}`
       }`}
     >
-      <span className={`absolute inset-y-0 left-0 w-1 ${cancelled ? "bg-slate-300" : color.bar}`} aria-hidden="true" />
-      <span className={`block truncate text-[12.5px] font-bold leading-snug ${cancelled ? "text-slate-500 line-through" : color.text}`}>
-        {info?.courseName ?? `Lớp ${displayCode("class", session.classGroupId)}`}
-      </span>
-      <span className="block truncate text-[11.5px] text-brand-muted">
-        {displayCode("class", session.classGroupId)} · Buổi {session.sessionNumber}
-        {total ? `/${total}` : ""}
-      </span>
-      <span className="mt-0.5 flex items-center gap-1 text-[11.5px] text-brand-muted">
-        <Icon name={info?.deliveryMode === "ONLINE" ? "videocam" : "location_on"} className="text-[13px]" />
-        <span className="truncate">{info ? (info.deliveryMode === "ONLINE" ? "Online" : "Trung tâm") : ""}</span>
-        {info && <span className="ml-auto shrink-0 tabular-nums">{info.currentStudents} HV</span>}
-      </span>
-      {(mark || cancelled || substitute || leave || session.originalSessionId !== null) && (
-        <span className="mt-1 flex flex-wrap gap-1">
-          {mark && <Tag tone="amber">Điểm danh</Tag>}
-          {cancelled && <Tag tone="slate">Đã hủy</Tag>}
-          {substitute && !cancelled && <Tag tone="slate">Dạy thay</Tag>}
-          {leave && <Tag tone="red">Chờ duyệt nghỉ</Tag>}
-          {session.originalSessionId !== null && <Tag tone="navy">Học bù</Tag>}
+      <span className={`block h-1 ${cancelled ? "bg-slate-300" : tentative ? "bg-amber-300" : color.bar}`} aria-hidden="true" />
+      <span className="block px-2 pb-1.5 pt-1">
+        <span className={`block truncate text-[12.5px] font-extrabold leading-snug ${cancelled ? "text-slate-500 line-through" : tentative ? "text-brand-ink" : color.text}`}>
+          {info?.courseName ?? `Lớp ${displayCode("class", session.classGroupId)}`}
         </span>
-      )}
+        <span className="flex items-center justify-between gap-1 text-[11px] text-brand-muted">
+          <span className="truncate">
+            {displayCode("class", session.classGroupId)} - B{session.sessionNumber}
+            {total ? `/${total}` : ""}
+          </span>
+          {info && (
+            <span className="flex shrink-0 items-center gap-0.5 tabular-nums">
+              <Icon name="person" className="text-[12px]" />
+              {tentative ? `${info.currentStudents}/${info.maxStudents}` : info.currentStudents}
+            </span>
+          )}
+        </span>
+        {(tentative || mark || cancelled || substitute || leave || session.originalSessionId !== null) && (
+          <span className="mt-1 flex flex-wrap gap-1">
+            {tentative && !cancelled && <Tag tone="amber">Dự kiến</Tag>}
+            {mark && <Tag tone="red">Điểm danh</Tag>}
+            {cancelled && <Tag tone="slate">Đã hủy</Tag>}
+            {substitute && !cancelled && <Tag tone="slate">Dạy thay</Tag>}
+            {leave && <Tag tone="red">Chờ duyệt nghỉ</Tag>}
+            {session.originalSessionId !== null && <Tag tone="navy">Học bù</Tag>}
+          </span>
+        )}
+      </span>
     </button>
   );
 }
@@ -347,16 +388,16 @@ function Tag({ tone, children }: { tone: "amber" | "slate" | "red" | "navy"; chi
 
 function Stat({ icon, label, value, sub, warn = false }: { icon: string; label: string; value: string; sub?: string; warn?: boolean }) {
   return (
-    <div className={`flex items-start gap-3 p-4 ${PORTAL_CARD}`}>
+    <div className="flex items-center gap-3 border-b border-brand-sandLine px-4 py-3.5 lg:border-b-0">
       <span
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${warn ? "bg-amber-50 text-amber-600" : "bg-brand-tint text-brand-navy"}`}
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${warn ? "bg-red-50 text-red-600" : "bg-brand-tint text-brand-navy"}`}
       >
-        <Icon name={icon} className="text-[21px]" />
+        <Icon name={icon} className="text-[22px]" />
       </span>
       <div className="min-w-0">
-        <dt className="text-[12.5px] font-semibold text-brand-muted">{label}</dt>
-        <dd className="text-[17px] font-extrabold tabular-nums text-brand-ink">{value}</dd>
-        {sub && <dd className="truncate text-[12px] text-brand-muted">{sub}</dd>}
+        <dt className="text-[12px] font-semibold text-brand-muted">{label}</dt>
+        <dd className={`text-[18px] font-extrabold leading-tight tabular-nums ${warn ? "text-red-700" : "text-brand-ink"}`}>{value}</dd>
+        {sub && <dd className="truncate text-[11.5px] font-medium text-amber-700">{sub}</dd>}
       </div>
     </div>
   );
@@ -369,7 +410,7 @@ function WeekButton({ icon, label, onClick }: { icon: string; label: string; onC
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`flex h-9 w-9 items-center justify-center rounded-lg text-brand-navy hover:bg-brand-tint ${FOCUS_RING}`}
+      className={`flex h-8 w-8 items-center justify-center rounded-lg text-brand-navy hover:bg-white ${FOCUS_RING}`}
     >
       <Icon name={icon} className="text-[22px]" />
     </button>

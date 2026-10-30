@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { AdminToast, type AdminNotice } from "@/components/admin/AdminToast";
 import { ClassDetailSheet } from "@/components/admin/ClassDetailSheet";
+import { AssignmentPanel } from "@/components/admin/AssignmentPanel";
+import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { ClassFormDialog } from "@/components/admin/ClassFormDialog";
 import { ClassStatusDialog } from "@/components/admin/ClassStatusDialog";
 import { RowMenu } from "@/components/admin/RowMenu";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
 import { deleteClass } from "@/services/managementService";
 import { Pager } from "@/components/dashboard/Pager";
@@ -13,7 +16,6 @@ import { StatusChip } from "@/components/dashboard/StatusChip";
 import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING, PORTAL_BTN_SECONDARY } from "@/constants/classNames";
 import { CLASS_STATUS, CLASS_TYPE_LABEL } from "@/constants/labels";
-import { ROUTES } from "@/constants/routes";
 import { patternLabel } from "@/constants/management";
 import { useRefreshAdmin } from "@/hooks/useAdminData";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -21,7 +23,6 @@ import { useAdminClasses, useAdminCourses, useClassSummary } from "@/hooks/useMa
 import type { AdminClassResponse, ClassStatus, ClassType } from "@/interfaces/api";
 import { classNextStep, classStatusActions, displayCode } from "@/utils/classes";
 import { formatDayMonth, parseIsoDate } from "@/utils/date";
-import { useNavigate } from "react-router-dom";
 
 const PAGE_SIZE = 12;
 
@@ -53,7 +54,6 @@ const TOAST_MS = 4000;
  * PATCH /admin/classes/{id}/status, POST /admin/classes/{id}/reopen, GET /admin/classes/{id}/enrollments.
  */
 export function AdminClassesPage() {
-  const navigate = useNavigate();
   const [status, setStatus] = useState<ClassStatus | "">("");
   const [classType, setClassType] = useState<ClassType | "">("");
   const [courseId, setCourseId] = useState<number | "">("");
@@ -63,6 +63,8 @@ export function AdminClassesPage() {
   const [viewing, setViewing] = useState<AdminClassResponse | null>(null);
   const [statusTarget, setStatusTarget] = useState<{ item: AdminClassResponse; mode: "status" | "reopen" } | null>(null);
   const [notice, setNotice] = useState<AdminNotice | null>(null);
+  // Lớp đang phân công gia sư chính (lớp cũ chưa có gia sư hoặc đã nhả gia sư)
+  const [assigning, setAssigning] = useState<AdminClassResponse | null>(null);
   const [removing, setRemoving] = useState<AdminClassResponse | null>(null);
   const refresh = useRefreshAdmin();
 
@@ -191,7 +193,7 @@ export function AdminClassesPage() {
       ) : rows.length === 0 ? (
         <PortalEmpty
           icon="school"
-          title={narrowed ? "Không có lớp nào khớp" : "Chưa có lớp học nào"}
+          title={narrowed ? "Không có lớp nào khớp." : "Chưa có lớp học nào."}
           description={narrowed ? "Bỏ bớt bộ lọc hoặc đổi từ khóa tìm kiếm." : "Mở lớp đầu tiên từ một khóa học đang bán."}
           action={
             narrowed ? (
@@ -233,7 +235,7 @@ export function AdminClassesPage() {
                   selected={viewingFresh?.id === item.id}
                   onOpen={() => setViewing(item)}
                   onChangeStatus={(mode) => setStatusTarget({ item, mode })}
-                  onAssign={() => navigate(ROUTES.adminAssignments)}
+                  onAssign={() => setAssigning(item)}
                   onDelete={() => setRemoving(item)}
                 />
               </li>
@@ -262,7 +264,19 @@ export function AdminClassesPage() {
         classItem={viewingFresh}
         onClose={() => setViewing(null)}
         onChangeStatus={(item, mode) => setStatusTarget({ item, mode })}
+        onAssign={(item) => setAssigning(item)}
       />
+      <PortalDialog
+        open={assigning !== null}
+        title="Phân công gia sư phụ trách"
+        description="Chỉ gia sư không trùng lịch với các buổi của lớp mới phân công được."
+        onClose={() => setAssigning(null)}
+        widthClassName="max-w-[880px]"
+      >
+        {assigning && (
+          <AssignmentPanel key={assigning.id} classId={assigning.id} currentTutorId={assigning.tutorId ?? null} info={assigning} />
+        )}
+      </PortalDialog>
       <ClassFormDialog
         open={creating}
         onClose={() => setCreating(false)}
@@ -379,7 +393,7 @@ function ClassRowCard({
   const next = classNextStep(item, new Date());
   const canUpdate = classStatusActions(item, new Date()).length > 0;
   const percent = Math.min(100, Math.round((item.currentStudents / Math.max(1, item.maxStudents)) * 100));
-  const tutor = item.tutorName ?? (item.tutorId ? `Gia sư #${item.tutorId}` : null);
+  const tutor = item.tutorName ?? (item.tutorId ? `Gia sư ${displayCode("tutor", item.tutorId)}` : null);
 
   return (
     <div
@@ -398,12 +412,12 @@ function ClassRowCard({
             {item.courseName}
           </button>
           <p className="mt-0.5 truncate text-[12.5px] text-brand-muted">
-            {item.classCode} · {CLASS_TYPE_LABEL[item.classType]} · {item.deliveryMode === "ONLINE" ? "Online" : "Tại trung tâm"}
+            {item.classCode} - {CLASS_TYPE_LABEL[item.classType]} - {item.deliveryMode === "ONLINE" ? "Online" : "Tại trung tâm"}
           </p>
           {/* Màn hình hẹp: lịch, sĩ số, trạng thái gộp xuống dưới */}
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-brand-muted lg:hidden">
             <span>
-              {patternLabel(item.schedulePattern)} · {item.timeSlotLabel}
+              {patternLabel(item.schedulePattern)} - {item.timeSlotLabel}
             </span>
             <span className="tabular-nums">
               {item.currentStudents}/{item.maxStudents}
@@ -418,7 +432,7 @@ function ClassRowCard({
       <div className="hidden text-[13px] lg:block">
         <p className="text-brand-ink">{patternLabel(item.schedulePattern)}</p>
         <p className="tabular-nums text-brand-muted">
-          {item.timeSlotLabel} · từ {isoToShort(item.startDate)}
+          {item.timeSlotLabel} - từ {isoToShort(item.startDate)}
         </p>
       </div>
 
@@ -431,8 +445,9 @@ function ClassRowCard({
         </div>
       </div>
 
-      <p className={`hidden truncate text-[13.5px] lg:block ${tutor ? "text-brand-ink" : "text-brand-muted"}`}>
-        {tutor ?? "Chưa phân công"}
+      <p className={`hidden min-w-0 items-center gap-2 text-[13.5px] lg:flex ${tutor ? "text-brand-ink" : "text-brand-muted"}`}>
+        {tutor && <UserAvatar userId={item.tutorId} name={tutor} size={24} />}
+        <span className="truncate">{tutor ?? "Chưa phân công"}</span>
       </p>
 
       <div className="hidden lg:block">

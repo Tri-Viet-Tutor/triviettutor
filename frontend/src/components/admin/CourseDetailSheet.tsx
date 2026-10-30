@@ -70,11 +70,11 @@ function SheetBody({
           <CourseCover subject={course.subject} gradeLevel={course.gradeLevel} size="lg" muted={!course.active} />
           <div className="min-w-0 flex-1 pt-0.5">
             <p className="text-[12px] font-bold uppercase tracking-[0.06em] text-brand-muted">
-              {subjectLabel(course.subject)} · {gradeLabel(course.gradeLevel)}
+              {subjectLabel(course.subject)} - {gradeLabel(course.gradeLevel)}
             </p>
             <h2 className="mt-1 text-[20px] font-bold leading-snug text-brand-navy">{course.name}</h2>
             <p className="mt-1 text-[13.5px] text-brand-muted">
-              {course.durationMinutes} phút/buổi · số buổi đặt theo từng lớp
+              {course.durationMinutes} phút/buổi - số buổi đặt theo từng lớp
             </p>
           </div>
           <button
@@ -166,7 +166,7 @@ function PriceLadder({ course }: { course: CourseResponse }) {
           >
             <dt className="text-[12.5px] text-brand-muted">
               {tier.size}
-              {index > 0 && <span className="text-emerald-700"> · −{Math.round(tier.discountRate * 100)}%</span>}
+              {index > 0 && <span className="text-emerald-700"> - −{Math.round(tier.discountRate * 100)}%</span>}
             </dt>
             <dd className="mt-0.5 text-[15px] font-bold tabular-nums text-brand-ink">{formatVnd(tier.price)}</dd>
           </div>

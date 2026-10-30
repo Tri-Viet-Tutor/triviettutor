@@ -1,8 +1,8 @@
+import { AvatarUploader } from "@/components/dashboard/AvatarUploader";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
 import { ProfileForm } from "@/components/dashboard/ProfileForm";
 import { PortalError, PortalLoading } from "@/components/dashboard/PortalState";
 import { ROLE_NAME } from "@/constants/labels";
-import { nameInitial } from "@/utils/sessions";
 import { PORTAL_CARD } from "@/constants/classNames";
 import { useMe } from "@/hooks/usePortalData";
 import { formatVnd } from "@/utils/currency";
@@ -27,12 +27,7 @@ export function ProfilePage() {
       ) : (
         <div className={`max-w-2xl overflow-hidden ${PORTAL_CARD}`}>
           <div className="flex items-center gap-4 bg-brand-navy px-5 py-5 text-white sm:px-7">
-            <span
-              aria-hidden="true"
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white text-[24px] font-bold text-brand-navy"
-            >
-              {nameInitial(me.fullName)}
-            </span>
+            <AvatarUploader userId={me.id} name={me.fullName} />
             <div className="min-w-0">
               <p className="truncate text-[19px] font-bold leading-tight">{me.fullName}</p>
               <p className="mt-0.5 text-[14px] text-white/80">

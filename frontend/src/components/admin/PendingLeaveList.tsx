@@ -7,6 +7,7 @@ import { useUserDirectory } from "@/hooks/useAdminData";
 import type { Role } from "@/interfaces/api";
 import { formatClockTime, formatDate } from "@/utils/date";
 import type { PendingLeaveListProps } from "@/interfaces/admin";
+import { displayCode } from "@/utils/classes";
 
 /** Mấy đơn xin nghỉ mới nhất đang chờ duyệt, ở trang Tổng quan của quản trị; bấm để sang trang xử lý. */
 export function PendingLeaveList({ requests, isError }: PendingLeaveListProps) {
@@ -43,7 +44,7 @@ export function PendingLeaveList({ requests, isError }: PendingLeaveListProps) {
                       {label(request.requesterRole as Role, request.requesterId)}
                     </span>
                     <span className="block text-[13.5px] text-brand-muted">
-                      Buổi #{request.sessionId} · gửi {formatClockTime(requestedAt)} ngày {formatDate(requestedAt)}
+                      Buổi {displayCode("session", request.sessionId)} - gửi {formatClockTime(requestedAt)} ngày {formatDate(requestedAt)}
                     </span>
                   </span>
                   {request.isLateNotice && <StatusChip tone="slate">Báo trễ</StatusChip>}

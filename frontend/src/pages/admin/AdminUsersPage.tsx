@@ -95,7 +95,7 @@ export function AdminUsersPage() {
       ) : users.content.length === 0 ? (
         <PortalEmpty
           icon="group"
-          title="Không tìm thấy người dùng nào"
+          title="Không tìm thấy người dùng nào."
           description={keyword ? `Không có ai khớp với "${keyword}".` : undefined}
         />
       ) : (

@@ -26,6 +26,7 @@ import { useMyLeaveRequests, useMySessions } from "@/hooks/usePortalData";
 import { useNow } from "@/hooks/useNow";
 import { useAuthStore } from "@/stores/authStore";
 import { formatDayMonth, parseIsoDate, startOfToday, weekdayName } from "@/utils/date";
+import { displayCode } from "@/utils/classes";
 
 /** Số buổi sắp tới hiện ở trang Tổng quan (không tính buổi trên bảng "hôm nay") */
 const UPCOMING_PREVIEW = 4;
@@ -137,7 +138,7 @@ export function TutorHomePage() {
                               {weekdayName(date)} {formatDayMonth(date)}, <span className="tabular-nums">{formatTimeRange(session)}</span>
                             </span>
                             <span className="block text-[13.5px] text-brand-muted">
-                              Lớp #{session.classGroupId}, buổi {session.sessionNumber}
+                              Lớp {displayCode("class", session.classGroupId)}, buổi {session.sessionNumber}
                             </span>
                           </span>
                           <span className="inline-flex shrink-0 items-center gap-1 text-[14px] font-semibold text-brand-navy">

@@ -13,7 +13,7 @@ import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY } from "@/constants/classNames";
 import { GRADE_OPTIONS } from "@/constants/classOptions";
 import { CLASS_STATUS } from "@/constants/labels";
-import { coursePricePerSession, coursePriceTiers, gradeLabel, subjectLabel, subjectOptionsFrom } from "@/constants/management";
+import { coursePricePerSession, coursePriceTiers, gradeLabel, subjectIcon, subjectLabel, subjectOptionsFrom } from "@/constants/management";
 import { useRefreshAdmin } from "@/hooks/useAdminData";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAdminCourses, useCourseSummary, useSubjects } from "@/hooks/useManagementData";
@@ -21,19 +21,12 @@ import type { AdminClassResponse, CourseResponse, GradeLevel } from "@/interface
 import { deleteCourse, setCourseActive } from "@/services/managementService";
 import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
 import { displayCode } from "@/utils/classes";
-import { formatVnd } from "@/utils/currency";
 import { portalErrorMessage } from "@/utils/errors";
 
 /** Bộ lọc trạng thái bán */
 type ActiveFilter = "all" | "active" | "inactive";
 
 const PAGE_SIZE = 12;
-
-/** Lưới cột của dòng khóa học trên máy tính (bội số 8px) */
-const ROW_GRID = "md:grid-cols-[minmax(0,1fr)_228px_128px_48px] md:gap-x-6";
-
-/** Đệm hai bên dùng chung cho tiêu đề cột và từng dòng để các cột thẳng hàng */
-const ROW_PAD_X = "px-4 md:px-6";
 
 /** Khung chung của mọi điều khiển trên thanh công cụ: cùng chiều cao 48px, cùng bo góc, cùng viền và bóng */
 const CONTROL = "h-12 rounded-xl border border-brand-sandLine bg-white shadow-[0_1px_2px_rgba(20,33,61,0.05)]";
@@ -47,7 +40,7 @@ const STRIP_SELECT = `h-full min-w-0 cursor-pointer appearance-none bg-transpare
 /**
  * Quản lý khóa học:
  * - Dải công cụ: ô tìm theo tên, lọc khối, lọc môn; nút trượt Tất cả / Đang bán / Ngừng bán.
- * - Mỗi khóa là một dòng gọn: tên, môn · khối, số buổi, học phí 1 kèm 1, trạng thái.
+ * - Mỗi khóa là một dòng gọn: tên, môn - khối, số buổi, học phí 1 kèm 1, trạng thái.
  * - Bấm một khóa mở ngăn chi tiết bên phải (học phí theo sĩ số, các lớp, sửa, mở / ngừng bán, tạo lớp).
  * API: GET/POST /admin/courses, PUT /admin/courses/{id}, PATCH /admin/courses/{id}/toggle.
  */
@@ -241,7 +234,7 @@ export function AdminCoursesPage() {
       ) : rows.length === 0 ? (
         <PortalEmpty
           icon="menu_book"
-          title={narrowed ? "Không có khóa nào khớp" : "Chưa có khóa học nào"}
+          title={narrowed ? "Không có khóa nào khớp." : "Chưa có khóa học nào."}
           description={narrowed ? "Bỏ bớt bộ lọc hoặc đổi từ khóa tìm kiếm." : "Thêm khóa học đầu tiên để bắt đầu mở lớp cho học viên."}
           action={
             narrowed ? (
@@ -258,34 +251,37 @@ export function AdminCoursesPage() {
         />
       ) : (
         <>
-          {/* Tiêu đề cột (chỉ máy tính) */}
-          <div
-            className={`mb-3 hidden items-center gap-4 border-x border-transparent text-[12px] font-semibold text-brand-muted md:grid ${ROW_PAD_X} ${ROW_GRID}`}
-          >
-            <span className="flex gap-4">
-              <span className="w-14 shrink-0">Mã</span>
-              Khóa học
-            </span>
-            <span className="text-right">Học phí / buổi</span>
-            <span>Trạng thái</span>
-            <span aria-hidden="true" />
+          <div className="overflow-x-auto rounded-2xl border border-brand-sandLine bg-white shadow-[0_1px_2px_rgba(20,33,61,0.05)]">
+            <table className="w-full min-w-[860px] border-collapse text-left">
+              <thead>
+                <tr className="border-b border-brand-sandLine bg-brand-sand/60 text-[12px] font-bold uppercase tracking-wide text-brand-muted">
+                  <th scope="col" className="w-[88px] px-5 py-3">Mã</th>
+                  <th scope="col" className="px-4 py-3">Khóa học</th>
+                  <th scope="col" className="w-[170px] px-4 py-3 text-right">1 kèm 1 / buổi (VNĐ)</th>
+                  <th scope="col" className="w-[190px] px-4 py-3 text-right">Lớp nhóm / buổi (VNĐ)</th>
+                  <th scope="col" className="w-[140px] px-4 py-3">Trạng thái</th>
+                  <th scope="col" className="w-[64px] px-4 py-3 text-right">
+                    <span className="sr-only">Thao tác</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-brand-sandLine">
+                {rows.map((course) => (
+                  <CourseRow
+                    key={course.id}
+                    course={course}
+                    selected={viewingFresh?.id === course.id}
+                    toggling={toggle.isPending && toggle.variables?.id === course.id}
+                    onOpen={() => setViewing(course)}
+                    onEdit={() => openForm(course)}
+                    onCreateClass={() => setClassFor(course)}
+                    onToggle={() => toggle.mutate(course)}
+                    onDelete={() => setRemoving(course)}
+                  />
+                ))}
+              </tbody>
+            </table>
           </div>
-          <ul className="space-y-2">
-            {rows.map((course) => (
-              <li key={course.id}>
-                <CourseRowCard
-                  course={course}
-                  selected={viewingFresh?.id === course.id}
-                  toggling={toggle.isPending && toggle.variables?.id === course.id}
-                  onOpen={() => setViewing(course)}
-                  onEdit={() => openForm(course)}
-                  onCreateClass={() => setClassFor(course)}
-                  onToggle={() => toggle.mutate(course)}
-                  onDelete={() => setRemoving(course)}
-                />
-              </li>
-            ))}
-          </ul>
           <Pager page={page} totalPages={courses.data.totalPages} onChange={setPage} label="Phân trang khóa học" />
         </>
       )}
@@ -364,10 +360,10 @@ export function AdminCoursesPage() {
 }
 
 /**
- * Một khóa ở dạng dòng gọn: ảnh bìa, tên, môn · khối, số buổi, học phí 1 kèm 1, trạng thái, menu ⋮.
+ * Một khóa ở dạng dòng gọn: ảnh bìa, tên, môn - khối, số buổi, học phí 1 kèm 1, trạng thái, menu ⋮.
  * Bấm vào thẻ mở ngăn chi tiết. Màn hình hẹp: các cột gộp thành hai dòng dưới tên khóa.
  */
-function CourseRowCard({
+function CourseRow({
   course,
   selected,
   toggling,
@@ -387,63 +383,68 @@ function CourseRowCard({
   onToggle: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const number = (amount: number) => new Intl.NumberFormat("vi-VN").format(amount);
 
   return (
-    <div
-      className={`group relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-xl border bg-white py-4 shadow-[0_1px_2px_rgba(20,33,61,0.04)] transition-[border-color,box-shadow] duration-150 hover:shadow-[0_4px_16px_-8px_rgba(11,58,140,0.24)] ${ROW_PAD_X} ${ROW_GRID} ${
-        selected ? "border-brand-navy/40 ring-1 ring-brand-navy/15" : "border-brand-sandLine hover:border-brand-navy/25"
-      } ${menuOpen ? "z-20" : ""}`}
-    >
-      <div className="flex min-w-0 items-center gap-4">
-        <span className={`w-14 shrink-0 text-[13.5px] font-semibold tabular-nums ${course.active ? "text-brand-navy" : "text-brand-muted"}`}>{displayCode("course", course.id)}</span>
-        <div className="min-w-0">
-          {/* Nút phủ cả thẻ: bấm chỗ nào trên thẻ cũng mở chi tiết, bàn phím Tab tới được */}
-          <button
-            type="button"
-            onClick={onOpen}
-            className="text-left text-[15px] font-semibold leading-snug text-brand-ink outline-none after:absolute after:inset-0 after:rounded-xl after:content-[''] group-hover:text-brand-navy focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-brand-navy"
+    <tr className={`transition-colors ${selected ? "bg-brand-tint/60" : "hover:bg-brand-sand/30"} ${menuOpen ? "relative z-20" : ""}`}>
+      <td className="px-5 py-3.5">
+        <span className={`font-mono text-[13px] font-bold ${course.active ? "text-brand-navy" : "text-brand-muted"}`}>{displayCode("course", course.id)}</span>
+      </td>
+      <td className="px-4 py-3.5">
+        <span className="flex min-w-0 items-center gap-3">
+          <span
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${course.active ? "bg-brand-tint text-brand-navy" : "bg-slate-100 text-slate-500"}`}
           >
-            {course.name}
-          </button>
-          <p className="mt-0.5 text-[13px] text-brand-muted">
-            {subjectLabel(course.subject)} · {gradeLabel(course.gradeLevel)}
-          </p>
-          <div className="mt-2 flex flex-wrap items-center gap-2 md:hidden">
-            <CoursePrice course={course} />
-            <SaleBadge active={course.active} />
-          </div>
-        </div>
-      </div>
-      <span className="hidden text-right md:block">
-        <CoursePrice course={course} />
-      </span>
-      <span className="hidden md:block">
+            <Icon name={subjectIcon(course.subject)} className="text-[21px]" />
+          </span>
+          <span className="min-w-0">
+            <button
+              type="button"
+              onClick={onOpen}
+              className="block truncate text-left text-[15px] font-bold text-brand-ink hover:text-brand-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-navy"
+            >
+              {course.name}
+            </button>
+            <span className="block text-[13px] text-brand-muted">
+              {subjectLabel(course.subject)} - {gradeLabel(course.gradeLevel)}
+            </span>
+          </span>
+        </span>
+      </td>
+      <td className="px-4 py-3.5 text-right text-[15px] font-bold tabular-nums text-brand-ink">{number(coursePricePerSession(course))}</td>
+      <td className="px-4 py-3.5 text-right">
+        <span className="text-[12px] text-brand-muted">từ </span>
+        <span className="text-[15px] font-bold tabular-nums text-brand-navy">{number(groupFrom(course))}</span>
+      </td>
+      <td className="px-4 py-3.5">
         <SaleBadge active={course.active} />
-      </span>
-      <RowMenu
-        label={`khóa ${course.name}`}
-        open={menuOpen}
-        onOpenChange={setMenuOpen}
-        items={[
-          { icon: "edit", label: "Sửa", onSelect: onEdit },
-          {
-            icon: "add_circle",
-            label: "Tạo lớp",
-            onSelect: onCreateClass,
-            disabled: !course.active,
-            hint: course.active ? undefined : "Mở bán khóa trước",
-          },
-          {
-            icon: course.active ? "pause_circle" : "play_circle",
-            label: course.active ? "Ngừng bán" : "Mở bán",
-            onSelect: onToggle,
-            disabled: toggling,
-            tone: course.active ? "danger" : undefined,
-          },
-          { icon: "delete", label: "Xóa", onSelect: onDelete, tone: "danger" },
-        ]}
-      />
-    </div>
+      </td>
+      <td className="relative px-4 py-3.5 text-right">
+        <RowMenu
+          label={`khóa ${course.name}`}
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
+          items={[
+            { icon: "edit", label: "Sửa", onSelect: onEdit },
+            {
+              icon: "add_circle",
+              label: "Tạo lớp",
+              onSelect: onCreateClass,
+              disabled: !course.active,
+              hint: course.active ? undefined : "Mở bán khóa trước",
+            },
+            {
+              icon: course.active ? "pause_circle" : "play_circle",
+              label: course.active ? "Ngừng bán" : "Mở bán",
+              onSelect: onToggle,
+              disabled: toggling,
+              tone: course.active ? "danger" : undefined,
+            },
+            { icon: "delete", label: "Xóa", onSelect: onDelete, tone: "danger" },
+          ]}
+        />
+      </td>
+    </tr>
   );
 }
 
@@ -465,24 +466,8 @@ function SaleBadge({ active }: { active: boolean }) {
   );
 }
 
-/** Học phí mỗi học viên theo hai cách đăng ký: học 1 kèm 1 (giá gốc) và lớp nhóm (giảm theo sĩ số) */
-function CoursePrice({ course }: { course: CourseResponse }) {
+/** Học phí mỗi buổi thấp nhất của lớp nhóm (bậc sĩ số đông nhất) */
+function groupFrom(course: CourseResponse): number {
   const group = coursePriceTiers(course).filter((tier) => tier.discountRate > 0).map((tier) => tier.price);
-  const short = (amount: number) => new Intl.NumberFormat("vi-VN").format(amount);
-  return (
-    <span className="inline-flex flex-col gap-0.5 text-[13px] tabular-nums md:items-end">
-      <span className="whitespace-nowrap">
-        <span className="text-brand-muted">1 kèm 1 </span>
-        <strong className="font-semibold text-brand-ink">{formatVnd(coursePricePerSession(course))}</strong>
-      </span>
-      {group.length > 0 && (
-        <span className="whitespace-nowrap">
-          <span className="text-brand-muted">Nhóm </span>
-          <strong className="font-semibold text-brand-ink">
-            {short(Math.min(...group))} – {formatVnd(Math.max(...group))}
-          </strong>
-        </span>
-      )}
-    </span>
-  );
+  return group.length > 0 ? Math.min(...group) : coursePricePerSession(course);
 }

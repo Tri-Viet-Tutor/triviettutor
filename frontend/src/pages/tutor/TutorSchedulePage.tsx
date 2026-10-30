@@ -53,7 +53,7 @@ export function TutorSchedulePage() {
         <SessionSchedule
           title="Lịch dạy"
           now={now}
-          emptyTitle="Bạn chưa có buổi dạy nào"
+          emptyTitle="Bạn chưa có buổi dạy nào."
           emptyDescription="Lịch dạy sẽ hiện ở đây sau khi trung tâm phân công lớp cho bạn."
           renderBadge={(session) =>
             needsAttendance(session, tutorId, now) ? (
@@ -65,7 +65,9 @@ export function TutorSchedulePage() {
             ) : null
           }
           renderDetail={(session, hasPendingLeave) => (
-            <TutorSessionDetail session={session} now={now} tutorId={tutorId} hasPendingLeave={hasPendingLeave} />
+            <div className="border-t border-brand-sandLine px-4 py-4 sm:px-5">
+              <TutorSessionDetail session={session} now={now} tutorId={tutorId} hasPendingLeave={hasPendingLeave} />
+            </div>
           )}
         />
       </div>

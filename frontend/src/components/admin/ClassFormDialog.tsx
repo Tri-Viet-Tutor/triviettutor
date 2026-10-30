@@ -14,6 +14,7 @@ import { addDays, formatDate, parseIsoDate, startOfToday, toIsoDate } from "@/ut
 import { portalErrorMessage } from "@/utils/errors";
 import type { AdminClassResponse, ClassType, CreateClassRequest, DeliveryMode, SchedulePattern, TimeSlot } from "@/interfaces/api";
 import type { ClassFormDialogProps } from "@/interfaces/admin";
+import { DateField } from "@/components/ui/DateField";
 
 const CLASS_TYPE_OPTIONS: { value: ClassType; label: string; hint: string }[] = [
   { value: "GROUP", label: "Lớp nhóm", hint: "2 – 8 học viên" },
@@ -163,7 +164,7 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
                 <option value="">{courses.isPending ? "Đang tải…" : "Chọn khóa học"}</option>
                 {courses.data?.content.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.name} · {subjectLabel(item.subject)} {gradeLabel(item.gradeLevel)}
+                    {item.name} - {subjectLabel(item.subject)} {gradeLabel(item.gradeLevel)}
                   </option>
                 ))}
               </select>
@@ -241,13 +242,11 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
               <label htmlFor="class-start" className={PORTAL_LABEL}>
                 Ngày khai giảng
               </label>
-              <input
+              <DateField
                 id="class-start"
-                type="date"
                 value={startDate}
-                lang="vi"
                 min={toIsoDate(addDays(startOfToday(), 1))}
-                onChange={(event) => changeStart(event.target.value)}
+                onChange={(value) => changeStart(value)}
                 className={PORTAL_INPUT}
               />
             </div>
@@ -255,15 +254,13 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
               <label htmlFor="class-deadline" className={PORTAL_LABEL}>
                 Hạn đăng ký
               </label>
-              <input
+              <DateField
                 id="class-deadline"
-                type="date"
                 value={deadline}
-                lang="vi"
                 min={toIsoDate(startOfToday())}
                 max={startDate || undefined}
-                onChange={(event) => {
-                  setDeadline(event.target.value);
+                onChange={(value) => {
+                  setDeadline(value);
                   setDeadlineTouched(true);
                 }}
                 className={PORTAL_INPUT}
@@ -277,10 +274,10 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-brand-tint px-3 py-2.5 text-[13.5px] text-brand-ink">
             <Icon name="event_note" className="text-[18px] text-brand-navy" />
             <strong className="font-semibold">{sessionCount} buổi</strong>
-            {endDate && <span>· dự kiến kết thúc {formatDate(parseIsoDate(endDate))}</span>}
+            {endDate && <span>- dự kiến kết thúc {formatDate(parseIsoDate(endDate))}</span>}
             {classPrice !== null && (
               <span>
-                · học phí 1 kèm 1 <strong className="font-semibold">{formatVnd(classPrice)}</strong>
+                - học phí 1 kèm 1 <strong className="font-semibold">{formatVnd(classPrice)}</strong>
               </span>
             )}
           </p>

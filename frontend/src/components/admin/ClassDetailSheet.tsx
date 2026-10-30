@@ -1,17 +1,15 @@
 import { useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
 import { CourseCover } from "@/components/admin/CourseCover";
 import { StatusChip } from "@/components/dashboard/StatusChip";
 import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING } from "@/constants/classNames";
 import { CLASS_STATUS, CLASS_TYPE_LABEL, ENROLLMENT_STATUS, SESSION_STATUS } from "@/constants/labels";
-import { ROUTES } from "@/constants/routes";
 import { patternLabel } from "@/constants/management";
 import { useAdminSessions, useUserDirectory } from "@/hooks/useAdminData";
 import { useClassEnrollments } from "@/hooks/useManagementData";
 import type { AdminClassResponse } from "@/interfaces/api";
 import { formatVnd } from "@/utils/currency";
-import { classNextStep, classStatusActions, discountForSize, estimatedEndDate, sizeTierLabel } from "@/utils/classes";
+import { classNextStep, classStatusActions, discountForSize, estimatedEndDate, sizeTierLabel, displayCode } from "@/utils/classes";
 import { formatDate, parseIsoDate } from "@/utils/date";
 
 /** "02/11/2026" từ "2026-11-02" */
@@ -22,6 +20,8 @@ interface ClassDetailSheetProps {
   classItem: AdminClassResponse | null;
   onClose: () => void;
   onChangeStatus: (item: AdminClassResponse, mode: "status" | "reopen") => void;
+  /** Mở hộp thoại phân công gia sư chính cho lớp chưa có gia sư */
+  onAssign?: (item: AdminClassResponse) => void;
 }
 
 /**
@@ -29,7 +29,7 @@ interface ClassDetailSheetProps {
  * trạng thái và việc cần làm tiếp, thông tin chính, sĩ số và học phí, học viên, lịch từng buổi (thu gọn).
  * Hộp thoại đổi trạng thái / mở lại mở chồng lên trên ngăn này.
  */
-export function ClassDetailSheet({ classItem, onClose, onChangeStatus }: ClassDetailSheetProps) {
+export function ClassDetailSheet({ classItem, onClose, onChangeStatus, onAssign }: ClassDetailSheetProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const open = classItem !== null;
 
@@ -54,12 +54,12 @@ export function ClassDetailSheet({ classItem, onClose, onChangeStatus }: ClassDe
       className="fixed inset-y-0 left-auto right-0 m-0 h-dvh max-h-dvh w-full max-w-[640px] border-0 bg-transparent p-0 backdrop:bg-brand-navyDeep/35 backdrop:backdrop-blur-[1px] open:animate-[sheet-in_220ms_cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:open:animate-none"
     >
       <style>{"@keyframes sheet-in{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}"}</style>
-      {classItem && <SheetBody item={classItem} onClose={onClose} onChangeStatus={onChangeStatus} />}
+      {classItem && <SheetBody item={classItem} onClose={onClose} onChangeStatus={onChangeStatus} onAssign={onAssign} />}
     </dialog>
   );
 }
 
-function SheetBody({ item, onClose, onChangeStatus }: { item: AdminClassResponse } & Omit<ClassDetailSheetProps, "classItem">) {
+function SheetBody({ item, onClose, onChangeStatus, onAssign }: { item: AdminClassResponse } & Omit<ClassDetailSheetProps, "classItem">) {
   const style = CLASS_STATUS[item.status];
   const next = classNextStep(item, new Date());
   const actions = classStatusActions(item, new Date());
@@ -78,7 +78,7 @@ function SheetBody({ item, onClose, onChangeStatus }: { item: AdminClassResponse
   // Học phí mỗi học viên theo sĩ số hiện tại (người đã đóng giữ giá đã chốt)
   const size = Math.max(1, item.currentStudents);
   const discount = discountForSize(item.classType, size);
-  const tutor = item.tutorName ?? (item.tutorId ? `Gia sư #${item.tutorId}` : null);
+  const tutor = item.tutorName ?? (item.tutorId ? `Gia sư ${displayCode("tutor", item.tutorId)}` : null);
   const showDeadline = ["DRAFT", "PUBLISHED", "ENROLLING"].includes(item.status);
 
   return (
@@ -109,16 +109,17 @@ function SheetBody({ item, onClose, onChangeStatus }: { item: AdminClassResponse
         {!closed && (next || actions.length > 0 || reopen) && (
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-brand-sand/60 py-2 pl-4 pr-2">
             <p className={`min-w-0 text-[13.5px] font-medium ${next ? "text-amber-800" : "text-brand-muted"}`}>
-              {next ? next.text : "Không có việc cần làm"}
+              {next ? next.text : "Không có việc cần làm."}
             </p>
             <div className="flex shrink-0 gap-2">
-              {next?.action === "assign" && !item.tutorId && (
-                <Link
-                  to={ROUTES.adminAssignments}
+              {next?.action === "assign" && !item.tutorId && onAssign && (
+                <button
+                  type="button"
+                  onClick={() => onAssign(item)}
                   className={`inline-flex h-10 items-center gap-1.5 rounded-xl bg-brand-navy px-4 text-[14px] font-semibold text-white hover:bg-brand-navyDeep ${FOCUS_RING}`}
                 >
                   Phân công gia sư
-                </Link>
+                </button>
               )}
               {(reopen || actions.length > 0) && (
                 <button
@@ -141,7 +142,7 @@ function SheetBody({ item, onClose, onChangeStatus }: { item: AdminClassResponse
           <Fact label="Thời gian" value={`${isoToText(item.startDate)} → ${isoToText(endDate)}`} sub={`${item.totalSessions} buổi`} />
           <Fact
             label="Hình thức"
-            value={`${CLASS_TYPE_LABEL[item.classType]} · ${item.deliveryMode === "ONLINE" ? "Online" : "Tại trung tâm"}`}
+            value={`${CLASS_TYPE_LABEL[item.classType]} - ${item.deliveryMode === "ONLINE" ? "Online" : "Tại trung tâm"}`}
             sub={item.deliveryMode === "ONLINE" && item.meetingUrl ? item.meetingUrl : undefined}
           />
           <Fact label="Gia sư" value={tutor ?? "Chưa phân công"} muted={!tutor} />
@@ -159,7 +160,7 @@ function SheetBody({ item, onClose, onChangeStatus }: { item: AdminClassResponse
               <strong className="font-semibold tabular-nums text-brand-ink">
                 {formatVnd(Math.round(item.basePrice1on1 * (1 - discount)))}
               </strong>
-              /người · {sizeTierLabel(item.classType, size)}
+              /người - {sizeTierLabel(item.classType, size)}
               {discount > 0 && `, −${Math.round(discount * 100)}%`}
             </p>
           </div>
@@ -184,7 +185,7 @@ function SheetBody({ item, onClose, onChangeStatus }: { item: AdminClassResponse
                 return (
                   <li key={enrollment.enrollmentId} className="flex items-center gap-3 px-4 py-3 text-[14px]">
                     <span className="min-w-0 flex-1 truncate font-medium text-brand-ink">
-                      {directory.nameOf(enrollment.studentId) ?? `Học viên #${enrollment.studentId}`}
+                      {directory.nameOf(enrollment.studentId) ?? `Học viên ${displayCode("student", enrollment.studentId)}`}
                     </span>
                     {enrollment.status !== "ACTIVE" && (
                       <StatusChip tone={status.tone} icon={status.icon}>
@@ -222,7 +223,7 @@ function SheetBody({ item, onClose, onChangeStatus }: { item: AdminClassResponse
                   <li key={session.sessionId} className="flex items-center gap-3 px-4 py-2.5 text-[13.5px]">
                     <span className="w-7 shrink-0 text-right tabular-nums text-brand-muted">{session.sessionNumber}</span>
                     <span className="flex-1 tabular-nums text-brand-ink">
-                      {isoToText(session.date)} · {session.startTime.slice(0, 5)}–{session.endTime.slice(0, 5)}
+                      {isoToText(session.date)} - {session.startTime.slice(0, 5)}–{session.endTime.slice(0, 5)}
                       {session.originalSessionId !== null && <span className="ml-2 text-[12px] text-amber-700">học bù</span>}
                     </span>
                     {session.status !== "SCHEDULED" && (

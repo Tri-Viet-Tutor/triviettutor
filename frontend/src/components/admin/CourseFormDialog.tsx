@@ -317,8 +317,8 @@ export function CourseFormDialog({ open, course, onClose, onSaved }: CourseFormD
               </div>
               <p className="mt-2 flex items-start gap-2 text-[12.5px] leading-relaxed text-brand-muted">
                 <Icon name="info" className="mt-px text-[16px]" />
-                Mức giảm áp dụng chung cho mọi khóa và được tính tự động khi học viên thanh toán. Giá đã trả được chốt theo sĩ số lúc đăng
-                ký.
+                Học viên đóng đủ giá 1 kèm 1 khi đăng ký. Khi lớp nhóm chốt sĩ số, phần giảm theo bảng trên được hoàn tự động vào ví
+                của từng học viên.
               </p>
             </div>
 
