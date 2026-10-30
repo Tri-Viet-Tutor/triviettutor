@@ -257,10 +257,25 @@ export function AdminClassesPage() {
                       </StatusChip>
                       <div className="flex flex-wrap gap-1">
                         {item.status === "FAILED_TO_OPEN" ? (
-                          <button type="button" onClick={() => setStatusTarget({ item, mode: "reopen" })} className={PORTAL_BTN_GHOST}>
-                            <Icon name="restart_alt" className="text-[18px]" />
-                            Mở lại
-                          </button>
+                          <>
+                            <button type="button" onClick={() => setStatusTarget({ item, mode: "reopen" })} className={PORTAL_BTN_GHOST}>
+                              <Icon name="restart_alt" className="text-[18px]" />
+                              Mở lại
+                            </button>
+                            {/* Backend từ chối hủy lớp còn học viên (CLASS_REFUND_REQUIRED); span giữ tooltip khi nút bị khóa */}
+                            <span title={item.currentStudents > 0 ? "Hoàn tiền cho học viên trước khi hủy lớp" : undefined}>
+                              <button
+                                type="button"
+                                onClick={() => setStatusTarget({ item, mode: "status" })}
+                                disabled={item.currentStudents > 0}
+                                aria-label={item.currentStudents > 0 ? "Hủy lớp (hoàn tiền cho học viên trước khi hủy lớp)" : undefined}
+                                className={PORTAL_BTN_GHOST}
+                              >
+                                <Icon name="cancel" className="text-[18px]" />
+                                Hủy lớp
+                              </button>
+                            </span>
+                          </>
                         ) : (
                           item.status !== "COMPLETED" &&
                           item.status !== "CANCELLED" && (

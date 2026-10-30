@@ -65,6 +65,8 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   SESSION_ALREADY_CANCELLED: "Buổi học này đã bị hủy từ trước.",
   MAKEUP_ALREADY_EXISTS: "Buổi này đã có buổi học bù.",
   INVALID_MAKEUP_TIME: "Buổi học bù phải ở tương lai và giờ kết thúc sau giờ bắt đầu.",
+  SESSION_ALREADY_TAUGHT: "Buổi này đã có điểm danh hoặc xác nhận dạy nên không hủy hay dùng lại được.",
+  MEETING_NOT_AVAILABLE: "Phòng học chỉ mở từ 15 phút trước giờ học đến khi buổi học kết thúc (buổi đã hủy hoặc đã xong thì không vào được).",
   STUDENT_SCHEDULE_CONFLICT: "Giờ này trùng lịch học khác của học viên trong lớp.",
   // Điểm danh
   ATTENDANCE_LOCKED: "Điểm danh đã khóa nên không sửa được nữa.",
@@ -105,6 +107,27 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   ENROLLMENT_NOT_FOUND: "Không tìm thấy ghi danh này.",
   REFUND_NOT_ALLOWED: "Ghi danh này không hủy / hoàn tiền được theo quy định.",
   REFUND_ALREADY_SETTLED: "Ghi danh này đã được xử lý hoàn tiền.",
+  // Bài tập, bài nộp, chấm điểm
+  HOMEWORK_NOT_FOUND: "Không tìm thấy bài tập này.",
+  HOMEWORK_LOCKED: "Bài tập đã đóng nên không sửa hay mở lại được.",
+  HOMEWORK_PUBLISHED_EDIT_RESTRICTED: "Bài đã công bố chỉ được lùi hạn nộp hoặc tăng điểm tối đa.",
+  HOMEWORK_DEADLINE_PASSED: "Đã quá hạn nộp của bài tập này.",
+  HOMEWORK_INVALID_DEADLINE: "Hạn nộp phải ở tương lai.",
+  HOMEWORK_NOT_ACCEPTING: "Bài tập này hiện không nhận bài nộp.",
+  HOMEWORK_SESSION_CANCELLED: "Buổi học đã bị hủy.",
+  LEARNING_VERSION_CONFLICT: "Dữ liệu vừa được thay đổi ở nơi khác. Hãy tải lại rồi thử lại.",
+  INVALID_RESOURCE_URL: "Đường dẫn tài liệu phải là link https hợp lệ.",
+  SUBMISSION_NOT_FOUND: "Không tìm thấy bài nộp này.",
+  SUBMISSION_NOT_STARTED: "Hãy bấm bắt đầu làm bài trước khi lưu hoặc nộp.",
+  SUBMISSION_LOCKED: "Bài làm ở trạng thái hiện tại không thực hiện được thao tác này.",
+  EMPTY_SUBMISSION: "Hãy nhập bài làm hoặc dán link bài làm trước khi nộp.",
+  SUBMISSION_NOT_SUBMITTED: "Chỉ chấm được bài đã nộp.",
+  INVALID_HOMEWORK_SCORE: "Điểm không được vượt quá điểm tối đa của bài.",
+  GRADING_REASON_REQUIRED: "Cần nhập lý do khi sửa điểm đã chấm.",
+  // Đánh giá gia sư
+  RATING_NOT_FOUND: "Không tìm thấy đánh giá này.",
+  RATING_ALREADY_EXISTS: "Bạn đã đánh giá gia sư này rồi. Hãy tải lại để sửa đánh giá cũ.",
+  RATING_NOT_ELIGIBLE: "Bạn chỉ đánh giá được gia sư dạy lớp bạn đang học.",
 };
 
 /** Đổi lỗi của một lời gọi API thành câu báo cho người dùng; mất kết nối thì báo riêng. */

@@ -112,7 +112,7 @@ public class TutorRatingServiceImpl implements TutorRatingService {
     @Override
     @Transactional(readOnly = true)
     public TutorRatingSummaryResponse getTutorRatingSummary(Long tutorId) {
-        findTutorById(tutorId);
+        User tutor = findTutorById(tutorId);
 
         Double average = tutorRatingRepository.findAverageRatingByTutorId(tutorId);
         long total = tutorRatingRepository.countByTutor_Id(tutorId);
@@ -121,7 +121,7 @@ public class TutorRatingServiceImpl implements TutorRatingService {
                 ? BigDecimal.ZERO
                 : BigDecimal.valueOf(average).setScale(2, RoundingMode.HALF_UP);
 
-        return new TutorRatingSummaryResponse(tutorId, averageRating, total);
+        return new TutorRatingSummaryResponse(tutorId, tutor.getFullName(), averageRating, total);
     }
 
     @Override

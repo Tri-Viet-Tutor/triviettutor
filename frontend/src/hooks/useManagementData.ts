@@ -29,12 +29,13 @@ export function useAdminCourses(query: AdminCoursesQuery) {
   });
 }
 
-/** Danh sách lớp học */
-export function useAdminClasses(query: AdminClassesQuery) {
+/** Danh sách lớp học; `enabled = false` để tạm chưa tải */
+export function useAdminClasses(query: AdminClassesQuery, enabled = true) {
   return useQuery({
     queryKey: managementKeys.classes(query),
     queryFn: () => fetchAdminClasses(query),
     placeholderData: (previous) => previous,
+    enabled,
   });
 }
 

@@ -5,9 +5,9 @@ flow: FLOW-05-PAYROLL
 step_in_flow: Step 1 of 2 (Payroll Settlement & Audit)
 assigned_to: backend-dev
 reviewer: tech-lead
-status: TODO
+status: DONE
 created_at: 2026-10-25
-updated_at: 2026-10-25
+updated_at: 2026-10-29
 inputs:
   - Documentation/01-Business-Logic/02-Pricing-and-Subscription-Rules.md
   - Documentation/02-System-Architecture/02-Backend-Architecture-and-API-Specification.md
@@ -28,11 +28,11 @@ dependencies:
 - **Next Step Triggered**: None (Final flow milestone).
 
 ## 2. Acceptance Criteria (Product Owner)
-- [ ] Monthly payroll calculation strictly enforces formula `BR-02.40`:
+- [x] Monthly payroll calculation strictly enforces formula `BR-02.40`:
   $$\text{Total Salary} = \text{Base Salary} + (\text{Valid Completed Sessions} \times \text{Session Rate})$$
-- [ ] Valid completed sessions include only sessions in status `COMPLETED` where the tutor was the actual assigned instructor (`actualTutorId == tutorId`), properly crediting substitute teaching and excluding cancelled sessions.
-- [ ] Finalizing payroll via `POST /api/v1/admin/payroll/{year}/{month}/finalize` acquires database-level `PayrollMutex` lock to prevent race conditions or double-calculation during simultaneous admin clicks.
-- [ ] Once finalized (`PAYROLL_LOCKED`), subsequent preview requests return the finalized frozen snapshot.
+- [x] Valid completed sessions include only sessions in status `COMPLETED` where the tutor was the actual assigned instructor (`actualTutorId == tutorId`), properly crediting substitute teaching and excluding cancelled sessions.
+- [x] Finalizing payroll via `POST /api/v1/admin/payroll/{year}/{month}/finalize` acquires database-level `PayrollMutex` lock to prevent race conditions or double-calculation during simultaneous admin clicks.
+- [x] Once finalized (`PAYROLL_LOCKED`), subsequent preview requests return the finalized frozen snapshot.
 
 ## 3. Technical Constraints (Tech Lead)
 - Use optimistic/pessimistic lock on `PayrollMutex` table.
@@ -45,9 +45,15 @@ dependencies:
 - PO/BA Preliminary Decision & Proposal: Payroll runs per calendar month; partial months are prorated strictly by actual completed session count.
 
 ## 5. Work Execution Checklist (Assignee)
-- [ ] Review `PayrollService` calculation and mutex acquisition.
-- [ ] Implement concurrency test for parallel finalization calls.
-- [ ] Verify test suite passing via `mvn test-compile`.
+- [x] Review `PayrollService` calculation and mutex acquisition.
+- [x] Implement concurrency test for parallel finalization calls.
+- [x] Verify test suite passing via `mvn test-compile`.
+
+### Completion Notes (2026-10-29, branch `fix/flows/attendance-payroll`)
+- `PayrollService` applies BR-02.40 using `DefaultTeachingQuery` (valid = `COMPLETED`, locked, fully recorded, teaching confirmed by the actual tutor); finalization takes the `PayrollMutex` row lock and stores a frozen snapshot (status `FINALIZED`) returned by later reads.
+- Disabled tutors draw no base salary only in future periods (no disabled-at timestamp exists, so past and current draft months keep them); a disabled tutor who taught in the month is always paid. Finalized snapshots are unchanged.
+- Each line returns `reconciliation` (sessions per group), shown on the tutor and admin payroll pages.
+- Tests: `PayrollMutexTest`, `PayrollControllerTest` (incl. concurrent finalize), `PayrollHttpTest`.
 
 ## 6. Review & Sign-Off (Reviewer)
 - [ ] Mathematical precision and mutex safety verified.

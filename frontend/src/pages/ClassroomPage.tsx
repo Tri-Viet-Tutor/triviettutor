@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { getSessionMeetingToken, getSessionMeetingLogs } from "../services/meeting";
 import { MeetingTokenResponse, MeetingSessionLogsResponse } from "../interfaces/api";
 import { useAuthStore } from "../stores/authStore";
+import { portalErrorMessage } from "../utils/errors";
 
 export default function ClassroomPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -89,7 +90,7 @@ export default function ClassroomPage() {
             });
             setLoading(false);
           } else {
-            setError((err instanceof Error && err.message) || "Không thể kết nối vào phòng học trực tuyến. Vui lòng kiểm tra quyền đăng ký của bạn.");
+            setError(portalErrorMessage(err, "Không thể kết nối vào phòng học trực tuyến. Vui lòng kiểm tra quyền đăng ký của bạn."));
             setLoading(false);
           }
         }

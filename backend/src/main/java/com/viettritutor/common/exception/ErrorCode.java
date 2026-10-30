@@ -57,6 +57,8 @@ public enum ErrorCode {
     SESSION_ALREADY_CANCELLED (HttpStatus.CONFLICT, "This session has already been cancelled"),
     MAKEUP_ALREADY_EXISTS     (HttpStatus.CONFLICT, "This session already has a makeup session"),
     INVALID_MAKEUP_TIME       (HttpStatus.BAD_REQUEST, "Makeup must start in the future and end after its start time"),
+    SESSION_ALREADY_TAUGHT    (HttpStatus.UNPROCESSABLE_ENTITY, "This session already has attendance or a teaching confirmation"),
+    MEETING_NOT_AVAILABLE     (HttpStatus.UNPROCESSABLE_ENTITY, "The classroom is not open for this session right now"),
     INVALID_PAYROLL_PERIOD (HttpStatus.BAD_REQUEST, "Invalid payroll year or month"),
     INVALID_PAYROLL_KEY (HttpStatus.BAD_REQUEST, "Provide Idempotency-Key with 1-100 letters, digits or . _ : -"),
     PAYROLL_KEY_CONFLICT (HttpStatus.CONFLICT, "This idempotency key belongs to another payroll period"),
@@ -120,6 +122,8 @@ public enum ErrorCode {
     ATTENDANCE_NOT_LOCKED     (HttpStatus.UNPROCESSABLE_ENTITY, "Use the attendance submission API while attendance is unlocked"),
     ATTENDANCE_SESSION_NOT_ENDED (HttpStatus.UNPROCESSABLE_ENTITY, "Attendance cannot be finalized before the session ends"),
     ATTENDANCE_EXCUSED_NOT_ALLOWED (HttpStatus.UNPROCESSABLE_ENTITY, "Excused attendance requires approved student leave with at least 24 hours notice"),
+    ACTUAL_TUTOR_CHANGE_NOT_ALLOWED (HttpStatus.UNPROCESSABLE_ENTITY, "The actual tutor can only be corrected for a started, active session"),
+    TUTOR_DISABLED            (HttpStatus.UNPROCESSABLE_ENTITY, "The selected tutor account is disabled"),
 
     // ── Class lifecycle ───────────────────────────────────────────────────────
     INVALID_CLASS_CONFIGURATION (HttpStatus.BAD_REQUEST, "Invalid class dates, schedule, or course duration"),

@@ -74,6 +74,8 @@ export type ErrorCode =
   | "SESSION_ALREADY_CANCELLED"
   | "MAKEUP_ALREADY_EXISTS"
   | "INVALID_MAKEUP_TIME"
+  | "SESSION_ALREADY_TAUGHT"
+  | "MEETING_NOT_AVAILABLE"
   | "PAYROLL_FINALIZED"
   | "SESSION_STATE_CHANGED"
   | "SCHEDULE_CONFLICT"
@@ -106,6 +108,25 @@ export type ErrorCode =
   | "ATTENDANCE_SESSION_NOT_ENDED"
   | "ATTENDANCE_EXCUSED_NOT_ALLOWED"
   | "INVALID_STATUS_TRANSITION"
+  // Bài tập, bài nộp, chấm điểm
+  | "INVALID_HOMEWORK_DATE_RANGE"
+  | "HOMEWORK_NOT_FOUND"
+  | "HOMEWORK_LOCKED"
+  | "HOMEWORK_PUBLISHED_EDIT_RESTRICTED"
+  | "HOMEWORK_DEADLINE_PASSED"
+  | "HOMEWORK_INVALID_DEADLINE"
+  | "HOMEWORK_NOT_ACCEPTING"
+  | "HOMEWORK_SESSION_CANCELLED"
+  | "LEARNING_VERSION_CONFLICT"
+  | "INVALID_RESOURCE_URL"
+  | "SUBMISSION_NOT_FOUND"
+  | "SUBMISSION_NOT_STARTED"
+  | "SUBMISSION_LOCKED"
+  | "EMPTY_SUBMISSION"
+  | "SUBMISSION_NOT_SUBMITTED"
+  | "INVALID_SUBMISSION_FILTER"
+  | "INVALID_HOMEWORK_SCORE"
+  | "GRADING_REASON_REQUIRED"
   // (Đề xuất) Đơn hàng & thanh toán VNPay — backend chưa có
   | "ORDER_NOT_FOUND"
   | "INVALID_ORDER_ITEMS"
@@ -630,7 +651,8 @@ export interface AdminLeaveRequestsQuery extends MyLeaveRequestsQuery {
 
 /** dto.leave.MakeupRequest — POST /admin/sessions/{sessionId}/makeup */
 export interface MakeupRequest {
-  leaveRequestId: number;
+  /** Bỏ trống khi xếp bù cho buổi đã hủy mà không có đơn xin nghỉ */
+  leaveRequestId?: number;
   makeupDate: IsoDate;
   startTime: IsoTime;
   endTime: IsoTime;
@@ -865,12 +887,52 @@ export interface PayrollLineResponse {
   /** Buổi được tính lương */
   validSessions: number;
   cancelledSessions: number;
-  /** Buổi đã có người dạy thay */
+  /** Buổi của gia sư này nhưng do gia sư khác dạy thay (được dạy thay) */
   substitutedOutSessions: number;
   /** Buổi chưa chốt (chưa khóa điểm danh / chưa xác nhận đã dạy) */
   unfinalizedSessions: number;
   sessionPay: number;
   totalPay: number;
+  /** Đối soát từng buổi của tháng (backend luôn trả kèm) */
+  reconciliation?: TeachingPeriodSummary | null;
+}
+
+/** dto.attendance.TeachingSessionResponse — một buổi trong bảng đối soát lương */
+export interface TeachingSessionResponse {
+  sessionId: number;
+  classGroupId: number;
+  originalSessionId: number | null;
+  date: IsoDate;
+  startTime: IsoTime;
+  endTime: IsoTime;
+  status: SessionStatus;
+  scheduledTutorId: number | null;
+  actualTutorId: number | null;
+  taughtByTutorId: number | null;
+  teachingConfirmedBy: number | null;
+  teachingConfirmedAt: IsoDateTime | null;
+  attendanceLocked: boolean;
+  needsAdminReview: boolean;
+  cancellationReason: string | null;
+  scheduledTutorAtCancellation: number | null;
+  actualTutorAtCancellation: number | null;
+}
+
+/** dto.attendance.TeachingPeriodSummary — các buổi của một gia sư trong tháng, chia theo nhóm */
+export interface TeachingPeriodSummary {
+  tutorId: number;
+  /** "2026-10" */
+  month: string;
+  completed: TeachingSessionResponse[];
+  cancelled: TeachingSessionResponse[];
+  substitutedOut: TeachingSessionResponse[];
+  unfinalized: TeachingSessionResponse[];
+}
+
+/** dto.attendance.ActualTutorChange — PATCH /admin/sessions/{sessionId}/actual-tutor */
+export interface ActualTutorChange {
+  tutorId: number;
+  reason: string;
 }
 
 /** dto.payroll.PayrollResponse — GET /admin/payroll/{year}/{month} */

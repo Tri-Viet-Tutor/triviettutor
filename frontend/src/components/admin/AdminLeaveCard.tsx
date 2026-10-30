@@ -1,17 +1,16 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { MakeupForm } from "@/components/admin/MakeupForm";
 import { ReasonForm } from "@/components/admin/ReasonForm";
-import { AuthNotice } from "@/components/auth/AuthNotice";
 import { StatusChip } from "@/components/dashboard/StatusChip";
 import { AUTH_LABEL, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT, PORTAL_TEXT_LINK } from "@/constants/classNames";
 import { LEAVE_RESOLUTION, LEAVE_STATUS, SESSION_STATUS } from "@/constants/labels";
 import { ROUTES } from "@/constants/routes";
-import { adminKeys, useAdminSession, useRefreshAdmin, useUserDirectory } from "@/hooks/useAdminData";
+import { adminKeys, useAdminSession, useCanOfferMakeup, useRefreshAdmin, useUserDirectory } from "@/hooks/useAdminData";
 import type { AdminLeaveRequestsQuery, Role } from "@/interfaces/api";
-import { assignSubstitute, cancelSession, createMakeup, fetchAdminLeaveRequests, rejectLeaveRequest } from "@/services/admin";
-import { formatClockTime, formatDate, parseIsoDate, startOfToday, toIsoDate } from "@/utils/date";
-import { portalErrorMessage } from "@/utils/errors";
+import { assignSubstitute, cancelSession, fetchAdminLeaveRequests, rejectLeaveRequest } from "@/services/admin";
+import { formatClockTime, formatDate, parseIsoDate } from "@/utils/date";
 import { formatLongDate, formatTimeRange, teacherOf } from "@/utils/sessions";
 import type { AdminLeaveCardProps, LeaveCardAction } from "@/interfaces/admin";
 
@@ -21,10 +20,7 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
   const sessionQuery = useAdminSession(request.sessionId);
   const session = sessionQuery.data;
   const [action, setAction] = useState<LeaveCardAction | null>(null);
-  // Dữ liệu form học bù / dạy thay
-  const [makeupDate, setMakeupDate] = useState("");
-  const [startTime, setStartTime] = useState("18:00");
-  const [endTime, setEndTime] = useState("20:00");
+  // Dữ liệu form dạy thay
   const [substituteId, setSubstituteId] = useState("");
 
   /** Xử lý xong: đóng form và tải lại dữ liệu khu quản trị */
@@ -40,16 +36,6 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
   const substitute = useMutation({
     mutationFn: (reason: string) =>
       assignSubstitute(request.sessionId, { leaveRequestId: request.leaveRequestId, substituteTutorId: Number(substituteId), reason }),
-    onSuccess: done,
-  });
-  const makeup = useMutation({
-    mutationFn: () =>
-      createMakeup(request.sessionId, {
-        leaveRequestId: request.leaveRequestId,
-        makeupDate,
-        startTime: `${startTime}:00`,
-        endTime: `${endTime}:00`,
-      }),
     onSuccess: done,
   });
 
@@ -72,14 +58,19 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
   // Không cho chọn chính người đang dạy buổi đó làm người dạy thay
   const currentTeacher = session ? teacherOf(session) : null;
   const substituteOptions = tutors.filter((tutor) => tutor.id !== currentTeacher);
-  const makeupValid = makeupDate !== "" && startTime < endTime;
+  // Đơn đã duyệt "hủy buổi": vẫn xếp bù được nếu buổi gốc đã hủy chưa có buổi bù nào còn hiệu lực
+  const cancelledWithoutMakeup =
+    request.status === "APPROVED" &&
+    request.resolution === "CANCEL" &&
+    session?.status === "CANCELLED" &&
+    session.originalSessionId === null;
+  const canMakeupCancelled = useCanOfferMakeup(request.sessionId, session?.classGroupId ?? 0, cancelledWithoutMakeup) === true;
 
   /** Mở form của một cách xử lý, xóa lỗi cũ của các form khác */
   function open(next: LeaveCardAction) {
     reject.reset();
     cancel.reset();
     substitute.reset();
-    makeup.reset();
     setAction(next);
   }
 
@@ -222,68 +213,33 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
             </ReasonForm>
           )}
           {action === "makeup" && (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (makeupValid) makeup.mutate();
-              }}
-              className="space-y-3 rounded-xl border border-brand-sandLine bg-white p-3.5"
-            >
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div>
-                  <label htmlFor={`makeup-date-${request.leaveRequestId}`} className={`mb-1.5 ${AUTH_LABEL}`}>
-                    Ngày học bù
-                  </label>
-                  <input
-                    id={`makeup-date-${request.leaveRequestId}`}
-                    type="date"
-                    required
-                    min={toIsoDate(startOfToday())}
-                    value={makeupDate}
-                    onChange={(event) => setMakeupDate(event.target.value)}
-                    className={PORTAL_INPUT}
-                  />
-                </div>
-                <div>
-                  <label htmlFor={`makeup-start-${request.leaveRequestId}`} className={`mb-1.5 ${AUTH_LABEL}`}>
-                    Từ
-                  </label>
-                  <input
-                    id={`makeup-start-${request.leaveRequestId}`}
-                    type="time"
-                    required
-                    value={startTime}
-                    onChange={(event) => setStartTime(event.target.value)}
-                    className={PORTAL_INPUT}
-                  />
-                </div>
-                <div>
-                  <label htmlFor={`makeup-end-${request.leaveRequestId}`} className={`mb-1.5 ${AUTH_LABEL}`}>
-                    Đến
-                  </label>
-                  <input
-                    id={`makeup-end-${request.leaveRequestId}`}
-                    type="time"
-                    required
-                    value={endTime}
-                    onChange={(event) => setEndTime(event.target.value)}
-                    className={PORTAL_INPUT}
-                  />
-                </div>
-              </div>
-              <p className="text-[13.5px] text-brand-muted">Buổi gốc sẽ bị hủy và buổi học bù được tạo cho cả lớp.</p>
-              {makeup.error && (
-                <AuthNotice tone="error">{portalErrorMessage(makeup.error, "Chưa xếp được buổi học bù. Vui lòng thử lại.")}</AuthNotice>
-              )}
-              <div className="flex flex-wrap gap-2">
-                <button type="submit" disabled={!makeupValid || makeup.isPending} className={PORTAL_BTN_PRIMARY}>
-                  {makeup.isPending ? "Đang xếp…" : "Xếp buổi học bù"}
-                </button>
-                <button type="button" onClick={() => setAction(null)} disabled={makeup.isPending} className={PORTAL_BTN_SECONDARY}>
-                  Thôi
-                </button>
-              </div>
-            </form>
+            <MakeupForm
+              idPrefix={`makeup-${request.leaveRequestId}`}
+              sessionId={request.sessionId}
+              leaveRequestId={request.leaveRequestId}
+              note="Buổi gốc sẽ bị hủy và buổi học bù được tạo cho cả lớp."
+              onDone={done}
+              onCancel={() => setAction(null)}
+            />
+          )}
+        </div>
+      )}
+
+      {canMakeupCancelled && (
+        <div className="mt-4 border-t border-brand-sandLine pt-4">
+          {action === "makeup" ? (
+            <MakeupForm
+              idPrefix={`makeup-${request.leaveRequestId}`}
+              sessionId={request.sessionId}
+              leaveRequestId={request.leaveRequestId}
+              note="Buổi gốc đã hủy; buổi học bù được tạo cho cả lớp để lớp học đủ số buổi."
+              onDone={done}
+              onCancel={() => setAction(null)}
+            />
+          ) : (
+            <button type="button" onClick={() => open("makeup")} className={PORTAL_BTN_SECONDARY}>
+              Xếp buổi học bù
+            </button>
           )}
         </div>
       )}

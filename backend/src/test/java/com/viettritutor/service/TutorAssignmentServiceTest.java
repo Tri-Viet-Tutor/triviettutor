@@ -64,6 +64,9 @@ class TutorAssignmentServiceTest {
     @Mock
     private ConflictValidationService conflictService;
 
+    @Mock
+    private SessionOperationSupport operations;
+
     private TutorAssignmentService assignmentService;
 
     private User admin;
@@ -81,6 +84,7 @@ class TutorAssignmentServiceTest {
                 learningScheduleRepository,
                 sessionRepository,
                 conflictService,
+                operations,
                 FIXED_CLOCK
         );
 
