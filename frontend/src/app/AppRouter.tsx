@@ -64,6 +64,7 @@ import { StudentCheckoutPage } from "@/pages/student/StudentCheckoutPage";
 import { StudentWalletPage } from "@/pages/student/StudentWalletPage";
 import { StudentLeavePage } from "@/pages/student/StudentLeavePage";
 import { StudentEnrollmentsPage } from "@/pages/student/StudentEnrollmentsPage";
+import { StudentHomeworkPage } from "@/pages/student/StudentHomeworkPage";
 import { ProfilePage } from "@/pages/dashboard/ProfilePage";
 
 // Phòng học trực tuyến LiveKit
@@ -147,6 +148,7 @@ export function AppRouter() {
               <Route path={ROUTES.studentWallet} element={<StudentWalletPage />} />
               <Route path={ROUTES.studentLeave} element={<StudentLeavePage />} />
               <Route path={ROUTES.studentEnrollments} element={<StudentEnrollmentsPage />} />
+              <Route path={ROUTES.studentHomework} element={<StudentHomeworkPage />} />
               <Route path={ROUTES.studentProfile} element={<ProfilePage />} />
             </Route>
           </Route>

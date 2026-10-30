@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { StatusChip } from "@/components/dashboard/StatusChip";
+import { SessionHomeworkList } from "@/components/student/SessionHomeworkList";
 import { Icon } from "@/components/ui/Icon";
 import { ATTENDANCE_STATUS } from "@/constants/labels";
 import { ROUTES } from "@/constants/routes";
@@ -14,7 +15,7 @@ const LINK =
 
 /**
  * Chi tiết một buổi học: ngày giờ, ghi chú (học bù, dạy thay), điểm danh của tôi
- * (GET /sessions/{id}/attendance, chỉ tải khi buổi đã bắt đầu) và lối xin nghỉ / vào lớp.
+ * (GET /sessions/{id}/attendance, chỉ tải khi buổi đã bắt đầu), bài tập đã công bố và lối xin nghỉ / vào lớp.
  */
 export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailProps) {
   const started = sessionStart(session).getTime() <= now.getTime();
@@ -82,6 +83,8 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
           )}
         </ul>
       )}
+
+      <SessionHomeworkList sessionId={session.sessionId} />
 
       {(canJoin || canLeave || hasPendingLeave) && (
         <div className="mt-4 flex flex-wrap items-center gap-2.5">

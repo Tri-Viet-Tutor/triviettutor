@@ -54,6 +54,8 @@ export const ROUTES = {
   studentCheckout: "/student/checkout",
   studentWallet: "/student/wallet",
   studentLeave: "/student/leave",
+  /** Bài tập về nhà ở các lớp đang học: làm, lưu nháp, nộp và xem điểm */
+  studentHomework: "/student/homework",
   /** Các lớp đã đóng học phí */
   studentEnrollments: "/student/classes",
   studentProfile: "/student/profile",
