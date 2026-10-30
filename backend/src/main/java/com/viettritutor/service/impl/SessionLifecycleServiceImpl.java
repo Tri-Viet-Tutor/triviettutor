@@ -48,7 +48,7 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
     static final String EXPIRED_PENDING_REASON =
             "Automatically cancelled: no makeup or substitute was arranged before the session started";
     static final String EMPTY_CLASS_REASON = "0 enrollments at deadline";
-    /** Class audit action for automated transitions; the only class change allowed without an actor (V24). */
+    /** Class audit action for automated transitions; the only class change allowed without an actor (V26). */
     static final String AUTO_STATUS = "AUTO_STATUS";
 
     private final SessionRepository sessionRepository;

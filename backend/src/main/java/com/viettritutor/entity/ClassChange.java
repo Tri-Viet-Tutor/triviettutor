@@ -19,7 +19,7 @@ public class ClassChange {
     @Column(name = "class_group_id", nullable = false)
     private Long classGroupId;
 
-    // NULL only for automated AUTO_STATUS changes (V24 chk_class_changes_actor).
+    // NULL only for automated AUTO_STATUS changes (V26 chk_class_changes_actor).
     @Column(name = "actor_id")
     private Long actorId;
 

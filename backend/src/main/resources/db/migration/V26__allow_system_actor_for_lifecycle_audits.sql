@@ -1,4 +1,4 @@
--- V24: The session lifecycle job changes classes, sessions, leave requests and tutor assignments
+-- V26: The session lifecycle job changes classes, sessions, leave requests and tutor assignments
 -- without a human actor. Allow a NULL actor only for the automated change kinds it writes.
 -- Portable SQL (PostgreSQL and H2). Constraint names below are PostgreSQL's generated names
 -- for the unnamed table CHECKs created in V3/V4.

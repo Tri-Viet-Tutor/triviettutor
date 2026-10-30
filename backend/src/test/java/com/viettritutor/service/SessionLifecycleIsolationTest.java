@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * No test-level transaction: every lifecycle item commits or rolls back on its own, exactly as in the
- * scheduled job. The V24 migration is applied on top of the generated H2 schema so its SQL and CHECKs
+ * scheduled job. The V26 migration is applied on top of the generated H2 schema so its SQL and CHECKs
  * are exercised on H2 too.
  */
 @SpringBootTest(properties = {
@@ -70,11 +70,11 @@ class SessionLifecycleIsolationTest {
     @Autowired JdbcTemplate jdbc;
 
     @BeforeEach
-    void applyV24() throws Exception {
+    void applyV26() throws Exception {
         if (migrated) return;
         try (Connection connection = dataSource.getConnection()) {
             ScriptUtils.executeSqlScript(connection,
-                    new ClassPathResource("db/migration/V24__allow_system_actor_for_lifecycle_audits.sql"));
+                    new ClassPathResource("db/migration/V26__allow_system_actor_for_lifecycle_audits.sql"));
         }
         migrated = true;
     }
