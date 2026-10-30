@@ -30,14 +30,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * Blank role or search means "no filter". Callers must pass "" rather than null:
      * PostgreSQL cannot infer a type for a null parameter in {@code IS NULL} / {@code LIKE},
      * and the list request then fails with {@code text ~~ bytea}.
+     * Callers escape {@code \}, {@code %} and {@code _} in search so they match literally.
      */
     @Query("""
             select u from User u
             where (:role = '' or u.role = :role)
               and (
                     :search = ''
-                 or lower(u.email) like concat('%', :search, '%')
-                 or lower(u.fullName) like concat('%', :search, '%')
+                 or lower(u.email) like concat('%', :search, '%') escape '\\'
+                 or lower(u.fullName) like concat('%', :search, '%') escape '\\'
               )
             """)
     Page<User> findAdminUsers(@Param("role") String role,

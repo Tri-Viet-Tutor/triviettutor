@@ -43,7 +43,9 @@ public class AdminUserServiceImpl implements AdminUserService {
             throw new BusinessException(ErrorCode.INVALID_ROLE_FILTER);
         }
         String normalizedSearch = search == null || search.isBlank()
-                ? "" : search.trim().toLowerCase(Locale.ROOT);
+                ? "" : search.trim().toLowerCase(Locale.ROOT)
+                        // Match LIKE wildcards literally: searching "%" must not list every user.
+                        .replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
         return PageResponse.from(userRepository.findAdminUsers(
                 normalizedRole, normalizedSearch,
                 PageRequest.of(page, size, Sort.by("id").ascending()))
