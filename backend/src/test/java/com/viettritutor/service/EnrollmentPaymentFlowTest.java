@@ -286,4 +286,26 @@ class EnrollmentPaymentFlowTest {
         assertThat(listed.path("cancellable").asBoolean()).isFalse();
         request("DELETE", "/api/v1/enrollments/" + enrollmentId, Map.of("reason", "Đổi lịch"), student, null, 422);
     }
+
+    @Test void cancellingOnTheEnrollmentDeadlineDayRefundsInFullButNotTheDayAfter() throws Exception {
+        ClassGroup group = newClass(ClassType.GROUP, "1000000");
+        wallets.saveAndFlush(Wallet.builder().studentId(student.getId()).balance(new BigDecimal("1600000"))
+                .createdAt(OffsetDateTime.now(clock)).build());
+        // Enrollment stays open through the deadline day; a student who pays that day may still cancel (BR-02.31).
+        clock.value = group.getEnrollmentDeadline().atTime(10, 0).atZone(clock.getZone()).toInstant();
+        long first = quote(student, group);
+        request("POST", "/api/v1/payment-intents/" + first + "/wallet", null, student, "wallet-" + first, 200);
+        long enrollmentId = enrollments.findByPaymentId(payments.findByIntentId(first).orElseThrow().getId()).orElseThrow().getId();
+        assertThat(myEnrollment(student, enrollmentId).path("cancellable").asBoolean()).isTrue();
+        request("DELETE", "/api/v1/enrollments/" + enrollmentId, Map.of("reason", "Đổi lịch"), student, null, 200);
+        assertThat(wallets.findByStudentId(student.getId()).orElseThrow().getBalance()).isEqualByComparingTo("1600000");
+
+        long second = quote(student, group);
+        request("POST", "/api/v1/payment-intents/" + second + "/wallet", null, student, "wallet-" + second, 200);
+        long kept = enrollments.findByPaymentId(payments.findByIntentId(second).orElseThrow().getId()).orElseThrow().getId();
+        clock.value = clock.value.plus(Duration.ofDays(1));
+        assertThat(myEnrollment(student, kept).path("cancellable").asBoolean()).isFalse();
+        request("DELETE", "/api/v1/enrollments/" + kept, Map.of("reason", "Đổi lịch"), student, null, 422);
+        assertThat(wallets.findByStudentId(student.getId()).orElseThrow().getBalance()).isEqualByComparingTo("800000");
+    }
 }

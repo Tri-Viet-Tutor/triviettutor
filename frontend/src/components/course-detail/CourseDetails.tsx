@@ -243,7 +243,7 @@ export function CourseDetails({ course, backTo }: { course: Course; backTo: stri
                         {group.totalSessions} buổi · Tối đa {group.maxStudents} học viên
                       </span>
                       <span className="mt-3 flex flex-wrap justify-between gap-2 text-sm font-bold text-brand-navy">
-                        <span>{formatVnd(group.basePrice1on1)} / khóa</span>
+                        <span>{formatVnd(group.estimatedFee)} / khóa</span>
                         <span>{classId === group.id ? "Đã chọn · Xem lịch bên dưới" : "Chọn lớp và xem lịch →"}</span>
                       </span>
                     </button>

@@ -62,6 +62,7 @@ class PayrollControllerTest {
     @Autowired TutorProfileRepository profiles;
     @Autowired AttendanceRecordRepository records;
     @Autowired JdbcTemplate jdbc;
+    @Autowired jakarta.persistence.EntityManager entityManager;
     @Autowired SessionGenerator generator;
     @Autowired PayrollService service;
     PayrollTestFixtures.Data f;
@@ -109,6 +110,19 @@ class PayrollControllerTest {
         var mine=data(call("GET","/tutor/payroll",null,tutor,null),200);
         assertEquals(1,mine.path("totalElements").asInt());assertEquals(8400000,mine.path("content").get(0).path("totalPay").asLong());
         assertFalse(mine.toString().contains("totalPayroll"));
+    }
+    @Test void snapshotWithPlainTextReconciliationStillShowsStoredAmounts()throws Exception{
+        finalizePay();
+        // Imported sample rows (as on the shared database) carry a plain-text note instead of the JSON reconciliation.
+        jdbc.update("update payroll_lines set reconciliation='Đã đối soát số buổi dạy và chốt bảng lương.'");
+        entityManager.clear();
+        var stored=lines.findAll().stream().filter(l->l.getTutorId().equals(f.tutor().getId())).findFirst().orElseThrow();
+        var admin=line(get(),f.tutor().getId());
+        assertEquals(stored.getTotalPay().longValue(),admin.path("totalPay").asLong());
+        assertEquals(stored.getValidSessions(),admin.path("validSessions").asInt());
+        assertTrue(admin.path("reconciliation").isNull()||admin.path("reconciliation").isMissingNode());
+        var mine=data(call("GET","/tutor/payroll",null,tutor,null),200).path("content").get(0);
+        assertEquals(stored.getTotalPay().longValue(),mine.path("totalPay").asLong());
     }
     @Test void tutorIdentityCannotBeOverriddenAndEachTutorSeesOnlyOwnPay()throws Exception{
         finalizePay();
