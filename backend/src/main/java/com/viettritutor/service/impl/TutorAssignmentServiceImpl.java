@@ -94,7 +94,9 @@ public class TutorAssignmentServiceImpl implements TutorAssignmentService {
         Long primaryTutorId = assignmentRepository.findByClassGroupIdAndStatus(classId, AssignmentStatus.ACTIVE)
                 .map(TutorAssignment::getTutorId).orElse(null);
         List<Session> requested = future.stream().filter(session -> followsPrimaryTutor(session, primaryTutorId)).toList();
-        List<User> tutors = userRepository.findByRoleOrderByIdAsc("ROLE_TUTOR");
+        // A locked tutor cannot sign in to teach, so they are never suggested.
+        List<User> tutors = userRepository.findByRoleOrderByIdAsc("ROLE_TUTOR").stream()
+                .filter(tutor -> !tutor.isLocked()).toList();
         if (tutors.isEmpty()) {
             return List.of();
         }
@@ -120,6 +122,9 @@ public class TutorAssignmentServiceImpl implements TutorAssignmentService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         if (!"ROLE_TUTOR".equals(tutor.getRole())) {
             throw new BusinessException(ErrorCode.INVALID_TUTOR);
+        }
+        if (tutor.isLocked()) {
+            throw new BusinessException(ErrorCode.INVALID_TUTOR, "The selected tutor account is locked");
         }
         return tutor;
     }
