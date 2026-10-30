@@ -33,6 +33,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -68,16 +69,17 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(readOnly = true)
     public AuthResponse login(AuthRequest request) {
+        String email = normalizeEmail(request.getEmail());
         try {
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+                    new UsernamePasswordAuthenticationToken(email, request.getPassword()));
         } catch (LockedException ex) {
             throw new BusinessException(ErrorCode.ACCOUNT_LOCKED);
         } catch (DisabledException ex) {
             throw new BusinessException(ErrorCode.ACCOUNT_NOT_VERIFIED);
         }
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (user.isLocked()) {
@@ -93,8 +95,9 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            User existing = userRepository.findByEmail(request.getEmail()).orElse(null);
+        String email = normalizeEmail(request.getEmail());
+        if (userRepository.existsByEmailIgnoreCase(email)) {
+            User existing = userRepository.findByEmail(email).orElse(null);
             if (existing != null && !existing.isEnabled()) {
                 ensureResendAllowed(existing.getEmail());
                 existing.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -111,7 +114,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         User user = User.builder()
-                .email(request.getEmail())
+                .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
                 .role("ROLE_STUDENT")
@@ -134,7 +137,8 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(noRollbackFor = BusinessException.class)
     public AuthResponse verifyEmail(VerifyEmailRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        String email = normalizeEmail(request.getEmail());
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (user.isEnabled()) {
@@ -142,7 +146,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         EmailVerification verification = emailVerificationRepository
-                .findTopByEmailAndVerifiedFalseOrderByCreatedAtDesc(request.getEmail())
+                .findTopByEmailAndVerifiedFalseOrderByCreatedAtDesc(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_OTP));
 
         if (verification.getFailedAttempts() >= MAX_OTP_ATTEMPTS) {
@@ -173,6 +177,14 @@ public class AuthServiceImpl implements AuthService {
         return buildAuthResponse(user);
     }
 
+    /**
+     * Emails are stored trimmed and lower-case, so "A@x.com" and "a@x.com" are one account
+     * (users.email is unique only case-sensitively).
+     */
+    static String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
+    }
+
     private static boolean otpMatches(String expected, String submitted) {
         if (submitted == null) {
             return false;
@@ -195,7 +207,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public RegisterResponse resendVerification(ResendVerificationRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(normalizeEmail(request.getEmail()))
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (user.isEnabled()) {
@@ -246,7 +258,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
-        userRepository.findByEmail(request.getEmail().trim()).ifPresent(user -> {
+        userRepository.findByEmail(normalizeEmail(request.getEmail())).ifPresent(user -> {
             passwordResetTokenRepository.deleteAllByUserId(user.getId());
 
             String token = UUID.randomUUID().toString();

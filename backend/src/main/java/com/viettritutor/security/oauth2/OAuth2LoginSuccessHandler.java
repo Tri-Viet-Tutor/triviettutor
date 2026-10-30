@@ -20,6 +20,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -61,7 +62,9 @@ public class OAuth2LoginSuccessHandler
         OAuth2User oauth2User = ((OAuth2AuthenticationToken) authentication).getPrincipal();
 
         String googleId = oauth2User.getAttribute("sub");
-        String email = oauth2User.getAttribute("email");
+        String googleEmail = oauth2User.getAttribute("email");
+        // Local accounts store emails trimmed and lower-case.
+        String email = googleEmail == null ? null : googleEmail.trim().toLowerCase(Locale.ROOT);
         String name = oauth2User.getAttribute("name");
         Boolean emailVerified = oauth2User.getAttribute("email_verified");
 
