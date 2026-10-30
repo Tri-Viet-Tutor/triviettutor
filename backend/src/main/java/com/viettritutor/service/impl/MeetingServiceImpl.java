@@ -23,6 +23,7 @@ import livekit.LivekitWebhook;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -359,7 +360,7 @@ public class MeetingServiceImpl implements MeetingService {
             event = receiver.receive(body, authHeader);
         } catch (Exception e) {
             log.error("Failed to validate LiveKit webhook event: {}", e.getMessage());
-            throw new BusinessException(ErrorCode.ACCESS_DENIED, "Invalid webhook signature: " + e.getMessage());
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "Invalid webhook signature");
         }
 
         String eventType = event.getEvent();
@@ -524,14 +525,20 @@ public class MeetingServiceImpl implements MeetingService {
         MeetingSessionLog sessionLog = null;
         List<MeetingParticipantLog> participantLogs = Collections.emptyList();
 
-        if (meetingSessionLogRepository != null) {
-            sessionLog = meetingSessionLogRepository.findBySessionId(roomName).orElse(null);
-        }
-        if (meetingParticipantLogRepository != null) {
-            participantLogs = meetingParticipantLogRepository.findBySessionId(roomName);
-            if (participantLogs == null) {
-                participantLogs = Collections.emptyList();
+        try {
+            if (meetingSessionLogRepository != null) {
+                sessionLog = meetingSessionLogRepository.findBySessionId(roomName).orElse(null);
             }
+            if (meetingParticipantLogRepository != null) {
+                participantLogs = meetingParticipantLogRepository.findBySessionId(roomName);
+                if (participantLogs == null) {
+                    participantLogs = Collections.emptyList();
+                }
+            }
+        } catch (DataAccessException e) {
+            // MongoDB is an optional audit store: report it as unavailable instead of a 500.
+            log.warn("Meeting logs unavailable for session {}: {}", sessionId, e.getMessage());
+            throw new BusinessException(ErrorCode.MEETING_LOGS_UNAVAILABLE);
         }
 
         return MeetingSessionLogsResponse.builder()
