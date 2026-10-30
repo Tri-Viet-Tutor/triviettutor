@@ -33,7 +33,7 @@ public class PaymentController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('STUDENT')")
     @Operation(summary = "Quote the fixed server course price for one class",
-            description = "Idempotency-Key is required. The quote lasts 5 minutes by default. Starting VNPay reserves a seat until expiry; quoting alone does not. Discounts are not applied.")
+            description = "Idempotency-Key is required. The quote lasts 5 minutes by default. Starting VNPay reserves a seat until expiry; quoting alone does not. The quoted amount already includes the group-size discount for the seat being bought.")
     public ApiResponse<PaymentIntentResponse> create(@Valid @RequestBody CreatePaymentIntentRequest input,
                                                      @RequestHeader(value = "Idempotency-Key", required = false) String key,
                                                      @CurrentUser User student) {
