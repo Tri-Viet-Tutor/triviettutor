@@ -15,6 +15,11 @@ public interface AdminCourseService {
     /** {@code keyword}: tìm trong tên khóa, không phân biệt hoa thường; null hoặc rỗng là bỏ qua. */
     PageResponse<CourseResponse> list(String subject, GradeLevel gradeLevel, Boolean active, String keyword, int page, int size);
 
+    /** Không lọc theo tên khóa (giữ cho các nơi gọi cũ, ví dụ AssistantContextBuilder). */
+    default PageResponse<CourseResponse> list(String subject, GradeLevel gradeLevel, Boolean active, int page, int size) {
+        return list(subject, gradeLevel, active, null, page, size);
+    }
+
     CourseResponse update(Long courseId, CourseRequest request);
 
     /** Đảo trạng thái bán. Giữ để tương thích; client mới dùng {@link #setActive}. */
