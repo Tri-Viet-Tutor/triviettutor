@@ -317,6 +317,7 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
               )}
               <CourseOfferList
                 classes={results}
+                classesLoading={catalog.isPending}
                 filters={filters}
                 canBuy={isStudent || !user}
                 onBuy={buy}

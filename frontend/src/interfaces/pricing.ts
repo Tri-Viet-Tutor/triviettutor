@@ -73,6 +73,8 @@ export interface ClassTicketProps {
 export interface CourseOfferListProps {
   /** Lớp đang mở sau khi áp bộ lọc và sắp xếp của CourseShopSection */
   classes: TuitionClass[];
+  /** Danh sách lớp còn đang tải (chưa biết khóa nào đang tuyển sinh) */
+  classesLoading?: boolean;
   filters: ClassShopFilters;
   /** Tài khoản hiện tại được đăng ký lớp không (chỉ học viên) */
   canBuy: boolean;
