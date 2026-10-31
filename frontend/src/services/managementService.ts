@@ -136,3 +136,8 @@ export async function fetchMyEnrollments(query: EnrollmentsQuery = {}): Promise<
 export async function cancelEnrollment(enrollmentId: number, reason: string): Promise<EnrollmentResponse> {
   return unwrap(await api.delete<ApiResponse<EnrollmentResponse>>(`/enrollments/${enrollmentId}`, { data: { reason } }));
 }
+
+/** POST /enrollments/{enrollmentId}/transfer — đổi sang lớp khác cùng khóa trước hạn chốt; học phí bù trừ qua ví */
+export async function transferEnrollment(enrollmentId: number, targetClassId: number): Promise<EnrollmentResponse> {
+  return unwrap(await api.post<ApiResponse<EnrollmentResponse>>(`/enrollments/${enrollmentId}/transfer`, { targetClassId }));
+}

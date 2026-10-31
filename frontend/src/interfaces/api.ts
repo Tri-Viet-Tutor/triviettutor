@@ -960,6 +960,10 @@ export interface EnrollmentResponse {
   refundStatus: "PENDING" | "COMPLETED" | "FAILED" | null;
   /** Học viên còn được tự hủy và hoàn 100% học phí hay không (BR-02.32) */
   cancellable: boolean;
+  /** Đăng ký này được tạo khi đổi từ đăng ký khác (mỗi đăng ký chỉ đổi lớp một lần) */
+  transferredFromEnrollmentId?: number | null;
+  /** Còn đổi sang lớp khác cùng khóa được không; backend chưa trả thì giao diện tự xét theo hạn chốt */
+  transferable?: boolean;
 }
 
 /** Tham số của GET /enrollments/my và GET /admin/classes/{classId}/enrollments */
