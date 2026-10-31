@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useMutation, useQueries } from "@tanstack/react-query";
+import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { FilterTabs } from "@/components/dashboard/FilterTabs";
 import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
 import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/PortalState";
 import { StatTile } from "@/components/dashboard/StatTile";
 import { StatusChip } from "@/components/dashboard/StatusChip";
+import { TransferClassDialog } from "@/components/student/TransferClassDialog";
 import { TutorRatingBadge, TutorRatingDialog } from "@/components/student/TutorRatingDialog";
 import { Icon } from "@/components/ui/Icon";
 import {
@@ -41,7 +42,8 @@ function cancelNotice(result: EnrollmentResponse): string {
 }
 
 /**
- * Các lớp học viên đã đóng học phí: học phí, ưu đãi, tiến độ buổi học, buổi kế tiếp và hủy ghi danh.
+ * Các lớp học viên đã đóng học phí: học phí, ưu đãi, tiến độ buổi học, buổi kế tiếp, đổi lớp và hủy ghi danh.
+ * Đổi lớp: trước hạn chốt, sang lớp khác cùng khóa còn trước hạn chốt, mỗi lớp một lần (POST /enrollments/{id}/transfer).
  * API: GET /enrollments/my, DELETE /enrollments/{id} (kèm lý do), GET /me/sessions để ghép tiến độ.
  * Lớp đã có buổi học hoàn tất thì đánh giá được gia sư dạy gần nhất (POST /tutors/{id}/ratings, PUT /ratings/{id}).
  */
@@ -52,6 +54,8 @@ export function StudentEnrollmentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [ratingTutorId, setRatingTutorId] = useState<number | null>(null);
+  const [transferring, setTransferring] = useState<EnrollmentResponse | null>(null);
+  const queryClient = useQueryClient();
   const enrollments = useMyEnrollments();
   const sessions = useMySessions();
   const refreshMine = useRefreshMine();
@@ -82,6 +86,17 @@ export function StudentEnrollmentsPage() {
   const shown = filter === "ALL" ? all : all.filter((item) => item.status === filter);
   const active = all.filter((item) => item.status === "ACTIVE");
   const paid = all.reduce((sum, item) => sum + item.feeCharged, 0);
+
+  /** Còn đổi lớp được: còn tự hủy được (trước hạn chốt), lớp đang tuyển sinh và chưa từng đổi */
+  function canTransfer(item: EnrollmentResponse) {
+    return (
+      item.status === "ACTIVE" &&
+      item.cancellable &&
+      item.transferable !== false &&
+      !item.transferredFromEnrollmentId &&
+      classById.get(item.classGroupId)?.status === "ENROLLING"
+    );
+  }
 
   /** Tiến độ và buổi kế tiếp của một lớp, lấy từ lịch học của tôi */
   function progressOf(classGroupId: number) {
@@ -279,13 +294,19 @@ export function StudentEnrollmentsPage() {
 
                 <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-brand-sandLine px-3 py-2 text-[13px] text-brand-muted">
                   <span className="whitespace-nowrap px-2">Ghi danh ngày {formatDate(new Date(item.enrolledAt))}</span>
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap justify-end gap-1">
                     {item.status === "ACTIVE" && (
                       <>
                         <Link to={ROUTES.studentSchedule} className={PORTAL_BTN_GHOST}>
                           <Icon name="calendar_month" className="text-[18px]" />
                           Lịch học
                         </Link>
+                        {canTransfer(item) && (
+                          <button type="button" onClick={() => setTransferring(item)} className={PORTAL_BTN_GHOST}>
+                            <Icon name="swap_horiz" className="text-[18px]" />
+                            Đổi lớp
+                          </button>
+                        )}
                         {item.cancellable ? (
                           <button
                             type="button"
@@ -314,6 +335,19 @@ export function StudentEnrollmentsPage() {
       )}
 
       <TutorRatingDialog tutorId={ratingTutorId} onClose={() => setRatingTutorId(null)} />
+
+      <TransferClassDialog
+        enrollment={transferring}
+        current={transferring ? classById.get(transferring.classGroupId) : undefined}
+        onClose={() => setTransferring(null)}
+        onDone={(message) => {
+          setTransferring(null);
+          setNotice(message);
+          void refreshMine();
+          void queryClient.invalidateQueries({ queryKey: ["catalog-class"] });
+          void queryClient.invalidateQueries({ queryKey: ["transfer-options"] });
+        }}
+      />
 
       <PortalDialog
         open={cancelling !== null}

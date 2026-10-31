@@ -101,6 +101,7 @@ function OfferSkeleton() {
  */
 export function CourseOfferList({
   classes,
+  classesLoading,
   filters,
   canBuy,
   onBuy,
@@ -134,16 +135,17 @@ export function CourseOfferList({
     return map;
   }, [classes]);
 
-  // Khóa khớp ô tìm, môn và khối
+  // Chỉ hiện khóa đang tuyển sinh (có ít nhất một lớp mở đăng ký) và khớp ô tìm, môn, khối
   const results = useMemo(() => {
     const keyword = normalizeText(filters.query);
     return sortCourses(courses.data?.content ?? []).filter(
       (course) =>
         (!filters.subject || course.subject === filters.subject) &&
         (!filters.grade || course.gradeLevel === filters.grade) &&
-        (!keyword || normalizeText(`${course.name} ${course.subject} ${subjectLabel(course.subject)}`).includes(keyword)),
+        (!keyword || normalizeText(`${course.name} ${course.subject} ${subjectLabel(course.subject)}`).includes(keyword)) &&
+        (classesByCourse.get(courseKey(course.name, course.subject, course.gradeLevel))?.length ?? 0) > 0,
     );
-  }, [courses.data, filters.query, filters.subject, filters.grade]);
+  }, [courses.data, classesByCourse, filters.query, filters.subject, filters.grade]);
 
   const openClassTotal = useMemo(
     () =>
@@ -154,7 +156,7 @@ export function CourseOfferList({
     [results, classesByCourse],
   );
 
-  if (courses.isPending) return <OfferSkeleton />;
+  if (courses.isPending || classesLoading) return <OfferSkeleton />;
 
   if (courses.isError)
     return (
@@ -173,13 +175,14 @@ export function CourseOfferList({
       </div>
     );
 
-  const noCoursesAtAll = (courses.data?.content.length ?? 0) === 0;
+  // Không lọc gì mà vẫn trống: chưa có khóa nào đang tuyển sinh
+  const noCoursesAtAll = !(filters.query || filters.subject || filters.grade || filters.mode || filters.schedule);
 
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p aria-live="polite" className="text-[14.5px] text-brand-muted">
-          <strong className="text-[18px] font-bold text-brand-navy">{results.length}</strong> khóa học đang bán
+          <strong className="text-[18px] font-bold text-brand-navy">{results.length}</strong> khóa học đang tuyển sinh
           {results.length > 0 && (
             <>
               {" - "}
@@ -197,10 +200,10 @@ export function CourseOfferList({
         <div className="mt-4 rounded-2xl border border-dashed border-brand-navy/30 bg-white/60 px-6 py-12 text-center">
           <Icon name={noCoursesAtAll ? "inventory_2" : "search_off"} className="text-[44px] text-brand-navy/40" />
           <p className="mt-2 text-[17px] font-bold text-brand-navy">
-            {noCoursesAtAll ? "Hiện chưa có khóa học nào đang bán." : "Không có khóa học phù hợp."}
+            {noCoursesAtAll ? "Hiện chưa có khóa học nào đang tuyển sinh." : "Không có khóa học phù hợp."}
           </p>
           <p className="mt-1 text-[14px] text-brand-muted">
-            {noCoursesAtAll ? "Trung tâm sẽ sớm mở bán khóa mới, bạn quay lại sau nhé." : "Thử bỏ bớt bộ lọc hoặc tìm bằng từ khóa khác."}
+            {noCoursesAtAll ? "Trung tâm sẽ sớm mở lớp mới, bạn quay lại sau nhé." : "Thử bỏ bớt bộ lọc hoặc tìm bằng từ khóa khác."}
           </p>
           {!noCoursesAtAll && (
             <button

@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
+import { ConfirmDialog } from "@/components/dashboard/ConfirmDialog";
 import { AuthNotice } from "@/components/auth/AuthNotice";
 import { PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
 import { deleteUser, updateUser } from "@/services/admin";
@@ -94,39 +95,47 @@ const STATUS_LABEL: Record<AdminUserStatus, { label: string; tone: Tone }> = {
   UNVERIFIED: { label: "Chưa kích hoạt", tone: "slate" },
 };
 
-/** Nút khóa / mở khóa một tài khoản (PATCH /admin/users/{id}/status) */
+/** Nút khóa / mở khóa một tài khoản (PATCH /admin/users/{id}/status), hỏi lại bằng hộp xác nhận */
 function LockToggle({ user }: { user: AdminUserResponse }) {
   const refresh = useRefreshAdmin();
-  const toggle = useMutation({
-    mutationFn: () => updateUserStatus(user.id, { locked: !user.locked }),
-    onSuccess: () => void refresh(),
-  });
+  const [asking, setAsking] = useState(false);
 
-  function onClick() {
-    const question = user.locked
-      ? `Mở khóa tài khoản ${user.email}?`
-      : `Khóa tài khoản ${user.email}? Người này sẽ không đăng nhập được và phiên đang dùng bị đăng xuất.`;
-    if (window.confirm(question)) toggle.mutate();
-  }
-
-  const error = toggle.error ? portalErrorMessage(toggle.error, "Chưa đổi được trạng thái. Vui lòng thử lại.") : null;
   return (
     <>
       <button
         type="button"
-        disabled={toggle.isPending}
-        onClick={onClick}
-        title={error ?? (user.locked ? "Mở khóa" : "Khóa")}
+        onClick={() => setAsking(true)}
+        title={user.locked ? "Mở khóa" : "Khóa"}
         aria-label={user.locked ? `Mở khóa ${user.fullName}` : `Khóa ${user.fullName}`}
-        className={`${ICON_BTN} w-9 px-0 ${error ? "border-red-300 text-red-700" : ""}`}
+        className={`${ICON_BTN} w-9 px-0`}
       >
         <Icon name={user.locked ? "lock_open" : "lock"} className="text-[18px]" />
       </button>
-      {error && (
-        <span role="alert" className="sr-only">
-          {error}
-        </span>
-      )}
+      <ConfirmDialog
+        open={asking}
+        tone={user.locked ? "primary" : "danger"}
+        icon={user.locked ? "lock_open" : "lock"}
+        title={user.locked ? "Mở khóa tài khoản?" : "Khóa tài khoản?"}
+        message={
+          user.locked ? (
+            <>
+              <strong className="text-brand-ink">{user.fullName}</strong> ({user.email}) sẽ đăng nhập lại được bình thường.
+            </>
+          ) : (
+            <>
+              <strong className="text-brand-ink">{user.fullName}</strong> ({user.email}) sẽ không đăng nhập được và phiên đang dùng
+              bị đăng xuất.
+            </>
+          )
+        }
+        confirmLabel={user.locked ? "Mở khóa" : "Khóa tài khoản"}
+        pendingLabel="Đang lưu…"
+        onClose={() => setAsking(false)}
+        onConfirm={async () => {
+          await updateUserStatus(user.id, { locked: !user.locked });
+          void refresh();
+        }}
+      />
     </>
   );
 }
