@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useMemo, useState } from "react";
 import { AuthNotice } from "@/components/auth/AuthNotice";
 import { QuestionBuilder } from "@/components/homework/QuestionBuilder";
+import { AttachmentField } from "@/components/ui/AttachmentField";
 import { PORTAL_BTN_ACCENT, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
 import { useMySessions, useUserId } from "@/hooks/usePortalData";
 import { createHomework, updateHomework } from "@/services/homeworkService";
@@ -134,21 +135,13 @@ export function HomeworkEditor({ homework, initialSessionId, onSaved, onCancel }
             className={`${PORTAL_INPUT} h-auto resize-y py-2.5 leading-relaxed`}
           />
         </div>
-        <div>
-          <label htmlFor="hw-resource" className={PORTAL_LABEL}>
-            Link tài liệu (không bắt buộc, https)
-          </label>
-          <input
-            id="hw-resource"
-            type="url"
-            maxLength={2048}
-            readOnly={published}
-            value={resourceUrl}
-            onChange={(event) => setResourceUrl(event.target.value)}
-            placeholder="https://"
-            className={PORTAL_INPUT}
-          />
-        </div>
+        <AttachmentField
+          id="hw-resource"
+          label="Tài liệu kèm theo (không bắt buộc)"
+          value={resourceUrl}
+          onChange={setResourceUrl}
+          disabled={published}
+        />
       </section>
 
       <section className={`grid gap-4 p-5 sm:grid-cols-2 sm:p-6 ${PORTAL_CARD}`} aria-label="Thời gian và quyền vào làm">

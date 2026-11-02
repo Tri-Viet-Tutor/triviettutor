@@ -14,10 +14,29 @@ import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '@/components/common/AppHeader';
 import { SessionCard } from '@/components/common/SessionCard';
 import { BrandColors } from '@/constants/Colors';
-import { MOCK_SESSIONS } from '@/constants/data';
 import { SessionItem } from '@/types';
 import { useAuth } from '@/services/authContext';
-import { fetchMySessions } from '@/services/api';
+import { fetchMySessions } from '@/services/sessions';
+
+const WEEKDAY_SHORT = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+/** "2026-10-28" theo giờ máy (không dùng toISOString vì sẽ lệch ngày theo múi giờ UTC) */
+function isoDate(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** Bảy ngày Thứ 2 → Chủ nhật của tuần chứa `anchor` */
+function weekOf(anchor: Date): Date[] {
+  const monday = new Date(anchor);
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(monday);
+    day.setDate(monday.getDate() + index);
+    return day;
+  });
+}
 
 interface DayItem {
   day: string;
@@ -29,34 +48,36 @@ interface DayItem {
 
 export default function ScheduleScreen() {
   const { user } = useAuth();
-  const [sessions, setSessions] = useState<SessionItem[]>(MOCK_SESSIONS);
+  const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Default to today's date in YYYY-MM-DD
-  const todayStr = new Date().toISOString().split('T')[0];
-  const [selectedDate, setSelectedDate] = useState<string>('2026-10-15');
+  const today = new Date();
+  const todayStr = isoDate(today);
+  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
   const [filterMode, setFilterMode] = useState<'SELECTED_DAY' | 'ALL_WEEK'>('ALL_WEEK');
 
   const loadSessions = useCallback(async () => {
+    if (!user) {
+      setSessions([]);
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     try {
-      const data = await fetchMySessions();
-      if (data && data.length > 0) {
-        setSessions(data);
-        setIsLiveConnected(true);
-      } else {
-        setSessions(MOCK_SESSIONS);
-      }
-    } catch {
-      // Gracefully fall back to cached / mock sessions
-      setSessions(MOCK_SESSIONS);
-      setIsLiveConnected(false);
+      const week = weekOf(new Date());
+      setSessions(await fetchMySessions({ from: isoDate(week[0]), to: isoDate(week[6]) }));
+      setLoadError(null);
+    } catch (error: any) {
+      // Không hiện lịch giả: báo lỗi để học viên biết và kéo xuống tải lại
+      setSessions([]);
+      setLoadError(error?.message === 'SESSION_EXPIRED' ? 'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.' : 'Không tải được lịch học. Kéo xuống để thử lại.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     loadSessions();
@@ -67,16 +88,18 @@ export default function ScheduleScreen() {
     loadSessions();
   }, [loadSessions]);
 
-  // Compute dynamic week days
-  const currentWeekDays: DayItem[] = [
-    { day: 'T2', date: '12/10', fullDate: '2026-10-12', hasSession: sessions.some((s) => s.date === '2026-10-12') },
-    { day: 'T3', date: '13/10', fullDate: '2026-10-13', hasSession: sessions.some((s) => s.date === '2026-10-13') },
-    { day: 'T4', date: '14/10', fullDate: '2026-10-14', hasSession: sessions.some((s) => s.date === '2026-10-14') },
-    { day: 'T5', date: '15/10', fullDate: '2026-10-15', hasSession: sessions.some((s) => s.date === '2026-10-15'), isToday: true },
-    { day: 'T6', date: '16/10', fullDate: '2026-10-16', hasSession: sessions.some((s) => s.date === '2026-10-16') },
-    { day: 'T7', date: '17/10', fullDate: '2026-10-17', hasSession: sessions.some((s) => s.date === '2026-10-17') },
-    { day: 'CN', date: '18/10', fullDate: '2026-10-18', hasSession: sessions.some((s) => s.date === '2026-10-18') },
-  ];
+  // Tuần hiện tại (Thứ 2 → Chủ nhật)
+  const weekDays = weekOf(today);
+  const currentWeekDays: DayItem[] = weekDays.map((day) => {
+    const fullDate = isoDate(day);
+    return {
+      day: WEEKDAY_SHORT[day.getDay()],
+      date: `${day.getDate()}/${day.getMonth() + 1}`,
+      fullDate,
+      hasSession: sessions.some((s) => s.date === fullDate),
+      isToday: fullDate === todayStr,
+    };
+  });
 
   const filteredSessions =
     filterMode === 'SELECTED_DAY'
@@ -92,11 +115,7 @@ export default function ScheduleScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <AppHeader
         title="Thời khóa biểu"
-        subtitle={
-          isLiveConnected
-            ? 'Đồng bộ trực tuyến với VietTriTutor Core'
-            : 'Lịch học & chuyên cần tuần này'
-        }
+        subtitle="Lịch học tuần này"
       />
 
       <View style={styles.container}>
@@ -127,13 +146,9 @@ export default function ScheduleScreen() {
         <View style={styles.weekStripWrapper}>
           <View style={styles.weekStripHeader}>
             <View style={styles.monthHeaderRow}>
-              <Text style={styles.weekTitle}>Tháng 10 / 2026</Text>
-              {isLiveConnected && (
-                <View style={styles.liveBadge}>
-                  <View style={styles.liveDot} />
-                  <Text style={styles.liveText}>API Connected</Text>
-                </View>
-              )}
+              <Text style={styles.weekTitle}>
+                Tháng {today.getMonth() + 1} / {today.getFullYear()}
+              </Text>
             </View>
             <View style={styles.modeToggle}>
               <TouchableOpacity
@@ -211,7 +226,7 @@ export default function ScheduleScreen() {
         <View style={styles.noticeBar}>
           <Ionicons name="information-circle" size={16} color={BrandColors.navy} />
           <Text style={styles.noticeText}>
-            Quy tắc xin nghỉ: Học viên gửi đơn trước $\ge 24h$ sẽ được xếp lịch học bù miễn phí. Với lớp trực tuyến, bấm "Vào phòng học Online" để mở phòng học.
+            Xin nghỉ trước ít nhất 24 giờ để trung tâm sắp xếp. Với lớp trực tuyến, bấm "Vào phòng học Online" để mở phòng học.
           </Text>
         </View>
 
@@ -234,7 +249,27 @@ export default function ScheduleScreen() {
                 tintColor={BrandColors.navy}
               />
             }>
-            {filteredSessions.length > 0 ? (
+            {!user ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="log-in-outline" size={48} color={BrandColors.muted} />
+                <Text style={styles.emptyTitle}>Đăng nhập để xem lịch học</Text>
+                <Text style={styles.emptyDesc}>Lịch học hiện theo các lớp bạn đã đăng ký.</Text>
+              </View>
+            ) : loadError ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="cloud-offline-outline" size={48} color={BrandColors.muted} />
+                <Text style={styles.emptyTitle}>{loadError}</Text>
+                <TouchableOpacity style={styles.showAllBtn} onPress={onRefresh}>
+                  <Text style={styles.showAllBtnText}>Thử lại</Text>
+                </TouchableOpacity>
+              </View>
+            ) : sessions.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="calendar-outline" size={48} color={BrandColors.muted} />
+                <Text style={styles.emptyTitle}>Tuần này bạn chưa có buổi học nào</Text>
+                <Text style={styles.emptyDesc}>Đăng ký lớp ở tab Khóa học để lịch học hiện ở đây.</Text>
+              </View>
+            ) : filteredSessions.length > 0 ? (
               filteredSessions.map((session) => (
                 <SessionCard key={session.sessionId} session={session} />
               ))

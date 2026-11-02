@@ -8,6 +8,7 @@ import type { PaymentStatus } from "@/interfaces/api";
 import { getApiError } from "@/services/api";
 import { listPayments, refundPayment, updateRefund } from "@/services/tuitionPaymentService";
 import { formatVnd } from "@/utils/currency";
+import { displayCode } from "@/utils/classes";
 
 /** Tên trạng thái giao dịch */
 const STATUSES: Record<PaymentStatus, string> = {
@@ -116,20 +117,20 @@ function PaymentCard({ payment, onUpdated }: PaymentCardProps) {
     code === "INVALID_REFUND_PERCENTAGE"
       ? "Trường hợp này cần hoàn 100%."
       : code === "PAYMENT_GATEWAY_DISABLED"
-        ? "VNPay Sandbox chưa được cấu hình đầy đủ."
+        ? "Cổng VNPay chưa được cấu hình đầy đủ."
         : code === "REFUND_ALREADY_SETTLED"
           ? "Yêu cầu hoàn tiền đã tồn tại hoặc chưa được phép thử lại."
           : "Không xử lý được yêu cầu hoàn tiền. Vui lòng kiểm tra và thử lại.";
   return (
     <section className={`${PORTAL_CARD} space-y-3 p-5`}>
       <h2 className="font-bold text-brand-navy">
-        Giao dịch #{payment.paymentId} · {STATUSES[payment.status]}
+        Giao dịch {displayCode("payment", payment.paymentId)} - {STATUSES[payment.status]}
       </h2>
       <p className="text-sm">
-        Học viên #{payment.studentId} · Lớp #{payment.classGroupId} · {payment.method}
+        Học viên {displayCode("student", payment.studentId)} - Lớp {displayCode("class", payment.classGroupId)} - {payment.method}
       </p>
       <p>
-        {formatVnd(payment.amount)} · Đã hoàn {formatVnd(payment.refundedAmount)}
+        {formatVnd(payment.amount)} - Đã hoàn {formatVnd(payment.refundedAmount)}
       </p>
       <p className="break-all text-xs text-brand-muted">Mã giao dịch: {payment.transactionRef}</p>
       {payment.status === "REQUIRES_REFUND" && (
@@ -137,8 +138,8 @@ function PaymentCard({ payment, onUpdated }: PaymentCardProps) {
       )}
       {refund && (
         <p className="text-sm">
-          Hoàn tiền #{refund.refundId}:{" "}
-          {refund.status === "COMPLETED" ? "Đã hoàn" : refund.status === "FAILED" ? "Bị từ chối" : "Chờ xác nhận"} ·{" "}
+          Hoàn tiền {displayCode("refund", refund.refundId)}:{" "}
+          {refund.status === "COMPLETED" ? "Đã hoàn" : refund.status === "FAILED" ? "Bị từ chối" : "Chờ xác nhận"} -{" "}
           {formatVnd(refund.amount)}
         </p>
       )}

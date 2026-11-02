@@ -644,7 +644,7 @@ class HomeworkControllerTest {
     @Test void publishingNotifiesEnrolledStudentsAndTutorListCountsWork() throws Exception {
         long id=publish(body());
         var note=notificationsOf(student).getFirst();
-        assertEquals("HOMEWORK_PUBLISHED",note.getType());assertEquals("/student/homeworks/"+id,note.getLink());
+        assertEquals("HOMEWORK_PUBLISHED",note.getType());assertEquals("/student/homework/"+id,note.getLink());
         assertTrue(notificationsOf(outsider).isEmpty());
         submit(id);
         var item=data(call("GET","/tutor/homeworks",null,t),200).path("content").get(0);

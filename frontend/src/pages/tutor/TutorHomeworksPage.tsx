@@ -9,6 +9,7 @@ import { FOCUS_RING, PORTAL_BTN_ACCENT, PORTAL_CARD } from "@/constants/classNam
 import { HOMEWORK_STATUS } from "@/constants/labels";
 import { ROUTES, homeworkPath } from "@/constants/routes";
 import { useTutorHomeworks } from "@/hooks/useHomeworkData";
+import { displayCode } from "@/utils/classes";
 import { formatDate, parseIsoDate } from "@/utils/date";
 import { formatDateTime } from "@/utils/homework";
 
@@ -59,7 +60,7 @@ export function TutorHomeworksPage() {
                   <div className="min-w-0">
                     <p className="truncate text-[16px] font-bold text-brand-navy">{homework.title}</p>
                     <p className="mt-0.5 text-[14px] text-brand-muted">
-                      Lớp #{classGroupId}, buổi {sessionNumber} ({formatDate(parseIsoDate(sessionDate))}) · Hạn nộp{" "}
+                      Lớp {displayCode("class", classGroupId)}, buổi {sessionNumber} ({formatDate(parseIsoDate(sessionDate))}) · Hạn nộp{" "}
                       {formatDateTime(homework.dueAt)}
                     </p>
                   </div>

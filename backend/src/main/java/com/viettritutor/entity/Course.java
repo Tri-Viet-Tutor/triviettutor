@@ -39,6 +39,21 @@ public class Course {
     @Column(name = "total_sessions", nullable = false)
     private Integer totalSessions;
 
+    /**
+     * Học phí 1 kèm 1 của một lớp có {@code sessions} buổi = giá khóa quy theo buổi × số buổi của lớp
+     * (basePrice1on1 là giá cho totalSessions buổi; khóa mới lưu totalSessions = 1 nên basePrice1on1 là giá mỗi buổi).
+     */
+    public java.math.BigDecimal priceFor(Integer sessions) {
+        if (sessions == null || totalSessions == null || totalSessions <= 0 || sessions.equals(totalSessions)) return basePrice1on1;
+        return basePrice1on1.multiply(java.math.BigDecimal.valueOf(sessions))
+                .divide(java.math.BigDecimal.valueOf(totalSessions), 0, java.math.RoundingMode.HALF_UP);
+    }
+
+    /** Học phí 1 kèm 1 cho một buổi */
+    public java.math.BigDecimal pricePerSession() {
+        return priceFor(1);
+    }
+
     @Column(name = "duration_minutes", nullable = false)
     private Integer durationMinutes;
 

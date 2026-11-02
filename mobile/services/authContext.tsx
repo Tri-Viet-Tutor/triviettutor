@@ -1,13 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Alert } from 'react-native';
-import { User, UserRole } from '@/types';
-import { CURRENT_STUDENT, DEMO_USERS } from '@/constants/data';
+import { User } from '@/types';
 import {
   getStoredToken,
-  setStoredToken,
   removeStoredToken,
   getStoredUser,
-  setStoredUser,
   removeStoredUser,
   loginWithApi,
   onAuthExpired,
@@ -18,46 +15,40 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, roleOrPassword?: string | UserRole, maybeRole?: UserRole) => Promise<boolean>;
+  /** Đăng nhập thật qua POST /auth/login; sai thông tin thì trả về câu báo lỗi */
+  login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
   logout: () => Promise<void>;
-  switchRole: (role: 'student' | 'tutor' | 'admin') => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
-  user: CURRENT_STUDENT,
+  user: null,
   token: null,
-  isAuthenticated: true,
+  isAuthenticated: false,
   isLoading: false,
-  login: async () => true,
+  login: async () => ({ ok: false }),
   logout: async () => {},
-  switchRole: async () => {},
 });
 
+/**
+ * Trạng thái đăng nhập của app. Không còn tài khoản demo hay token giả:
+ * mở app lần đầu là khách (vẫn xem được danh mục lớp), muốn xem lịch học thì đăng nhập bằng tài khoản thật.
+ */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(CURRENT_STUDENT);
+  const [user, setUser] = useState<User | null>(null);
   const [token, setTokenState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Initialize auth state from SecureStore
+  // Khôi phục phiên đã lưu trong SecureStore
   useEffect(() => {
     let isMounted = true;
+
     async function loadStoredAuth() {
       try {
         const storedToken = await getStoredToken();
         const storedUser = await getStoredUser();
-
-        if (isMounted) {
-          if (storedToken && storedUser) {
-            setTokenState(storedToken);
-            setUser(storedUser);
-          } else {
-            // Seed initial demo session token for out-of-the-box experience
-            const initialToken = 'demo-bearer-jwt-token-viettritutor';
-            await setStoredToken(initialToken);
-            await setStoredUser(CURRENT_STUDENT);
-            setTokenState(initialToken);
-            setUser(CURRENT_STUDENT);
-          }
+        if (isMounted && storedToken && storedUser) {
+          setTokenState(storedToken);
+          setUser(storedUser);
         }
       } catch (err) {
         console.warn('Failed restoring stored credentials:', err);
@@ -68,7 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     loadStoredAuth();
 
-    // Subscribe to JWT expiration events (401 interceptor)
+    // Token hết hạn (API trả 401): về trạng thái khách
     const unsubscribe = onAuthExpired(() => {
       setUser(null);
       setTokenState(null);
@@ -84,55 +75,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const login = async (
-    email: string,
-    roleOrPassword?: string | UserRole,
-    maybeRole?: UserRole
-  ): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<{ ok: boolean; message?: string }> => {
     setIsLoading(true);
     try {
-      // Determine if a password was passed
-      const isRole =
-        roleOrPassword === 'ROLE_STUDENT' ||
-        roleOrPassword === 'ROLE_TUTOR' ||
-        roleOrPassword === 'ROLE_ADMIN';
-
-      if (!isRole && typeof roleOrPassword === 'string' && roleOrPassword.length > 0) {
-        try {
-          // Attempt real backend authentication
-          const result = await loginWithApi(email, roleOrPassword);
-          setUser(result.user);
-          setTokenState(result.accessToken);
-          setIsLoading(false);
-          return true;
-        } catch {
-          // Fall through to demo user creation if backend not reachable
-        }
+      const result = await loginWithApi(email.trim(), password);
+      setUser(result.user);
+      setTokenState(result.accessToken);
+      return { ok: true };
+    } catch (error: any) {
+      const message = String(error?.message ?? '');
+      if (message.includes('Network request failed')) {
+        return { ok: false, message: 'Không kết nối được máy chủ. Kiểm tra mạng hoặc địa chỉ EXPO_PUBLIC_API_BASE_URL.' };
       }
-
-      const role: UserRole = isRole
-        ? (roleOrPassword as UserRole)
-        : maybeRole || 'ROLE_STUDENT';
-
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      const demoToken = `jwt-token-${email.split('@')[0]}-${Date.now()}`;
-      const foundUser: User = {
-        id: 'usr-current',
-        fullName: email.split('@')[0] || 'Học viên VietTri',
-        email,
-        role,
-        gradeLevel: 'GRADE_12',
-      };
-
-      await setStoredToken(demoToken);
-      await setStoredUser(foundUser);
-      setUser(foundUser);
-      setTokenState(demoToken);
+      return { ok: false, message: message.startsWith('HTTP') || !message ? 'Email hoặc mật khẩu không đúng.' : message };
+    } finally {
       setIsLoading(false);
-      return true;
-    } catch {
-      setIsLoading(false);
-      return false;
     }
   };
 
@@ -145,17 +102,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   };
 
-  const switchRole = async (role: 'student' | 'tutor' | 'admin') => {
-    setIsLoading(true);
-    const targetUser = DEMO_USERS[role] || CURRENT_STUDENT;
-    const demoToken = `jwt-token-${role}-${Date.now()}`;
-    await setStoredToken(demoToken);
-    await setStoredUser(targetUser);
-    setUser(targetUser);
-    setTokenState(demoToken);
-    setIsLoading(false);
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -165,7 +111,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         login,
         logout,
-        switchRole,
       }}>
       {children}
     </AuthContext.Provider>

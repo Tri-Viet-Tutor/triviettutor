@@ -52,9 +52,9 @@ public class AssistantContextBuilder {
         context.append("## Khóa học đang bán\n");
         for (CourseResponse course : courses.list(null, null, true, 0, 50).getContent()) {
             context.append("- ").append(course.getName()).append(" | môn ").append(course.getSubject())
-                    .append(" | ").append(course.getGradeLevel()).append(" | ").append(course.getTotalSessions())
-                    .append(" buổi x ").append(course.getDurationMinutes()).append(" phút | giá gốc 1-1 ")
-                    .append(vnd(course.getBasePrice1on1())).append('\n');
+                    .append(" | ").append(course.getGradeLevel()).append(" | số buổi tùy lớp, mỗi buổi ")
+                    .append(course.getDurationMinutes()).append(" phút | giá 1-1 mỗi buổi ")
+                    .append(vnd(course.getPricePerSession())).append('\n');
         }
         context.append("\n## Lớp đang mở tuyển sinh (còn chỗ)\n");
         List<ClassResponse> open = classes.catalog(null, null, null, null, null, 0, 30).getContent();

@@ -16,11 +16,11 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 @RestController @RequestMapping("/api/v1") @RequiredArgsConstructor @Validated
-@Tag(name="Multi-class orders",description="Full course prices in VND. Checkout holds prices for 5 minutes by default, without reserving seats.")
+@Tag(name="Multi-class orders",description="Prices in VND with the class-size discount each class would get if bought alone (BR-02.11). Checkout holds prices for 5 minutes by default, without reserving seats.")
 public class OrderController {
  private final OrderService orders;
  @PostMapping("/orders/checkout") @PreAuthorize("hasRole('STUDENT')")
- @Operation(summary="Choose a class for every cart subject and create an order",description="Requires current cartVersion, all cartItemId/classId pairs and Idempotency-Key. No client prices or discounts. All selected classes must have compatible schedules.")
+ @Operation(summary="Choose a class for every cart subject and create an order",description="Requires current cartVersion, all cartItemId/classId pairs and Idempotency-Key. Prices and discounts are computed by the server; clients never send them. All selected classes must have compatible schedules.")
  public ApiResponse<OrderResponse> checkout(@Valid @RequestBody CheckoutRequest input,
    @Parameter(required=true) @RequestHeader(value="Idempotency-Key",required=false) String key,@CurrentUser User student){return ApiResponse.ok(orders.checkout(input,key,student));}
  @GetMapping("/orders/my") @PreAuthorize("hasRole('STUDENT')") @Operation(summary="List my orders")

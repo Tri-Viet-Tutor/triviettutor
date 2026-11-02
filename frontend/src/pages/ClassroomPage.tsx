@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { getSessionMeetingToken, getSessionMeetingLogs } from "../services/meeting";
 import { MeetingTokenResponse, MeetingSessionLogsResponse } from "../interfaces/api";
 import { useAuthStore } from "../stores/authStore";
+import { portalErrorMessage } from "../utils/errors";
+import { ConfirmDialog } from "@/components/dashboard/ConfirmDialog";
 
 export default function ClassroomPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -89,7 +91,7 @@ export default function ClassroomPage() {
             });
             setLoading(false);
           } else {
-            setError((err instanceof Error && err.message) || "Không thể kết nối vào phòng học trực tuyến. Vui lòng kiểm tra quyền đăng ký của bạn.");
+            setError(portalErrorMessage(err, "Không thể kết nối vào phòng học trực tuyến. Vui lòng kiểm tra quyền đăng ký của bạn."));
             setLoading(false);
           }
         }
@@ -285,16 +287,16 @@ export default function ClassroomPage() {
     setInputMsg("");
   };
 
-  const handleLeave = () => {
-    if (window.confirm("Bạn có chắc chắn muốn rời khỏi phòng học trực tuyến?")) {
-      if (localStream) {
-        localStream.getTracks().forEach((t) => t.stop());
-      }
-      if (screenStream) {
-        screenStream.getTracks().forEach((t) => t.stop());
-      }
-      navigate(-1);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const handleLeave = () => setConfirmLeave(true);
+  const leaveRoom = () => {
+    if (localStream) {
+      localStream.getTracks().forEach((t) => t.stop());
     }
+    if (screenStream) {
+      screenStream.getTracks().forEach((t) => t.stop());
+    }
+    navigate(-1);
   };
 
   if (loading) {
@@ -351,7 +353,7 @@ export default function ClassroomPage() {
           <div className="h-4 w-px bg-slate-700" />
           <div>
             <h1 className="text-sm font-bold text-slate-100 leading-tight">
-              {meetingData.courseTitle} — Buổi #{meetingData.sessionNumber}
+              {meetingData.courseTitle} — Buổi {meetingData.sessionNumber}
             </h1>
             <p className="text-xs text-slate-400">
               Phòng: <code className="text-indigo-400 font-mono">{meetingData.roomName}</code> • Vai trò:{" "}
@@ -779,6 +781,17 @@ export default function ClassroomPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmLeave}
+        tone="warning"
+        icon="logout"
+        title="Rời phòng học?"
+        message="Camera và micro sẽ tắt. Bạn có thể vào lại phòng học trong thời gian buổi học diễn ra."
+        confirmLabel="Rời phòng"
+        cancelLabel="Ở lại"
+        onClose={() => setConfirmLeave(false)}
+        onConfirm={leaveRoom}
+      />
     </div>
   );
 }

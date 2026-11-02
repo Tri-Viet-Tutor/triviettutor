@@ -15,6 +15,7 @@ import { RegisterPage } from "@/pages/auth/RegisterPage";
 import { VerifyEmailPage } from "@/pages/auth/VerifyEmailPage";
 import { ForgotPasswordPage } from "@/pages/auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/auth/ResetPasswordPage";
+import { OAuth2SuccessPage } from "@/pages/auth/OAuth2SuccessPage";
 
 // Trang công khai
 import { HomePage } from "@/pages/public/HomePage";
@@ -47,6 +48,7 @@ import { AdminPaymentsPage } from "@/pages/admin/AdminPaymentsPage";
 import { AdminCoursesPage } from "@/pages/admin/AdminCoursesPage";
 import { AdminClassesPage } from "@/pages/admin/AdminClassesPage";
 import { AdminPayrollPage } from "@/pages/admin/AdminPayrollPage";
+import { AdminReviewsPage } from "@/pages/admin/AdminReviewsPage";
 
 // Trang gia sư
 import { TutorHomePage } from "@/pages/tutor/TutorHomePage";
@@ -57,14 +59,17 @@ import { TutorPayrollPage } from "@/pages/tutor/TutorPayrollPage";
 import { TutorHomeworksPage } from "@/pages/tutor/TutorHomeworksPage";
 import { TutorHomeworkNewPage } from "@/pages/tutor/TutorHomeworkNewPage";
 import { TutorHomeworkDetailPage } from "@/pages/tutor/TutorHomeworkDetailPage";
+import { TutorReviewsPage } from "@/pages/tutor/TutorReviewsPage";
 
 // Trang học viên
 import { StudentHomePage } from "@/pages/student/StudentHomePage";
 import { StudentSchedulePage } from "@/pages/student/StudentSchedulePage";
+import { StudentCartPage } from "@/pages/student/StudentCartPage";
 import { StudentCatalogPage } from "@/pages/student/StudentCatalogPage";
 import { StudentCheckoutPage } from "@/pages/student/StudentCheckoutPage";
 import { StudentWalletPage } from "@/pages/student/StudentWalletPage";
 import { StudentLeavePage } from "@/pages/student/StudentLeavePage";
+import { StudentFeedbackPage } from "@/pages/student/StudentFeedbackPage";
 import { StudentEnrollmentsPage } from "@/pages/student/StudentEnrollmentsPage";
 import { StudentHomeworksPage } from "@/pages/student/StudentHomeworksPage";
 import { StudentHomeworkPage } from "@/pages/student/StudentHomeworkPage";
@@ -102,6 +107,7 @@ export function AppRouter() {
           <Route path={ROUTES.verifyEmail} element={<VerifyEmailPage />} />
           <Route path={ROUTES.forgotPassword} element={<ForgotPasswordPage />} />
           <Route path={ROUTES.resetPassword} element={<ResetPasswordPage />} />
+          <Route path={ROUTES.oauth2Success} element={<OAuth2SuccessPage />} />
         </Route>
 
         {/* Admin*/}
@@ -118,6 +124,7 @@ export function AppRouter() {
               <Route path={ROUTES.adminCourses} element={<AdminCoursesPage />} />
               <Route path={ROUTES.adminClasses} element={<AdminClassesPage />} />
               <Route path={ROUTES.adminPayroll} element={<AdminPayrollPage />} />
+              <Route path={ROUTES.adminReviews} element={<AdminReviewsPage />} />
               <Route path={ROUTES.adminProfile} element={<ProfilePage />} />
             </Route>
           </Route>
@@ -135,6 +142,7 @@ export function AppRouter() {
               <Route path={ROUTES.tutorHomeworks} element={<TutorHomeworksPage />} />
               <Route path={ROUTES.tutorHomeworkNew} element={<TutorHomeworkNewPage />} />
               <Route path={ROUTES.tutorHomeworkDetail} element={<TutorHomeworkDetailPage />} />
+              <Route path={ROUTES.tutorReviews} element={<TutorReviewsPage />} />
               <Route path={ROUTES.tutorProfile} element={<ProfilePage />} />
             </Route>
           </Route>
@@ -151,9 +159,11 @@ export function AppRouter() {
               <Route path={ROUTES.studentCatalogLegacy} element={<LegacyRedirect to={ROUTES.studentCatalog} />} />
               <Route path={ROUTES.studentCheckout} element={<StudentCheckoutPage />} />
               <Route path={ROUTES.studentWallet} element={<StudentWalletPage />} />
+              <Route path={ROUTES.studentCart} element={<StudentCartPage />} />
               <Route path={ROUTES.studentLeave} element={<StudentLeavePage />} />
+              <Route path={ROUTES.studentHomework} element={<StudentHomeworksPage />} />
+              <Route path={ROUTES.studentFeedback} element={<StudentFeedbackPage />} />
               <Route path={ROUTES.studentEnrollments} element={<StudentEnrollmentsPage />} />
-              <Route path={ROUTES.studentHomeworks} element={<StudentHomeworksPage />} />
               <Route path={ROUTES.studentHomeworkDetail} element={<StudentHomeworkPage />} />
               <Route path={ROUTES.studentProfile} element={<ProfilePage />} />
             </Route>

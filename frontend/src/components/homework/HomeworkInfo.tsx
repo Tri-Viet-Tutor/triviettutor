@@ -1,5 +1,6 @@
 import { Icon } from "@/components/ui/Icon";
 import { PORTAL_CARD, PORTAL_TEXT_LINK } from "@/constants/classNames";
+import { attachmentName } from "@/services/fileService";
 import { formatDateTime, formatScore, homeworkPhase } from "@/utils/homework";
 import type { HomeworkInfoProps } from "@/interfaces/homework";
 
@@ -73,7 +74,7 @@ export function HomeworkInfo({ homework, now }: HomeworkInfoProps) {
           className={`mt-3 inline-flex items-center gap-1 text-[14.5px] ${PORTAL_TEXT_LINK}`}
         >
           <Icon name="attach_file" className="text-[18px]" />
-          Tài liệu kèm theo
+          {attachmentName(homework.resourceUrl)}
         </a>
       )}
     </section>

@@ -16,7 +16,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { BrandColors } from '@/constants/Colors';
 import { useAuth } from '@/services/authContext';
-import { DEMO_USERS } from '@/constants/data';
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -32,27 +31,14 @@ export default function LoginScreen() {
     }
 
     setIsSubmitting(true);
-    await login(email, 'ROLE_STUDENT');
+    const result = await login(email, password);
     setIsSubmitting(false);
 
-    Alert.alert('Thành công', 'Đăng nhập thành công!', [
-      {
-        text: 'Tiếp tục',
-        onPress: () => router.replace('/(tabs)'),
-      },
-    ]);
-  };
-
-  const handleQuickLogin = async (roleKey: 'student' | 'tutor' | 'admin') => {
-    const demo = DEMO_USERS[roleKey];
-    if (demo) {
-      setEmail(demo.email);
-      setPassword('password123');
-      setIsSubmitting(true);
-      await login(demo.email, demo.role);
-      setIsSubmitting(false);
-      router.replace('/(tabs)');
+    if (!result.ok) {
+      Alert.alert('Đăng nhập thất bại', result.message ?? 'Email hoặc mật khẩu không đúng.');
+      return;
     }
+    router.replace('/(tabs)');
   };
 
   return (
@@ -156,41 +142,6 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          {/* Quick Demo Section */}
-          <View style={styles.demoSection}>
-            <Text style={styles.demoTitle}>Đăng nhập nhanh mẫu (Demo Mode):</Text>
-            <View style={styles.demoList}>
-              <TouchableOpacity
-                style={styles.demoCard}
-                onPress={() => handleQuickLogin('student')}>
-                <Ionicons name="school" size={18} color={BrandColors.navy} />
-                <View>
-                  <Text style={styles.demoCardName}>Học viên THPT</Text>
-                  <Text style={styles.demoCardSub}>Nguyễn Minh Quân (Lớp 12)</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.demoCard}
-                onPress={() => handleQuickLogin('tutor')}>
-                <Ionicons name="book" size={18} color={BrandColors.orange} />
-                <View>
-                  <Text style={styles.demoCardName}>Gia sư Trung tâm</Text>
-                  <Text style={styles.demoCardSub}>Thầy Hồ Đức Thuận (Môn Toán)</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.demoCard}
-                onPress={() => handleQuickLogin('admin')}>
-                <Ionicons name="shield-checkmark" size={18} color="#16A34A" />
-                <View>
-                  <Text style={styles.demoCardName}>Quản trị viên (Admin)</Text>
-                  <Text style={styles.demoCardSub}>admin@viettritutor.edu.vn</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -71,6 +71,9 @@ public class DefaultTeachingQuery implements TeachingQuery {
                 if (valid) completed.add(item); else unfinalized.add(item);
             } else if (Objects.equals(tutorId, session.getScheduledTutorId())
                     || events.stream().anyMatch(change -> change.getAction() == SessionChangeType.SUBSTITUTE
+                            // Leave-based substitutions only: actual-tutor corrections (ActualTutorService) are
+                            // recorded without a leave request and mean the previous tutor never taught the lesson.
+                            && change.getLeaveRequestId() != null
                             && Objects.equals(tutorId, change.getPreviousTutorId()))) {
                 substitutedOut.add(item);
             }

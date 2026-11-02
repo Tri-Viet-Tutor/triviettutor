@@ -1,5 +1,6 @@
 -- Homework becomes a quiz: open/close window, optional access password, late policy,
 -- multiple-choice / essay questions, photo attachments and in-app notifications.
+-- Attachment bytes live in learning_files (V27); this only links them to a submission.
 
 -- Existing homework keeps its old behaviour: always open, no password, no late work.
 ALTER TABLE homeworks
@@ -59,10 +60,7 @@ CREATE TABLE homework_answers (
 CREATE TABLE submission_attachments (
     id BIGSERIAL PRIMARY KEY,
     submission_id BIGINT NOT NULL REFERENCES homework_submissions(id) ON DELETE RESTRICT,
-    file_name VARCHAR(255) NOT NULL,
-    content_type VARCHAR(100) NOT NULL,
-    size_bytes BIGINT NOT NULL CHECK (size_bytes > 0),
-    data BYTEA NOT NULL,
+    file_id BIGINT NOT NULL UNIQUE REFERENCES learning_files(id) ON DELETE RESTRICT,
     uploaded_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 CREATE INDEX idx_submission_attachments_submission ON submission_attachments(submission_id, id);

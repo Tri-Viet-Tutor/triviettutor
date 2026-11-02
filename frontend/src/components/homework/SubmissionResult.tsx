@@ -3,6 +3,7 @@ import { AttachmentList } from "@/components/homework/AttachmentList";
 import { Icon } from "@/components/ui/Icon";
 import { PORTAL_CARD, PORTAL_LABEL, PORTAL_TEXT_LINK } from "@/constants/classNames";
 import { SUBMISSION_STATUS } from "@/constants/labels";
+import { attachmentName } from "@/services/fileService";
 import { formatDateTime, formatDuration, formatScore } from "@/utils/homework";
 import type { SubmissionResultProps } from "@/interfaces/homework";
 
@@ -90,7 +91,7 @@ export function SubmissionResult({ homework, submission }: SubmissionResultProps
           {submission.content && <p className="whitespace-pre-line text-[14.5px] leading-relaxed text-brand-ink">{submission.content}</p>}
           {submission.resourceUrl && (
             <a href={submission.resourceUrl} target="_blank" rel="noreferrer noopener" className={`text-[14.5px] ${PORTAL_TEXT_LINK}`}>
-              Link bài làm
+              {attachmentName(submission.resourceUrl)}
             </a>
           )}
           {submission.attachments && submission.attachments.length > 0 && (

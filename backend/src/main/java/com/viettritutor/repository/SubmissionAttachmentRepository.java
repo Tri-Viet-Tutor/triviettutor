@@ -15,9 +15,10 @@ public interface SubmissionAttachmentRepository extends JpaRepository<Submission
         OffsetDateTime getUploadedAt();
     }
     @Query("""
-            select a.id as id, a.submissionId as submissionId, a.fileName as fileName, a.contentType as contentType,
-            a.sizeBytes as sizeBytes, a.uploadedAt as uploadedAt
-            from SubmissionAttachment a where a.submissionId in :ids order by a.id
+            select a.id as id, a.submissionId as submissionId, f.fileName as fileName, f.contentType as contentType,
+            f.sizeBytes as sizeBytes, a.uploadedAt as uploadedAt
+            from SubmissionAttachment a join LearningFile f on f.id = a.fileId
+            where a.submissionId in :ids order by a.id
             """)
     List<Info> findInfo(@Param("ids") Collection<Long> submissionIds);
     long countBySubmissionId(Long submissionId);

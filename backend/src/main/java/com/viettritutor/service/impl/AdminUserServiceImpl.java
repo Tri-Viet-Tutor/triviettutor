@@ -7,6 +7,7 @@ import com.viettritutor.dto.user.AdminUserResponse;
 import com.viettritutor.dto.user.CreateTutorRequest;
 import com.viettritutor.dto.user.MeResponse;
 import com.viettritutor.dto.user.UpdateTutorProfileRequest;
+import com.viettritutor.dto.user.UpdateUserRequest;
 import com.viettritutor.entity.TutorProfile;
 import com.viettritutor.entity.User;
 import com.viettritutor.repository.TutorProfileRepository;
@@ -43,7 +44,9 @@ public class AdminUserServiceImpl implements AdminUserService {
             throw new BusinessException(ErrorCode.INVALID_ROLE_FILTER);
         }
         String normalizedSearch = search == null || search.isBlank()
-                ? "" : search.trim().toLowerCase(Locale.ROOT);
+                ? "" : search.trim().toLowerCase(Locale.ROOT)
+                        // Match LIKE wildcards literally: searching "%" must not list every user.
+                        .replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
         return PageResponse.from(userRepository.findAdminUsers(
                 normalizedRole, normalizedSearch,
                 PageRequest.of(page, size, Sort.by("id").ascending()))
@@ -63,6 +66,8 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName().trim())
                 .role("ROLE_TUTOR")
+                // Admin-created accounts are usable immediately; no email OTP step.
+                .enabled(true)
                 .build();
         try {
             userRepository.saveAndFlush(user);
@@ -81,6 +86,7 @@ public class AdminUserServiceImpl implements AdminUserService {
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
+                null,
                 user.getRole(),
                 user.getCreatedAt(),
                 new MeResponse.TutorProfileResponse(
@@ -89,6 +95,47 @@ public class AdminUserServiceImpl implements AdminUserService {
                         profile.getBio()
                 )
         );
+    }
+
+    @Override
+    @Transactional
+    public AdminUserResponse updateStatus(Long adminId, Long userId, boolean locked) {
+        if (locked && userId.equals(adminId)) {
+            throw new BusinessException(ErrorCode.CANNOT_LOCK_SELF);
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        user.setLocked(locked);
+        return AdminUserResponse.from(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public AdminUserResponse updateUser(Long userId, UpdateUserRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        if (!email.equalsIgnoreCase(user.getEmail()) && userRepository.existsByEmailIgnoreCase(email)) {
+            throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
+        }
+        user.setFullName(request.fullName().trim());
+        user.setEmail(email);
+        return AdminUserResponse.from(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(Long userId, Long actorId) {
+        if (userId.equals(actorId)) throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        try {
+            tutorProfileRepository.findById(userId).ifPresent(tutorProfileRepository::delete);
+            userRepository.delete(user);
+            userRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.USER_IN_USE);
+        }
     }
 
     @Override
@@ -117,6 +164,7 @@ public class AdminUserServiceImpl implements AdminUserService {
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
+                null,
                 user.getRole(),
                 user.getCreatedAt(),
                 new MeResponse.TutorProfileResponse(

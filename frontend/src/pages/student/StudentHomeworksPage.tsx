@@ -1,3 +1,4 @@
+import { useQueries } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FilterTabs } from "@/components/dashboard/FilterTabs";
@@ -10,6 +11,8 @@ import { SUBMISSION_STATUS } from "@/constants/labels";
 import { homeworkPath } from "@/constants/routes";
 import { useStudentHomeworks } from "@/hooks/useHomeworkData";
 import { useNow } from "@/hooks/useNow";
+import { getTuitionClass } from "@/services/tuitionPaymentService";
+import { displayCode } from "@/utils/classes";
 import { formatDateTime, formatScore, homeworkPhase } from "@/utils/homework";
 import type { SubmissionStatus } from "@/interfaces/homework";
 
@@ -29,6 +32,18 @@ export function StudentHomeworksPage() {
   const [tab, setTab] = useState<StatusTab>("ALL");
   const [page, setPage] = useState(0);
   const homeworks = useStudentHomeworks({ status: tab === "ALL" ? undefined : tab, page, size: 20 });
+
+  // Tên khóa của từng lớp
+  const classIds = [...new Set(homeworks.data?.content.map((item) => item.classGroupId))];
+  const classes = useQueries({
+    queries: classIds.map((id) => ({
+      queryKey: ["catalog-class", id],
+      queryFn: () => getTuitionClass(id),
+      staleTime: 5 * 60_000,
+      retry: false,
+    })),
+  });
+  const courseName = (id: number) => classes[classIds.indexOf(id)]?.data?.courseName ?? `Lớp ${displayCode("class", id)}`;
 
   return (
     <>
@@ -73,7 +88,7 @@ export function StudentHomeworksPage() {
                   <div className="min-w-0">
                     <p className="truncate text-[16px] font-bold text-brand-navy">{homework.title}</p>
                     <p className="mt-0.5 text-[14px] text-brand-muted">
-                      Lớp #{classGroupId} · Hạn nộp {formatDateTime(homework.dueAt)}
+                      {courseName(classGroupId)} · Hạn nộp {formatDateTime(homework.dueAt)}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">

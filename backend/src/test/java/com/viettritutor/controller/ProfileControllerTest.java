@@ -20,6 +20,9 @@ import java.math.BigDecimal;
 import java.util.Map;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import org.springframework.mock.web.MockMultipartFile;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import org.springframework.http.MediaType;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -241,6 +244,41 @@ class ProfileControllerTest {
     private User createUser(String email, String role) {
         return users.saveAndFlush(User.builder().email(email).password("private-password-hash")
                 .fullName("Test User").role(role).build());
+    }
+
+    @Test
+    void invalidAvatarUploadsReturnCleanBadRequest() throws Exception {
+        User user = createUser("avatar@example.test", "ROLE_STUDENT");
+
+        mvc.perform(multipart("/api/v1/me/avatar")
+                        .file(new MockMultipartFile("file", "a.png", "image/png", "not an image".getBytes()))
+                        .header("Authorization", bearer(user)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_AVATAR"));
+        mvc.perform(multipart("/api/v1/me/avatar")
+                        .file(new MockMultipartFile("file", "a.gif", "image/gif", new byte[]{1, 2, 3}))
+                        .header("Authorization", bearer(user)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_AVATAR"));
+        mvc.perform(multipart("/api/v1/me/avatar").header("Authorization", bearer(user)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("MISSING_REQUEST_PART"));
+    }
+
+    @Test
+    void unknownPathAndUnsupportedMethodReturnCleanErrors() throws Exception {
+        User user = createUser("paths@example.test", "ROLE_STUDENT");
+
+        mvc.perform(get("/api/v1/no-such-endpoint").header("Authorization", bearer(user)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
+        mvc.perform(delete("/api/v1/me").header("Authorization", bearer(user)))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.errorCode").value("METHOD_NOT_ALLOWED"));
+        mvc.perform(put("/api/v1/me").header("Authorization", bearer(user))
+                        .contentType(MediaType.TEXT_PLAIN).content("fullName=x"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.errorCode").value("UNSUPPORTED_MEDIA_TYPE"));
     }
 
     private String bearer(User user) {

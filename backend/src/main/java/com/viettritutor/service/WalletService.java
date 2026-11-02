@@ -70,6 +70,21 @@ public class WalletService {
                 .description(description).createdAt(OffsetDateTime.now(clock)).build());
     }
 
+    @Transactional
+    public boolean creditClassDiscount(Long studentId, Long enrollmentId, BigDecimal amount, String description) {
+        if (amount == null || amount.signum() <= 0 || amount.stripTrailingZeros().scale() > 0) return false;
+        if (transactions.existsByEnrollmentId(enrollmentId)) return false;
+        support.lockPeople(studentId);
+        Wallet wallet = ownedWallet(studentId);
+        BigDecimal next = wallet.getBalance().add(amount);
+        if (next.compareTo(MAX_BALANCE) > 0) throw new BusinessException(ErrorCode.WALLET_BALANCE_LIMIT);
+        wallet.setBalance(next);
+        transactions.saveAndFlush(WalletTransaction.builder().walletId(wallet.getId()).type("CLASS_DISCOUNT").amount(amount)
+                .balanceAfter(next).enrollmentId(enrollmentId).description(description)
+                .createdAt(OffsetDateTime.now(clock)).build());
+        return true;
+    }
+
     private Wallet ownedWallet(Long studentId) {
         Wallet wallet = wallets.findByStudentId(studentId).orElseGet(() -> wallets.saveAndFlush(Wallet.builder()
                 .studentId(studentId).balance(BigDecimal.ZERO).createdAt(OffsetDateTime.now(clock)).build()));

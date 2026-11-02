@@ -19,6 +19,8 @@ export const ROUTES = {
   verifyEmail: "/verify-email",
   forgotPassword: "/forgot-password",
   resetPassword: "/reset-password",
+  /** Backend chuyển về đây sau khi đăng nhập Google, token nằm trong phần #token=… */
+  oauth2Success: "/oauth2/success",
   /** Khu quản trị: tổng quan, người dùng, buổi học, duyệt nghỉ / xếp bù, phân công gia sư, hồ sơ */
   admin: "/admin",
   adminUsers: "/admin/users",
@@ -34,6 +36,7 @@ export const ROUTES = {
   adminCourses: "/admin/courses",
   adminClasses: "/admin/classes",
   adminPayroll: "/admin/payroll",
+  adminReviews: "/admin/reviews",
   /** Khu gia sư: tổng quan, lịch dạy + điểm danh, lịch rảnh, xin nghỉ, hồ sơ */
   tutor: "/tutor",
   tutorSessions: "/tutor/sessions",
@@ -46,6 +49,7 @@ export const ROUTES = {
   tutorHomeworks: "/tutor/homeworks",
   tutorHomeworkNew: "/tutor/homeworks/new",
   tutorHomeworkDetail: "/tutor/homeworks/:homeworkId",
+  tutorReviews: "/tutor/reviews",
   /** Khu học viên: tổng quan, lịch học, mua khóa học + thanh toán, xin nghỉ, hồ sơ */
   student: "/student",
   studentSchedule: "/student/schedule",
@@ -55,10 +59,14 @@ export const ROUTES = {
   studentCatalogLegacy: "/student/courses",
   studentCheckout: "/student/checkout",
   studentWallet: "/student/wallet",
+  /** Giỏ hàng: chọn lớp cho từng môn rồi đặt đơn nhiều lớp */
+  studentCart: "/student/cart",
   studentLeave: "/student/leave",
-  /** Bài tập của các lớp đang học, và trang làm một bài (nhập mật khẩu, làm, nộp, xem điểm) */
-  studentHomeworks: "/student/homeworks",
-  studentHomeworkDetail: "/student/homeworks/:homeworkId",
+  /** Bài tập về nhà ở các lớp đang học: làm, lưu nháp, nộp và xem điểm */
+  studentHomework: "/student/homework",
+  /** Làm một bài: nhập mật khẩu, làm, nộp, xem điểm và nhận xét */
+  studentHomeworkDetail: "/student/homework/:homeworkId",
+  studentFeedback: "/student/feedback",
   /** Các lớp đã đóng học phí */
   studentEnrollments: "/student/classes",
   studentProfile: "/student/profile",

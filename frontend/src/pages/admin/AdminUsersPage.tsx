@@ -25,7 +25,8 @@ const ROLE_TABS: { value: Role | ""; label: string }[] = [
 
 /**
  * Trang Người dùng của quản trị (GET /admin/users): tìm theo họ tên / email, lọc theo vai trò,
- * thêm tài khoản gia sư (POST /admin/users/tutors) và sửa hồ sơ gia sư (PUT /admin/users/{id}/tutor-profile).
+ * thêm tài khoản gia sư (POST /admin/users/tutors), sửa hồ sơ gia sư (PUT /admin/users/{id}/tutor-profile)
+ * và khóa / mở khóa tài khoản (PATCH /admin/users/{id}/status) ngay trên từng dòng.
  * Học viên tự đăng ký khi mua khóa học nên không có nút thêm học viên.
  */
 export function AdminUsersPage() {
@@ -95,7 +96,7 @@ export function AdminUsersPage() {
       ) : users.content.length === 0 ? (
         <PortalEmpty
           icon="group"
-          title="Không tìm thấy người dùng nào"
+          title="Không tìm thấy người dùng nào."
           description={keyword ? `Không có ai khớp với "${keyword}".` : undefined}
         />
       ) : (

@@ -32,6 +32,7 @@ export function StudentHomeworkPage() {
   const [starting, setStarting] = useState(false);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [revising, setRevising] = useState(false);
 
   const start = useMutation({
     mutationFn: () => startHomework(homeworkId, password.trim() || undefined),
@@ -68,7 +69,7 @@ export function StudentHomeworkPage() {
 
   return (
     <>
-      <Link to={ROUTES.studentHomeworks} className={`mb-3 text-[14px] ${PORTAL_MORE_LINK}`}>
+      <Link to={ROUTES.studentHomework} className={`mb-3 text-[14px] ${PORTAL_MORE_LINK}`}>
         <Icon name="arrow_back" className="text-[18px]" />
         Tất cả bài tập
       </Link>
@@ -105,8 +106,22 @@ export function StudentHomeworkPage() {
             <AuthNotice tone="info">Bài không còn nhận bài làm nên bản lưu tạm của bạn không nộp được nữa.</AuthNotice>
           ))}
 
-        {(submission.status === "SUBMITTED" || submission.status === "GRADED") && (
-          <SubmissionResult homework={data} submission={submission} />
+        {submission.status === "SUBMITTED" && revising && (
+          <QuizForm key={submission.id} homework={data} submission={submission} onDone={() => setRevising(false)} />
+        )}
+
+        {(submission.status === "GRADED" || (submission.status === "SUBMITTED" && !revising)) && (
+          <>
+            <SubmissionResult homework={data} submission={submission} />
+            {submission.status === "SUBMITTED" && phase === "open" && (
+              <div className="flex justify-end">
+                <button type="button" onClick={() => setRevising(true)} className={PORTAL_BTN_SECONDARY}>
+                  <Icon name="edit" className="text-[18px]" />
+                  Sửa và nộp lại
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

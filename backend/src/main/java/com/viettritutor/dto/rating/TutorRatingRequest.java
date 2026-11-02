@@ -11,6 +11,6 @@ public record TutorRatingRequest(
         @Digits(integer = 1, fraction = 1)
         BigDecimal rating,
 
-        @Size(max = 5000)
+        @Size(max = 2000) // matches tutor_reviews.comment VARCHAR(2000) (V18)
         String comment
 ) {}

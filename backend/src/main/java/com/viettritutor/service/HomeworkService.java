@@ -180,6 +180,6 @@ public class HomeworkService {
                 .filter(row -> !row.getStartDate().isAfter(session.getSessionDate()) && !row.getEndDate().isBefore(session.getSessionDate()))
                 .map(LearningSchedule::getStudentId).distinct()
                 .forEach(studentId -> notifications.send(studentId, "HOMEWORK_PUBLISHED", "Bài tập mới: " + h.getTitle(),
-                        message, "/student/homeworks/" + h.getId()));
+                        message, "/student/homework/" + h.getId()));
     }
 }

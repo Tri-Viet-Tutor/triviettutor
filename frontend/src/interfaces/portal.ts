@@ -28,7 +28,7 @@ export type AntVariant = "leaf" | "pen" | "book";
 export interface AntMascotProps {
   /**
    * Ba dáng của chú kiến, mỗi dáng một nét mặt:
-   * "leaf" cười tươi, che chiếc lá làm ô và vẫy tay · "pen" nháy mắt, ôm cây bút chì to ·
+   * "leaf" cười tươi, che chiếc lá làm ô và vẫy tay - "pen" nháy mắt, ôm cây bút chì to -
    * "book" cười tít mắt, hai tay nâng quyển sách mở.
    */
   variant?: AntVariant;
@@ -155,6 +155,8 @@ export interface PortalNavProps {
 
 /** Props của AccountMenu */
 export interface AccountMenuProps {
+  /** Id người dùng để hiện ảnh đại diện */
+  userId?: number;
   fullName: string;
   /** Tên vai trò, ví dụ "Quản trị viên" */
   roleName: string;

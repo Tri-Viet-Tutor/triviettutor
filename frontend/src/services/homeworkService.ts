@@ -1,4 +1,4 @@
-import type { ApiResponse, PageResponse } from "@/interfaces/api";
+import type { ApiResponse, PageResponse, StudentHomeworkResponse as StudentHomeworkSummary } from "@/interfaces/api";
 import type {
   AttachmentResponse,
   GradeInput,
@@ -67,7 +67,17 @@ export async function fetchAttachmentBlob(attachmentId: number): Promise<Blob> {
   return data;
 }
 
+/** GET /sessions/{sessionId}/homeworks — bài tập của một buổi */
+export async function listSessionHomeworks(sessionId: number): Promise<PageResponse<HomeworkResponse>> {
+  return unwrap(await api.get<ApiResponse<PageResponse<HomeworkResponse>>>(`/sessions/${sessionId}/homeworks`, { params: { size: 100 } }));
+}
+
 // ── Học viên ────────────────────────────────────────────────────────────────
+
+/** GET /student/homeworks — toàn bộ bài của tôi, cho ô tổng quan ở trang chủ học viên */
+export async function listMyHomeworks(): Promise<PageResponse<StudentHomeworkSummary>> {
+  return unwrap(await api.get<ApiResponse<PageResponse<StudentHomeworkSummary>>>("/student/homeworks", { params: { size: 100 } }));
+}
 
 /** GET /student/homeworks — bài tập của các lớp tôi đang học */
 export async function fetchStudentHomeworks(query: StudentHomeworksQuery = {}): Promise<PageResponse<StudentHomeworkResponse>> {

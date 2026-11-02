@@ -5,6 +5,11 @@ server:
 spring:
   application:
     name: viettritutor-backend
+  servlet:
+    multipart:
+      # Learning attachments allow up to 10 MB; avatars keep their own 2 MB limit in AvatarServiceImpl.
+      max-file-size: 10MB
+      max-request-size: 11MB
   profiles:
     active: ${APP_PROFILE:dev}
   mail:
@@ -18,11 +23,6 @@ spring:
           auth: true
           starttls:
             enable: true
-  servlet:
-    multipart:
-      # Homework photos/PDFs; SubmissionService enforces the same 10 MB per file.
-      max-file-size: 10MB
-      max-request-size: 11MB
   data:
     mongodb:
       uri: ${MONGODB_URI:mongodb://localhost:27017/triviettutor}
@@ -44,6 +44,9 @@ springdoc:
 
 # App-level settings
 app:
+  mongodb:
+    # Meeting audit logs are optional; fail fast instead of blocking requests 30s when MongoDB is down.
+    server-selection-timeout-ms: ${MONGODB_SERVER_SELECTION_TIMEOUT_MS:3000}
   assistant:
     # Without GEMINI_API_KEY the chatbot answers 503 ASSISTANT_UNAVAILABLE; the rest of the app still runs.
     gemini-api-key: ${GEMINI_API_KEY:}

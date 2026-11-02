@@ -13,7 +13,7 @@ export function CourseDetailPage({ variant = "public" }: { variant?: "public" | 
     <CourseDetails key={course.id} course={course} backTo={backTo} />
   ) : (
     <section className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
-      <h1 className="text-2xl font-bold text-brand-navy">Không tìm thấy khóa học</h1>
+      <h1 className="text-2xl font-bold text-brand-navy">Không tìm thấy khóa học.</h1>
       <p className="my-4 text-brand-muted">Khóa học này không có trong danh mục. Bạn hãy chọn một khóa khác.</p>
       <Link to={backTo} className={PORTAL_BTN_SECONDARY}>
         Về danh sách khóa học

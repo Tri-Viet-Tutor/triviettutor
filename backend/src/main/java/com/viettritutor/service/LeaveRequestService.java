@@ -10,4 +10,5 @@ public interface LeaveRequestService {
     PageResponse<LeaveRequestResponse> mine(User user, LeaveRequestStatus status, int page, int size);
     PageResponse<LeaveRequestResponse> admin(User user, LeaveRequestStatus status, Long requesterId, Long sessionId, int page, int size);
     LeaveRequestResponse reject(Long requestId, String reason, User admin);
+    LeaveRequestResponse excuse(Long requestId, String reason, User admin);
 }

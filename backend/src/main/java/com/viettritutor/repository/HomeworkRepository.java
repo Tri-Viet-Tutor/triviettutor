@@ -31,8 +31,8 @@ public interface HomeworkRepository extends JpaRepository<Homework, Long> {
             )
             and (:status is null or submission.status = :status
                 or (:status = com.viettritutor.enums.SubmissionStatus.NOT_STARTED and submission.id is null))
-            and (:from is null or h.dueAt >= :from)
-            and (:to is null or h.dueAt <= :to)
+            and (cast(:from as OffsetDateTime) is null or h.dueAt >= :from)
+            and (cast(:to as OffsetDateTime) is null or h.dueAt <= :to)
             order by h.dueAt asc, h.id asc
             """, countQuery = """
             select count(h.id)
@@ -49,8 +49,8 @@ public interface HomeworkRepository extends JpaRepository<Homework, Long> {
             )
             and (:status is null or submission.status = :status
                 or (:status = com.viettritutor.enums.SubmissionStatus.NOT_STARTED and submission.id is null))
-            and (:from is null or h.dueAt >= :from)
-            and (:to is null or h.dueAt <= :to)
+            and (cast(:from as OffsetDateTime) is null or h.dueAt >= :from)
+            and (cast(:to as OffsetDateTime) is null or h.dueAt <= :to)
             """)
     Page<StudentHomeworkView> findStudentHomeworks(@Param("studentId") Long studentId,
             @Param("status") SubmissionStatus status, @Param("from") OffsetDateTime from,

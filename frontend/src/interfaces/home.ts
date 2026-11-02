@@ -4,9 +4,11 @@ import type { Tutor } from "@/interfaces/tutor";
 // ── components/home ──
 /** Props của CrawlingAnt */
 export interface CrawlingAntProps {
-  /** Câu hiện trên đầu con kiến */
-  message: string;
+  /** Câu hiện trên đầu con kiến; bỏ trống thì kiến chỉ bò, không nói */
+  message?: string;
   className?: string;
+  /** Màu thân kiến (mặc định nâu đậm như trang chủ) */
+  color?: string;
 }
 
 /** Props của GraduationCap */

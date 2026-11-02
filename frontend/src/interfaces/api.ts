@@ -48,6 +48,13 @@ export type ErrorCode =
   | "INVALID_RESET_TOKEN"
   | "RESET_TOKEN_EXPIRED"
   | "EMAIL_SEND_FAILED"
+  | "OTP_ATTEMPTS_EXCEEDED"
+  | "OTP_RESEND_TOO_SOON"
+  | "ACCOUNT_LOCKED"
+  | "CANNOT_LOCK_SELF"
+  | "RATING_NOT_FOUND"
+  | "RATING_ALREADY_EXISTS"
+  | "RATING_NOT_ELIGIBLE"
   | "ACCESS_DENIED"
   | "INVALID_PROFILE_FIELD"
   | "INVALID_ROLE_FILTER"
@@ -67,12 +74,34 @@ export type ErrorCode =
   | "SESSION_ALREADY_CANCELLED"
   | "MAKEUP_ALREADY_EXISTS"
   | "INVALID_MAKEUP_TIME"
+  | "SESSION_ALREADY_TAUGHT"
+  | "MEETING_NOT_AVAILABLE"
   | "PAYROLL_FINALIZED"
   | "SESSION_STATE_CHANGED"
   | "SCHEDULE_CONFLICT"
   | "INVALID_AVAILABILITY"
   | "INVALID_TUTOR"
   | "CLASS_NOT_ASSIGNABLE"
+  | "CLASS_TUTOR_REQUIRED"
+  | "INVALID_HOMEWORK_DATE_RANGE"
+  | "HOMEWORK_NOT_FOUND"
+  | "HOMEWORK_LOCKED"
+  | "HOMEWORK_PUBLISHED_EDIT_RESTRICTED"
+  | "HOMEWORK_DEADLINE_PASSED"
+  | "HOMEWORK_INVALID_DEADLINE"
+  | "HOMEWORK_NOT_ACCEPTING"
+  | "HOMEWORK_SESSION_CANCELLED"
+  | "LEARNING_VERSION_CONFLICT"
+  | "SUBMISSION_NOT_FOUND"
+  | "SUBMISSION_NOT_STARTED"
+  | "SUBMISSION_LOCKED"
+  | "EMPTY_SUBMISSION"
+  | "SUBMISSION_NOT_SUBMITTED"
+  | "INVALID_SUBMISSION_FILTER"
+  | "INVALID_HOMEWORK_SCORE"
+  | "CLASS_IN_USE"
+  | "USER_IN_USE"
+  | "COURSE_IN_USE"
   | "CLASS_ALREADY_ASSIGNED"
   | "ASSIGNMENT_NOT_FOUND"
   | "TUTOR_ALREADY_ASSIGNED"
@@ -99,6 +128,25 @@ export type ErrorCode =
   | "ATTENDANCE_SESSION_NOT_ENDED"
   | "ATTENDANCE_EXCUSED_NOT_ALLOWED"
   | "INVALID_STATUS_TRANSITION"
+  // Bài tập, bài nộp, chấm điểm
+  | "INVALID_HOMEWORK_DATE_RANGE"
+  | "HOMEWORK_NOT_FOUND"
+  | "HOMEWORK_LOCKED"
+  | "HOMEWORK_PUBLISHED_EDIT_RESTRICTED"
+  | "HOMEWORK_DEADLINE_PASSED"
+  | "HOMEWORK_INVALID_DEADLINE"
+  | "HOMEWORK_NOT_ACCEPTING"
+  | "HOMEWORK_SESSION_CANCELLED"
+  | "LEARNING_VERSION_CONFLICT"
+  | "INVALID_RESOURCE_URL"
+  | "SUBMISSION_NOT_FOUND"
+  | "SUBMISSION_NOT_STARTED"
+  | "SUBMISSION_LOCKED"
+  | "EMPTY_SUBMISSION"
+  | "SUBMISSION_NOT_SUBMITTED"
+  | "INVALID_SUBMISSION_FILTER"
+  | "INVALID_HOMEWORK_SCORE"
+  | "GRADING_REASON_REQUIRED"
   // (Đề xuất) Đơn hàng & thanh toán VNPay — backend chưa có
   | "ORDER_NOT_FOUND"
   | "INVALID_ORDER_ITEMS"
@@ -147,8 +195,19 @@ export type ErrorCode =
   | "ATTACHMENT_LIMIT_REACHED"
   | "ATTACHMENT_NOT_FOUND"
   | "NOTIFICATION_NOT_FOUND"
+  | "INVALID_FILE"
+  | "FILE_NOT_FOUND"
+  | "FILE_TOO_LARGE"
   // Không nằm trong enum ErrorCode nhưng backend vẫn trả về:
   | "VALIDATION_ERROR"
+  | "CART_ITEM_NOT_FOUND"
+  | "CART_LIMIT_EXCEEDED"
+  | "CART_CHANGED"
+  | "INVALID_CHECKOUT"
+  | "ORDER_SUBJECT_MISMATCH"
+  | "ORDER_EXPIRED"
+  | "ORDER_NOT_PENDING"
+  | "PAYMENT_MOCK_DISABLED"
   | "ASSISTANT_RATE_LIMITED"
   | "ASSISTANT_UNAVAILABLE"
   | "INTERNAL_ERROR";
@@ -252,6 +311,10 @@ export interface CourseResponse {
   name: string;
   /** Mã môn, ví dụ "MATH" */
   subject: string;
+  /** Id môn trong bảng subjects (dùng để thêm môn vào giỏ hàng) */
+  subjectId?: number;
+  /** Học phí 1 kèm 1 cho MỘT buổi; học phí lớp = giá này × số buổi của lớp */
+  pricePerSession?: number;
   gradeLevel: GradeLevel;
   /** Học phí gốc của lớp 1 kèm 1 cho trọn khóa (đồng) */
   basePrice1on1: number;
@@ -261,11 +324,45 @@ export interface CourseResponse {
   description: string | null;
   active: boolean;
   createdAt: IsoDateTime;
+  updatedAt?: IsoDateTime;
+  /** Học phí mỗi học viên theo bậc sĩ số do backend tính (PricingService); backend cũ chưa có thì undefined */
+  priceTiers?: CoursePriceTier[];
+}
+
+/** Một bậc học phí theo sĩ số (CourseResponse.priceTiers) */
+export interface CoursePriceTier {
+  minStudents: number;
+  maxStudents: number;
+  /** 0, 0.2, 0.35, 0.4 */
+  discountRate: number;
+  /** Số tiền mỗi học viên trả (đồng) */
+  pricePerStudent: number;
+}
+
+/** GET /admin/classes/summary — số lớp theo từng trạng thái */
+export interface ClassSummaryResponse {
+  total: number;
+  byStatus: Record<ClassStatus, number>;
+}
+
+/** GET /admin/courses/summary */
+export interface CourseSummaryResponse {
+  total: number;
+  active: number;
+  inactive: number;
+}
+
+/** Một môn học — GET /catalog/subjects; `code` là mã môn lưu ở khóa học ("MATH") */
+export interface SubjectResponse {
+  id: number;
+  code: string;
 }
 
 /** Một lớp đang mở đăng ký — phần tử của GET /catalog/classes */
 export interface CatalogClassResponse {
   courseId?: number;
+  /** Id môn trong bảng subjects (dùng để thêm vào giỏ hàng) */
+  subjectId?: number;
   full?: boolean;
   id: number;
   /** Ví dụ "MATH-G10-MWF-M-001" */
@@ -292,6 +389,14 @@ export interface CatalogClassResponse {
   /** 1 với ONE_ON_ONE, 8 với GROUP */
   maxStudents: number;
   spotsLeft: number;
+  /** Gia sư phụ trách lớp (phân công khi mở lớp); chưa phân công thì không có */
+  tutorId?: number | null;
+  tutorName?: string | null;
+  /** Điểm đánh giá trung bình của gia sư (1 – 5); chưa có đánh giá thì null */
+  tutorRating?: number | null;
+  tutorRatingCount?: number;
+  /** Học phí 1 kèm 1 cho một buổi (basePrice1on1 là giá cả lớp theo số buổi của lớp) */
+  pricePerSession?: number;
 }
 
 /** Tham số lọc của GET /catalog/classes */
@@ -410,6 +515,14 @@ export interface AvailabilityResponse {
   endTime: IsoTime;
 }
 
+/** dto.assignment.TutorBoardResponse — GET /admin/tutor-board: khung rảnh đã khai và buổi đang dạy của một gia sư */
+export interface TutorBoardResponse {
+  tutorId: number;
+  tutorName: string;
+  availability: AvailabilityResponse[];
+  teaching: { sessionId: number; classGroupId: number; date: IsoDate; startTime: IsoTime; endTime: IsoTime }[];
+}
+
 /** dto.assignment.AvailabilityRequest — PUT /tutor/availability (tối đa 1000 khung giờ) */
 export interface AvailabilityRequest {
   slots: AvailabilityResponse[];
@@ -490,6 +603,10 @@ export interface AttendanceResponse {
   studentIds: number[];
   missingStudentIds: number[];
   records: AttendanceRecordResponse[];
+  /** Họ tên học viên theo mã (backend mới); backend cũ không có thì chỉ hiện mã */
+  studentNames?: Record<string, string>;
+  /** Học viên trung tâm đã duyệt nghỉ có phép buổi này: miễn điểm danh */
+  excusedStudentIds?: number[];
 }
 
 /** dto.attendance.AttendanceRecordInput */
@@ -570,6 +687,20 @@ export interface UpdateMeRequest {
 /** dto.user.AdminUserResponse — GET /admin/users */
 export interface AdminUserResponse extends UserInfo {
   createdAt: IsoDateTime;
+  /** Bị quản trị viên khóa: không đăng nhập được (cả Google), phiên cũ hết hiệu lực */
+  locked: boolean;
+  /** Đã xác thực email / kích hoạt */
+  enabled: boolean;
+  /** LOCKED ưu tiên hơn UNVERIFIED; còn lại ACTIVE */
+  status: AdminUserStatus;
+}
+
+/** Trạng thái tài khoản trong AdminUserResponse */
+export type AdminUserStatus = "ACTIVE" | "LOCKED" | "UNVERIFIED";
+
+/** PATCH /admin/users/{userId}/status */
+export interface UpdateUserStatusRequest {
+  locked: boolean;
 }
 
 /** Tham số của GET /admin/users (page từ 0, size 1 – 100) */
@@ -640,7 +771,8 @@ export interface AdminLeaveRequestsQuery extends MyLeaveRequestsQuery {
 
 /** dto.leave.MakeupRequest — POST /admin/sessions/{sessionId}/makeup */
 export interface MakeupRequest {
-  leaveRequestId: number;
+  /** Bỏ trống khi xếp bù cho buổi đã hủy mà không có đơn xin nghỉ */
+  leaveRequestId?: number;
   makeupDate: IsoDate;
   startTime: IsoTime;
   endTime: IsoTime;
@@ -671,10 +803,9 @@ export interface ApiError {
 }
 
 // ── services/authService.ts ──
-/** POST /auth/forgot-password — email nhận liên kết; frontendUrl để backend dựng liên kết về đúng trang */
+/** POST /auth/forgot-password — email nhận liên kết (địa chỉ trang do backend tự cấu hình) */
 export interface ForgotPasswordRequest {
   email: string;
-  frontendUrl?: string;
 }
 
 /** POST /auth/reset-password — token lấy từ liên kết trong email */
@@ -682,20 +813,6 @@ export interface ResetPasswordRequest {
   token: string;
   /** 6 – 128 ký tự, cùng giới hạn với mật khẩu lúc đăng ký */
   newPassword: string;
-}
-
-// ── services/orderService.ts ──
-/** (Đề xuất) Kết quả của POST /orders/checkout */
-export interface OrderResponse {
-  orderId: number;
-  /** Mã đơn hiển thị cho người mua */
-  orderCode: string;
-  /** Tổng tiền máy chủ chốt cho đơn (VND) */
-  totalAmount: number;
-  /** Đường dẫn thanh toán VNPay đã ký */
-  paymentUrl: string;
-  /** Thời điểm đường dẫn hết hạn (ISO 8601) */
-  expiresAt?: string;
 }
 
 // ── Thanh toán học phí qua VNPay (services/tuitionPaymentService.ts) ──
@@ -771,9 +888,10 @@ export interface CourseRequest {
   /** Mã môn, ví dụ "MATH" */
   subject: string;
   gradeLevel: GradeLevel;
-  /** Học phí gốc lớp 1 kèm 1 cho trọn khóa (đồng) */
+  /** Học phí 1 kèm 1 cho MỘT buổi (đồng) khi không gửi totalSessions */
   basePrice1on1: number;
-  totalSessions: number;
+  /** Bỏ trống: số buổi đặt ở từng lớp (chỉ client cũ còn gửi) */
+  totalSessions?: number;
   durationMinutes: number;
   description?: string;
 }
@@ -781,6 +899,8 @@ export interface CourseRequest {
 /** Tham số lọc của GET /admin/courses */
 export interface AdminCoursesQuery {
   subject?: string;
+  /** Tìm trong tên khóa (không phân biệt hoa thường) */
+  q?: string;
   gradeLevel?: GradeLevel;
   active?: boolean;
   page?: number;
@@ -798,8 +918,11 @@ export interface ClassSessionPreview {
 }
 
 /** dto.classgroup.ClassResponse — GET/POST /admin/classes */
-export interface AdminClassResponse extends CatalogClassResponse {
+export interface AdminClassResponse extends Omit<CatalogClassResponse, "estimatedFee" | "discountRate"> {
   courseId: number;
+  /** null khi lớp đã đủ chỗ (lớp 1-1 đã có học viên, lớp nhóm đủ 8) */
+  estimatedFee: number | null;
+  discountRate: number | null;
   status: ClassStatus;
   enrollmentDeadline: IsoDate | null;
   reservedStudents: number;
@@ -812,6 +935,8 @@ export interface AdminClassResponse extends CatalogClassResponse {
 /** Tham số lọc của GET /admin/classes */
 export interface AdminClassesQuery {
   courseId?: number;
+  /** Tìm trong mã lớp hoặc tên khóa */
+  q?: string;
   status?: ClassStatus;
   classType?: ClassType;
   schedulePattern?: SchedulePattern;
@@ -829,6 +954,10 @@ export interface CreateClassRequest {
   startDate: IsoDate;
   enrollmentDeadline?: IsoDate;
   meetingUrl?: string;
+  /** Gia sư phụ trách, phân công ngay khi mở lớp (backend kiểm tra trùng lịch) */
+  tutorId?: number;
+  /** Số buổi của lớp (1 – 200) */
+  totalSessions?: number;
 }
 
 /** PATCH /admin/classes/{classId}/status */
@@ -861,6 +990,14 @@ export interface EnrollmentResponse {
   cancelledAt: IsoDateTime | null;
   cancellationReason: string | null;
   cancelledBy: number | null;
+  /** Trạng thái lần hoàn tiền gần nhất của giao dịch; null khi chưa có */
+  refundStatus: "PENDING" | "COMPLETED" | "FAILED" | null;
+  /** Học viên còn được tự hủy và hoàn 100% học phí hay không (BR-02.32) */
+  cancellable: boolean;
+  /** Đăng ký này được tạo khi đổi từ đăng ký khác (mỗi đăng ký chỉ đổi lớp một lần) */
+  transferredFromEnrollmentId?: number | null;
+  /** Còn đổi sang lớp khác cùng khóa được không; backend chưa trả thì giao diện tự xét theo hạn chốt */
+  transferable?: boolean;
 }
 
 /** Tham số của GET /enrollments/my và GET /admin/classes/{classId}/enrollments */
@@ -886,12 +1023,52 @@ export interface PayrollLineResponse {
   /** Buổi được tính lương */
   validSessions: number;
   cancelledSessions: number;
-  /** Buổi đã có người dạy thay */
+  /** Buổi của gia sư này nhưng do gia sư khác dạy thay (được dạy thay) */
   substitutedOutSessions: number;
   /** Buổi chưa chốt (chưa khóa điểm danh / chưa xác nhận đã dạy) */
   unfinalizedSessions: number;
   sessionPay: number;
   totalPay: number;
+  /** Đối soát từng buổi của tháng (backend luôn trả kèm) */
+  reconciliation?: TeachingPeriodSummary | null;
+}
+
+/** dto.attendance.TeachingSessionResponse — một buổi trong bảng đối soát lương */
+export interface TeachingSessionResponse {
+  sessionId: number;
+  classGroupId: number;
+  originalSessionId: number | null;
+  date: IsoDate;
+  startTime: IsoTime;
+  endTime: IsoTime;
+  status: SessionStatus;
+  scheduledTutorId: number | null;
+  actualTutorId: number | null;
+  taughtByTutorId: number | null;
+  teachingConfirmedBy: number | null;
+  teachingConfirmedAt: IsoDateTime | null;
+  attendanceLocked: boolean;
+  needsAdminReview: boolean;
+  cancellationReason: string | null;
+  scheduledTutorAtCancellation: number | null;
+  actualTutorAtCancellation: number | null;
+}
+
+/** dto.attendance.TeachingPeriodSummary — các buổi của một gia sư trong tháng, chia theo nhóm */
+export interface TeachingPeriodSummary {
+  tutorId: number;
+  /** "2026-10" */
+  month: string;
+  completed: TeachingSessionResponse[];
+  cancelled: TeachingSessionResponse[];
+  substitutedOut: TeachingSessionResponse[];
+  unfinalized: TeachingSessionResponse[];
+}
+
+/** dto.attendance.ActualTutorChange — PATCH /admin/sessions/{sessionId}/actual-tutor */
+export interface ActualTutorChange {
+  tutorId: number;
+  reason: string;
 }
 
 /** dto.payroll.PayrollResponse — GET /admin/payroll/{year}/{month} */
@@ -914,4 +1091,110 @@ export interface TutorPayrollQuery {
   month?: number;
   page?: number;
   size?: number;
+}
+
+// ── Giỏ hàng & đơn nhiều lớp (CartController, OrderController) ─────────────
+
+/** GET /cart — giỏ của học viên; mỗi dòng là một môn, chọn lớp cụ thể lúc đặt đơn */
+export interface CartResponse {
+  id: number | null;
+  /** Tăng mỗi khi giỏ đổi; gửi lại khi đặt đơn để backend biết giỏ chưa bị sửa ở nơi khác */
+  cartVersion: number;
+  items: CartItem[];
+}
+
+export interface CartItem {
+  id: number;
+  subjectId: number;
+  /** Mã môn, ví dụ "MATH" */
+  subjectName: string;
+  addedAt: IsoDateTime;
+}
+
+/** POST /orders/checkout */
+export interface CartCheckoutRequest {
+  cartVersion: number;
+  items: { cartItemId: number; classId: number }[];
+}
+
+export type CartOrderStatus = "PENDING_PAYMENT" | "PAID" | "CANCELLED" | "EXPIRED" | "PARTIALLY_REFUNDED" | "REFUNDED";
+
+/** Một đơn nhiều lớp với giá đã chốt cho từng lớp */
+export interface CartOrderResponse {
+  id: number;
+  status: CartOrderStatus;
+  totalAmount: number;
+  refundedAmount: number;
+  createdAt: IsoDateTime;
+  /** Giá giữ đến thời điểm này; quá hạn phải đặt lại */
+  expiresAt: IsoDateTime;
+  paidAt: IsoDateTime | null;
+  items: {
+    id: number;
+    cartItemId: number;
+    subjectId: number;
+    courseId: number;
+    classId: number;
+    subjectName: string;
+    courseName: string;
+    classCode: string | null;
+    unitPrice: number;
+    enrollmentId: number | null;
+  }[];
+}
+
+// ── Bài tập (dto.learning: HomeworkController, SubmissionController) ─────────
+
+export type HomeworkStatus = "DRAFT" | "PUBLISHED" | "CLOSED";
+export type SubmissionStatus = "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED" | "GRADED";
+
+/** dto.learning.HomeworkResponse */
+export interface HomeworkResponse {
+  id: number;
+  sessionId: number;
+  /** Phiên bản để chống ghi đè; gửi kèm mọi lần sửa / đổi trạng thái */
+  version: number;
+  title: string;
+  instructions: string;
+  resourceUrl?: string | null;
+  dueAt: IsoDateTime;
+  maxScore: number;
+  status: HomeworkStatus;
+  createdAt?: IsoDateTime;
+  publishedAt?: IsoDateTime | null;
+  closedAt?: IsoDateTime | null;
+}
+
+/** dto.learning.HomeworkRequest — POST /sessions/{sessionId}/homeworks (tạo ở trạng thái DRAFT) */
+export interface HomeworkRequest {
+  title: string;
+  instructions: string;
+  resourceUrl?: string;
+  /** Hạn nộp trong tương lai, ISO có múi giờ */
+  dueAt: string;
+  maxScore: number;
+}
+
+/** dto.learning.SubmissionResponse */
+export interface SubmissionResponse {
+  id?: number;
+  homeworkId: number;
+  studentId: number;
+  version?: number;
+  status: SubmissionStatus;
+  content?: string | null;
+  resourceUrl?: string | null;
+  startedAt?: IsoDateTime | null;
+  submittedAt?: IsoDateTime | null;
+  score?: number | null;
+  feedback?: string | null;
+  gradedAt?: IsoDateTime | null;
+}
+
+/** dto.learning.StudentHomeworkResponse — GET /student/homeworks */
+export interface StudentHomeworkResponse {
+  homework: HomeworkResponse;
+  classGroupId: number;
+  sessionDate: IsoDate;
+  submission: SubmissionResponse;
 }

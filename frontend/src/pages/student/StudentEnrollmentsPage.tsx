@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { FilterTabs } from "@/components/dashboard/FilterTabs";
 import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
 import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/PortalState";
 import { StatTile } from "@/components/dashboard/StatTile";
 import { StatusChip } from "@/components/dashboard/StatusChip";
+import { TransferClassDialog } from "@/components/student/TransferClassDialog";
+import { TutorRatingBadge, TutorRatingDialog } from "@/components/student/TutorRatingDialog";
 import { Icon } from "@/components/ui/Icon";
 import {
   AUTH_ERROR,
@@ -22,15 +24,28 @@ import { ROUTES } from "@/constants/routes";
 import { useMyEnrollments, useRefreshMine } from "@/hooks/useManagementData";
 import { useMySessions } from "@/hooks/usePortalData";
 import { cancelEnrollment } from "@/services/managementService";
+import { getTuitionClass } from "@/services/tuitionPaymentService";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { formatVnd } from "@/utils/currency";
 import { formatDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
-import { formatTimeRange, nextSession, splitSessions } from "@/utils/sessions";
+import { formatTimeRange, nextSession, splitSessions, teacherOf } from "@/utils/sessions";
 import type { EnrollmentResponse, EnrollmentStatus } from "@/interfaces/api";
+import { displayCode } from "@/utils/classes";
+
+/** Câu báo đúng với kết quả hủy: hoàn ngay (ví/mock) hay đang chờ VNPay hoàn tiền */
+function cancelNotice(result: EnrollmentResponse): string {
+  if (result.status === "REFUNDED") return "Đã hủy ghi danh và hoàn học phí.";
+  if (result.refundStatus === "PENDING") return "Đã gửi yêu cầu hủy. VNPay đang hoàn tiền; lớp sẽ chuyển sang “Đã hoàn tiền” khi hoàn tất.";
+  if (result.refundStatus === "FAILED") return "Đã gửi yêu cầu hủy nhưng hoàn tiền chưa thành công. Trung tâm sẽ liên hệ để xử lý.";
+  return "Đã hủy ghi danh lớp học.";
+}
 
 /**
- * Các lớp học viên đã đóng học phí: học phí, ưu đãi, tiến độ buổi học, buổi kế tiếp và hủy ghi danh.
+ * Các lớp học viên đã đóng học phí: học phí, ưu đãi, tiến độ buổi học, buổi kế tiếp, đổi lớp và hủy ghi danh.
+ * Đổi lớp: trước hạn chốt, sang lớp khác cùng khóa còn trước hạn chốt, mỗi lớp một lần (POST /enrollments/{id}/transfer).
  * API: GET /enrollments/my, DELETE /enrollments/{id} (kèm lý do), GET /me/sessions để ghép tiến độ.
+ * Lớp đã có buổi học hoàn tất thì đánh giá được gia sư dạy gần nhất (POST /tutors/{id}/ratings, PUT /ratings/{id}).
  */
 export function StudentEnrollmentsPage() {
   const [filter, setFilter] = useState<EnrollmentStatus | "ALL">("ALL");
@@ -38,6 +53,9 @@ export function StudentEnrollmentsPage() {
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [ratingTutorId, setRatingTutorId] = useState<number | null>(null);
+  const [transferring, setTransferring] = useState<EnrollmentResponse | null>(null);
+  const queryClient = useQueryClient();
   const enrollments = useMyEnrollments();
   const sessions = useMySessions();
   const refreshMine = useRefreshMine();
@@ -47,22 +65,52 @@ export function StudentEnrollmentsPage() {
     mutationFn: () => cancelEnrollment((cancelling as EnrollmentResponse).enrollmentId, reason.trim()),
     onSuccess: (result) => {
       setCancelling(null);
-      setNotice(result.status === "REFUNDED" ? "Đã hủy ghi danh. Học phí sẽ được hoàn theo quy định." : "Đã hủy ghi danh lớp học.");
+      setNotice(cancelNotice(result));
       void refreshMine();
     },
     onError: (err) => setError(portalErrorMessage(err, "Chưa hủy được ghi danh. Vui lòng thử lại.")),
   });
 
   const all = enrollments.data?.content ?? [];
+  // Tên khóa và gia sư của từng lớp đã ghi danh (GET /catalog/classes/{id})
+  const classIds = [...new Set(all.map((item) => item.classGroupId))];
+  const classDetails = useQueries({
+    queries: classIds.map((id) => ({
+      queryKey: ["catalog-class", id],
+      queryFn: () => getTuitionClass(id),
+      staleTime: 60_000,
+      retry: false,
+    })),
+  });
+  const classById = new Map(classIds.map((id, index) => [id, classDetails[index]?.data]));
   const shown = filter === "ALL" ? all : all.filter((item) => item.status === filter);
   const active = all.filter((item) => item.status === "ACTIVE");
   const paid = all.reduce((sum, item) => sum + item.feeCharged, 0);
+
+  /** Còn đổi lớp được: còn tự hủy được (trước hạn chốt), lớp đang tuyển sinh và chưa từng đổi */
+  function canTransfer(item: EnrollmentResponse) {
+    return (
+      item.status === "ACTIVE" &&
+      item.cancellable &&
+      item.transferable !== false &&
+      !item.transferredFromEnrollmentId &&
+      classById.get(item.classGroupId)?.status === "ENROLLING"
+    );
+  }
 
   /** Tiến độ và buổi kế tiếp của một lớp, lấy từ lịch học của tôi */
   function progressOf(classGroupId: number) {
     const mine = (sessions.data ?? []).filter((session) => session.classGroupId === classGroupId && session.status !== "CANCELLED");
     const { upcoming, past } = splitSessions(mine, now);
     return { done: past.length, total: mine.length, next: nextSession(upcoming) };
+  }
+
+  /** Gia sư dạy buổi hoàn tất gần nhất của lớp — người học viên được đánh giá; chưa học xong buổi nào thì null */
+  function ratedTutorOf(classGroupId: number): number | null {
+    const completed = (sessions.data ?? [])
+      .filter((session) => session.classGroupId === classGroupId && session.status === "COMPLETED" && teacherOf(session) !== null)
+      .sort((a, b) => `${b.date}${b.startTime}`.localeCompare(`${a.date}${a.startTime}`));
+    return completed.length ? teacherOf(completed[0]) : null;
   }
 
   return (
@@ -121,7 +169,7 @@ export function StudentEnrollmentsPage() {
       ) : shown.length === 0 ? (
         <PortalEmpty
           icon="local_library"
-          title={all.length === 0 ? "Bạn chưa đăng ký lớp nào" : "Không có lớp ở trạng thái này"}
+          title={all.length === 0 ? "Bạn chưa đăng ký lớp nào." : "Không có lớp ở trạng thái này."}
           description="Chọn một khóa học đang mở và thanh toán qua VNPay để giữ chỗ trong lớp."
           action={
             <Link to={ROUTES.studentCatalog} className={PORTAL_BTN_ACCENT}>
@@ -135,6 +183,7 @@ export function StudentEnrollmentsPage() {
             const status = ENROLLMENT_STATUS[item.status];
             const progress = progressOf(item.classGroupId);
             const percent = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+            const tutorId = ratedTutorOf(item.classGroupId);
             return (
               <li key={item.enrollmentId} className={`flex flex-col overflow-hidden ${PORTAL_CARD}`}>
                 <div className="flex items-start justify-between gap-3 border-b border-dashed border-brand-sandLine bg-gradient-to-br from-brand-tint to-white px-5 py-4">
@@ -144,9 +193,21 @@ export function StudentEnrollmentsPage() {
                     </span>
                     <div>
                       <p className="text-[12.5px] font-bold uppercase tracking-wide text-brand-orangeHover">
-                        Mã ghi danh #{item.enrollmentId}
+                        Mã ghi danh {displayCode("enrollment", item.enrollmentId)}
                       </p>
-                      <h2 className="text-[17px] font-bold text-brand-ink">Lớp #{item.classGroupId}</h2>
+                      <h2 className="text-[17px] font-bold text-brand-ink">
+                        {classById.get(item.classGroupId)?.courseName ?? `Lớp ${displayCode("class", item.classGroupId)}`}
+                      </h2>
+                      {classById.get(item.classGroupId)?.tutorName && (
+                        <p className="mt-0.5 flex items-center gap-1.5 text-[13.5px] text-brand-muted">
+                          <UserAvatar
+                            userId={classById.get(item.classGroupId)?.tutorId}
+                            name={classById.get(item.classGroupId)?.tutorName ?? ""}
+                            size={20}
+                          />
+                          Gia sư <span className="font-semibold text-brand-ink">{classById.get(item.classGroupId)?.tutorName}</span>
+                        </p>
+                      )}
                     </div>
                   </div>
                   <StatusChip tone={status.tone} icon={status.icon}>
@@ -162,7 +223,7 @@ export function StudentEnrollmentsPage() {
                     </div>
                     {item.discountRate > 0 && (
                       <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[12.5px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/15">
-                        Ưu đãi lớp nhóm −{Math.round(item.discountRate * 100)}%
+                        Đã hoàn {Math.round(item.discountRate * 100)}% vào ví
                       </span>
                     )}
                   </div>
@@ -191,6 +252,39 @@ export function StudentEnrollmentsPage() {
                     </p>
                   )}
 
+                  {item.status === "ACTIVE" && item.refundStatus === "PENDING" && (
+                    <p className="flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-2.5 text-[13.5px] font-medium text-amber-800">
+                      <Icon name="hourglass_top" className="text-[18px]" />
+                      Đang hoàn tiền qua VNPay. Lớp sẽ được hủy khi hoàn tiền xong.
+                    </p>
+                  )}
+                  {item.status === "ACTIVE" && item.refundStatus === "FAILED" && (
+                    <p className="flex items-center gap-1.5 rounded-xl bg-red-50 px-3 py-2.5 text-[13.5px] font-medium text-red-700">
+                      <Icon name="error" className="text-[18px]" />
+                      Hoàn tiền chưa thành công. Trung tâm sẽ liên hệ để xử lý.
+                    </p>
+                  )}
+
+                  {item.status === "ACTIVE" && item.refundStatus === "COMPLETED" && (
+                    <p className="flex items-center gap-1.5 rounded-xl bg-sky-50 px-3 py-2.5 text-[13.5px] font-medium text-sky-800">
+                      <Icon name="info" className="text-[18px]" />
+                      Đã hoàn tiền một phần. Bạn vẫn tiếp tục học lớp này.
+                    </p>
+                  )}
+
+                  {tutorId !== null && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-brand-sandLine px-3 py-2">
+                      <span className="flex flex-wrap items-center gap-x-2 text-[14px] text-brand-ink">
+                        <Icon name="person" className="text-[19px] text-brand-navy" />
+                        <TutorRatingBadge tutorId={tutorId} />
+                      </span>
+                      <button type="button" onClick={() => setRatingTutorId(tutorId)} className={PORTAL_BTN_GHOST}>
+                        <Icon name="star" className="text-[18px]" />
+                        Đánh giá gia sư
+                      </button>
+                    </div>
+                  )}
+
                   {item.status !== "ACTIVE" && item.cancellationReason && (
                     <p className="text-[13.5px] text-brand-muted">
                       Lý do hủy: <span className="text-brand-ink">{item.cancellationReason}</span>
@@ -200,24 +294,36 @@ export function StudentEnrollmentsPage() {
 
                 <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-brand-sandLine px-3 py-2 text-[13px] text-brand-muted">
                   <span className="whitespace-nowrap px-2">Ghi danh ngày {formatDate(new Date(item.enrolledAt))}</span>
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap justify-end gap-1">
                     {item.status === "ACTIVE" && (
                       <>
                         <Link to={ROUTES.studentSchedule} className={PORTAL_BTN_GHOST}>
                           <Icon name="calendar_month" className="text-[18px]" />
                           Lịch học
                         </Link>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setReason("");
-                            setError(null);
-                            setCancelling(item);
-                          }}
-                          className={`${PORTAL_BTN_GHOST} text-red-600 hover:bg-red-50`}
-                        >
-                          Hủy ghi danh
-                        </button>
+                        {canTransfer(item) && (
+                          <button type="button" onClick={() => setTransferring(item)} className={PORTAL_BTN_GHOST}>
+                            <Icon name="swap_horiz" className="text-[18px]" />
+                            Đổi lớp
+                          </button>
+                        )}
+                        {item.cancellable ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReason("");
+                              setError(null);
+                              setCancelling(item);
+                            }}
+                            className={`${PORTAL_BTN_GHOST} text-red-600 hover:bg-red-50`}
+                          >
+                            Hủy ghi danh
+                          </button>
+                        ) : (
+                          (!item.refundStatus || item.refundStatus === "COMPLETED") && (
+                            <span className="self-center px-2 text-[12.5px]">Liên hệ admin để hủy</span>
+                          )
+                        )}
                       </>
                     )}
                   </div>
@@ -227,6 +333,21 @@ export function StudentEnrollmentsPage() {
           })}
         </ul>
       )}
+
+      <TutorRatingDialog tutorId={ratingTutorId} onClose={() => setRatingTutorId(null)} />
+
+      <TransferClassDialog
+        enrollment={transferring}
+        current={transferring ? classById.get(transferring.classGroupId) : undefined}
+        onClose={() => setTransferring(null)}
+        onDone={(message) => {
+          setTransferring(null);
+          setNotice(message);
+          void refreshMine();
+          void queryClient.invalidateQueries({ queryKey: ["catalog-class"] });
+          void queryClient.invalidateQueries({ queryKey: ["transfer-options"] });
+        }}
+      />
 
       <PortalDialog
         open={cancelling !== null}

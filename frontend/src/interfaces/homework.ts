@@ -232,6 +232,8 @@ export interface AttachmentListProps {
 export interface QuizFormProps {
   homework: HomeworkResponse;
   submission: SubmissionResponse;
+  /** Gọi sau khi nộp xong (dùng để đóng chế độ sửa và nộp lại) */
+  onDone?: () => void;
 }
 
 export interface SubmissionGraderProps {

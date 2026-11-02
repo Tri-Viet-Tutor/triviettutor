@@ -3,6 +3,8 @@ package com.viettritutor.controller;
 import com.viettritutor.common.api.ApiResponse;
 import com.viettritutor.common.api.PageResponse;
 import com.viettritutor.dto.user.*;
+import com.viettritutor.entity.User;
+import com.viettritutor.security.CurrentUser;
 import com.viettritutor.service.AdminUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -53,6 +55,23 @@ public class UserController {
                 ));
     }
 
+    @PatchMapping("/{userId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+            summary = "Lock or unlock a user account",
+            description = "Admin only. A locked user cannot log in (password or Google) and existing tokens stop working. "
+                    + "An admin cannot lock their own account."
+    )
+    public ApiResponse<AdminUserResponse> updateStatus(
+            @PathVariable Long userId,
+            @Valid @RequestBody UpdateUserStatusRequest request,
+            @CurrentUser User admin
+    ) {
+        return ApiResponse.ok(
+                adminUserService.updateStatus(admin.getId(), userId, request.getLocked())
+        );
+    }
+
     @PutMapping("/{userId}/tutor-profile")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(
@@ -66,5 +85,21 @@ public class UserController {
         return ApiResponse.ok(
                 adminUserService.updateTutorProfile(userId, request)
         );
+    }
+
+    @PutMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Update a user's name and email", description = "Admin only. Email must stay unique.")
+    public ApiResponse<AdminUserResponse> updateUser(@PathVariable Long userId, @Valid @RequestBody UpdateUserRequest request) {
+        return ApiResponse.ok(adminUserService.updateUser(userId, request));
+    }
+
+    @DeleteMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Delete a user without learning, payment or teaching history",
+            description = "Admin only. Returns 409 USER_IN_USE when other records still reference the account.")
+    public ApiResponse<Void> deleteUser(@PathVariable Long userId, @CurrentUser User admin) {
+        adminUserService.deleteUser(userId, admin.getId());
+        return ApiResponse.ok(null);
     }
 }

@@ -10,11 +10,11 @@ import type { ClassSlipProps } from "@/interfaces/catalog";
 export function ClassSlip({ course, grade, deliveryMode, schedulePattern, timeSlot }: ClassSlipProps) {
   // Các dòng của phiếu: nhãn bên trái, giá trị bên phải
   const rows = [
-    { label: "Khóa học", value: `${course.name} · ${grade.label}` },
+    { label: "Khóa học", value: `${course.name} - ${grade.label}` },
     { label: "Sĩ số", value: `${CLASS_SIZE.min} – ${CLASS_SIZE.max} học viên mỗi lớp` },
     { label: "Hình thức", value: deliveryMode.label },
     { label: "Lịch học", value: schedulePattern.label },
-    { label: "Ca học", value: `${timeSlot.hint} · ${SESSION_MINUTES} phút mỗi buổi` },
+    { label: "Ca học", value: `${timeSlot.hint} - ${SESSION_MINUTES} phút mỗi buổi` },
     // Chỉ thêm dòng học phí khi khóa đã có mức phí
     ...(course.tuitionFee !== undefined ? [{ label: "Học phí", value: `${formatVnd(course.tuitionFee)} / khóa` }] : []),
   ];

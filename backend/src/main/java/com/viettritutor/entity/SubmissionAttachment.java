@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.OffsetDateTime;
 
+/** Links a stored LearningFile to the submission it belongs to; the bytes stay in learning_files. */
 @Entity
 @Table(name = "submission_attachments")
 @Getter
@@ -17,14 +18,8 @@ public class SubmissionAttachment {
     private Long id;
     @Column(name = "submission_id", nullable = false)
     private Long submissionId;
-    @Column(name = "file_name", nullable = false)
-    private String fileName;
-    @Column(name = "content_type", nullable = false, length = 100)
-    private String contentType;
-    @Column(name = "size_bytes", nullable = false)
-    private long sizeBytes;
-    @Column(nullable = false, columnDefinition = "bytea")
-    private byte[] data;
+    @Column(name = "file_id", nullable = false, unique = true)
+    private Long fileId;
     @Column(name = "uploaded_at", nullable = false)
     private OffsetDateTime uploadedAt;
 }

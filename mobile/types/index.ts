@@ -7,13 +7,14 @@ export type UserRole = 'ROLE_STUDENT' | 'ROLE_TUTOR' | 'ROLE_ADMIN';
 
 export type GradeLevel = 'GRADE_10' | 'GRADE_11' | 'GRADE_12';
 
-export type Subject = 
+export type Subject =
   | 'MATH'
   | 'PHYSICS'
   | 'CHEMISTRY'
   | 'ENGLISH'
   | 'LITERATURE'
-  | 'BIOLOGY';
+  | 'BIOLOGY'
+  | 'INFORMATICS';
 
 export type SchedulePattern = 'MON_WED_FRI' | 'TUE_THU_SAT' | 'SAT_SUN';
 
@@ -54,9 +55,12 @@ export interface TutorInfo {
 
 export interface CourseItem {
   id: string;
+  /** Id khóa học backend (để đọc mô tả khóa) */
+  courseId?: number;
   code: string;
   title: string;
-  subject: Subject;
+  /** Mã môn backend ("MATH"); có thể là môn mới chưa có trong Subject */
+  subject: Subject | (string & {});
   subjectLabel: string;
   gradeLevel: GradeLevel;
   gradeLabel: string;
@@ -73,16 +77,24 @@ export interface CourseItem {
   maxStudents: number;
   startDate: string;
   location: string;
-  tutor: TutorInfo;
-  description: string;
-  highlights: string[];
+  /** Backend chưa công khai gia sư của lớp đang tuyển sinh (admin phân công sau hạn đăng ký) */
+  tutor?: TutorInfo;
+  description?: string;
+  highlights?: string[];
+  /** Học phí gốc 1 kèm 1; tuitionFee là giá học viên trả nếu đăng ký ngay (đã giảm theo sĩ số) */
+  basePrice?: number;
+  /** Mức giảm theo sĩ số, ví dụ 0.2 */
+  discountRate?: number;
+  spotsLeft?: number;
+  enrollmentDeadline?: string | null;
+  sessions?: { id: number; sessionNumber: number; date: string; startTime: string; endTime: string; status: string }[];
 }
 
 export interface SessionItem {
   sessionId: string;
   classId: string;
   className: string;
-  subject: Subject;
+  subject: Subject | (string & {});
   subjectLabel: string;
   gradeLabel: string;
   sessionNumber: number;
@@ -106,7 +118,8 @@ export interface BackendSessionResponse {
   date: string; // YYYY-MM-DD
   startTime: string; // HH:mm:ss
   endTime: string; // HH:mm:ss
-  status: SessionStatus;
+  /** Trạng thái backend: SCHEDULED, IN_SESSION, COMPLETED, CANCELLED, PENDING_RESCHEDULE, MAKEUP, ABSENCE_LATE */
+  status: string;
   scheduledTutorId?: number | null;
   actualTutorId?: number | null;
   meetingUrl?: string | null;
@@ -114,6 +127,40 @@ export interface BackendSessionResponse {
   originalSessionId?: number | null;
   attendanceLocked?: boolean;
   attendanceNeedsReview?: boolean;
+}
+
+/** GET /catalog/classes và /catalog/classes/{id} (ClassResponse của backend) */
+export interface BackendClassResponse {
+  id: number;
+  classCode: string;
+  courseId: number;
+  courseName: string;
+  subject: string;
+  subjectId?: number;
+  gradeLevel: GradeLevel;
+  classType: ClassType;
+  deliveryMode: DeliveryMode;
+  schedulePattern: SchedulePattern;
+  timeSlot: TimeSlot;
+  timeSlotLabel: string;
+  startDate: string;
+  enrollmentDeadline?: string | null;
+  status: string;
+  totalSessions: number;
+  maxStudents: number;
+  currentStudents: number;
+  spotsLeft: number;
+  full: boolean;
+  basePrice1on1: number;
+  estimatedFee?: number | null;
+  discountRate?: number | null;
+  sessions?: { id: number; sessionNumber: number; date: string; startTime: string; endTime: string; status: string }[];
+}
+
+export interface BackendPage<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
 }
 
 export interface BackendApiResponse<T> {

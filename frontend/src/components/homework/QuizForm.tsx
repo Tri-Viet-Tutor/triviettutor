@@ -3,6 +3,7 @@ import { type ChangeEvent, useRef, useState } from "react";
 import { AuthNotice } from "@/components/auth/AuthNotice";
 import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { AttachmentList } from "@/components/homework/AttachmentList";
+import { AttachmentField } from "@/components/ui/AttachmentField";
 import { Icon } from "@/components/ui/Icon";
 import { PORTAL_BTN_ACCENT, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
 import { homeworkKeys } from "@/hooks/useHomeworkData";
@@ -20,12 +21,14 @@ const MAX_ATTACHMENTS = 10;
  * Bài làm đang làm dở của học viên: chọn đáp án trắc nghiệm, viết tự luận, chụp ảnh bài làm trên giấy
  * (mở thẳng camera trên điện thoại) hoặc chọn ảnh / PDF, lưu tạm và nộp bài.
  */
-export function QuizForm({ homework, submission }: QuizFormProps) {
+export function QuizForm({ homework, submission, onDone }: QuizFormProps) {
   const userId = useUserId();
   const queryClient = useQueryClient();
   const now = useNow();
   const questions = homework.questions ?? [];
   const acceptsFiles = questions.length === 0 || questions.some((question) => question.type === "ESSAY");
+  // Đã nộp, chưa chấm: đang sửa để nộp lại trước hạn; ảnh đã gửi giữ nguyên
+  const resubmitting = submission.status === "SUBMITTED";
 
   const [answers, setAnswers] = useState<Record<number, AnswerInput>>(() =>
     Object.fromEntries((submission.answers ?? []).map((answer) => [answer.questionId, answer])),
@@ -73,7 +76,13 @@ export function QuizForm({ homework, submission }: QuizFormProps) {
       setSavedAt(new Date());
     },
   });
-  const submit = useMutation({ mutationFn: () => submitHomework(homework.id, payload()), onSuccess: refresh });
+  const submit = useMutation({
+    mutationFn: () => submitHomework(homework.id, payload()),
+    onSuccess: (next) => {
+      refresh(next);
+      onDone?.();
+    },
+  });
   const upload = useMutation({
     mutationFn: async (files: File[]) => {
       // Gửi lần lượt để thứ tự ảnh giữ đúng thứ tự trang bài làm
@@ -170,22 +179,20 @@ export function QuizForm({ homework, submission }: QuizFormProps) {
               className={`${PORTAL_INPUT} h-auto resize-y py-2.5 leading-relaxed`}
             />
           </div>
-          <div>
-            <label htmlFor="work-link" className={PORTAL_LABEL}>
-              Link bài làm (không bắt buộc, https)
-            </label>
-            <input
-              id="work-link"
-              type="url"
-              value={resourceUrl}
-              onChange={(event) => setResourceUrl(event.target.value)}
-              className={PORTAL_INPUT}
-            />
-          </div>
+          <AttachmentField
+            id="work-link"
+            label="File / link bài làm (PDF, Word, ảnh… hoặc link https)"
+            value={resourceUrl}
+            onChange={setResourceUrl}
+          />
         </section>
       )}
 
-      {acceptsFiles && (
+      {resubmitting && attachments.length > 0 && (
+        <AuthNotice tone="info">Ảnh đã gửi được giữ nguyên, bạn chỉ sửa được phần viết.</AuthNotice>
+      )}
+
+      {acceptsFiles && !resubmitting && (
         <section className={`p-5 ${PORTAL_CARD}`} aria-labelledby="photos-title">
           <h2 id="photos-title" className="text-[16px] font-bold text-brand-navy">
             Ảnh chụp bài làm
@@ -228,18 +235,28 @@ export function QuizForm({ homework, submission }: QuizFormProps) {
       {savedAt && !draft.isPending && <AuthNotice tone="success">Đã lưu tạm lúc {savedAt.toLocaleTimeString("vi-VN")}.</AuthNotice>}
 
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <button type="button" disabled={busy} onClick={() => draft.mutate()} className={PORTAL_BTN_SECONDARY}>
-          {draft.isPending ? "Đang lưu…" : "Lưu tạm"}
-        </button>
+        {resubmitting ? (
+          <button type="button" disabled={busy} onClick={() => onDone?.()} className={PORTAL_BTN_SECONDARY}>
+            Hủy
+          </button>
+        ) : (
+          <button type="button" disabled={busy} onClick={() => draft.mutate()} className={PORTAL_BTN_SECONDARY}>
+            {draft.isPending ? "Đang lưu…" : "Lưu tạm"}
+          </button>
+        )}
         <button type="button" disabled={busy} onClick={() => setConfirming(true)} className={PORTAL_BTN_ACCENT}>
           <Icon name="send" className="text-[18px]" />
-          Nộp bài
+          {resubmitting ? "Nộp lại" : "Nộp bài"}
         </button>
       </div>
 
       <PortalDialog open={confirming} title="Nộp bài" onClose={() => setConfirming(false)} widthClassName="max-w-[460px]">
         <div className="space-y-3 text-[14.5px] leading-relaxed text-brand-ink">
-          <p>Sau khi nộp, bạn không sửa được bài làm nữa.</p>
+          <p>
+            {questions.length > 0 && !acceptsFiles
+              ? "Bài được chấm ngay khi nộp và không sửa được nữa."
+              : "Sau khi nộp, bạn vẫn sửa và nộp lại được trước hạn nếu gia sư chưa chấm."}
+          </p>
           {unanswered > 0 && <p className="font-semibold text-amber-800">Còn {unanswered} câu chưa trả lời.</p>}
           {overdueSeconds > 0 && (
             <p className="font-semibold text-red-700">

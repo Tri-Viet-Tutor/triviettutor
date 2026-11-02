@@ -15,8 +15,8 @@ export const GRADE_OPTIONS: ClassOption<GradeLevel>[] = [
 /** Số của các khối đang dạy: ["10", "11", "12"] */
 const GRADE_NUMBERS = GRADE_OPTIONS.map((grade) => grade.label.replace("Lớp ", ""));
 
-/** "Lớp 10 · 11 · 12" — liệt kê các khối đang dạy */
-export const GRADE_LIST_LABEL = `Lớp ${GRADE_NUMBERS.join(" · ")}`;
+/** "Lớp 10 - 11 - 12" — liệt kê các khối đang dạy */
+export const GRADE_LIST_LABEL = `Lớp ${GRADE_NUMBERS.join(" - ")}`;
 
 /** "Lớp 10 – 12" — khoảng khối đang dạy */
 export const GRADE_RANGE_LABEL = `Lớp ${GRADE_NUMBERS[0]} – ${GRADE_NUMBERS[GRADE_NUMBERS.length - 1]}`;

@@ -10,6 +10,7 @@ import { homeworkKeys } from "@/hooks/useHomeworkData";
 import { useUserId } from "@/hooks/usePortalData";
 import { gradeSubmission } from "@/services/homeworkService";
 import { portalErrorMessage } from "@/utils/errors";
+import { attachmentName } from "@/services/fileService";
 import { formatDateTime, formatDuration, formatScore } from "@/utils/homework";
 import type { SubmissionGraderProps } from "@/interfaces/homework";
 
@@ -151,7 +152,7 @@ export function SubmissionGrader({ homework, submission }: SubmissionGraderProps
           rel="noreferrer noopener"
           className={`mt-2 inline-block text-[14.5px] ${PORTAL_TEXT_LINK}`}
         >
-          Link bài làm
+          {attachmentName(submission.resourceUrl)}
         </a>
       )}
       {submission.attachments && submission.attachments.length > 0 && (

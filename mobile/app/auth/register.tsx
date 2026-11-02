@@ -11,11 +11,16 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { registerWithApi } from '@/services/api';
 import { BrandColors } from '@/constants/Colors';
 import { GradeLevel } from '@/types';
+
+/** Địa chỉ website để kích hoạt tài khoản bằng mã gửi qua email */
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL || 'http://localhost:5173';
 
 export default function RegisterScreen() {
   const [fullName, setFullName] = useState('');
@@ -28,31 +33,46 @@ export default function RegisterScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleRegister = async () => {
-    if (!fullName.trim() || !email.trim() || !phone.trim() || !password.trim()) {
-      Alert.alert('Thông báo', 'Vui lòng điền đầy đủ tất cả các trường thông tin.');
+    if (!fullName.trim() || !email.trim() || !password.trim()) {
+      Alert.alert('Thông báo', 'Vui lòng nhập họ tên, email và mật khẩu.');
       return;
     }
-
+    if (password.length < 6) {
+      Alert.alert('Thông báo', 'Mật khẩu cần ít nhất 6 ký tự.');
+      return;
+    }
     if (password !== confirmPassword) {
       Alert.alert('Thông báo', 'Mật khẩu xác nhận không khớp.');
       return;
     }
 
     setIsSubmitting(true);
-    // Giả lập đăng ký thành công
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    setIsSubmitting(false);
-
-    Alert.alert(
-      'Đăng ký thành công',
-      'Tài khoản học viên của bạn đã được khởi tạo! Vui lòng đăng nhập để bắt đầu trải nghiệm.',
-      [
-        {
-          text: 'Đăng nhập ngay',
-          onPress: () => router.replace('/auth/login'),
-        },
-      ]
-    );
+    try {
+      // Tạo tài khoản thật; máy chủ gửi mã kích hoạt tới email
+      await registerWithApi(fullName, email, password);
+      Alert.alert(
+        'Đã tạo tài khoản',
+        `Mã kích hoạt đã được gửi tới ${email.trim()}. Mở trang kích hoạt trên website để nhập mã, sau đó đăng nhập trên app.`,
+        [
+          { text: 'Để sau', style: 'cancel', onPress: () => router.replace('/auth/login') },
+          {
+            text: 'Mở trang kích hoạt',
+            onPress: () => {
+              void Linking.openURL(`${WEB_URL}/verify-email`);
+              router.replace('/auth/login');
+            },
+          },
+        ]
+      );
+    } catch (error: any) {
+      const message = String(error?.message ?? '');
+      Alert.alert(
+        'Chưa tạo được tài khoản',
+        message.includes('Network request failed') ? 'Không kết nối được máy chủ.' : message || 'Vui lòng thử lại.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

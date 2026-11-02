@@ -18,7 +18,7 @@ export interface WalletTopup {
 }
 export interface WalletTransaction {
   transactionId: number;
-  type: "TOPUP" | "TUITION" | "REFUND";
+  type: "TOPUP" | "TUITION" | "REFUND" | "CLASS_DISCOUNT";
   amount: number;
   balanceAfter: number;
   description: string;

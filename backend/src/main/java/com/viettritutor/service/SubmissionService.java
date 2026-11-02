@@ -28,6 +28,7 @@ public class SubmissionService {
     private final HomeworkSubmissionRepository submissions;
     private final HomeworkAnswerRepository answers;
     private final SubmissionAttachmentRepository attachments;
+    private final LearningFileRepository learningFiles;
     private final UserRepository users;
     private final HomeworkAccessService access;
     private final HomeworkQuestionService questions;
@@ -154,7 +155,7 @@ public class SubmissionService {
         notifications.send(s.getStudentId(), "HOMEWORK_GRADED", "Đã có điểm: " + h.getTitle(),
                 "Điểm của bạn: " + plain(score) + "/" + plain(h.getMaxScore())
                         + (s.getFeedback() != null ? ". Gia sư có nhận xét cho bài làm." : "."),
-                "/student/homeworks/" + h.getId());
+                "/student/homework/" + h.getId());
         return detailed(s, false);
     }
 
@@ -175,10 +176,12 @@ public class SubmissionService {
         // Trust the bytes, not the browser-supplied content type.
         String type = sniff(data);
         if (type == null) throw new BusinessException(ErrorCode.INVALID_ATTACHMENT);
+        var stored = learningFiles.saveAndFlush(LearningFile.builder().fileKey(UUID.randomUUID()).ownerId(actor.getId())
+                .fileName(fileName(file.getOriginalFilename(), type)).contentType(type).sizeBytes((long) data.length)
+                .data(data).createdAt(access.now()).build());
         var saved = attachments.saveAndFlush(SubmissionAttachment.builder().submissionId(s.getId())
-                .fileName(fileName(file.getOriginalFilename(), type)).contentType(type).sizeBytes(data.length)
-                .data(data).uploadedAt(access.now()).build());
-        var response = AttachmentResponse.builder().id(saved.getId()).fileName(saved.getFileName())
+                .fileId(stored.getId()).uploadedAt(access.now()).build());
+        var response = AttachmentResponse.builder().id(saved.getId()).fileName(stored.getFileName())
                 .contentType(type).sizeBytes(data.length).uploadedAt(saved.getUploadedAt()).build();
         audit.submission(s.getId(), actor, "ATTACH", null, response, null);
         return response;
@@ -191,13 +194,17 @@ public class SubmissionService {
         var attachment = attachments.findById(attachmentId)
                 .filter(a -> a.getSubmissionId().equals(s.getId()))
                 .orElseThrow(() -> new BusinessException(ErrorCode.ATTACHMENT_NOT_FOUND));
+        var stored = learningFiles.findById(attachment.getFileId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ATTACHMENT_NOT_FOUND));
         attachments.delete(attachment);
-        audit.submission(s.getId(), actor, "DETACH", Map.of("id", attachmentId, "fileName", attachment.getFileName()), null, null);
+        attachments.flush(); // The link holds a foreign key to the file.
+        learningFiles.delete(stored);
+        audit.submission(s.getId(), actor, "DETACH", Map.of("id", attachmentId, "fileName", stored.getFileName()), null, null);
     }
 
     /** The owning student or the session's tutor/admin may read a file. */
     @Transactional(readOnly = true)
-    public SubmissionAttachment download(Long attachmentId, User actor) {
+    public LearningFile download(Long attachmentId, User actor) {
         Long submissionId = attachments.findSubmissionId(attachmentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ATTACHMENT_NOT_FOUND));
         HomeworkSubmission s = submissions.findById(submissionId)
@@ -209,7 +216,8 @@ public class SubmissionService {
         } else {
             access.requireWriter(context.session(), actor);
         }
-        return attachments.findById(attachmentId).orElseThrow(() -> new BusinessException(ErrorCode.ATTACHMENT_NOT_FOUND));
+        return attachments.findById(attachmentId).flatMap(a -> learningFiles.findById(a.getFileId()))
+                .orElseThrow(() -> new BusinessException(ErrorCode.ATTACHMENT_NOT_FOUND));
     }
 
     private HomeworkSubmission ownInProgress(HomeworkAccessService.Context context, User actor) {

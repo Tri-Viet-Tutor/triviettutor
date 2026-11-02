@@ -7,7 +7,7 @@ export const CONTAINER = "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8";
 export const FOCUS_RING = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
 
 /** Liên kết dạng chữ màu xanh, gạch chân khi rê chuột */
-export const TEXT_LINK = `inline-flex items-center gap-1 text-[15px] font-semibold text-brand-navy underline-offset-4 hover:underline ${FOCUS_RING}`;
+export const TEXT_LINK = `inline-flex items-center gap-1 text-[15px] font-semibold text-brand-navy transition-colors hover:text-brand-orangeHover [&>.material-symbols-outlined]:transition-transform hover:[&>.material-symbols-outlined]:translate-x-0.5 ${FOCUS_RING}`;
 
 /** Ô nhập kiểu điền phiếu giấy: chỉ có một nét gạch chân */
 export const FIELD =
