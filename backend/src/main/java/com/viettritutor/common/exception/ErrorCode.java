@@ -30,6 +30,8 @@ public enum ErrorCode {
     OTP_ATTEMPTS_EXCEEDED     (HttpStatus.TOO_MANY_REQUESTS, "Too many incorrect codes; request a new verification code"),
     OTP_RESEND_TOO_SOON       (HttpStatus.TOO_MANY_REQUESTS, "Please wait before requesting another verification code"),
     ACCOUNT_LOCKED            (HttpStatus.FORBIDDEN,      "This account has been locked by an administrator"),
+    GOOGLE_NOT_LINKED         (HttpStatus.UNPROCESSABLE_ENTITY, "This account is not linked to a Google account"),
+    GOOGLE_UNLINK_NOT_ALLOWED (HttpStatus.UNPROCESSABLE_ENTITY, "Cannot unlink Google account; it is the only login method for this account"),
 
     // ── Authorization ─────────────────────────────────────────────────────────
     ACCESS_DENIED             (HttpStatus.FORBIDDEN,      "You do not have permission to perform this action"),

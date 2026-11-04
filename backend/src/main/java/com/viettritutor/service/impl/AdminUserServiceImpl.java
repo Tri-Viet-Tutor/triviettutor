@@ -82,6 +82,8 @@ public class AdminUserServiceImpl implements AdminUserService {
         profile.setBio(request.getBio());
         tutorProfileRepository.save(profile);
 
+        boolean googleLinked = user.getGoogleId() != null;
+
         return new MeResponse(
                 user.getId(),
                 user.getEmail(),
@@ -89,6 +91,7 @@ public class AdminUserServiceImpl implements AdminUserService {
                 null,
                 user.getRole(),
                 user.getCreatedAt(),
+                googleLinked,
                 new MeResponse.TutorProfileResponse(
                         profile.getBaseSalary(),
                         profile.getSessionRate(),
@@ -160,6 +163,8 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
         tutorProfileRepository.save(profile);
 
+        boolean googleLinked = user.getGoogleId() != null;
+
         return new MeResponse(
                 user.getId(),
                 user.getEmail(),
@@ -167,6 +172,7 @@ public class AdminUserServiceImpl implements AdminUserService {
                 null,
                 user.getRole(),
                 user.getCreatedAt(),
+                googleLinked,
                 new MeResponse.TutorProfileResponse(
                         profile.getBaseSalary(),
                         profile.getSessionRate(),

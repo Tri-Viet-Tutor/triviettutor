@@ -18,6 +18,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 
 /**
  * Spring Security configuration.
@@ -42,6 +45,24 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final ClientRegistrationRepository clientRegistrationRepository;
+
+    @Bean
+    public OAuth2AuthorizationRequestResolver authorizationRequestResolver() {
+        DefaultOAuth2AuthorizationRequestResolver resolver =
+                new DefaultOAuth2AuthorizationRequestResolver(
+                        clientRegistrationRepository,
+                        "/oauth2/authorization"
+                );
+
+        resolver.setAuthorizationRequestCustomizer(
+                customizer -> customizer.additionalParameters(
+                        params -> params.put("prompt", "select_account")
+                )
+        );
+
+        return resolver;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -57,8 +78,12 @@ public class SecurityConfig {
                             response.getWriter().write("{\"success\":false,\"message\":\"Access denied\",\"errorCode\":\"ACCESS_DENIED\"}");
                         }))
                 .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(endpoint -> endpoint
+                                .authorizationRequestResolver(authorizationRequestResolver())
+                        )
                         .successHandler(oAuth2LoginSuccessHandler)
-                        .failureHandler(oAuth2LoginSuccessHandler))
+                        .failureHandler(oAuth2LoginSuccessHandler)
+                )
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

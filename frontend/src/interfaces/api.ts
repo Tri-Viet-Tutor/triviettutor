@@ -632,6 +632,7 @@ export interface TutorProfileResponse {
  */
 export interface MeResponse extends UserInfo {
   createdAt: IsoDateTime;
+  googleLinked: boolean;
   profile: Partial<StudentProfileResponse & TutorProfileResponse> | null;
 }
 

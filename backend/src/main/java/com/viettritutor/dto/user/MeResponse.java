@@ -14,6 +14,7 @@ public record MeResponse(
         String avatarUrl,
         String role,
         LocalDateTime createdAt,
+        boolean googleLinked,
 
         @JsonInclude(JsonInclude.Include.ALWAYS)
         @Schema(oneOf = {

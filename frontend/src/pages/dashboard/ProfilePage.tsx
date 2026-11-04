@@ -4,9 +4,10 @@ import { ProfileForm } from "@/components/dashboard/ProfileForm";
 import { PortalError, PortalLoading } from "@/components/dashboard/PortalState";
 import { ROLE_NAME } from "@/constants/labels";
 import { PORTAL_CARD } from "@/constants/classNames";
-import { useMe } from "@/hooks/usePortalData";
+import { useMe, useUnlinkGoogle } from "@/hooks/usePortalData";
 import { formatVnd } from "@/utils/currency";
 import { formatDate } from "@/utils/date";
+import { GoogleAccountSection } from "@/components/dashboard/GoogleAccountSection";
 
 /**
  * Trang Hồ sơ dùng chung cho ba khu (GET / PUT /me): xem và sửa thông tin của chính mình.
@@ -15,6 +16,18 @@ import { formatDate } from "@/utils/date";
 export function ProfilePage() {
   const meQuery = useMe();
   const me = meQuery.data;
+
+    const unlinkGoogleMutation = useUnlinkGoogle();
+
+    const handleUnlinkGoogle = () => {
+        const password = window.prompt(
+            "Nhập mật khẩu hiện tại để hủy liên kết Google:"
+        );
+
+        if (password === null || !password.trim()) return;
+
+        unlinkGoogleMutation.mutate(password);
+    };
 
   return (
     <>
@@ -54,9 +67,19 @@ export function ProfilePage() {
             </dl>
           )}
 
-          <div className="px-5 py-6 sm:px-7">
-            <ProfileForm me={me} />
-          </div>
+            <div className="px-5 py-6 sm:px-7">
+                <ProfileForm me={me} />
+
+                <GoogleAccountSection
+                    googleLinked={me.googleLinked}
+                    onLink={() => {
+                        window.location.href =
+                            `${import.meta.env.VITE_OAUTH2_BASE_URL}/oauth2/authorization/google?flow=link`;
+                    }}
+                    onUnlink={handleUnlinkGoogle}
+                    isUnlinking={unlinkGoogleMutation.isPending}
+                />
+            </div>
         </div>
       )}
     </>
