@@ -246,7 +246,7 @@ def main():
         cmt = sample_comments[i % len(sample_comments)]
         created_at = f"'{today - timedelta(days=i % 15 + 1)} 21:00:00+07'"
         reviews.append(
-            f"INSERT INTO tutor_reviews (id, student_id, tutor_id, class_group_id, rating, comment, created_at) VALUES ({rev_id}, {st_id}, {t_id}, {c_id}, {rating}, '{cmt}', {created_at}) ON CONFLICT DO NOTHING;"
+            f"INSERT INTO tutor_reviews (id, student_id, tutor_id, rating, comment, created_at, updated_at) VALUES ({rev_id}, {st_id}, {t_id}, {rating}, '{cmt}', {created_at}, {created_at}) ON CONFLICT DO NOTHING;"
         )
         rev_id += 1
 
