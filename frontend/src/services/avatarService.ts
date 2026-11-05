@@ -2,7 +2,9 @@ import { api } from "@/services/api";
 
 /** Đường dẫn ảnh đại diện của một người dùng (GET /users/{id}/avatar, công khai) */
 export function avatarUrl(userId: number, version = 0): string {
-  return `/api/v1/users/${userId}/avatar${version ? `?v=${version}` : ""}`;
+  // Cùng gốc với các lời gọi API (VITE_API_BASE_URL có thể là địa chỉ backend đầy đủ)
+  const base = (api.defaults.baseURL || "/api/v1").replace(/\/+$/, "");
+  return `${base}/users/${userId}/avatar${version ? `?v=${version}` : ""}`;
 }
 
 export const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
