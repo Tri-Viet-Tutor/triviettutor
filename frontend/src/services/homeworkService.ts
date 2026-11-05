@@ -45,7 +45,13 @@ export async function gradeSubmission(id: number, input: { score: number; feedba
 
 /** GET /student/homeworks — bài của các lớp học viên đang học */
 export async function listMyHomeworks(status?: SubmissionStatus): Promise<PageResponse<StudentHomeworkResponse>> {
-  return unwrap(await api.get<ApiResponse<PageResponse<StudentHomeworkResponse>>>("/student/homeworks", { params: { status, size: 100 } }));
+  // Backend xếp theo hạn nộp tăng dần, tối đa 100 bài / trang: tải hết các trang để bài mới nhất không bị cắt mất
+  const get = async (page: number) =>
+    unwrap(await api.get<ApiResponse<PageResponse<StudentHomeworkResponse>>>("/student/homeworks", { params: { status, page, size: 100 } }));
+  const first = await get(0);
+  const content = [...first.content];
+  for (let page = 1; page < first.totalPages; page++) content.push(...(await get(page)).content);
+  return { ...first, content, size: content.length, totalPages: 1 };
 }
 
 /** POST /homeworks/{id}/submissions/me/start */

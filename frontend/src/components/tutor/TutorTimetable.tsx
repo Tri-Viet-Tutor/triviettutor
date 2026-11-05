@@ -63,7 +63,9 @@ export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | 
   const tentativeOf = (classId: number) => {
     const query = classQueries[classIds.indexOf(classId)];
     const status = query?.data?.status;
-    return status === "PUBLISHED" || status === "ENROLLING" || status === "DRAFT" || Boolean(query?.isError);
+    if (status === "PUBLISHED" || status === "ENROLLING" || status === "DRAFT") return true;
+    // Catalog cũng trả 404 cho lớp đang chạy của khóa đã ẩn: lớp đã có buổi diễn ra / hoàn tất thì không phải dự kiến
+    return Boolean(query?.isError) && !sessions.some((session) => session.classGroupId === classId && (session.status === "IN_SESSION" || session.status === "COMPLETED"));
   };
   const colorOf = (classId: number) => CLASS_COLORS[Math.max(0, classIds.indexOf(classId)) % CLASS_COLORS.length];
 
