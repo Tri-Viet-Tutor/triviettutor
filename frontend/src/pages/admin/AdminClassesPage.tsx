@@ -82,6 +82,8 @@ export function AdminClassesPage() {
   const rows = classes.data?.content ?? [];
   // Ngăn chi tiết luôn hiện bản mới nhất sau khi đổi trạng thái
   const viewingFresh = viewing ? (rows.find((item) => item.id === viewing.id) ?? viewing) : null;
+  // Khung phân công cũng đọc bản mới nhất: phân công xong thì hiện gia sư mới và chuyển sang "Đổi gia sư"
+  const assigningFresh = assigning ? (rows.find((item) => item.id === assigning.id) ?? assigning) : null;
 
   useEffect(() => setPage(0), [keyword]);
 
@@ -273,8 +275,8 @@ export function AdminClassesPage() {
         onClose={() => setAssigning(null)}
         widthClassName="max-w-[880px]"
       >
-        {assigning && (
-          <AssignmentPanel key={assigning.id} classId={assigning.id} currentTutorId={assigning.tutorId ?? null} info={assigning} />
+        {assigningFresh && (
+          <AssignmentPanel key={assigningFresh.id} classId={assigningFresh.id} currentTutorId={assigningFresh.tutorId ?? null} info={assigningFresh} />
         )}
       </PortalDialog>
       <ClassFormDialog
