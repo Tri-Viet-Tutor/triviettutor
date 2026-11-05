@@ -2,6 +2,7 @@ package com.viettritutor.security.jwt;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import com.viettritutor.entity.User;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -21,6 +23,8 @@ import java.util.function.Function;
  */
 @Service
 public class JwtService {
+
+    static final String USER_ID_CLAIM = "userId";
 
     @Value("${app.jwt.secret}")
     private String secret;
@@ -38,8 +42,12 @@ public class JwtService {
      * @return signed JWT string
      */
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
+        Map<String, Object> claims = new HashMap<>(extraClaims);
+        if (userDetails instanceof User user && user.getId() != null) {
+            claims.put(USER_ID_CLAIM, user.getId());
+        }
         return Jwts.builder()
-                .claims(extraClaims)
+                .claims(claims)
                 .subject(userDetails.getUsername())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expirationMs))
@@ -49,10 +57,28 @@ public class JwtService {
 
     // ── Token Validation ──────────────────────────────────────────────────────
 
-    /** Returns true if the token is valid and not expired for the given user. */
+    /**
+     * Returns true if the token is valid and not expired for the given user.
+     * The subject is an email, which an admin can change and a new account can then take over,
+     * so the token must also carry the id of the account it was issued for.
+     */
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+        return username.equals(userDetails.getUsername())
+                && issuedForSameAccount(token, userDetails)
+                && !isTokenExpired(token);
+    }
+
+    private boolean issuedForSameAccount(String token, UserDetails userDetails) {
+        if (!(userDetails instanceof User user)) {
+            return true;
+        }
+        Object userId = extractClaim(token, claims -> claims.get(USER_ID_CLAIM));
+        if (userId == null) {
+            // Every token this service issues for an account carries the id; nothing to compare otherwise.
+            return true;
+        }
+        return userId instanceof Number id && user.getId() != null && id.longValue() == user.getId();
     }
 
     private boolean isTokenExpired(String token) {
