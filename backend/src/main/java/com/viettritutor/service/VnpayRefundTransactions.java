@@ -43,6 +43,12 @@ public class VnpayRefundTransactions {
         ClassGroup group = lock(payment, actor.getId());
         if (enrollment != null) entityManager.refresh(enrollment, LockModeType.PESSIMISTIC_WRITE);
         if (!"VNPAY".equals(payment.getMethod())) throw new BusinessException(ErrorCode.PAYMENT_PROVIDER_CONFLICT);
+        // The student key is fixed per enrollment, so a retry with reworded reason must not conflict; return the
+        // refund already sent to VNPay and leave reconcile/retry to admins.
+        if (studentCancel) {
+            var requested = refunds.findByPaymentId(payment.getId());
+            if (requested.isPresent()) return request(requested.get(), payment, false);
+        }
         String fingerprint = "VNPAY:" + payment.getId() + ":" + input.refundPercentage() + ":" + input.reason().trim();
         var replay = idempotency.replay(actor.getId(), PaymentOperationType.REFUND_ENROLLMENT, key, fingerprint);
         if (replay.isPresent()) return request(refunds.findById(replay.get()).orElseThrow(), payment, false);
@@ -127,10 +133,22 @@ public class VnpayRefundTransactions {
                 learning.deactivate(enrollment.getId(), LearningScheduleStatus.CANCELLED);
             }
         } else if (("refund".equals(response.get("vnp_Command")) && Set.of("02", "03", "91", "95", "97").contains(code))
-                || (matchingRefund && "00".equals(code) && "09".equals(response.get("vnp_TransactionStatus")))) {
+                || (matchingRefund && "00".equals(code) && "09".equals(response.get("vnp_TransactionStatus")))
+                || neverReachedVnpay(refund, payment, response)) {
             refund.setStatus("FAILED");
         }
         return RefundResponse.from(refund);
+    }
+
+    // QueryDr still shows only the untouched original payment, so the refund command never reached VNPay.
+    // Only full refunds are released for retry: VNPay never refunds more than the paid amount, so a resend
+    // cannot pay twice. Partial refunds stay PENDING because a resend could stack a second partial refund.
+    private static boolean neverReachedVnpay(Refund refund, Payment payment, Map<String, String> response) {
+        return "querydr".equals(response.get("vnp_Command"))
+                && refund.getAmount().compareTo(payment.getAmount()) == 0
+                && "00".equals(response.get("vnp_ResponseCode"))
+                && "01".equals(response.get("vnp_TransactionType"))
+                && "00".equals(response.get("vnp_TransactionStatus"));
     }
 
     @Transactional

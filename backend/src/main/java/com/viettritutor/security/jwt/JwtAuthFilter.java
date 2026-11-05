@@ -56,8 +56,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         try {
             final String userEmail = jwtService.extractUsername(jwt);
 
-            // Authenticate only if not already in context
-            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            // The Bearer token always wins: a Google login leaves its user in the HTTP session, and that stale
+            // context must not override whoever signed in later in the same browser.
+            if (userEmail != null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
 
                 // Tokens issued before an admin lock must stop working immediately.

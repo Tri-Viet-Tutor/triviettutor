@@ -14,6 +14,7 @@ import java.util.*;
 @Component
 @RequiredArgsConstructor
 public class VnpayApiClient {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(VnpayApiClient.class);
     private final VnpayProperties properties;
     private final VnpaySignature signature;
 
@@ -30,14 +31,18 @@ public class VnpayApiClient {
                     "vnp_TmnCode", "vnp_TxnRef", "vnp_Amount", "vnp_BankCode", "vnp_PayDate", "vnp_TransactionNo",
                     "vnp_TransactionType", "vnp_TransactionStatus", "vnp_OrderInfo"));
             if ("querydr".equals(command)) keys.addAll(List.of("vnp_PromotionCode", "vnp_PromotionAmount"));
-            if (!signature.matches(join(response, keys), response.get("vnp_SecureHash"))
-                    || !properties.getTmnCode().equals(response.get("vnp_TmnCode"))
-                    || !command.equals(response.get("vnp_Command"))
-                    || !fields.get("vnp_TxnRef").equals(response.get("vnp_TxnRef"))) {
-                throw new IllegalArgumentException();
-            }
+            String problem = !signature.matches(join(response, keys), response.get("vnp_SecureHash")) ? "signature"
+                    : !properties.getTmnCode().equals(response.get("vnp_TmnCode")) ? "tmnCode"
+                    : !command.equals(response.get("vnp_Command")) ? "command"
+                    : !fields.get("vnp_TxnRef").equals(response.get("vnp_TxnRef")) ? "txnRef" : null;
+            log.info("VNPay {} txnRef={} responseCode={} transactionType={} transactionStatus={} message={} rejected={}",
+                    command, fields.get("vnp_TxnRef"), response.get("vnp_ResponseCode"), response.get("vnp_TransactionType"),
+                    response.get("vnp_TransactionStatus"), response.get("vnp_Message"), problem);
+            if (problem != null) throw new IllegalArgumentException("Untrusted VNPay response: " + problem);
             return response;
         } catch (RuntimeException exception) {
+            // Without this the refund silently stays PENDING with code UNKNOWN.
+            log.warn("VNPay {} failed for txnRef={}: {}", command, fields.get("vnp_TxnRef"), exception.toString());
             throw new BusinessException(ErrorCode.PAYMENT_GATEWAY_ERROR);
         }
     }
