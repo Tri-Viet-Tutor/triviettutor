@@ -252,7 +252,8 @@ export function AdminReport() {
   // Doanh thu theo ngày (giao dịch thành công, trừ phần đã hoàn)
   const days30 = Array.from({ length: 30 }, (_, index) => addDays(monthStart, index));
   const paid = (payments.data?.content ?? []).filter((item) => item.status === "COMPLETED" || item.status === "PARTIALLY_REFUNDED");
-  const net = (item: (typeof paid)[number]) => item.amount - (item.refundedAmount ?? 0);
+  // Ưu đãi lớp nhóm hoàn vào ví cũng là tiền trả lại học viên, nên trừ khỏi doanh thu như hoàn tiền.
+  const net = (item: (typeof paid)[number]) => item.amount - (item.refundedAmount ?? 0) - (item.discountCredited ?? 0);
   const revenueByDay = days30.map((day) => {
     const iso = toIsoDate(day);
     return paid.filter((item) => toIsoDate(new Date(item.paidAt ?? item.createdAt)) === iso).reduce((sum, item) => sum + net(item), 0);
