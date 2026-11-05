@@ -1,8 +1,9 @@
 import { ROUTES } from "@/constants/routes";
+import { Icon } from "@/components/ui/Icon";
 import { AdminTodoPanel } from "@/components/admin/AdminTodoPanel";
 import type { TodoTile } from "@/interfaces/admin";
 import { PendingLeaveList } from "@/components/admin/PendingLeaveList";
-import { AdminOverviewCharts } from "@/components/admin/AdminOverviewCharts";
+import { AdminReport } from "@/components/admin/AdminReport";
 import { useAdminLeaveRequests, useAdminSessions } from "@/hooks/useAdminData";
 import { PortalGreeting } from "@/components/dashboard/PortalGreeting";
 import { UpcomingList } from "@/components/dashboard/UpcomingList";
@@ -65,7 +66,21 @@ export function AdminHomePage() {
 
       <div className="space-y-5">
         <AdminTodoPanel name={givenName(fullName)} tiles={tiles} />
-        <AdminOverviewCharts />
+        <div className="flex flex-wrap items-end justify-between gap-3 pt-2">
+          <div>
+            <h2 className="text-[22px] font-extrabold tracking-tight text-brand-navy">Báo cáo tổng quan</h2>
+            <p className="text-[13.5px] text-brand-muted">Số liệu cập nhật đến {formatLongDate(today).toLowerCase()}.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-brand-sandLine bg-white px-4 text-[14px] font-semibold text-brand-navy hover:border-brand-navy/40 print:hidden"
+          >
+            <Icon name="print" className="text-[19px]" />
+            In báo cáo
+          </button>
+        </div>
+        <AdminReport />
 
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
           <div className="lg:col-span-7">

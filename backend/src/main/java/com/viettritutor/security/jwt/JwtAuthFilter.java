@@ -3,6 +3,7 @@ package com.viettritutor.security.jwt;
 import com.viettritutor.security.RestAuthenticationEntryPoint;
 import io.jsonwebtoken.JwtException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -60,6 +61,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (userEmail != null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
 
+                // Tokens issued before an admin lock must stop working immediately.
+                if (!userDetails.isAccountNonLocked()) {
+                    throw new LockedException("Account is locked");
+                }
+
                 if (jwtService.isTokenValid(jwt, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities()
@@ -68,6 +74,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
+        } catch (LockedException ex) {
+            SecurityContextHolder.clearContext();
+            authenticationEntryPoint.commence(request, response, ex);
+            return;
         } catch (JwtException | IllegalArgumentException | AuthenticationException ex) {
             SecurityContextHolder.clearContext();
             authenticationEntryPoint.commence(request, response,

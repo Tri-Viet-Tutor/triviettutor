@@ -28,19 +28,38 @@ public class SessionOperationSupport {
     public record Snapshot(SessionStatus status, Long scheduledTutorId, Long actualTutorId) {}
 
     public Context load(Long sessionId) {
+        Context context = loadAny(sessionId);
+        requireOpenClass(context.classGroup());
+        return context;
+    }
+
+    /** Locks the class like {@link #load} but also accepts closed classes; callers check editability themselves. */
+    public Context loadAny(Long sessionId) {
         Long classId = sessionRepository.findClassGroupId(sessionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));
         ClassGroup classGroup = classRepository.findForUpdate(classId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CLASS_NOT_FOUND));
-        if (Set.of(ClassStatus.COMPLETED, ClassStatus.CANCELLED, ClassStatus.FAILED_TO_OPEN).contains(classGroup.getStatus())) {
-            throw new BusinessException(ErrorCode.SESSION_NOT_EDITABLE);
-        }
         return new Context(classGroup, sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND)));
     }
 
+    public void requireOpenClass(ClassGroup classGroup) {
+        if (Set.of(ClassStatus.COMPLETED, ClassStatus.CANCELLED, ClassStatus.FAILED_TO_OPEN).contains(classGroup.getStatus())) {
+            throw new BusinessException(ErrorCode.SESSION_NOT_EDITABLE);
+        }
+    }
+
     public void lockSession(Session session) {
+        lockSessionRow(session);
+        requireEditable(session);
+    }
+
+    /** Takes the session row lock without requiring the session to be editable. */
+    public void lockSessionRow(Session session) {
         entityManager.refresh(session, LockModeType.PESSIMISTIC_WRITE);
+    }
+
+    public void requireEditable(Session session) {
         if (session.getStatus() == SessionStatus.COMPLETED) {
             throw new BusinessException(ErrorCode.SESSION_NOT_EDITABLE);
         }
@@ -63,6 +82,10 @@ public class SessionOperationSupport {
     public void requireTutor(User tutor) {
         if (!"ROLE_TUTOR".equals(tutor.getRole())) {
             throw new BusinessException(ErrorCode.INVALID_TUTOR);
+        }
+        // A locked account cannot sign in, so it must not be given sessions to teach.
+        if (tutor.isLocked()) {
+            throw new BusinessException(ErrorCode.INVALID_TUTOR, "The selected tutor account is locked");
         }
     }
 
@@ -116,6 +139,16 @@ public class SessionOperationSupport {
         request.setReplacementSessionId(replacementId);
     }
 
+    /** Approves a leave request on behalf of an automated job: no human resolver is recorded. */
+    public void approveAsSystem(LeaveRequest request, LeaveResolution resolution, String reason) {
+        request.setStatus(LeaveRequestStatus.APPROVED);
+        request.setResolution(resolution);
+        request.setResolvedBy(null);
+        request.setResolvedAt(OffsetDateTime.now(clock));
+        request.setResolutionReason(reason.trim());
+        request.setReplacementSessionId(null);
+    }
+
     public Snapshot snapshot(Session session) {
         return new Snapshot(session.getStatus(), session.getScheduledTutorId(),
                 session.getActualTutorId() != null ? session.getActualTutorId() : session.getScheduledTutorId());
@@ -129,5 +162,15 @@ public class SessionOperationSupport {
                 .scheduledTutorId(before.scheduledTutorId()).previousTutorId(before.actualTutorId())
                 .newTutorId(session.getActualTutorId() != null ? session.getActualTutorId() : session.getScheduledTutorId())
                 .replacementSessionId(replacementId).build());
+    }
+
+    /** Records a session change made by an automated job: no human actor is recorded. */
+    public void auditAsSystem(Session session, Snapshot before, SessionChangeType action, String reason, Long requestId) {
+        changeRepository.save(SessionChange.builder().sessionId(session.getId()).leaveRequestId(requestId)
+                .action(action).actorId(null).reason(reason.trim()).changedAt(OffsetDateTime.now(clock))
+                .previousStatus(before.status()).newStatus(session.getStatus())
+                .scheduledTutorId(before.scheduledTutorId()).previousTutorId(before.actualTutorId())
+                .newTutorId(session.getActualTutorId() != null ? session.getActualTutorId() : session.getScheduledTutorId())
+                .build());
     }
 }

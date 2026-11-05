@@ -106,8 +106,8 @@ public class EnrollmentPaymentSupport {
         }
         LocalDate start = original.stream().map(Session::getSessionDate).min(LocalDate::compareTo).orElseThrow();
         LocalDate end = original.stream().map(Session::getSessionDate).max(LocalDate::compareTo).orElseThrow();
-        BigDecimal discountRate = pricing.discount(classGroup.getClassType(), existing);
-        BigDecimal expectedAmount = pricing.estimate(course.getBasePrice1on1(), discountRate);
+        BigDecimal discountRate = BigDecimal.ZERO;
+        BigDecimal expectedAmount = course.priceFor(expectedSessions);
         return new Admission(course, List.copyOf(payable), (int) existing + 1, start, end, discountRate, expectedAmount);
     }
 
@@ -120,8 +120,11 @@ public class EnrollmentPaymentSupport {
                 .atZone(clock.getZone()).toInstant().isAfter(clock.instant());
         if (classGroup.getStatus() == ClassStatus.CANCELLED) return beforeStart;
         if (Set.of(ClassStatus.ASSIGNED, ClassStatus.IN_PROGRESS, ClassStatus.COMPLETED).contains(classGroup.getStatus())) return false;
-        LocalDate deadline = classGroup.getEnrollmentDeadline() != null ? classGroup.getEnrollmentDeadline()
-                : first.map(Session::getSessionDate).orElse(null);
-        return beforeStart && deadline != null && LocalDate.now(clock).isBefore(deadline);
+        if (!beforeStart) return false;
+        LocalDate today = LocalDate.now(clock);
+        // The enrollment deadline day is still open (admission and the opening job treat it as inclusive),
+        // so cancelling on that day is still "before the deadline" (BR-02.31).
+        if (classGroup.getEnrollmentDeadline() != null) return !today.isAfter(classGroup.getEnrollmentDeadline());
+        return today.isBefore(first.get().getSessionDate());
     }
 }

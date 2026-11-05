@@ -6,7 +6,7 @@ const MESSAGES: Record<string, string> = {
   WALLET_TOPUP_NOT_FOUND: "Không tìm thấy yêu cầu nạp tiền của bạn.",
   WALLET_BALANCE_LIMIT: "Ví đã đạt giới hạn số dư. Vui lòng liên hệ trung tâm.",
   PAYMENT_PROVIDER_CONFLICT: "Yêu cầu đã bắt đầu bằng phương thức khác. Hãy tiếp tục hoặc hủy yêu cầu đó.",
-  PAYMENT_GATEWAY_DISABLED: "VNPay Sandbox chưa được cấu hình. Vui lòng liên hệ trung tâm.",
+  PAYMENT_GATEWAY_DISABLED: "Cổng VNPay chưa được cấu hình. Vui lòng liên hệ trung tâm.",
   INVALID_PAYMENT_SIGNATURE: "Không xác minh được kết quả VNPay. Hãy kiểm tra lại trạng thái yêu cầu.",
   INVALID_PAYMENT_RETURN_URL: "Địa chỉ trở về chưa được trung tâm cấu hình.",
   IDEMPOTENCY_CONFLICT: "Yêu cầu đã được dùng với dữ liệu khác. Hãy tạo yêu cầu mới.",

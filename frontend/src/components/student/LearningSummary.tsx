@@ -16,11 +16,10 @@ export function LearningSummary({ sessions, upcomingCount, attendance, leaveTota
   const completed = sessions.filter((session) => session.status === "COMPLETED").length;
   const hours = completedHours(sessions);
 
-  // Ba cột chuyên cần; nghỉ có phép ghi riêng một dòng bên dưới
+  // Chuyên cần: có mặt / vắng mặt; buổi có phép (bản ghi cũ) ghi riêng một dòng bên dưới
   const columns = [
     { label: "Có mặt", value: count("PRESENT"), color: "text-brand-ink" },
-    { label: "Đi trễ", value: count("LATE"), color: "text-[#1F63D8]" },
-    { label: "Vắng", value: count("ABSENT"), color: "text-brand-ink" },
+    { label: "Vắng mặt", value: count("ABSENT"), color: "text-red-600" },
   ];
   const excused = count("EXCUSED");
 
@@ -67,9 +66,9 @@ export function LearningSummary({ sessions, upcomingCount, attendance, leaveTota
     >
       <h3 className="text-[16px] font-bold text-brand-ink">Chuyên cần</h3>
       <p className="mt-0.5 text-[13.5px] text-brand-muted">
-        {recorded > 0 ? `${recorded} buổi được điểm danh gần nhất` : "Chưa có buổi nào được điểm danh"}
+        {recorded > 0 ? `${recorded} buổi được điểm danh gần nhất` : "Chưa có buổi nào được điểm danh."}
       </p>
-      <dl className="mt-3 grid grid-cols-3 gap-2 border-b border-brand-sandLine pb-4">
+      <dl className="mt-3 grid grid-cols-2 gap-2 border-b border-brand-sandLine pb-4">
         {columns.map((column) => (
           <div key={column.label}>
             <dt className="text-[14px] text-brand-muted">{column.label}</dt>

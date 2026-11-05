@@ -9,6 +9,8 @@ import { replaceAvailability } from "@/services/tutorService";
 import { addDays, formatDate, parseIsoDate, startOfToday, toIsoDate, weekdayName } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 import type { AvailabilityEditorProps } from "@/interfaces/portal";
+import { DateField } from "@/components/ui/DateField";
+import { TimeField } from "@/components/ui/TimeField";
 
 /** Các ca của trung tâm (enum TimeSlot) để chọn nhanh; "CUSTOM" là tự nhập giờ */
 const PRESETS = TIME_SLOT_OPTIONS.map((slot) => {
@@ -114,13 +116,12 @@ export function AvailabilityEditor({ saved, queryKey }: AvailabilityEditorProps)
           <label htmlFor="availability-date" className={`mb-1.5 ${AUTH_LABEL}`}>
             Ngày
           </label>
-          <input
+          <DateField
             id="availability-date"
-            type="date"
             required
             min={todayIso}
             value={date}
-            onChange={(event) => setDate(event.target.value)}
+            onChange={(value) => setDate(value)}
             className={AUTH_INPUT}
           />
         </div>
@@ -143,12 +144,11 @@ export function AvailabilityEditor({ saved, queryKey }: AvailabilityEditorProps)
               <label htmlFor="availability-start" className={`mb-1.5 ${AUTH_LABEL}`}>
                 Từ
               </label>
-              <input
+              <TimeField
                 id="availability-start"
-                type="time"
                 required
                 value={start}
-                onChange={(event) => setStart(event.target.value)}
+                onChange={(value) => setStart(value)}
                 className={AUTH_INPUT}
               />
             </div>
@@ -156,12 +156,11 @@ export function AvailabilityEditor({ saved, queryKey }: AvailabilityEditorProps)
               <label htmlFor="availability-end" className={`mb-1.5 ${AUTH_LABEL}`}>
                 Đến
               </label>
-              <input
+              <TimeField
                 id="availability-end"
-                type="time"
                 required
                 value={end}
-                onChange={(event) => setEnd(event.target.value)}
+                onChange={(value) => setEnd(value)}
                 className={AUTH_INPUT}
               />
             </div>
@@ -220,7 +219,7 @@ export function AvailabilityEditor({ saved, queryKey }: AvailabilityEditorProps)
         {days.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-brand-sandLine bg-white/60 px-6 py-10 text-center">
             <Icon name="event_available" className="text-[40px] text-slate-300" />
-            <p className="mt-2 text-[16px] font-semibold text-brand-navy">Chưa có khung giờ rảnh nào sắp tới</p>
+            <p className="mt-2 text-[16px] font-semibold text-brand-navy">Chưa có khung giờ rảnh nào sắp tới.</p>
             <p className="mx-auto mt-1 max-w-md text-[14.5px] leading-relaxed text-brand-muted">
               Thêm các khung giờ bạn dạy được để trung tâm ưu tiên phân công lớp phù hợp.
             </p>

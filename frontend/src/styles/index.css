@@ -26,6 +26,13 @@
     font-family: "Be Vietnam Pro", system-ui, sans-serif !important;
   }
 
+  /* Khu quản trị dùng Inter (gọn, rõ số liệu); đặc hiệu cao hơn quy tắc trên nên thắng */
+  .font-admin,
+  .font-admin *:not(.material-symbols-outlined) {
+    font-family: "Inter", "Be Vietnam Pro", system-ui, sans-serif !important;
+    font-feature-settings: "cv11", "ss01";
+  }
+
   .material-symbols-outlined {
     font-family: "Material Symbols Outlined" !important;
     font-size: 24px;
@@ -324,17 +331,18 @@
   transform-origin: 15.5px 12px;
 }
 
+/* Tốc độ chỉnh được qua biến CSS đặt ở phần tử cha: --ant-duration, --ant-delay, --ant-step (mặc định như trang chủ) */
 .ant-lane.is-active .ant-walker {
-  animation: ant-walk 14s linear infinite;
+  animation: ant-walk var(--ant-duration, 14s) linear var(--ant-delay, 0s) infinite;
 }
 .ant-lane.is-active .ant-body {
-  animation: ant-turn 14s linear infinite;
+  animation: ant-turn var(--ant-duration, 14s) linear var(--ant-delay, 0s) infinite;
 }
 .ant-lane.is-active .ant-legs-a {
-  animation: ant-step 0.26s ease-in-out infinite alternate;
+  animation: ant-step var(--ant-step, 0.26s) ease-in-out infinite alternate;
 }
 .ant-lane.is-active .ant-legs-b {
-  animation: ant-step 0.26s ease-in-out infinite alternate-reverse;
+  animation: ant-step var(--ant-step, 0.26s) ease-in-out infinite alternate-reverse;
 }
 .ant-lane.is-active .ant-bubble {
   animation: ant-say 12s ease-out infinite;
@@ -385,6 +393,74 @@
   }
 }
 
+/*7. Chú kiến mở trợ lý AI (components/assistant/ChatWidget.tsx) */
+/* Nhún nhẹ liên tục; mỗi 6 giây nhảy lên lắc mình một cái. Câu "Hỏi mình nhé!" hiện mỗi 9 giây. */
+
+.chat-pet-body {
+  transform-origin: 50% 100%;
+  animation: pet-hop 6s ease-in-out infinite;
+}
+.chat-pet:hover .chat-pet-body,
+.chat-pet[aria-expanded="true"] .chat-pet-body {
+  animation-play-state: paused;
+}
+.chat-pet-bubble {
+  opacity: 0;
+  animation: pet-say 9s ease-out 1.5s infinite;
+}
+.chat-pet:hover .chat-pet-bubble {
+  opacity: 1;
+  animation: none;
+}
+
+@keyframes pet-hop {
+  0%,
+  30%,
+  60%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  15%,
+  45% {
+    transform: translateY(-3px) scale(1, 1);
+  }
+  /* Nhún xuống lấy đà, bật lên, lắc qua lại rồi đáp */
+  68% {
+    transform: translateY(0) scale(1.08, 0.9);
+  }
+  75% {
+    transform: translateY(-16px) scale(0.95, 1.06) rotate(-8deg);
+  }
+  80% {
+    transform: translateY(-16px) rotate(8deg);
+  }
+  85% {
+    transform: translateY(-8px) rotate(-5deg);
+  }
+  90% {
+    transform: translateY(0) scale(1.06, 0.93);
+  }
+  95% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+@keyframes pet-say {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.8);
+  }
+  5%,
+  40% {
+    opacity: 1;
+    transform: none;
+  }
+  46% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.8);
+  }
+}
+
 /*. Người dùng bật "giảm chuyển động": tắt hết, hiện sẵn nội dung */
 
 @media (prefers-reduced-motion: reduce) {
@@ -401,7 +477,9 @@
   .ant-lane.is-active .ant-body,
   .ant-lane.is-active .ant-legs-a,
   .ant-lane.is-active .ant-legs-b,
-  .ant-lane.is-active .ant-bubble {
+  .ant-lane.is-active .ant-bubble,
+  .chat-pet-body,
+  .chat-pet-bubble {
     animation: none;
   }
 

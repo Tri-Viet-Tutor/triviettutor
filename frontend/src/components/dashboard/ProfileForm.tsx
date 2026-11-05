@@ -33,7 +33,7 @@ function toValues(me: MeResponse): ProfileFormValues {
 /**
  * Form sửa hồ sơ của tôi (PUT /me). Email không đổi được.
  * Mỗi vai trò chỉ được sửa các trường của mình — gửi trường của vai trò khác backend sẽ từ chối:
- * học viên: điện thoại, địa chỉ · gia sư: giới thiệu bản thân · quản trị: chỉ họ tên.
+ * học viên: điện thoại, địa chỉ - gia sư: giới thiệu bản thân - quản trị: chỉ họ tên.
  */
 export function ProfileForm({ me }: ProfileFormProps) {
   const userId = useUserId();

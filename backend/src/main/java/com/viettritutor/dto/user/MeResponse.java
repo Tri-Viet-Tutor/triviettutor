@@ -11,8 +11,10 @@ public record MeResponse(
         Long id,
         String email,
         String fullName,
+        String avatarUrl,
         String role,
         LocalDateTime createdAt,
+        boolean googleLinked,
 
         @JsonInclude(JsonInclude.Include.ALWAYS)
         @Schema(oneOf = {

@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -24,8 +24,11 @@ public class AttendanceLockJob {
         long afterId = 0;
         List<Long> batch;
         int lockedCount = 0;
+        // Deadline is end + 24h, so only sessions that ended at least 24 hours ago are due.
+        LocalDateTime cutoff = LocalDateTime.now(clock).minusHours(24);
         do {
-            batch = sessions.findAttendanceLockCandidates(LocalDate.now(clock), afterId, PageRequest.of(0, 200));
+            batch = sessions.findAttendanceLockCandidates(cutoff.toLocalDate(), cutoff.toLocalTime(), afterId,
+                    PageRequest.of(0, 200));
             for (Long sessionId : batch) {
                 try {
                     if (attendance.autoLock(sessionId)) {

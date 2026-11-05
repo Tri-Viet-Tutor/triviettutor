@@ -9,6 +9,7 @@ import type {
   VerifyEmailRequest,
   ForgotPasswordRequest,
   ResetPasswordRequest,
+  MeResponse,
 } from "@/interfaces/api";
 import { api, unwrap } from "@/services/api";
 
@@ -54,11 +55,41 @@ export async function resendVerification(request: ResendVerificationRequest): Pr
 
 /** POST /auth/forgot-password — gửi liên kết đặt lại mật khẩu tới email */
 export async function requestPasswordReset(request: ForgotPasswordRequest): Promise<void> {
-  const payload = {
-    ...request,
-    frontendUrl: request.frontendUrl || (typeof window !== "undefined" ? window.location.origin : undefined),
-  };
-  await api.post("/auth/forgot-password", payload);
+  // Không gửi địa chỉ trang: backend luôn dựng liên kết từ FRONTEND_URL đã cấu hình (chống giả mạo liên kết).
+  await api.post("/auth/forgot-password", { email: request.email });
+}
+
+/*
+ * ── Đăng nhập bằng Google ─────────────────────────────────────────────────────
+ */
+
+/**
+ * Gốc (origin) của backend. Proxy của Vite chỉ chuyển tiếp /api nên luồng OAuth2 phải đi thẳng tới backend:
+ * - VITE_API_BASE_URL là địa chỉ đầy đủ (https://api.example.com/api/v1) → lấy origin của nó;
+ * - đang chạy dev với đường dẫn tương đối → dùng VITE_API_PROXY_TARGET (mặc định http://localhost:8080);
+ * - còn lại (frontend và backend chung tên miền) → origin của trang hiện tại.
+ */
+export function backendOrigin(): string {
+  const base = import.meta.env.VITE_API_BASE_URL;
+  if (base && /^https?:\/\//i.test(base)) return new URL(base).origin;
+  if (import.meta.env.DEV) return (import.meta.env.VITE_API_PROXY_TARGET || "http://localhost:8080").replace(/\/+$/, "");
+  return window.location.origin;
+}
+
+/** Chỉ hiện nút Google khi VITE_GOOGLE_LOGIN_ENABLED=true (backend đã có GOOGLE_CLIENT_ID / SECRET thật) */
+export const GOOGLE_LOGIN_ENABLED = import.meta.env.VITE_GOOGLE_LOGIN_ENABLED === "true";
+
+/** Địa chỉ bắt đầu đăng nhập Google của Spring Security; xong backend chuyển về /oauth2/success#token=… */
+export function googleLoginUrl(): string {
+    const oauthBaseUrl =
+        import.meta.env.VITE_OAUTH2_BASE_URL || "http://localhost:8080";
+
+    return `${oauthBaseUrl.replace(/\/+$/, "")}/oauth2/authorization/google`;
+}
+
+/** GET /me bằng token vừa nhận (chưa lưu vào store) — dùng ở trang hoàn tất đăng nhập Google */
+export async function fetchMeWithToken(token: string): Promise<MeResponse> {
+  return unwrap(await api.get<ApiResponse<MeResponse>>("/me", { headers: { Authorization: `Bearer ${token}` } }));
 }
 
 /** POST /auth/reset-password — đổi mật khẩu bằng token liên kết */

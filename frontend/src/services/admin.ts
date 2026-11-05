@@ -1,4 +1,5 @@
 import type {
+  ActualTutorChange,
   AdminLeaveRequestsQuery,
   AdminSessionsQuery,
   AdminUserResponse,
@@ -10,6 +11,8 @@ import type {
   AttendanceRecordResponse,
   AttendanceResponse,
   AvailableTutorResponse,
+  TutorBoardResponse,
+  TuitionPayment,
   CancelSessionRequest,
   CreateTutorRequest,
   LeaveRequestResponse,
@@ -19,6 +22,7 @@ import type {
   SessionResponse,
   SubstituteRequest,
   UpdateTutorProfileRequest,
+  UpdateUserStatusRequest,
 } from "@/interfaces/api";
 import { api, unwrap } from "@/services/api";
 
@@ -43,6 +47,11 @@ export async function createTutor(request: CreateTutorRequest): Promise<MeRespon
 /** PUT /admin/users/{userId}/tutor-profile — sửa lương, thù lao và giới thiệu của một gia sư */
 export async function updateTutorProfile(userId: number, request: UpdateTutorProfileRequest): Promise<MeResponse> {
   return unwrap(await api.put<ApiResponse<MeResponse>>(`/admin/users/${userId}/tutor-profile`, request));
+}
+
+/** PATCH /admin/users/{userId}/status — khóa (true) / mở khóa (false) tài khoản; không tự khóa chính mình được */
+export async function updateUserStatus(userId: number, request: UpdateUserStatusRequest): Promise<AdminUserResponse> {
+  return unwrap(await api.patch<ApiResponse<AdminUserResponse>>(`/admin/users/${userId}/status`, request));
 }
 
 // ── Buổi học ─────────────────────────────────────────────────────────────────
@@ -89,6 +98,26 @@ export async function rejectLeaveRequest(requestId: number, reason: string): Pro
   return unwrap(await api.patch<ApiResponse<LeaveRequestResponse>>(`/admin/leave-requests/${requestId}/reject`, { reason }));
 }
 
+/** PATCH /admin/leave-requests/{id}/excuse — duyệt nghỉ có phép cho học viên lớp nhóm: miễn điểm danh buổi đó */
+export async function excuseLeaveRequest(requestId: number, reason: string): Promise<LeaveRequestResponse> {
+  return unwrap(await api.patch<ApiResponse<LeaveRequestResponse>>(`/admin/leave-requests/${requestId}/excuse`, { reason }));
+}
+
+/** GET /admin/payments — giao dịch học phí tạo từ `from` (tối đa 100) cho báo cáo doanh thu */
+export async function fetchPaymentsSince(from: string): Promise<PageResponse<TuitionPayment & { createdAt: string; paidAt: string | null }>> {
+  return unwrap(await api.get<ApiResponse<PageResponse<TuitionPayment & { createdAt: string; paidAt: string | null }>>>("/admin/payments", { params: { from, page: 0, size: 100 } }));
+}
+
+/** PUT /admin/users/{id} — sửa họ tên và email */
+export async function updateUser(userId: number, request: { fullName: string; email: string }): Promise<AdminUserResponse> {
+  return unwrap(await api.put<ApiResponse<AdminUserResponse>>(`/admin/users/${userId}`, request));
+}
+
+/** DELETE /admin/users/{id} — xóa tài khoản chưa có dữ liệu (409 USER_IN_USE nếu đã có) */
+export async function deleteUser(userId: number): Promise<void> {
+  await api.delete(`/admin/users/${userId}`);
+}
+
 // ── Điểm danh ────────────────────────────────────────────────────────────────
 
 /** PATCH /admin/sessions/{sessionId}/attendance/lock — khóa hoặc mở khóa điểm danh của buổi đã kết thúc */
@@ -105,11 +134,42 @@ export async function correctAttendance(
   return unwrap(await api.patch<ApiResponse<AttendanceRecordResponse>>(`/admin/sessions/${sessionId}/attendance/${recordId}`, input));
 }
 
+/**
+ * PUT /admin/sessions/{sessionId}/attendance/students/{studentId} — sửa điểm danh đã khóa của một học viên trong danh sách,
+ * tạo bản ghi mới nếu học viên chưa được điểm danh; bắt buộc có lý do
+ */
+export async function correctStudentAttendance(
+  sessionId: number,
+  studentId: number,
+  input: AttendanceCorrection,
+): Promise<AttendanceRecordResponse> {
+  return unwrap(
+    await api.put<ApiResponse<AttendanceRecordResponse>>(`/admin/sessions/${sessionId}/attendance/students/${studentId}`, input),
+  );
+}
+
+/** PATCH /admin/sessions/{sessionId}/actual-tutor — sửa gia sư thực dạy của buổi đã bắt đầu (vd. gia sư khác dạy thay khi vắng), kèm lý do */
+export async function changeActualTutor(sessionId: number, input: ActualTutorChange): Promise<SessionResponse> {
+  return unwrap(await api.patch<ApiResponse<SessionResponse>>(`/admin/sessions/${sessionId}/actual-tutor`, input));
+}
+
 // ── Phân công gia sư ─────────────────────────────────────────────────────────
 
 /** GET /admin/classes/{classId}/available-tutors — gia sư gợi ý cho lớp, người không trùng lịch xếp trước */
 export async function fetchAvailableTutors(classId: number): Promise<AvailableTutorResponse[]> {
   const { data } = await api.get<ApiResponse<AvailableTutorResponse[]>>(`/admin/classes/${classId}/available-tutors`);
+  return data.data ?? [];
+}
+
+/** GET /admin/sessions/{sessionId}/available-tutors — gia sư có thể dạy thay buổi này (rảnh giờ đó xếp trước) */
+export async function fetchSubstituteTutors(sessionId: number): Promise<AvailableTutorResponse[]> {
+  const { data } = await api.get<ApiResponse<AvailableTutorResponse[]>>(`/admin/sessions/${sessionId}/available-tutors`);
+  return data.data ?? [];
+}
+
+/** GET /admin/tutor-board — lịch rảnh đã khai và buổi đang dạy của mọi gia sư từ `from` đến `to` (tối đa 31 ngày) */
+export async function fetchTutorBoard(from: string, to: string): Promise<TutorBoardResponse[]> {
+  const { data } = await api.get<ApiResponse<TutorBoardResponse[]>>("/admin/tutor-board", { params: { from, to } });
   return data.data ?? [];
 }
 

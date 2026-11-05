@@ -62,6 +62,7 @@ class PayrollControllerTest {
     @Autowired TutorProfileRepository profiles;
     @Autowired AttendanceRecordRepository records;
     @Autowired JdbcTemplate jdbc;
+    @Autowired jakarta.persistence.EntityManager entityManager;
     @Autowired SessionGenerator generator;
     @Autowired PayrollService service;
     PayrollTestFixtures.Data f;
@@ -90,6 +91,7 @@ class PayrollControllerTest {
         assertEquals(1,line(p,f.substitute().getId()).path("validSessions").asInt());
         assertEquals(4250000,line(p,f.substitute().getId()).path("totalPay").asLong());
         assertEquals(3000000,line(p,f.idle().getId()).path("totalPay").asLong());
+        // No disabled-at timestamp exists, so past and current months keep a disabled tutor's base salary.
         assertEquals(1000000,line(p,f.disabled().getId()).path("totalPay").asLong());
         assertEquals(14850000,p.path("totalPayroll").asLong());
         assertEquals(0,periods.count());assertEquals(0,lines.count());assertEquals(0,mutex.count());
@@ -108,6 +110,19 @@ class PayrollControllerTest {
         var mine=data(call("GET","/tutor/payroll",null,tutor,null),200);
         assertEquals(1,mine.path("totalElements").asInt());assertEquals(8400000,mine.path("content").get(0).path("totalPay").asLong());
         assertFalse(mine.toString().contains("totalPayroll"));
+    }
+    @Test void snapshotWithPlainTextReconciliationStillShowsStoredAmounts()throws Exception{
+        finalizePay();
+        // Imported sample rows (as on the shared database) carry a plain-text note instead of the JSON reconciliation.
+        jdbc.update("update payroll_lines set reconciliation='Đã đối soát số buổi dạy và chốt bảng lương.'");
+        entityManager.clear();
+        var stored=lines.findAll().stream().filter(l->l.getTutorId().equals(f.tutor().getId())).findFirst().orElseThrow();
+        var admin=line(get(),f.tutor().getId());
+        assertEquals(stored.getTotalPay().longValue(),admin.path("totalPay").asLong());
+        assertEquals(stored.getValidSessions(),admin.path("validSessions").asInt());
+        assertTrue(admin.path("reconciliation").isNull()||admin.path("reconciliation").isMissingNode());
+        var mine=data(call("GET","/tutor/payroll",null,tutor,null),200).path("content").get(0);
+        assertEquals(stored.getTotalPay().longValue(),mine.path("totalPay").asLong());
     }
     @Test void tutorIdentityCannotBeOverriddenAndEachTutorSeesOnlyOwnPay()throws Exception{
         finalizePay();
@@ -170,6 +185,52 @@ class PayrollControllerTest {
         assertEquals(3,get().path("lines").size());
         profiles.deleteById(f.tutor().getId());profiles.flush();
         call("POST",path()+"/finalize",null,admin,"key").andExpect(status().isUnprocessableEntity());
+    }
+    @Test void chainedActualTutorCorrectionsDoNotCountIntermediateTutorAsSubstitutedOut()throws Exception{
+        Long id=f.completed().getFirst();
+        data(call("PATCH","/admin/sessions/"+id+"/actual-tutor",Map.of("tutorId",f.idle().getId(),"reason","First guess"),admin,null),200);
+        data(call("PATCH","/admin/sessions/"+id+"/actual-tutor",Map.of("tutorId",f.substitute().getId(),"reason","Actually taught by substitute"),admin,null),200);
+        var p=get();
+        var idle=line(p,f.idle().getId());
+        assertEquals(0,idle.path("substitutedOutSessions").asInt());assertEquals(0,idle.path("unfinalizedSessions").asInt());
+        assertEquals(2,line(p,f.tutor().getId()).path("substitutedOutSessions").asInt());
+        assertEquals(1,line(p,f.substitute().getId()).path("unfinalizedSessions").asInt());
+    }
+    @Test void disabledTutorsDrawNoBaseSalaryInFutureMonths()throws Exception{
+        var current=data(call("GET","/admin/payroll/2030/2",null,admin,null),200);
+        assertEquals(1000000,line(current,f.disabled().getId()).path("totalPay").asLong());
+        var future=data(call("GET","/admin/payroll/2030/3",null,admin,null),200);
+        for(var item:future.path("lines"))assertNotEquals(f.disabled().getId().longValue(),item.path("tutorId").asLong());
+        assertEquals(3000000,line(future,f.idle().getId()).path("totalPay").asLong());
+    }
+    @Test void disabledTutorWhoTaughtInMonthIsStillPaidAndDoesNotBlock()throws Exception{
+        fixtures.lesson(f.classId(),f.month().atDay(12),12,f.disabled(),f.disabled(),f.student(),f.admin(),true);
+        var p=get();
+        assertTrue(p.path("canFinalize").asBoolean());
+        var l=line(p,f.disabled().getId());
+        assertEquals(1,l.path("validSessions").asInt());assertEquals(1100000,l.path("totalPay").asLong());
+    }
+    @Test void adminCorrectsActualTutorWhichResetsEvidenceAndIsBlockedOnceFinalized()throws Exception{
+        Long id=f.completed().getFirst();
+        var body=Map.of("tutorId",f.idle().getId(),"reason","Scheduled tutor did not show up");
+        call("PATCH","/admin/sessions/"+id+"/actual-tutor",body,tutor,null).andExpect(status().isForbidden());
+        call("PATCH","/admin/sessions/"+id+"/actual-tutor",Map.of("tutorId",f.idle().getId()),admin,null)
+                .andExpect(status().isBadRequest());
+        call("PATCH","/admin/sessions/"+id+"/actual-tutor",Map.of("tutorId",f.disabled().getId(),"reason","x"),admin,null)
+                .andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.errorCode").value("TUTOR_DISABLED"));
+        var updated=data(call("PATCH","/admin/sessions/"+id+"/actual-tutor",body,admin,null),200);
+        assertEquals(f.idle().getId().longValue(),updated.path("actualTutorId").asLong());
+        Session s=sessions.findById(id).orElseThrow();
+        assertNull(s.getTeachingConfirmedAt());assertTrue(s.isAttendanceNeedsReview());
+        assertFalse(get().path("canFinalize").asBoolean());
+        assertEquals(1,line(get(),f.idle().getId()).path("unfinalizedSessions").asInt());
+        // Restore evidence so the month can be finalized, then the change is refused.
+        s.setActualTutorId(f.tutor().getId());s.setTaughtByTutorId(f.tutor().getId());
+        s.setTeachingConfirmedAt(OffsetDateTime.now());s.setAttendanceNeedsReview(false);
+        s.setStatus(SessionStatus.COMPLETED);s.setAttendanceLocked(true);sessions.flush();
+        finalizePay();
+        call("PATCH","/admin/sessions/"+id+"/actual-tutor",body,admin,null)
+                .andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.errorCode").value("PAYROLL_FINALIZED"));
     }
     @Test void makeupIsPaidInMonthActuallyTaughtAndOriginalCancellationIsNotDeducted()throws Exception{
         var old=fixtures.lesson(f.classId(),f.month().minusMonths(1).atEndOfMonth(),12,f.tutor(),f.tutor(),f.student(),f.admin(),false);

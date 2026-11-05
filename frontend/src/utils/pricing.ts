@@ -20,14 +20,14 @@ export function enrollmentStatus(window: EnrollmentWindow, today: Date): Enrollm
   return today < window.starts ? "CLOSED" : "STARTED";
 }
 
-/** Câu ghi trên nhãn trạng thái, ví dụ "Đang mở · còn 21 ngày" */
+/** Câu ghi trên nhãn trạng thái, ví dụ "Đang mở - còn 21 ngày" */
 export function enrollmentStatusLabel(window: EnrollmentWindow, today: Date): string {
   switch (enrollmentStatus(window, today)) {
     case "UPCOMING":
       return `Mở từ ${formatDayMonth(window.opens)}`;
     case "OPEN": {
       const daysLeft = diffDays(today, window.deadline);
-      return daysLeft === 0 ? "Chốt hôm nay" : `Đang mở · còn ${daysLeft} ngày`;
+      return daysLeft === 0 ? "Chốt hôm nay" : `Đang mở - còn ${daysLeft} ngày`;
     }
     case "CLOSED":
       return "Đã chốt đăng ký";

@@ -3,6 +3,7 @@ package com.viettritutor.service.impl;
 import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.common.exception.ErrorCode;
 import com.viettritutor.dto.user.MeResponse;
+import com.viettritutor.dto.user.UnlinkGoogleRequest;
 import com.viettritutor.dto.user.UpdateMeRequest;
 import com.viettritutor.entity.StudentProfile;
 import com.viettritutor.entity.TutorProfile;
@@ -12,6 +13,7 @@ import com.viettritutor.repository.TutorProfileRepository;
 import com.viettritutor.repository.UserRepository;
 import com.viettritutor.service.UserProfileService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ public class UserProfileServiceImpl implements UserProfileService {
     private final UserRepository userRepository;
     private final StudentProfileRepository studentProfileRepository;
     private final TutorProfileRepository tutorProfileRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional(readOnly = true)
@@ -45,12 +48,18 @@ public class UserProfileServiceImpl implements UserProfileService {
             default -> null;
         };
 
+        boolean googleLinked = user.getGoogleId() != null;
+
         return new MeResponse(
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
+                user.getAvatar() != null
+                        ? "/api/v1/users/" + user.getId() + "/avatar"
+                        : null,
                 user.getRole(),
                 user.getCreatedAt(),
+                googleLinked,
                 profile
         );
 
@@ -100,6 +109,33 @@ public class UserProfileServiceImpl implements UserProfileService {
 
         user.setFullName(request.getFullName().trim());
         userRepository.save(user);
+        return getMyProfile(user);
+    }
+
+    @Override
+    @Transactional
+    public MeResponse unlinkGoogle(
+            User principal,
+            UnlinkGoogleRequest request
+    ) {
+        User user = userRepository.findById(principal.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getGoogleId() == null) {
+            throw new BusinessException(ErrorCode.GOOGLE_NOT_LINKED);
+        }
+
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            throw new BusinessException(ErrorCode.GOOGLE_UNLINK_NOT_ALLOWED);
+        }
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+        }
+
+        user.setGoogleId(null);
+        userRepository.save(user);
+
         return getMyProfile(user);
     }
 }

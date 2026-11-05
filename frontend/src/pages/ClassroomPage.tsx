@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { getSessionMeetingToken, getSessionMeetingLogs } from "../services/meeting";
 import { MeetingTokenResponse, MeetingSessionLogsResponse } from "../interfaces/api";
 import { useAuthStore } from "../stores/authStore";
+import { portalErrorMessage } from "../utils/errors";
+import { ConfirmDialog } from "@/components/dashboard/ConfirmDialog";
 
 export default function ClassroomPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -26,6 +28,9 @@ export default function ClassroomPage() {
   const screenVideoRef = useRef<HTMLVideoElement | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+  // Bản mới nhất của screenStream cho hàm dọn dẹp của effect
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  screenStreamRef.current = screenStream;
   const [mediaPermissionDenied, setMediaPermissionDenied] = useState(false);
 
   // In-class chat
@@ -69,7 +74,7 @@ export default function ClassroomPage() {
           setLoading(false);
         }
       })
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         if (isMounted) {
           const isMock = localStorage.getItem("vtt_preview_mode") === "true";
           if (isMock) {
@@ -86,7 +91,7 @@ export default function ClassroomPage() {
             });
             setLoading(false);
           } else {
-            setError(err?.message || "Không thể kết nối vào phòng học trực tuyến. Vui lòng kiểm tra quyền đăng ký của bạn.");
+            setError(portalErrorMessage(err, "Không thể kết nối vào phòng học trực tuyến. Vui lòng kiểm tra quyền đăng ký của bạn."));
             setLoading(false);
           }
         }
@@ -100,16 +105,20 @@ export default function ClassroomPage() {
   // Request browser WebRTC camera & microphone streams
   useEffect(() => {
     let active = true;
+    let acquired: MediaStream | null = null;
 
     if (meetingData && typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
       navigator.mediaDevices
         .getUserMedia({ video: true, audio: true })
         .then((stream) => {
-          if (active) {
-            setLocalStream(stream);
-            if (localVideoRef.current) {
-              localVideoRef.current.srcObject = stream;
-            }
+          if (!active) {
+            stream.getTracks().forEach((t) => t.stop());
+            return;
+          }
+          acquired = stream;
+          setLocalStream(stream);
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = stream;
           }
         })
         .catch((err) => {
@@ -122,12 +131,8 @@ export default function ClassroomPage() {
 
     return () => {
       active = false;
-      if (localStream) {
-        localStream.getTracks().forEach((t) => t.stop());
-      }
-      if (screenStream) {
-        screenStream.getTracks().forEach((t) => t.stop());
-      }
+      acquired?.getTracks().forEach((t) => t.stop());
+      screenStreamRef.current?.getTracks().forEach((t) => t.stop());
     };
   }, [meetingData]);
 
@@ -209,7 +214,7 @@ export default function ClassroomPage() {
     try {
       const data = await getSessionMeetingLogs(Number(sessionId));
       setSessionLogs(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to load session logs:", err);
     } finally {
       setLogsLoading(false);
@@ -282,16 +287,16 @@ export default function ClassroomPage() {
     setInputMsg("");
   };
 
-  const handleLeave = () => {
-    if (window.confirm("Bạn có chắc chắn muốn rời khỏi phòng học trực tuyến?")) {
-      if (localStream) {
-        localStream.getTracks().forEach((t) => t.stop());
-      }
-      if (screenStream) {
-        screenStream.getTracks().forEach((t) => t.stop());
-      }
-      navigate(-1);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const handleLeave = () => setConfirmLeave(true);
+  const leaveRoom = () => {
+    if (localStream) {
+      localStream.getTracks().forEach((t) => t.stop());
     }
+    if (screenStream) {
+      screenStream.getTracks().forEach((t) => t.stop());
+    }
+    navigate(-1);
   };
 
   if (loading) {
@@ -348,7 +353,7 @@ export default function ClassroomPage() {
           <div className="h-4 w-px bg-slate-700" />
           <div>
             <h1 className="text-sm font-bold text-slate-100 leading-tight">
-              {meetingData.courseTitle} — Buổi #{meetingData.sessionNumber}
+              {meetingData.courseTitle} — Buổi {meetingData.sessionNumber}
             </h1>
             <p className="text-xs text-slate-400">
               Phòng: <code className="text-indigo-400 font-mono">{meetingData.roomName}</code> • Vai trò:{" "}
@@ -776,6 +781,17 @@ export default function ClassroomPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmLeave}
+        tone="warning"
+        icon="logout"
+        title="Rời phòng học?"
+        message="Camera và micro sẽ tắt. Bạn có thể vào lại phòng học trong thời gian buổi học diễn ra."
+        confirmLabel="Rời phòng"
+        cancelLabel="Ở lại"
+        onClose={() => setConfirmLeave(false)}
+        onConfirm={leaveRoom}
+      />
     </div>
   );
 }

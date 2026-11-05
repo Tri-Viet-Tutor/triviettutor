@@ -10,6 +10,7 @@ import { LEAVE_STATUS } from "@/constants/labels";
 import { ROUTES } from "@/constants/routes";
 import { useAdminLeaveRequests } from "@/hooks/useAdminData";
 import type { LeaveRequestStatus } from "@/interfaces/api";
+import { displayCode } from "@/utils/classes";
 
 /** Số đơn mỗi trang */
 const PAGE_SIZE = 10;
@@ -58,7 +59,7 @@ export function AdminReschedulesPage() {
 
       {sessionId !== null && (
         <p className="mb-4 text-[14.5px] text-brand-muted">
-          Đang xem đơn của buổi học #{sessionId}.{" "}
+          Đang xem đơn của buổi học {displayCode("session", sessionId)}.{" "}
           <Link to={ROUTES.adminReschedules} className={PORTAL_TEXT_LINK}>
             Xem đơn của mọi buổi
           </Link>
@@ -72,7 +73,7 @@ export function AdminReschedulesPage() {
       ) : list.content.length === 0 ? (
         <PortalEmpty
           icon="inbox"
-          title={status === "PENDING" ? "Không có đơn nào đang chờ duyệt" : "Không có đơn nào"}
+          title={status === "PENDING" ? "Không có đơn nào đang chờ duyệt." : "Không có đơn nào."}
           description={status === "PENDING" ? "Đơn mới của học viên và gia sư sẽ hiện ở đây." : undefined}
         />
       ) : (

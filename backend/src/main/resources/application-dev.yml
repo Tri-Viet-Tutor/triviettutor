@@ -20,6 +20,8 @@ spring:
       client:
         registration:
           google:
+            # Placeholders keep dev startable without Google credentials (Spring rejects an
+            # empty client-id). Google login only works once the real values are set in .env.
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
             scope:

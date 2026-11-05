@@ -70,14 +70,12 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
         {course.title}
       </Text>
 
-      {/* Tutor info */}
+      {/* Môn và mã lớp (gia sư được phân công sau khi lớp chốt sĩ số nên chưa hiện) */}
       <View style={styles.tutorRow}>
-        <Ionicons name="person-circle-outline" size={18} color={BrandColors.muted} />
-        <Text style={styles.tutorName}>{course.tutor.fullName}</Text>
-        <View style={styles.ratingBadge}>
-          <Ionicons name="star" size={12} color="#F59E0B" />
-          <Text style={styles.ratingText}>{course.tutor.rating}</Text>
-        </View>
+        <Ionicons name="pricetag-outline" size={16} color={BrandColors.muted} />
+        <Text style={styles.tutorName}>
+          {course.subjectLabel} · {course.code}
+        </Text>
       </View>
 
       {/* Schedule Info */}
@@ -117,7 +115,9 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
       {/* Bottom Row: Tuition fee & CTA */}
       <View style={styles.bottomRow}>
         <View>
-          <Text style={styles.feeLabel}>Học phí khóa ({course.totalSessions} buổi):</Text>
+          <Text style={styles.feeLabel}>
+            Học phí ({course.totalSessions} buổi){course.discountRate ? ` · giảm ${Math.round(course.discountRate * 100)}%` : ''}:
+          </Text>
           <Text style={styles.feeValue}>{formatCurrency(course.tuitionFee)}</Text>
         </View>
 

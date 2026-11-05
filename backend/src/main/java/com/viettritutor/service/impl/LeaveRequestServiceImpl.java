@@ -10,6 +10,7 @@ import com.viettritutor.entity.User;
 import com.viettritutor.enums.ClassType;
 import com.viettritutor.enums.LearningScheduleStatus;
 import com.viettritutor.enums.LeaveRequestStatus;
+import com.viettritutor.enums.LeaveResolution;
 import com.viettritutor.enums.SessionChangeType;
 import com.viettritutor.enums.SessionStatus;
 import com.viettritutor.repository.LearningScheduleRepository;
@@ -118,10 +119,17 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         operations.requireAdmin(admin);
         Long sessionId = leaveRepository.findSessionId(requestId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LEAVE_REQUEST_NOT_FOUND));
-        Session session = operations.load(sessionId).session();
-        operations.lockSession(session);
+        var context = operations.loadAny(sessionId);
+        Session session = context.session();
+        operations.lockSessionRow(session);
         LeaveRequest request = operations.request(requestId, sessionId);
         operations.requirePending(request);
+        // A request that never changed the session (late or group student notice) only gets a decision, so it
+        // can still be rejected after the session has been taught or the class has closed.
+        if (request.isAffectsSession()) {
+            operations.requireOpenClass(context.classGroup());
+            operations.requireEditable(session);
+        }
         var before = operations.snapshot(session);
         request.setStatus(LeaveRequestStatus.REJECTED);
         request.setResolvedBy(admin.getId());
@@ -133,6 +141,26 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
             session.setStatus(operations.restoredStatus(session, request.getSessionStatusBefore()));
         }
         operations.audit(session, before, SessionChangeType.REJECT_LEAVE, admin, reason, requestId, null);
+        return LeaveRequestResponse.from(request, session.getStatus());
+    }
+
+    @Override
+    @Transactional
+    public LeaveRequestResponse excuse(Long requestId, String reason, User admin) {
+        operations.requireAdmin(admin);
+        Long sessionId = leaveRepository.findSessionId(requestId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LEAVE_REQUEST_NOT_FOUND));
+        var context = operations.loadAny(sessionId);
+        Session session = context.session();
+        operations.lockSessionRow(session);
+        LeaveRequest request = operations.request(requestId, sessionId);
+        operations.requirePending(request);
+        if (!"ROLE_STUDENT".equals(request.getRequesterRole()) || request.isLateNotice() || request.isAffectsSession()
+                || session.getStatus() == SessionStatus.CANCELLED) {
+            throw new BusinessException(ErrorCode.LEAVE_RESOLUTION_NOT_ALLOWED);
+        }
+        operations.approve(request, LeaveResolution.EXCUSED, admin, reason, null);
+        leaveRepository.flush();
         return LeaveRequestResponse.from(request, session.getStatus());
     }
 }

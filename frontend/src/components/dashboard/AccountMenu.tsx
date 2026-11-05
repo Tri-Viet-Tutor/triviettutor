@@ -2,14 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING as FOCUS } from "@/constants/classNames";
-import { nameInitial } from "@/utils/sessions";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import type { AccountMenuProps } from "@/interfaces/portal";
 
 /**
  * Nút avatar ở góc phải thanh trên; bấm vào sổ xuống menu tài khoản (Hồ sơ, Đăng xuất).
  * Đóng khi bấm ra ngoài, nhấn Esc hoặc chọn một mục.
  */
-export function AccountMenu({ fullName, roleName, email, profileTo, onLogout }: AccountMenuProps) {
+export function AccountMenu({ userId, fullName, roleName, email, profileTo, onLogout }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -49,12 +49,7 @@ export function AccountMenu({ fullName, roleName, email, profileTo, onLogout }: 
           open ? "border-brand-navy/40" : "border-brand-sandLine hover:border-brand-navy/40"
         } ${FOCUS}`}
       >
-        <span
-          aria-hidden="true"
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-orange to-[#F7C24A] text-[14px] font-extrabold text-brand-navyDeep"
-        >
-          {nameInitial(fullName)}
-        </span>
+        <UserAvatar userId={userId} name={fullName} size={32} />
         <span className="hidden min-w-0 flex-col text-left leading-tight sm:flex">
           <span className="max-w-[180px] truncate text-[14px] font-semibold text-brand-ink">{fullName}</span>
           <span className="text-[11.5px] font-medium text-brand-muted">{roleName}</span>
@@ -70,12 +65,7 @@ export function AccountMenu({ fullName, roleName, email, profileTo, onLogout }: 
         >
           {/* Thông tin tài khoản */}
           <div className="mb-1 flex items-center gap-3 rounded-xl bg-brand-sand/70 p-3">
-            <span
-              aria-hidden="true"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-orange to-[#F7C24A] text-[16px] font-extrabold text-brand-navyDeep"
-            >
-              {nameInitial(fullName)}
-            </span>
+            <UserAvatar userId={userId} name={fullName} size={40} />
             <span className="min-w-0 leading-tight">
               <span className="block truncate text-[14px] font-bold text-brand-ink">{fullName}</span>
               <span className="block truncate text-[12.5px] text-brand-muted">{email || roleName}</span>

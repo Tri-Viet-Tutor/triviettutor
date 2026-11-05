@@ -6,5 +6,5 @@ import { PortalLayout } from "@/layouts/PortalLayout";
  * Khung của mọi trang /tutor/* (đã được PrivateRoute + RoleRoute chặn theo vai trò ở AppRouter).
  */
 export function TutorLayout() {
-  return <PortalLayout areaLabel="Khu gia sư" homeTo={ROUTES.tutor} profileTo={ROUTES.tutorProfile} navItems={TUTOR_NAV} />;
+  return <PortalLayout areaLabel="Giảng viên" homeTo={ROUTES.tutor} profileTo={ROUTES.tutorProfile} navItems={TUTOR_NAV} />;
 }

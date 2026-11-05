@@ -5,6 +5,7 @@ import { SESSION_STATUS } from "@/constants/labels";
 import { formatDayMonth, parseIsoDate } from "@/utils/date";
 import { dayLabel, formatTimeRange } from "@/utils/sessions";
 import type { SessionRowProps } from "@/interfaces/portal";
+import { displayCode } from "@/utils/classes";
 
 /** Một buổi trong danh sách lịch học / lịch dạy; bấm để mở phần chi tiết (children) ngay bên dưới. */
 export function SessionRow({ session, open, onToggle, hasPendingLeave, badge, children }: SessionRowProps) {
@@ -32,7 +33,7 @@ export function SessionRow({ session, open, onToggle, hasPendingLeave, badge, ch
             {formatTimeRange(session)}
           </span>
           <span className="block truncate text-[14px] text-brand-muted">
-            Lớp #{session.classGroupId}, buổi {session.sessionNumber}
+            Lớp {displayCode("class", session.classGroupId)}, buổi {session.sessionNumber}
             {session.originalSessionId !== null && " (học bù)"}
           </span>
           {/* Điện thoại: nhãn trạng thái nằm dưới để không chèn mất giờ học */}

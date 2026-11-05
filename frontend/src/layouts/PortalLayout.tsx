@@ -6,6 +6,8 @@ import { ROLE_NAME } from "@/constants/labels";
 import { ROUTES } from "@/constants/routes";
 import { AccountMenu } from "@/components/dashboard/AccountMenu";
 import { PortalNav } from "@/components/dashboard/PortalNav";
+import { ChatWidget } from "@/components/assistant/ChatWidget";
+import { ClickSpark } from "@/components/motion";
 import { formatLongDate } from "@/utils/sessions";
 import { startOfToday } from "@/utils/date";
 import { useAuthStore } from "@/stores/authStore";
@@ -34,6 +36,11 @@ export function PortalLayout({ areaLabel, homeTo, profileTo, navItems }: PortalL
   return (
     <div className={`min-h-screen font-sans text-brand-ink antialiased ${PORTAL_SURFACE}`}>
       <PortalNav items={navItems} label={areaLabel} homeTo={homeTo} />
+      {/* Bóng gáy sách đổ lên trang giấy bên cạnh */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-y-0 left-[228px] z-30 hidden w-5 bg-gradient-to-r from-[#082A66]/20 to-transparent lg:block"
+      />
 
       <div className="min-h-screen lg:pl-[228px]">
         {/* Thanh trên: điện thoại có logo; máy tính chỉ có ngày hôm nay và tài khoản */}
@@ -52,6 +59,7 @@ export function PortalLayout({ areaLabel, homeTo, profileTo, navItems }: PortalL
             </p>
 
             <AccountMenu
+              userId={user?.id}
               fullName={user?.fullName ?? ""}
               roleName={roleName}
               email={user?.email}
@@ -68,6 +76,9 @@ export function PortalLayout({ areaLabel, homeTo, profileTo, navItems }: PortalL
           </main>
         </div>
       </div>
+      <ChatWidget placement="portal" />
+      {/* Hiệu ứng tia sáng khi bấm chuột, giống các trang công khai (tự tắt nếu máy bật giảm chuyển động) */}
+      <ClickSpark />
     </div>
   );
 }

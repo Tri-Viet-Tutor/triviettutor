@@ -66,4 +66,13 @@ public class LeaveRequestController {
                                                    @CurrentUser User admin) {
         return ApiResponse.ok(leaveService.reject(requestId, input.reason(), admin));
     }
+
+    @PatchMapping("/admin/leave-requests/{requestId}/excuse")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Approve a student's early leave as excused: the student is exempt from attendance for that session")
+    public ApiResponse<LeaveRequestResponse> excuse(@PathVariable @Min(1) Long requestId,
+                                                   @Valid @RequestBody LeaveRequestInput input,
+                                                   @CurrentUser User admin) {
+        return ApiResponse.ok(leaveService.excuse(requestId, input.reason(), admin));
+    }
 }

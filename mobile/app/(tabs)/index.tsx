@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -14,21 +14,40 @@ import { AppHeader } from '@/components/common/AppHeader';
 import { CourseCard } from '@/components/common/CourseCard';
 import { SessionCard } from '@/components/common/SessionCard';
 import { BrandColors } from '@/constants/Colors';
-import { CENTER_INFO, MOCK_COURSES, MOCK_SESSIONS, MOCK_TUTORS } from '@/constants/data';
 import { useAuth } from '@/services/authContext';
-import { GradeLevel } from '@/types';
+import { fetchOpenClasses } from '@/services/catalog';
+import { fetchMySessions } from '@/services/sessions';
+import { CourseItem, GradeLevel, SessionItem } from '@/types';
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const [selectedGrade, setSelectedGrade] = useState<GradeLevel | 'ALL'>('ALL');
 
-  // Next upcoming session
-  const nextSession = MOCK_SESSIONS.find((s) => s.status === 'UPCOMING');
+  const [courses, setCourses] = useState<CourseItem[]>([]);
+  const [coursesError, setCoursesError] = useState(false);
+  const [nextSession, setNextSession] = useState<SessionItem | undefined>();
 
-  const filteredCourses =
-    selectedGrade === 'ALL'
-      ? MOCK_COURSES
-      : MOCK_COURSES.filter((c) => c.gradeLevel === selectedGrade);
+  // Lớp đang mở (công khai) và buổi học sắp tới của tài khoản đang đăng nhập
+  useEffect(() => {
+    fetchOpenClasses()
+      .then((items) => {
+        setCourses(items);
+        setCoursesError(false);
+      })
+      .catch(() => setCoursesError(true));
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setNextSession(undefined);
+      return;
+    }
+    fetchMySessions()
+      .then((items) => setNextSession(items.find((s) => s.status === 'UPCOMING' || s.status === 'IN_PROGRESS')))
+      .catch(() => setNextSession(undefined));
+  }, [user]);
+
+  const filteredCourses = (selectedGrade === 'ALL' ? courses : courses.filter((c) => c.gradeLevel === selectedGrade)).slice(0, 5);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -136,7 +155,7 @@ export default function HomeScreen() {
               <Text style={styles.sectionTitle}>Khóa học đang mở đăng ký</Text>
             </View>
             <TouchableOpacity onPress={() => router.push('/(tabs)/courses')}>
-              <Text style={styles.seeAllText}>Tất cả ({MOCK_COURSES.length})</Text>
+              <Text style={styles.seeAllText}>Tất cả ({courses.length})</Text>
             </TouchableOpacity>
           </View>
 
@@ -170,47 +189,13 @@ export default function HomeScreen() {
           </View>
 
           {/* Course List */}
-          {filteredCourses.map((course) => (
-            <CourseCard key={course.id} course={course} />
-          ))}
-        </View>
-
-        {/* Featured Tutors */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleRow}>
-              <Ionicons name="ribbon" size={18} color={BrandColors.navy} />
-              <Text style={styles.sectionTitle}>Gia sư tiêu biểu Trung tâm</Text>
-            </View>
-          </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tutorScroll}>
-            {Object.values(MOCK_TUTORS).map((tutor) => (
-              <View key={tutor.id} style={styles.tutorCard}>
-                <View style={styles.tutorAvatarBox}>
-                  <Ionicons name="person" size={28} color={BrandColors.navy} />
-                </View>
-                <Text style={styles.tutorCardName}>{tutor.fullName}</Text>
-                <View style={styles.tutorRatingRow}>
-                  <Ionicons name="star" size={12} color="#F59E0B" />
-                  <Text style={styles.tutorRatingText}>{tutor.rating} ({tutor.reviewCount} đánh giá)</Text>
-                </View>
-                <Text style={styles.tutorBio} numberOfLines={2}>
-                  {tutor.bio}
-                </Text>
-                <View style={styles.tutorTags}>
-                  {tutor.specialties.slice(0, 2).map((s, idx) => (
-                    <Text key={idx} style={styles.tutorTag}>
-                      {s}
-                    </Text>
-                  ))}
-                </View>
-              </View>
-            ))}
-          </ScrollView>
+          {coursesError ? (
+            <Text style={styles.commitText}>Không tải được danh sách lớp. Mở tab Khóa học để thử lại.</Text>
+          ) : filteredCourses.length === 0 ? (
+            <Text style={styles.commitText}>Hiện chưa có lớp nào mở đăng ký cho khối này.</Text>
+          ) : (
+            filteredCourses.map((course) => <CourseCard key={course.id} course={course} />)
+          )}
         </View>
 
         {/* Commitment Banner */}

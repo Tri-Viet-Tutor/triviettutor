@@ -32,6 +32,7 @@ public class AttendanceServiceImpl implements AttendanceService {
     private final SessionOperationSupport operations;
     private final Optional<PayrollGuard> payrollGuard;
     private final EntityManager entityManager;
+    private final UserRepository users;
     private final Clock clock;
 
     @Override
@@ -79,6 +80,12 @@ public class AttendanceServiceImpl implements AttendanceService {
             writeRecord(session, record, item.status(), item.note(), item.arrivedAt(), actor,
                     auditReason(input.reason(), "Manual attendance submission"), AttendanceChangeType.RECORD);
         }
+        for (Long studentId : excusedStudents(sessionId)) {
+            if (submitted.contains(studentId) || existing.containsKey(studentId) || !roster.contains(studentId)) continue;
+            AttendanceRecord record = AttendanceRecord.builder().sessionId(sessionId).studentId(studentId).build();
+            writeRecord(session, record, AttendanceStatus.EXCUSED, null, null, actor,
+                    "Excused by approved student leave", AttendanceChangeType.RECORD);
+        }
         if (!isAdmin(actor) || Boolean.TRUE.equals(input.teachingConfirmed())) {
             confirmTeaching(session, actor, auditReason(input.reason(), "Tutor attested teaching through manual attendance"));
         }
@@ -121,6 +128,29 @@ public class AttendanceServiceImpl implements AttendanceService {
         AttendanceRecord record = records.findById(recordId)
                 .filter(item -> item.getSessionId().equals(sessionId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.ATTENDANCE_NOT_FOUND));
+        return applyCorrection(session, record, input, admin);
+    }
+
+    @Override
+    @Transactional
+    public AttendanceRecordResponse correctStudent(Long sessionId, Long studentId, AttendanceCorrection input, User admin) {
+        operations.requireAdmin(admin);
+        Session session = lock(sessionId);
+        requirePayrollEditable(session);
+        requireRecordableState(session);
+        if (!effectivelyLocked(session)) throw new BusinessException(ErrorCode.ATTENDANCE_NOT_LOCKED);
+        if (!rosterIds(session).contains(studentId)) throw new BusinessException(ErrorCode.ATTENDANCE_STUDENT_NOT_ENROLLED);
+        // A locked session may never have had a submission; freeze its roster before the first record.
+        captureRoster(session);
+        AttendanceRecord record = records.findBySessionIdOrderByStudentId(sessionId).stream()
+                .filter(item -> item.getStudentId().equals(studentId)).findFirst()
+                .orElseGet(() -> AttendanceRecord.builder().sessionId(sessionId).studentId(studentId).build());
+        return applyCorrection(session, record, input, admin);
+    }
+
+    private AttendanceRecordResponse applyCorrection(Session session, AttendanceRecord record, AttendanceCorrection input,
+                                                     User admin) {
+        requireReason(input.reason());
         validateArrival(session, input.status(), input.arrivedAt());
         validateExcused(session, record.getStudentId(), input.status(), admin, input.reason());
         boolean previousLocked = session.isAttendanceLocked();
@@ -143,6 +173,18 @@ public class AttendanceServiceImpl implements AttendanceService {
     public boolean autoLock(Long sessionId) {
         Session session = lock(sessionId);
         if (session.isAttendanceAutoProcessed() || !deadlinePassed(session)) return false;
+        if (payrollGuard.map(guard -> guard.isDateFinalized(session.getSessionDate())).orElse(false)) {
+            // Finalized payroll is immutable: lock and stop retrying this session instead of failing every run.
+            boolean previousLocked = session.isAttendanceLocked();
+            session.setAttendanceAutoProcessed(true);
+            session.setAttendanceLocked(true);
+            if (session.getAttendanceLockedAt() == null) session.setAttendanceLockedAt(OffsetDateTime.now(clock));
+            if (!previousLocked) {
+                auditSession(session, false, session.getStatus(), AttendanceChangeType.AUTO_LOCK, null,
+                        "Attendance editing deadline reached; payroll period already finalized");
+            }
+            return false;
+        }
         requirePayrollEditable(session);
         boolean previousLocked = session.isAttendanceLocked();
         SessionStatus previousStatus = session.getStatus();
@@ -192,7 +234,8 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     private void requireRecordable(Session session) {
         requireRecordableState(session);
-        if (session.getStatus() == SessionStatus.COMPLETED || clock.instant().isBefore(start(session).toInstant())) {
+        // COMPLETED stays editable: callers enforce the lock and the tutor's end+24h deadline (BR-04.33).
+        if (clock.instant().isBefore(start(session).toInstant())) {
             throw new BusinessException(ErrorCode.SESSION_NOT_IN_PROGRESS);
         }
     }
@@ -353,6 +396,20 @@ public class AttendanceServiceImpl implements AttendanceService {
                 onlyStudentId == null && session.isAttendanceNeedsReview(), visible,
                 visible.stream().filter(id -> !recorded.contains(id)).toList(),
                 all.stream().filter(record -> onlyStudentId == null || record.getStudentId().equals(onlyStudentId))
-                        .map(record -> AttendanceRecordResponse.from(record, locked)).toList());
+                        .map(record -> AttendanceRecordResponse.from(record, locked)).toList(),
+                studentNames(visible),
+                excusedStudents(session.getId()).stream().filter(visible::contains).toList());
+    }
+
+    private List<Long> excusedStudents(Long sessionId) {
+        return leaves.findBySessionIdAndStatusOrderByRequestedAtAscIdAsc(sessionId, LeaveRequestStatus.APPROVED).stream()
+                .filter(request -> "ROLE_STUDENT".equals(request.getRequesterRole())
+                        && request.getResolution() == LeaveResolution.EXCUSED)
+                .map(LeaveRequest::getRequesterId).distinct().toList();
+    }
+
+    private Map<Long, String> studentNames(List<Long> ids) {
+        if (ids.isEmpty()) return Map.of();
+        return users.findAllById(ids).stream().collect(Collectors.toMap(User::getId, User::getFullName));
     }
 }

@@ -3,7 +3,9 @@ package com.viettritutor.controller;
 import com.viettritutor.common.api.ApiResponse;
 import com.viettritutor.common.api.PageResponse;
 import com.viettritutor.dto.catalog.CourseRequest;
+import com.viettritutor.dto.catalog.CourseActiveRequest;
 import com.viettritutor.dto.catalog.CourseResponse;
+import com.viettritutor.dto.catalog.CourseSummaryResponse;
 import com.viettritutor.enums.GradeLevel;
 import com.viettritutor.service.AdminCourseService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,14 +34,22 @@ public class CourseController {
     }
 
     @GetMapping
-    @Operation(summary = "List courses", description = "Includes active and hidden courses. Optional filters combine with AND. Page starts at 0; size is 1-100.")
+    @Operation(summary = "List courses", description = "Includes active and hidden courses. Optional filters combine with AND; "
+            + "q matches part of the course name, case-insensitive. Page starts at 0; size is 1-100.")
     public ApiResponse<PageResponse<CourseResponse>> list(
             @RequestParam(required = false) String subject,
             @RequestParam(required = false) GradeLevel gradeLevel,
             @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.ok(adminCourseService.list(subject, gradeLevel, active, page, size));
+        return ApiResponse.ok(adminCourseService.list(subject, gradeLevel, active, q, page, size));
+    }
+
+    @GetMapping("/summary")
+    @Operation(summary = "Count courses by sale status", description = "Total, active and inactive course counts, ignoring list filters.")
+    public ApiResponse<CourseSummaryResponse> summary() {
+        return ApiResponse.ok(adminCourseService.summary());
     }
 
     @PutMapping("/{courseId}")
@@ -47,6 +57,22 @@ public class CourseController {
     public ApiResponse<CourseResponse> update(@PathVariable @Positive Long courseId,
                                                @Valid @RequestBody CourseRequest request) {
         return ApiResponse.ok(adminCourseService.update(courseId, request));
+    }
+
+    @PutMapping("/{courseId}/active")
+    @Operation(summary = "Set course sale status", description = "Sets active to the given value. Idempotent: repeating the same "
+            + "request changes nothing. Preferred over the toggle endpoint.")
+    public ApiResponse<CourseResponse> setActive(@PathVariable @Positive Long courseId,
+                                                 @Valid @RequestBody CourseActiveRequest request) {
+        return ApiResponse.ok(adminCourseService.setActive(courseId, request.active()));
+    }
+
+    @DeleteMapping("/{courseId}")
+    @Operation(summary = "Delete a course that was never used",
+            description = "Only courses without any class, order or payment. Otherwise 409 COURSE_IN_USE: stop selling it instead.")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable @Positive Long courseId) {
+        adminCourseService.delete(courseId);
     }
 
     @PatchMapping("/{courseId}/toggle")

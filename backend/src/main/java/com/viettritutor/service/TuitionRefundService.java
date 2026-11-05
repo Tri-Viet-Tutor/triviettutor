@@ -14,12 +14,14 @@ public class TuitionRefundService {
     private final PaymentRepository payments;
     private final EnrollmentRefundService mock;
     private final VnpayRefundService vnpay;
+    private final PaymentReadService reads;
 
     public EnrollmentResponse cancel(Long id, String reason, User student) {
         Enrollment enrollment = find(id);
-        if (!isVnpay(enrollment)) return mock.cancel(id, reason, student);
-        vnpay.refund(null, id, new RefundRequest(reason, 100), "cancel-enrollment-" + id, student, true);
-        return EnrollmentResponse.from(find(id));
+        if (isVnpay(enrollment)) vnpay.refund(null, id, new RefundRequest(reason, 100), "cancel-enrollment-" + id, student, true);
+        else mock.cancel(id, reason, student);
+        // A VNPay enrollment stays ACTIVE until the provider confirms the refund; refundStatus tells the student so.
+        return reads.enrollment(find(id));
     }
 
     public RefundResponse refund(Long id, RefundRequest input, String key, User admin) {

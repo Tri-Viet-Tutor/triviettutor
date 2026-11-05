@@ -14,6 +14,9 @@ const AUTH_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   INVALID_RESET_TOKEN: "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã qua sử dụng. Vui lòng gửi lại yêu cầu.",
   RESET_TOKEN_EXPIRED: "Liên kết đặt lại mật khẩu đã hết hạn (sau 15 phút). Vui lòng gửi lại yêu cầu.",
   EMAIL_SEND_FAILED: "Chưa gửi được email. Vui lòng thử lại sau ít phút.",
+  OTP_ATTEMPTS_EXCEEDED: "Bạn đã nhập sai mã quá 5 lần. Hãy bấm gửi lại mã để nhận mã mới.",
+  OTP_RESEND_TOO_SOON: "Mã vừa được gửi. Vui lòng chờ khoảng 1 phút rồi gửi lại.",
+  ACCOUNT_LOCKED: "Tài khoản đã bị khóa. Vui lòng liên hệ trung tâm để được hỗ trợ.",
   USER_NOT_FOUND: "Không tìm thấy tài khoản với email này.",
   VALIDATION_ERROR: "Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.",
   // (Đề xuất) backend chỉ cho tạo tài khoản khi email đã có đơn thanh toán xong
@@ -23,6 +26,20 @@ const AUTH_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
 /** Đổi lỗi của một lời gọi API thành câu báo cho người dùng; mất kết nối thì báo riêng. */
 export function authErrorMessage(error: unknown, fallback = "Có lỗi xảy ra. Vui lòng thử lại."): string {
   return apiErrorMessage(error, AUTH_ERROR_TEXT, fallback);
+}
+
+/** Câu báo cho `?error=` mà backend gắn khi đăng nhập Google không thành công */
+const GOOGLE_LOGIN_ERROR_TEXT: Record<string, string> = {
+  GOOGLE_EMAIL_NOT_VERIFIED: "Email Google của bạn chưa được Google xác minh.",
+  ACCOUNT_NOT_VERIFIED: "Email này đã đăng ký nhưng chưa kích hoạt. Hãy đăng nhập bằng mật khẩu và nhập mã xác thực trước.",
+  ACCOUNT_LOCKED: "Tài khoản đã bị khóa. Vui lòng liên hệ trung tâm để được hỗ trợ.",
+  GOOGLE_ACCOUNT_CONFLICT: "Tài khoản Google này không khớp với tài khoản đã liên kết trước đó.",
+  GOOGLE_LOGIN_FAILED: "Đăng nhập bằng Google chưa thành công. Vui lòng thử lại.",
+};
+
+/** Đổi mã `?error=` của trang đăng nhập thành câu báo; mã lạ dùng câu chung */
+export function googleLoginErrorMessage(code: string): string {
+  return GOOGLE_LOGIN_ERROR_TEXT[code] ?? GOOGLE_LOGIN_ERROR_TEXT.GOOGLE_LOGIN_FAILED;
 }
 
 /** Mã lỗi của lời gọi API (nếu backend có trả về) */
@@ -48,6 +65,8 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   SESSION_ALREADY_CANCELLED: "Buổi học này đã bị hủy từ trước.",
   MAKEUP_ALREADY_EXISTS: "Buổi này đã có buổi học bù.",
   INVALID_MAKEUP_TIME: "Buổi học bù phải ở tương lai và giờ kết thúc sau giờ bắt đầu.",
+  SESSION_ALREADY_TAUGHT: "Buổi này đã có điểm danh hoặc xác nhận dạy nên không hủy hay dùng lại được.",
+  MEETING_NOT_AVAILABLE: "Phòng học chỉ mở từ 15 phút trước giờ học đến khi buổi học kết thúc (buổi đã hủy hoặc đã xong thì không vào được).",
   STUDENT_SCHEDULE_CONFLICT: "Giờ này trùng lịch học khác của học viên trong lớp.",
   // Điểm danh
   ATTENDANCE_LOCKED: "Điểm danh đã khóa nên không sửa được nữa.",
@@ -61,13 +80,17 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   ATTENDANCE_NOT_FOUND: "Không tìm thấy bản ghi điểm danh.",
   PAYROLL_FINALIZED: "Buổi này đã nằm trong bảng lương đã chốt nên không sửa được.",
   // Lịch rảnh, phân công
-  INVALID_AVAILABILITY: "Khung giờ rảnh chưa hợp lệ (giờ bắt đầu phải trước giờ kết thúc và không chồng nhau).",
+  INVALID_AVAILABILITY: "Khung giờ rảnh chưa hợp lệ (giờ bắt đầu phải trước giờ kết thúc và các khung không chồng nhau).",
   SCHEDULE_CONFLICT: "Gia sư này bị trùng lịch dạy ở lớp khác.",
   INVALID_TUTOR: "Người được chọn không phải gia sư.",
   USER_NOT_TUTOR: "Người dùng này không phải gia sư.",
   USER_NOT_FOUND: "Không tìm thấy người dùng.",
   CLASS_NOT_FOUND: "Không tìm thấy lớp này.",
   CLASS_NOT_ASSIGNABLE: "Lớp này chưa sẵn sàng để phân công gia sư.",
+  CLASS_TUTOR_REQUIRED: "Lớp chưa có gia sư. Hãy phân công gia sư trước khi mở đăng ký.",
+  CLASS_IN_USE: "Lớp đã có học viên, thanh toán hoặc buổi dạy nên không xóa được. Hãy hủy lớp thay vì xóa.",
+  USER_IN_USE: "Tài khoản đã có lớp học, thanh toán, ví hoặc buổi dạy nên không xóa được.",
+  COURSE_IN_USE: "Khóa đã có lớp hoặc đơn hàng nên không xóa được. Hãy chọn Ngừng bán thay vì xóa.",
   CLASS_ALREADY_ASSIGNED: "Lớp này đã có gia sư chính.",
   ASSIGNMENT_NOT_FOUND: "Lớp này chưa có gia sư nào được phân công.",
   TUTOR_ALREADY_ASSIGNED: "Gia sư này đang dạy lớp / buổi này rồi.",
@@ -78,6 +101,7 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   INVALID_DATE_RANGE: "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.",
   INVALID_PAGINATION: "Số trang không hợp lệ.",
   INVALID_ROLE_FILTER: "Vai trò lọc không hợp lệ.",
+  CANNOT_LOCK_SELF: "Bạn không thể tự khóa tài khoản của mình.",
   // Khóa học, lớp, ghi danh, bảng lương
   COURSE_NOT_FOUND: "Không tìm thấy khóa học này.",
   INVALID_STATUS_TRANSITION: "Không chuyển được lớp sang trạng thái này từ trạng thái hiện tại.",
@@ -87,6 +111,27 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   ENROLLMENT_NOT_FOUND: "Không tìm thấy ghi danh này.",
   REFUND_NOT_ALLOWED: "Ghi danh này không hủy / hoàn tiền được theo quy định.",
   REFUND_ALREADY_SETTLED: "Ghi danh này đã được xử lý hoàn tiền.",
+  // Bài tập, bài nộp, chấm điểm
+  HOMEWORK_NOT_FOUND: "Không tìm thấy bài tập này.",
+  HOMEWORK_LOCKED: "Bài tập đã đóng nên không sửa hay mở lại được.",
+  HOMEWORK_PUBLISHED_EDIT_RESTRICTED: "Bài đã công bố chỉ được lùi hạn nộp hoặc tăng điểm tối đa.",
+  HOMEWORK_DEADLINE_PASSED: "Đã quá hạn nộp của bài tập này.",
+  HOMEWORK_INVALID_DEADLINE: "Hạn nộp phải ở tương lai.",
+  HOMEWORK_NOT_ACCEPTING: "Bài tập này hiện không nhận bài nộp.",
+  HOMEWORK_SESSION_CANCELLED: "Buổi học đã bị hủy.",
+  LEARNING_VERSION_CONFLICT: "Dữ liệu vừa được thay đổi ở nơi khác. Hãy tải lại rồi thử lại.",
+  INVALID_RESOURCE_URL: "Đường dẫn tài liệu phải là link https hợp lệ.",
+  SUBMISSION_NOT_FOUND: "Không tìm thấy bài nộp này.",
+  SUBMISSION_NOT_STARTED: "Hãy bấm bắt đầu làm bài trước khi lưu hoặc nộp.",
+  SUBMISSION_LOCKED: "Bài làm ở trạng thái hiện tại không thực hiện được thao tác này.",
+  EMPTY_SUBMISSION: "Hãy nhập bài làm hoặc dán link bài làm trước khi nộp.",
+  SUBMISSION_NOT_SUBMITTED: "Chỉ chấm được bài đã nộp.",
+  INVALID_HOMEWORK_SCORE: "Điểm không được vượt quá điểm tối đa của bài.",
+  GRADING_REASON_REQUIRED: "Cần nhập lý do khi sửa điểm đã chấm.",
+  // Đánh giá gia sư
+  RATING_NOT_FOUND: "Không tìm thấy đánh giá này.",
+  RATING_ALREADY_EXISTS: "Bạn đã đánh giá gia sư này rồi. Hãy tải lại để sửa đánh giá cũ.",
+  RATING_NOT_ELIGIBLE: "Bạn chỉ đánh giá được gia sư dạy lớp bạn đang học.",
 };
 
 /** Đổi lỗi của một lời gọi API thành câu báo cho người dùng; mất kết nối thì báo riêng. */

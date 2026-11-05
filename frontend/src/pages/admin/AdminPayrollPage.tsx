@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
+import { PayrollReconciliation } from "@/components/dashboard/PayrollReconciliation";
 import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
 import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/PortalState";
@@ -16,6 +17,7 @@ import { useRefreshAdmin } from "@/hooks/useAdminData";
 import { finalizePayroll } from "@/services/managementService";
 import { formatVnd } from "@/utils/currency";
 import { portalErrorMessage } from "@/utils/errors";
+import { displayCode } from "@/utils/classes";
 
 /** Tháng trước của (năm, tháng) */
 function shiftMonth(year: number, month: number, delta: number) {
@@ -29,7 +31,7 @@ function newIdempotencyKey(): string {
 }
 
 /**
- * Bảng lương tháng của gia sư: lương cứng + thù lao theo buổi hợp lệ, các buổi bị hủy / dạy thay / chưa chốt,
+ * Bảng lương tháng của gia sư: lương cứng + thù lao theo buổi hợp lệ, các buổi bị hủy / được dạy thay / chưa chốt,
  * và nút chốt bảng lương khi không còn buổi nào chặn.
  * API: GET /admin/payroll/{year}/{month}, POST /admin/payroll/{year}/{month}/finalize (kèm Idempotency-Key).
  */
@@ -39,6 +41,8 @@ export function AdminPayrollPage() {
   const [period, setPeriod] = useState(() => shiftMonth(now.getFullYear(), now.getMonth() + 1, -1));
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Gia sư đang mở danh sách buổi dạy
+  const [expanded, setExpanded] = useState<number | null>(null);
   const payroll = usePayroll(period.year, period.month);
   const refresh = useRefreshAdmin();
   const isFutureNext = (() => {
@@ -153,7 +157,7 @@ export function AdminPayrollPage() {
                   <span className="font-mono">
                     {payroll.data.blockingSessionIds
                       .slice(0, 8)
-                      .map((id) => `#${id}`)
+                      .map((id) => displayCode("session", id))
                       .join(", ")}
                     {payroll.data.blockingSessionIds.length > 8 && "…"}
                   </span>
@@ -168,7 +172,7 @@ export function AdminPayrollPage() {
           {payroll.data.lines.length === 0 ? (
             <PortalEmpty
               icon="receipt_long"
-              title="Tháng này chưa có dòng lương nào"
+              title="Tháng này chưa có dòng lương nào."
               description="Chưa có gia sư nào dạy buổi học trong tháng đã chọn."
             />
           ) : (
@@ -182,33 +186,51 @@ export function AdminPayrollPage() {
                       <th className="px-3 py-3 text-right font-bold">Thù lao / buổi</th>
                       <th className="px-3 py-3 text-center font-bold">Hợp lệ</th>
                       <th className="px-3 py-3 text-center font-bold">Hủy</th>
-                      <th className="px-3 py-3 text-center font-bold">Dạy thay</th>
+                      <th className="px-3 py-3 text-center font-bold">Được dạy thay</th>
                       <th className="px-3 py-3 text-center font-bold">Chưa chốt</th>
                       <th className="px-5 py-3 text-right font-bold">Thực nhận</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-brand-sandLine">
                     {payroll.data.lines.map((line) => (
-                      <tr key={line.tutorId} className="hover:bg-brand-tint/40">
-                        <td className="px-5 py-3.5">
-                          <p className="font-semibold text-brand-ink">{line.tutorName}</p>
-                          <p className="text-[12.5px] text-brand-muted">Mã #{line.tutorId}</p>
-                        </td>
-                        <td className="px-3 py-3.5 text-right tabular-nums">{formatVnd(line.baseSalary)}</td>
-                        <td className="px-3 py-3.5 text-right tabular-nums">{formatVnd(line.sessionRate)}</td>
-                        <td className="px-3 py-3.5 text-center font-semibold tabular-nums text-emerald-700">{line.validSessions}</td>
-                        <td className="px-3 py-3.5 text-center tabular-nums text-brand-muted">{line.cancelledSessions}</td>
-                        <td className="px-3 py-3.5 text-center tabular-nums text-brand-muted">{line.substitutedOutSessions}</td>
-                        <td
-                          className={`px-3 py-3.5 text-center tabular-nums ${line.unfinalizedSessions > 0 ? "font-bold text-red-600" : "text-brand-muted"}`}
-                        >
-                          {line.unfinalizedSessions}
-                        </td>
-                        <td className="px-5 py-3.5 text-right">
-                          <p className="font-extrabold tabular-nums text-brand-navy">{formatVnd(line.totalPay)}</p>
-                          <p className="text-[12px] text-brand-muted tabular-nums">thù lao {formatVnd(line.sessionPay)}</p>
-                        </td>
-                      </tr>
+                      <Fragment key={line.tutorId}>
+                        <tr className="hover:bg-brand-tint/40">
+                          <td className="px-5 py-3.5">
+                            <p className="font-semibold text-brand-ink">{line.tutorName}</p>
+                            <p className="text-[12.5px] text-brand-muted">Mã {displayCode("tutor", line.tutorId)}</p>
+                            <button
+                              type="button"
+                              aria-expanded={expanded === line.tutorId}
+                              onClick={() => setExpanded(expanded === line.tutorId ? null : line.tutorId)}
+                              className={`mt-0.5 inline-flex items-center gap-0.5 text-[12.5px] ${PORTAL_TEXT_LINK}`}
+                            >
+                              <Icon name={expanded === line.tutorId ? "expand_less" : "expand_more"} className="text-[16px]" />
+                              {expanded === line.tutorId ? "Ẩn các buổi" : "Xem các buổi"}
+                            </button>
+                          </td>
+                          <td className="px-3 py-3.5 text-right tabular-nums">{formatVnd(line.baseSalary)}</td>
+                          <td className="px-3 py-3.5 text-right tabular-nums">{formatVnd(line.sessionRate)}</td>
+                          <td className="px-3 py-3.5 text-center font-semibold tabular-nums text-emerald-700">{line.validSessions}</td>
+                          <td className="px-3 py-3.5 text-center tabular-nums text-brand-muted">{line.cancelledSessions}</td>
+                          <td className="px-3 py-3.5 text-center tabular-nums text-brand-muted">{line.substitutedOutSessions}</td>
+                          <td
+                            className={`px-3 py-3.5 text-center tabular-nums ${line.unfinalizedSessions > 0 ? "font-bold text-red-600" : "text-brand-muted"}`}
+                          >
+                            {line.unfinalizedSessions}
+                          </td>
+                          <td className="px-5 py-3.5 text-right">
+                            <p className="font-extrabold tabular-nums text-brand-navy">{formatVnd(line.totalPay)}</p>
+                            <p className="text-[12px] text-brand-muted tabular-nums">thù lao {formatVnd(line.sessionPay)}</p>
+                          </td>
+                        </tr>
+                        {expanded === line.tutorId && (
+                          <tr className="bg-brand-sand/40">
+                            <td colSpan={8} className="px-5 py-3.5">
+                              <PayrollReconciliation summary={line.reconciliation} />
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     ))}
                   </tbody>
                   <tfoot>

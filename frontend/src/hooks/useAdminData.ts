@@ -1,7 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ROLE_NAME } from "@/constants/labels";
 import type { AdminLeaveRequestsQuery, AdminSessionsQuery, AdminUsersQuery, Role } from "@/interfaces/api";
+import { useAdminClasses } from "@/hooks/useManagementData";
 import { fetchAdminLeaveRequests, fetchAdminSessions, fetchAdminUsers, fetchSession } from "@/services/admin";
+import { displayCode } from "@/utils/classes";
 
 /** Khóa cache của khu quản trị — tất cả nằm dưới "admin" nên sau một thao tác chỉ cần làm mới cả nhóm này */
 export const adminKeys = {
@@ -11,6 +13,8 @@ export const adminKeys = {
   session: (sessionId: number) => ["admin", "session", sessionId] as const,
   leaveRequests: (query: AdminLeaveRequestsQuery) => ["admin", "leave-requests", query] as const,
   availableTutors: (classId: number) => ["admin", "available-tutors", classId] as const,
+  substituteTutors: (sessionId: number) => ["admin", "substitute-tutors", sessionId] as const,
+  tutorBoard: (from: string, to: string) => ["admin", "tutor-board", from, to] as const,
 };
 
 /** Danh sách người dùng (có phân trang); giữ dữ liệu cũ trong lúc tải trang mới để danh sách không nhảy */
@@ -37,6 +41,22 @@ export function useAdminSession(sessionId: number | null) {
   });
 }
 
+/**
+ * Có nên mời xếp buổi bù cho buổi gốc đã hủy không: lớp chưa đóng (hoàn thành / hủy / không mở được)
+ * và buổi gốc chưa có buổi học bù "sống" (chưa bị hủy). Trả `undefined` khi đang tải hoặc không bật.
+ * Giới hạn: chỉ đọc 100 buổi đầu của lớp và 100 lớp đầu của mỗi trạng thái đóng (API chưa lọc theo mã).
+ */
+export function useCanOfferMakeup(originalSessionId: number, classGroupId: number, enabled: boolean): boolean | undefined {
+  const sessions = useAdminSessions({ classGroupId, page: 0, size: 100 }, enabled);
+  const completed = useAdminClasses({ status: "COMPLETED", page: 0, size: 100 }, enabled);
+  const cancelled = useAdminClasses({ status: "CANCELLED", page: 0, size: 100 }, enabled);
+  const failed = useAdminClasses({ status: "FAILED_TO_OPEN", page: 0, size: 100 }, enabled);
+  if (!enabled || !sessions.data || !completed.data || !cancelled.data || !failed.data) return undefined;
+  const classClosed = [completed.data, cancelled.data, failed.data].some((page) => page.content.some((item) => item.id === classGroupId));
+  const liveMakeup = sessions.data.content.some((item) => item.originalSessionId === originalSessionId && item.status !== "CANCELLED");
+  return !classClosed && !liveMakeup;
+}
+
 /** Danh sách đơn xin nghỉ theo bộ lọc */
 export function useAdminLeaveRequests(query: AdminLeaveRequestsQuery) {
   return useQuery({
@@ -60,10 +80,10 @@ export function useUserDirectory() {
   const names = new Map<number, string>();
   for (const user of [...(tutors.data?.content ?? []), ...(students.data?.content ?? [])]) names.set(user.id, user.fullName);
 
-  /** "Gia sư Hồ Đức Thuận (#3)" hoặc "Gia sư #3" khi chưa biết tên */
+  /** "Gia sư Hồ Đức Thuận" hoặc "Gia sư GV003" khi chưa biết tên */
   function label(role: Role, userId: number): string {
     const name = names.get(userId);
-    return name ? `${ROLE_NAME[role]} ${name} (#${userId})` : `${ROLE_NAME[role]} #${userId}`;
+    return name ? `${ROLE_NAME[role]} ${name}` : `${ROLE_NAME[role]} ${displayCode(role === "ROLE_TUTOR" ? "tutor" : role === "ROLE_STUDENT" ? "student" : "user", userId)}`;
   }
 
   return { tutors: tutors.data?.content ?? [], nameOf: (userId: number) => names.get(userId), label };

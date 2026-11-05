@@ -19,6 +19,17 @@ import { api, unwrap } from "@/services/api";
  * /me dùng cho mọi vai trò; buổi học và đơn xin nghỉ dùng cho học viên và gia sư.
  */
 
+/**
+ * DELETE /me/google/link — hủy liên kết Google
+ */
+export async function unlinkGoogle(password: string): Promise<MeResponse> {
+    return unwrap(
+        await api.delete<ApiResponse<MeResponse>>("/me/google/link", {
+            data: { password },
+        })
+    );
+}
+
 /** GET /me — hồ sơ của tôi */
 export async function fetchMe(): Promise<MeResponse> {
   return unwrap(await api.get<ApiResponse<MeResponse>>("/me"));

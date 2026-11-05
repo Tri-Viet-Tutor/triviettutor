@@ -7,8 +7,9 @@ import { SESSION_STATUS } from "@/constants/labels";
 import { LATE_NOTICE_HOURS } from "@/constants/rules";
 import type { SessionResponse } from "@/interfaces/api";
 import { diffDays, formatDayMonth, parseIsoDate, startOfToday, weekdayName } from "@/utils/date";
-import { canRequestLeave, dayLabel, formatTimeRange, sessionEnd, sessionStart } from "@/utils/sessions";
+import { canJoinNow, canRequestLeave, dayLabel, formatTimeRange, sessionEnd, sessionStart } from "@/utils/sessions";
 import type { TodayPanelProps } from "@/interfaces/portal";
+import { displayCode } from "@/utils/classes";
 
 /** "Còn 2 giờ 15 phút", "Còn 3 ngày", hoặc "Đang diễn ra" */
 function countdown(session: SessionResponse, now: Date): string {
@@ -80,7 +81,7 @@ export function TodayPanel({
                 </span>
                 <div className="min-w-0">
                   <p className="text-[16px] font-bold leading-tight text-brand-ink">
-                    Lớp #{session.classGroupId}, buổi {session.sessionNumber}
+                    Lớp {displayCode("class", session.classGroupId)}, buổi {session.sessionNumber}
                     {session.originalSessionId !== null && " (học bù)"}
                   </p>
                   <p className="mt-0.5 text-[14px] tabular-nums text-brand-muted">
@@ -99,7 +100,8 @@ export function TodayPanel({
                 </div>
               </div>
 
-              {session.meetingUrl ? (
+              {/* Phòng học nội bộ /classroom mở trong khung giờ vào lớp, kể cả khi buổi chưa gắn link ngoài */}
+              {canJoinNow(session, now) ? (
                 <Link to={`/classroom/${session.sessionId}`} className={TODAY_PANEL_CTA}>
                   Vào lớp
                   <Icon name="arrow_forward" className="text-[19px]" />

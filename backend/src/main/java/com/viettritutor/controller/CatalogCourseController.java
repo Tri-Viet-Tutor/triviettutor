@@ -8,7 +8,6 @@ import com.viettritutor.service.AdminCourseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -18,8 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/catalog/courses")
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()")
-@Tag(name = "Course catalog", description = "Available to authenticated ADMIN, TUTOR and STUDENT. Only active courses.")
+@Tag(name = "Course catalog", description = "Public: guests and every signed-in role can read it. Only active courses.")
 public class CatalogCourseController {
     private final AdminCourseService adminCourseService;
 
@@ -28,8 +26,9 @@ public class CatalogCourseController {
     public ApiResponse<PageResponse<CourseResponse>> list(
             @RequestParam(required = false) String subject,
             @RequestParam(required = false) GradeLevel gradeLevel,
+            @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "100") int size) {
-        return ApiResponse.ok(adminCourseService.list(subject, gradeLevel, true, page, size));
+        return ApiResponse.ok(adminCourseService.list(subject, gradeLevel, true, q, page, size));
     }
 }

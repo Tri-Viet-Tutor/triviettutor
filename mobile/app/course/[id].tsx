@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,88 +7,95 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  Alert,
+  ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Badge } from '@/components/common/Badge';
 import { BrandColors } from '@/constants/Colors';
-import { MOCK_COURSES } from '@/constants/data';
-import { useAuth } from '@/services/authContext';
+import { fetchClassDetail, fetchCourseDescription } from '@/services/catalog';
+import type { CourseItem } from '@/types';
 
+/** Địa chỉ website (đăng ký và thanh toán làm trên web; app chỉ để xem) */
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL || 'http://localhost:5173';
+
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+
+/** "2026-11-02" → "02/11/2026" */
+const formatDate = (iso?: string | null) => (iso ? iso.split('-').reverse().join('/') : '');
+
+/**
+ * Chi tiết một lớp đang mở: lấy từ GET /catalog/classes/{id} (lịch từng buổi, sĩ số, học phí thật)
+ * và mô tả khóa từ GET /catalog/courses. Đăng ký và thanh toán làm trên website.
+ */
 export default function CourseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user, isAuthenticated } = useAuth();
-  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [course, setCourse] = useState<CourseItem | null>(null);
+  const [description, setDescription] = useState<string | undefined>();
+  const [error, setError] = useState<string | null>(null);
 
-  const course = MOCK_COURSES.find((c) => c.id === id) || MOCK_COURSES[0];
+  useEffect(() => {
+    let active = true;
+    setCourse(null);
+    setError(null);
+    fetchClassDetail(id)
+      .then((detail) => {
+        if (!active) return;
+        setCourse(detail);
+        if (detail.courseId) {
+          fetchCourseDescription(detail.courseId)
+            .then((text) => active && setDescription(text))
+            .catch(() => undefined);
+        }
+      })
+      .catch(() => active && setError('Lớp này không còn mở hoặc không tải được. Hãy quay lại danh sách lớp.'));
+    return () => {
+      active = false;
+    };
+  }, [id]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(amount);
+  const openOnWeb = () => {
+    if (course) void Linking.openURL(`${WEB_URL}/student/checkout?lop=${course.id}`);
   };
 
-  const handleEnroll = () => {
-    if (!isAuthenticated) {
-      Alert.alert(
-        'Yêu cầu đăng nhập',
-        'Vui lòng đăng nhập để tiến hành đăng ký lớp học.',
-        [
-          { text: 'Hủy', style: 'cancel' },
-          {
-            text: 'Đăng nhập',
-            onPress: () => router.push('/auth/login'),
-          },
-        ]
-      );
-      return;
-    }
-
-    Alert.alert(
-      'Xác nhận đăng ký lớp học',
-      `Bạn đang đăng ký lớp:\n${course.title}\n\n• Học phí: ${formatCurrency(course.tuitionFee)}\n• Khai giảng dự kiến: ${course.startDate}\n• Lịch học: ${course.scheduleLabel} (${course.timeSlotHours})\n\nHọc sinh sẽ được kiểm tra chặn trùng lịch trước khi thanh toán.`,
-      [
-        { text: 'Suy nghĩ thêm', style: 'cancel' },
-        {
-          text: 'Đăng ký ngay',
-          onPress: () => {
-            setIsEnrolled(true);
-            Alert.alert(
-              'Đăng ký thành công!',
-              'Giáo vụ Trung tâm VietTriTutor sẽ liên hệ với bạn qua SĐT/Email để xác nhận lịch học và kích hoạt phòng học.',
-              [{ text: 'Về trang chủ', onPress: () => router.push('/(tabs)') }]
-            );
-          },
-        },
-      ]
+  if (!course) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { alignItems: 'center', justifyContent: 'center', padding: 24 }]}>
+        {error ? (
+          <>
+            <Ionicons name="alert-circle-outline" size={44} color={BrandColors.muted} />
+            <Text style={[styles.descriptionText, { textAlign: 'center', marginTop: 12 }]}>{error}</Text>
+            <TouchableOpacity style={[styles.enrollButton, { marginTop: 16 }]} onPress={() => router.back()}>
+              <Text style={styles.enrollButtonText}>Quay lại</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <ActivityIndicator size="large" color={BrandColors.navy} />
+        )}
+      </SafeAreaView>
     );
-  };
+  }
+
+  const full = (course.spotsLeft ?? 0) <= 0;
+  const upcoming = (course.sessions ?? []).filter((session) => session.status !== 'CANCELLED').slice(0, 6);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor={BrandColors.navy} />
 
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}>
-        
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         {/* Course Banner */}
         <View style={styles.banner}>
           <View style={styles.badgeRow}>
             <Badge label={course.gradeLabel} variant="orange" size="sm" />
             <Badge
-              label={course.classType === 'GROUP' ? `Lớp nhóm (${course.maxStudents} bạn)` : '1-kèm-1'}
+              label={course.classType === 'GROUP' ? `Lớp nhóm (tối đa ${course.maxStudents} bạn)` : '1-kèm-1'}
               variant="neutral"
               size="sm"
             />
-            <Badge
-              label={course.deliveryMode === 'ONLINE' ? 'Trực tuyến' : 'Tại trung tâm'}
-              variant="neutral"
-              size="sm"
-            />
+            <Badge label={course.deliveryMode === 'ONLINE' ? 'Trực tuyến' : 'Tại trung tâm'} variant="neutral" size="sm" />
           </View>
           <Text style={styles.bannerTitle}>{course.title}</Text>
           <Text style={styles.courseCode}>Mã lớp: {course.code}</Text>
@@ -111,7 +118,7 @@ export default function CourseDetailScreen() {
             <Text style={styles.paramValue}>
               {course.enrolledStudents}/{course.maxStudents}
             </Text>
-            <Text style={styles.paramLabel}>Sĩ số hiện tại</Text>
+            <Text style={styles.paramLabel}>{full ? 'Đã đủ chỗ' : `Còn ${course.spotsLeft} chỗ`}</Text>
           </View>
           <View style={styles.paramItem}>
             <Ionicons name="layers-outline" size={20} color={BrandColors.navy} />
@@ -121,89 +128,83 @@ export default function CourseDetailScreen() {
         </View>
 
         {/* Course Description */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Giới thiệu & Mục tiêu khóa học</Text>
-          <Text style={styles.descriptionText}>{course.description}</Text>
+        {description ? (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Giới thiệu khóa học</Text>
+            <Text style={styles.descriptionText}>{description}</Text>
+          </View>
+        ) : null}
 
-          <Text style={[styles.sectionTitle, { marginTop: 14 }]}>Điểm nổi bật của khóa:</Text>
-          {course.highlights.map((item, idx) => (
-            <View key={idx} style={styles.highlightRow}>
-              <Ionicons name="checkmark-circle" size={18} color={BrandColors.success} />
-              <Text style={styles.highlightText}>{item}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Tutor Section */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Gia sư đảm nhiệm</Text>
-          <View style={styles.tutorBox}>
-            <View style={styles.tutorAvatar}>
-              <Ionicons name="person" size={32} color={BrandColors.navy} />
-            </View>
-            <View style={styles.tutorDetails}>
-              <Text style={styles.tutorName}>{course.tutor.fullName}</Text>
-              <Text style={styles.tutorBio}>{course.tutor.bio}</Text>
-              <View style={styles.ratingBadge}>
-                <Ionicons name="star" size={13} color="#F59E0B" />
-                <Text style={styles.ratingText}>
-                  {course.tutor.rating} ({course.tutor.reviewCount} đánh giá từ học sinh)
+        {/* Schedule */}
+        {upcoming.length > 0 && (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Lịch các buổi đầu</Text>
+            {upcoming.map((session) => (
+              <View key={session.id} style={styles.highlightRow}>
+                <Ionicons name="calendar-number-outline" size={18} color={BrandColors.navy} />
+                <Text style={styles.highlightText}>
+                  Buổi {session.sessionNumber}: {formatDate(session.date)}, {session.startTime.substring(0, 5)} -{' '}
+                  {session.endTime.substring(0, 5)}
                 </Text>
               </View>
-            </View>
+            ))}
           </View>
-        </View>
+        )}
 
-        {/* Venue & Location */}
+        {/* Venue & Dates */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Địa điểm & Khai giảng</Text>
           <View style={styles.venueRow}>
-            <Ionicons
-              name={course.deliveryMode === 'ONLINE' ? 'videocam' : 'location'}
-              size={18}
-              color={BrandColors.navy}
-            />
+            <Ionicons name={course.deliveryMode === 'ONLINE' ? 'videocam' : 'location'} size={18} color={BrandColors.navy} />
             <Text style={styles.venueText}>{course.location}</Text>
           </View>
           <View style={styles.venueRow}>
             <Ionicons name="flag" size={18} color={BrandColors.orange} />
-            <Text style={styles.venueText}>Dự kiến khai giảng: {course.startDate}</Text>
+            <Text style={styles.venueText}>Khai giảng: {formatDate(course.startDate)}</Text>
+          </View>
+          {course.enrollmentDeadline ? (
+            <View style={styles.venueRow}>
+              <Ionicons name="hourglass-outline" size={18} color={BrandColors.orange} />
+              <Text style={styles.venueText}>Hạn đăng ký: {formatDate(course.enrollmentDeadline)}</Text>
+            </View>
+          ) : null}
+          <View style={styles.venueRow}>
+            <Ionicons name="person-outline" size={18} color={BrandColors.navy} />
+            <Text style={styles.venueText}>Gia sư được trung tâm phân công sau khi lớp chốt sĩ số.</Text>
           </View>
         </View>
 
         {/* Group Pricing Rules (BR-02) */}
-        <View style={[styles.sectionCard, styles.pricingCard]}>
-          <View style={styles.pricingHeader}>
-            <Ionicons name="shield-checkmark" size={20} color={BrandColors.navy} />
-            <Text style={styles.pricingTitle}>Chính sách Sĩ số & Học phí (BR-02)</Text>
+        {course.classType === 'GROUP' && (
+          <View style={[styles.sectionCard, styles.pricingCard]}>
+            <View style={styles.pricingHeader}>
+              <Ionicons name="shield-checkmark" size={20} color={BrandColors.navy} />
+              <Text style={styles.pricingTitle}>Học phí theo sĩ số</Text>
+            </View>
+            <Text style={styles.pricingDesc}>
+              Lớp nhóm 2 - 3 bạn giảm 20%, 4 - 5 bạn giảm 35%, 6 - 8 bạn giảm 40% so với học phí 1 kèm 1. Giá được chốt lúc bạn đăng ký.
+              Đến hạn đăng ký mà lớp chưa đủ 2 bạn, trung tâm dời ngày khai giảng hoặc hoàn tiền 100%.
+            </Text>
           </View>
-          <Text style={styles.pricingDesc}>
-            Lớp nhóm được thiết kế quy mô vàng từ 2 đến 8 học sinh THPT để đảm bảo chất lượng cao nhất.
-            Nếu đến hạn chốt đăng ký mà lớp chưa đủ 2 bạn, trung tâm cam kết dời ngày hoặc hoàn tiền 100%.
-          </Text>
-        </View>
+        )}
       </ScrollView>
 
       {/* Sticky Bottom Bar */}
       <View style={styles.bottomBar}>
         <View>
-          <Text style={styles.feeLabel}>Học phí trọn gói:</Text>
+          <Text style={styles.feeLabel}>
+            {course.discountRate ? `Học phí (giảm ${Math.round(course.discountRate * 100)}%):` : 'Học phí trọn khóa:'}
+          </Text>
           <Text style={styles.feeAmount}>{formatCurrency(course.tuitionFee)}</Text>
         </View>
 
         <TouchableOpacity
-          style={[styles.enrollButton, isEnrolled && styles.enrolledButton]}
-          onPress={handleEnroll}
-          disabled={isEnrolled}
+          style={[styles.enrollButton, full && styles.enrolledButton]}
+          onPress={openOnWeb}
+          disabled={full}
           activeOpacity={0.85}>
-          <Ionicons
-            name={isEnrolled ? 'checkmark-circle' : 'bag-check-outline'}
-            size={18}
-            color="#FFFFFF"
-          />
-          <Text style={styles.enrollButtonText}>
-            {isEnrolled ? 'Đã đăng ký' : 'Đăng ký ngay'}
-          </Text>
+          <Ionicons name={full ? 'close-circle-outline' : 'open-outline'} size={18} color="#FFFFFF" />
+          <Text style={styles.enrollButtonText}>{full ? 'Lớp đã đủ chỗ' : 'Đăng ký trên web'}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
