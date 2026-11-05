@@ -128,7 +128,7 @@ export function RateTutorDialog({ tutor, onClose }: { tutor: StudentTutor | null
               <textarea
                 value={comment}
                 onChange={(event) => setComment(event.target.value)}
-                maxLength={5000}
+                maxLength={2000}
                 rows={3}
                 placeholder="Nhận xét thêm (không bắt buộc): cách giảng bài, sự nhiệt tình, điều muốn thầy cô cải thiện…"
                 className={`${PORTAL_INPUT} h-auto py-2 leading-relaxed`}

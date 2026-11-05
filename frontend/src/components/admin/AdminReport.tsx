@@ -296,7 +296,7 @@ export function AdminReport() {
       {/* Chỉ số chính */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         <Kpi icon="payments" label="Doanh thu 30 ngày" value={payments.data ? formatVnd(revenue) : "…"} sub={`${paid.length} giao dịch thành công`} to={ROUTES.adminPayments} wide />
-        <Kpi icon="school" label="Lớp hoạt động" value={classesQuery.data ? String(active.length) : "…"} sub={`${classes.length} lớp tất cả`} to={ROUTES.adminClasses} />
+        <Kpi icon="school" label="Lớp hoạt động" value={classesQuery.data ? String(active.length) : "…"} sub={`${classesQuery.data?.totalElements ?? classes.length} lớp tất cả`} to={ROUTES.adminClasses} />
         <Kpi icon="groups" label="Đang theo học" value={classesQuery.data ? String(learners) : "…"} sub="học viên trong lớp" />
         <Kpi icon="person" label="Học viên" value={users.ROLE_STUDENT !== undefined ? String(users.ROLE_STUDENT) : "…"} sub="tài khoản" to={ROUTES.adminUsers} />
         <Kpi icon="badge" label="Gia sư" value={users.ROLE_TUTOR !== undefined ? String(users.ROLE_TUTOR) : "…"} sub="tài khoản" to={ROUTES.adminUsers} />
@@ -362,10 +362,16 @@ export function AdminReport() {
             tooltip={(index) => `${weekdayName(next14[index])} ${dm(next14[index])}: ${sessionCounts[index]} buổi`}
             height={160}
           />
+          {sessions.data && sessions.data.totalElements > sessions.data.content.length && (
+            <p className="mt-2 text-[12px] text-brand-muted">Chỉ tính {sessions.data.content.length} buổi đầu tiên trong khoảng này.</p>
+          )}
         </Card>
 
         <Card title="Lớp học theo giai đoạn" action={<More to={ROUTES.adminClasses} label="Lớp học" />}>
           <Donut parts={stages} total={classes.length} center="lớp học" />
+          {classesQuery.data && classesQuery.data.totalElements > classes.length && (
+            <p className="mt-2 text-[12px] text-brand-muted">Chỉ tính {classes.length} lớp đầu tiên.</p>
+          )}
         </Card>
       </div>
 

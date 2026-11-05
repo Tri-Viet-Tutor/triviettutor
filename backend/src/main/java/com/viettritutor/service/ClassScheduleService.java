@@ -42,6 +42,22 @@ public class ClassScheduleService {
                 c.getSchedulePattern(), c.getTimeSlot(), c.getMeetingUrl()));
     }
 
+    /**
+     * The sessions {@link #ensureGenerated} would create, built in memory without saving (no ids). Used to suggest
+     * tutors for a draft class whose schedule is generated only when it is published or a tutor is assigned.
+     */
+    public List<Session> plannedSessions(ClassGroup c) {
+        requireConfigured(c);
+        List<LocalDate> dates = calculator.calculate(c.getStartDate(), c.getSchedulePattern(), c.getTotalSessions());
+        List<Session> planned = new ArrayList<>();
+        for (int index = 0; index < dates.size(); index++) {
+            planned.add(Session.builder().classGroupId(c.getId()).sessionNumber(index + 1).sessionDate(dates.get(index))
+                    .startTime(c.getTimeSlot().getStartTime()).endTime(c.getTimeSlot().getEndTime())
+                    .status(SessionStatus.SCHEDULED).build());
+        }
+        return planned;
+    }
+
     public void requireConfigured(ClassGroup c) {
         if (c.getCourse() == null || c.getStartDate() == null || c.getTotalSessions() == null
                 || c.getSchedulePattern() == null || c.getTimeSlot() == null) {

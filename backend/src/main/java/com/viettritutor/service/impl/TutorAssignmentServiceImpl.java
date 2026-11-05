@@ -107,7 +107,13 @@ public class TutorAssignmentServiceImpl implements TutorAssignmentService {
                 .contains(classGroup.getStatus())) {
             throw new BusinessException(ErrorCode.CLASS_NOT_ASSIGNABLE);
         }
-        List<Session> future = futureSessions(sessionRepository.findByClassGroupIdOrderBySessionNumberAsc(classId));
+        List<Session> saved = sessionRepository.findByClassGroupIdOrderBySessionNumberAsc(classId);
+        // A draft class created without a tutor has no sessions yet: assign() generates them, so suggest
+        // tutors against the schedule it would generate instead of refusing.
+        if (saved.isEmpty() && PRE_ASSIGNABLE.contains(classGroup.getStatus())) {
+            saved = scheduleService.plannedSessions(classGroup);
+        }
+        List<Session> future = futureSessions(saved);
         requireFutureSessions(future);
         Long primaryTutorId = assignmentRepository.findByClassGroupIdAndStatus(classId, AssignmentStatus.ACTIVE)
                 .map(TutorAssignment::getTutorId).orElse(null);
