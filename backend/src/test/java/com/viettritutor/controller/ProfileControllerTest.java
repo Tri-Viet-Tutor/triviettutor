@@ -46,6 +46,7 @@ class ProfileControllerTest {
     @Autowired StudentProfileRepository students;
     @Autowired TutorProfileRepository tutors;
     @Autowired JwtService jwtService;
+    @Autowired org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Test
     void studentSeesOwnProfileEvenWhenAnotherUserIdIsSupplied() throws Exception {
@@ -279,6 +280,26 @@ class ProfileControllerTest {
                         .contentType(MediaType.TEXT_PLAIN).content("fullName=x"))
                 .andExpect(status().isUnsupportedMediaType())
                 .andExpect(jsonPath("$.errorCode").value("UNSUPPORTED_MEDIA_TYPE"));
+    }
+
+    @Test
+    void unlinkGoogleUsesApiResponseAndWrongPasswordIsNotUnauthorized() throws Exception {
+        User user = users.saveAndFlush(User.builder().email("linked@example.test")
+                .password(passwordEncoder.encode("secret123")).googleId("google-sub-1")
+                .fullName("Test User").role("ROLE_STUDENT").build());
+
+        // A wrong password must not be 401: the web client treats 401 as an expired session and logs out.
+        mvc.perform(delete("/api/v1/me/google/link").header("Authorization", bearer(user))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"password\":\"wrong\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("WRONG_CURRENT_PASSWORD"));
+
+        mvc.perform(delete("/api/v1/me/google/link").header("Authorization", bearer(user))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"password\":\"secret123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(user.getId()))
+                .andExpect(jsonPath("$.data.googleLinked").value(false));
     }
 
     private String bearer(User user) {

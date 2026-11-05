@@ -130,7 +130,7 @@ public class UserProfileServiceImpl implements UserProfileService {
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+            throw new BusinessException(ErrorCode.WRONG_CURRENT_PASSWORD);
         }
 
         user.setGoogleId(null);
