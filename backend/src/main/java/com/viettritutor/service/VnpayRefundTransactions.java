@@ -24,6 +24,7 @@ public class VnpayRefundTransactions {
     private final EnrollmentPaymentSupport support;
     private final PaymentIdempotencyService idempotency;
     private final LearningScheduleService learning;
+    private final WalletService wallet;
     private final EntityManager entityManager;
     private final Clock clock;
 
@@ -68,7 +69,9 @@ public class VnpayRefundTransactions {
         if ((payment.getStatus() == PaymentStatus.REQUIRES_REFUND || support.fullRefundRequired(group))
                 && input.refundPercentage() != 100) throw new BusinessException(ErrorCode.INVALID_REFUND_PERCENTAGE);
         if (enrollment == null) enrollment = enrollments.findByPaymentId(payment.getId()).orElse(null);
-        BigDecimal amount = payment.getAmount().multiply(BigDecimal.valueOf(input.refundPercentage()))
+        // The group-size discount already credited to the wallet is part of the fee returned; refund only the rest.
+        BigDecimal refundable = payment.getAmount().subtract(wallet.classDiscountCredited(enrollment == null ? null : enrollment.getId()));
+        BigDecimal amount = refundable.multiply(BigDecimal.valueOf(input.refundPercentage()))
                 .divide(BigDecimal.valueOf(100)).setScale(0, RoundingMode.HALF_UP);
         if (amount.signum() <= 0 || amount.compareTo(payment.getAmount()) > 0) throw new BusinessException(ErrorCode.INVALID_REFUND_PERCENTAGE);
         OffsetDateTime now = OffsetDateTime.now(clock);

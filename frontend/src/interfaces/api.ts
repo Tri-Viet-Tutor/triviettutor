@@ -827,6 +827,8 @@ export interface TuitionPayment {
   transactionRef: string;
   refundReason: string | null;
   refunds: TuitionRefund[];
+  /** Ưu đãi lớp nhóm đã hoàn vào ví cho ghi danh của giao dịch này */
+  discountCredited?: number;
 }
 
 /** Chi tiết yêu cầu thanh toán: giao dịch và ghi danh đi kèm (nếu đã có) */

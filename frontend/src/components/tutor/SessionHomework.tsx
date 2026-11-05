@@ -16,6 +16,7 @@ import { portalErrorMessage } from "@/utils/errors";
 import { studentLabel } from "@/utils/sessions";
 import { DateField } from "@/components/ui/DateField";
 import { TimeField } from "@/components/ui/TimeField";
+import { toIsoDate } from "@/utils/date";
 
 const STATUS_STYLE: Record<HomeworkResponse["status"], { label: string; className: string }> = {
   DRAFT: { label: "Nháp", className: "bg-slate-100 text-slate-700" },
@@ -225,7 +226,7 @@ function HomeworkForm({ sessionId, onCancel, onSaved }: { sessionId: number; onC
             <TimeField
               aria-label="Giờ hạn nộp"
               value={due.slice(11, 16)}
-              onChange={(value) => setDue(`${due.slice(0, 10) || new Date().toISOString().slice(0, 10)}T${value}`)}
+              onChange={(value) => setDue(`${due.slice(0, 10) || toIsoDate(new Date())}T${value}`)}
               className={PORTAL_INPUT}
             />
           </div>
