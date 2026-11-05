@@ -328,4 +328,25 @@ class VnpayPaymentIntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value("CLASS_FULL"));
     }
+
+    @Autowired ClassDiscountSettlementService discountSettlement;
+    @Autowired org.springframework.transaction.support.TransactionTemplate transactions;
+
+    @Test void vnpayRefundAfterGroupDiscountReturnsOnlyTheRemainingFee() throws Exception {
+        ClassGroup groupClass = newGroupClass(new BigDecimal("1000000"));
+        Long first = null;
+        for (int i = 0; i < 4; i++) {
+            User s = user("STUDENT");
+            long intentId = quote(s, groupClass, UUID.randomUUID().toString());
+            request("POST", "/api/v1/payment-intents/" + intentId + "/vnpay", null, s, null, 200);
+            ipn(callback(intentId, "00"), "00");
+            if (first == null) first = enrollments.findByPaymentId(payments.findByIntentId(intentId).orElseThrow().getId()).orElseThrow().getId();
+        }
+        groupClass.setStatus(ClassStatus.ASSIGNED); classes.saveAndFlush(groupClass);
+        transactions.executeWithoutResult(t -> discountSettlement.settle(classes.findById(groupClass.getId()).orElseThrow()));
+        // 4 students: 35% (350 000) already credited to the wallet, so a full refund sends only the other 650 000.
+        var request = refunds.prepare(null, first, new com.viettritutor.dto.payment.RefundRequest("Hủy lớp", 100), "refund-" + first, admin, false);
+        assertThat(request.amount()).isEqualByComparingTo("650000");
+        assertThat(request.paidAmount()).isEqualByComparingTo("1000000");
+    }
 }

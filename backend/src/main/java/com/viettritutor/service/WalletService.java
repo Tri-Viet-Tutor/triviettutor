@@ -85,6 +85,13 @@ public class WalletService {
         return true;
     }
 
+    /** Group-size discount already credited to the wallet for this enrollment (zero when none). */
+    @Transactional(readOnly = true)
+    public BigDecimal classDiscountCredited(Long enrollmentId) {
+        if (enrollmentId == null) return BigDecimal.ZERO;
+        return transactions.findByEnrollmentId(enrollmentId).map(WalletTransaction::getAmount).orElse(BigDecimal.ZERO);
+    }
+
     private Wallet ownedWallet(Long studentId) {
         Wallet wallet = wallets.findByStudentId(studentId).orElseGet(() -> wallets.saveAndFlush(Wallet.builder()
                 .studentId(studentId).balance(BigDecimal.ZERO).createdAt(OffsetDateTime.now(clock)).build()));

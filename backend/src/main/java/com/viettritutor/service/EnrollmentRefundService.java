@@ -89,7 +89,9 @@ public class EnrollmentRefundService {
         if (payment.getStatus() != PaymentStatus.COMPLETED || payment.getRefundedAmount().signum() != 0) {
             throw new BusinessException(ErrorCode.REFUND_ALREADY_SETTLED);
         }
-        BigDecimal amount = payment.getAmount().multiply(BigDecimal.valueOf(percentage)).divide(BigDecimal.valueOf(100))
+        // The group-size discount already credited to the wallet is part of the fee returned; refund only the rest.
+        BigDecimal refundable = payment.getAmount().subtract(wallet.classDiscountCredited(enrollment.getId()));
+        BigDecimal amount = refundable.multiply(BigDecimal.valueOf(percentage)).divide(BigDecimal.valueOf(100))
                 .setScale(0, RoundingMode.HALF_UP);
         if (amount.signum() <= 0 || amount.compareTo(payment.getAmount()) > 0) {
             throw new BusinessException(ErrorCode.INVALID_REFUND_PERCENTAGE);

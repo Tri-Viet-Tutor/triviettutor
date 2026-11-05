@@ -5,4 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface WalletTransactionRepository extends JpaRepository<WalletTransaction, Long> {
     Page<WalletTransaction> findByWalletId(Long walletId, Pageable pageable);
     boolean existsByEnrollmentId(Long enrollmentId);
+    java.util.Optional<WalletTransaction> findByEnrollmentId(Long enrollmentId);
+    java.util.List<WalletTransaction> findByEnrollmentIdIn(java.util.Collection<Long> enrollmentIds);
 }

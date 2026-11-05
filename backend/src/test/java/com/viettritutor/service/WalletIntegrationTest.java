@@ -319,6 +319,29 @@ class WalletIntegrationTest {
         assertThat(payments.findById(pid).orElseThrow().getStatus()).isEqualTo(PaymentStatus.PARTIALLY_REFUNDED);
         assertThat(enrollments.findById(eid).orElseThrow().getStatus()).isEqualTo(EnrollmentStatus.REFUNDED);
     }
+    @Autowired ClassDiscountSettlementService discountSettlement;
+    @Autowired org.springframework.transaction.support.TransactionTemplate transactions;
+    long payAs(User actor, ClassGroup c) throws Exception {
+        long topupId=request("POST","/api/v1/wallet/topups",Map.of("amount",100000),actor,UUID.randomUUID().toString(),201).path("topupId").asLong();
+        ipn(callback(topupId,"00"),"00");
+        long id=request("POST","/api/v1/payment-intents",Map.of("classGroupId",c.getId()),actor,UUID.randomUUID().toString(),201).path("intentId").asLong();
+        return request("POST","/api/v1/payment-intents/"+id+"/wallet",null,actor,"pay-"+id,200).path("payment").path("paymentId").asLong();
+    }
+    @Test void groupDiscountUsesLockedPriceAndIsNotRefundedTwice() throws Exception {
+        group.setClassType(ClassType.GROUP); group.setMaxStudents(8); classes.saveAndFlush(group);
+        long pid=payAs(student,group); payAs(other,group);
+        // A later course price cut must not enlarge the discount on the fee already paid (BR-02.04).
+        Course course=group.getCourse(); course.setBasePrice1on1(new BigDecimal("50000")); courses.saveAndFlush(course);
+        group.setStatus(ClassStatus.ASSIGNED); classes.saveAndFlush(group);
+        transactions.executeWithoutResult(t -> discountSettlement.settle(classes.findById(group.getId()).orElseThrow()));
+        balance("20000");
+        assertThat(request("GET","/api/v1/payments/"+pid,null,admin,null,200).path("discountCredited").decimalValue()).isEqualByComparingTo("20000");
+        long eid=enrollments.findByPaymentId(pid).orElseThrow().getId();
+        request("POST","/api/v1/admin/enrollments/"+eid+"/refund",Map.of("reason","Hủy lớp","refundPercentage",100),admin,"full",200);
+        // 20 000 discount credit + 80 000 refund = the 100 000 paid, never more.
+        balance("100000");
+        assertThat(payments.findById(pid).orElseThrow().getRefundedAmount()).isEqualByComparingTo("80000");
+    }
     @Test void insufficientBalanceRollsBackAllPaymentAndEnrollmentWrites() throws Exception {
         long id=quote(group);
         request("POST","/api/v1/payment-intents/"+id+"/wallet",null,student,"insufficient",409);
