@@ -176,7 +176,7 @@ export function CourseOfferList({
     );
 
   // Không lọc gì mà vẫn trống: chưa có khóa nào đang tuyển sinh
-  const noCoursesAtAll = !(filters.query || filters.subject || filters.grade || filters.mode || filters.schedule);
+  const noCoursesAtAll = !(filters.query || filters.subject || filters.grade || filters.mode || filters.schedule || filters.tutor);
 
   return (
     <>
