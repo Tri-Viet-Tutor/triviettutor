@@ -137,10 +137,12 @@ public class ClassQueryService {
      */
     public ClassResponse detail(Long id, Long viewerId, boolean staff) {
         ClassGroup c = classes.findById(id).orElseThrow(() -> new BusinessException(ErrorCode.CLASS_NOT_FOUND));
-        // Draft/failed/cancelled classes and inactive courses are not public catalog resources.
-        if (c.getCourse() == null || !c.getCourse().isActive()
+        // Draft/failed/cancelled classes are not public catalog resources. A course that stopped selling only hides
+        // classes still on sale (PUBLISHED/ENROLLING); running or finished classes stay readable for their students.
+        if (c.getCourse() == null
                 || !Set.of(ClassStatus.PUBLISHED, ClassStatus.ENROLLING, ClassStatus.ASSIGNED,
-                           ClassStatus.IN_PROGRESS, ClassStatus.COMPLETED).contains(c.getStatus())) {
+                           ClassStatus.IN_PROGRESS, ClassStatus.COMPLETED).contains(c.getStatus())
+                || (!c.getCourse().isActive() && (c.getStatus() == ClassStatus.PUBLISHED || c.getStatus() == ClassStatus.ENROLLING))) {
             throw new BusinessException(ErrorCode.CLASS_NOT_FOUND);
         }
         if (!staff && c.getStatus() == ClassStatus.ENROLLING && !holdsSeat(c.getId(), viewerId)) {
