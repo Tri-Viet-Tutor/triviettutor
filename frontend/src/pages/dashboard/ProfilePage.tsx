@@ -8,6 +8,8 @@ import { useMe, useUnlinkGoogle } from "@/hooks/usePortalData";
 import { formatVnd } from "@/utils/currency";
 import { formatDate } from "@/utils/date";
 import { GoogleAccountSection } from "@/components/dashboard/GoogleAccountSection";
+import { googleLoginUrl } from "@/services/authService";
+import { apiErrorMessage } from "@/services/api";
 
 /**
  * Trang Hồ sơ dùng chung cho ba khu (GET / PUT /me): xem và sửa thông tin của chính mình.
@@ -26,7 +28,21 @@ export function ProfilePage() {
 
         if (password === null || !password.trim()) return;
 
-        unlinkGoogleMutation.mutate(password);
+        unlinkGoogleMutation.mutate(password, {
+            onError: (error) =>
+                window.alert(
+                    apiErrorMessage(
+                        error,
+                        {
+                            WRONG_CURRENT_PASSWORD: "Mật khẩu hiện tại không đúng.",
+                            GOOGLE_UNLINK_NOT_ALLOWED:
+                                "Tài khoản chưa có mật khẩu nên không thể hủy liên kết Google. Hãy đặt mật khẩu bằng chức năng Quên mật khẩu trước.",
+                            GOOGLE_NOT_LINKED: "Tài khoản chưa liên kết Google.",
+                        },
+                        "Chưa hủy được liên kết Google. Vui lòng thử lại.",
+                    ),
+                ),
+        });
     };
 
   return (
@@ -73,8 +89,7 @@ export function ProfilePage() {
                 <GoogleAccountSection
                     googleLinked={me.googleLinked}
                     onLink={() => {
-                        window.location.href =
-                            `${import.meta.env.VITE_OAUTH2_BASE_URL}/oauth2/authorization/google?flow=link`;
+                        window.location.href = googleLoginUrl();
                     }}
                     onUnlink={handleUnlinkGoogle}
                     isUnlinking={unlinkGoogleMutation.isPending}

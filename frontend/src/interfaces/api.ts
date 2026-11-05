@@ -176,7 +176,10 @@ export type ErrorCode =
   | "PAYMENT_MOCK_DISABLED"
   | "ASSISTANT_RATE_LIMITED"
   | "ASSISTANT_UNAVAILABLE"
-  | "INTERNAL_ERROR";
+  | "INTERNAL_ERROR"
+  | "GOOGLE_NOT_LINKED"
+  | "GOOGLE_UNLINK_NOT_ALLOWED"
+  | "WRONG_CURRENT_PASSWORD";
 
 // ── Người dùng & đăng nhập (dto.auth, entity.User) ───────────────────────────
 

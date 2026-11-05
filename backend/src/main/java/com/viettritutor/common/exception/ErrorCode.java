@@ -184,7 +184,9 @@ public enum ErrorCode {
 
     // ── Assistant chatbot ─────────────────────────────────────────
     ASSISTANT_RATE_LIMITED (HttpStatus.TOO_MANY_REQUESTS, "Too many assistant questions; try again later"),
-    ASSISTANT_UNAVAILABLE (HttpStatus.SERVICE_UNAVAILABLE, "The assistant is not available right now");
+    ASSISTANT_UNAVAILABLE (HttpStatus.SERVICE_UNAVAILABLE, "The assistant is not available right now"),
+    // Not 401: the caller is signed in, and the web client logs out on any 401.
+    WRONG_CURRENT_PASSWORD (HttpStatus.BAD_REQUEST, "Current password is incorrect");
 
     private final HttpStatus httpStatus;
     private final String defaultMessage;

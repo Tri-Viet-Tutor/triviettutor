@@ -1,5 +1,6 @@
 package com.viettritutor.controller;
 
+import com.viettritutor.common.api.ApiResponse;
 import com.viettritutor.dto.user.MeResponse;
 import com.viettritutor.dto.user.UnlinkGoogleRequest;
 import com.viettritutor.entity.User;
@@ -21,12 +22,12 @@ public class MeController {
     private final UserProfileService userProfileService;
 
     @DeleteMapping("/google/link")
-    public ResponseEntity<MeResponse> unlinkGoogle(
+    public ResponseEntity<ApiResponse<MeResponse>> unlinkGoogle(
             @AuthenticationPrincipal User principal,
             @Valid @RequestBody UnlinkGoogleRequest request
     ) {
-        return ResponseEntity.ok(
+        return ResponseEntity.ok(ApiResponse.ok(
                 userProfileService.unlinkGoogle(principal, request)
-        );
+        ));
     }
 }
