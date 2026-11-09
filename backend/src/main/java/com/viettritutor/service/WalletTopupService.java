@@ -63,7 +63,7 @@ public class WalletTopupService {
         return response(topup, clientIp);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public WalletTopupResponse returned(MultiValueMap<String, String> input, User student, String clientIp) {
         support.student(student);
         Map<String, String> fields = signature.verified(input);
@@ -72,6 +72,12 @@ public class WalletTopupService {
         support.owner(topup.getStudentId(), student);
         if (!VnpayPaymentService.cents(topup.getAmount()).equals(fields.get("vnp_Amount"))) {
             throw new BusinessException(ErrorCode.INVALID_PAYMENT_SIGNATURE);
+        }
+        // The browser return carries the same HMAC as the IPN. A local sandbox cannot receive
+        // VNPay's server callback, so a verified success credits the wallet here. A cancel or
+        // failure stays pending; only the IPN is allowed to record that outcome.
+        if ("00".equals(fields.get("vnp_ResponseCode")) && "00".equals(fields.get("vnp_TransactionStatus"))) {
+            settle(topup, fields, false);
         }
         return response(topup, clientIp);
     }
