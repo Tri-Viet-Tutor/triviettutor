@@ -21,6 +21,12 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         channel: 'chrome',
         permissions: ['camera', 'microphone'],
+        launchOptions: {
+          args: [
+            '--use-fake-ui-for-media-stream',
+            '--use-fake-device-for-media-stream',
+          ],
+        },
       },
     },
   ],
