@@ -83,6 +83,50 @@ function Import-SampleData {
     }
 }
 
+# Ham nap dataset mau cho MongoDB
+function Import-MongoSampleData {
+    param($mongoFile)
+
+    if (-not (Test-Path -LiteralPath $mongoFile)) {
+        Write-Host " - Khong tim thay file du lieu MongoDB: $mongoFile" -ForegroundColor DarkGray
+        return
+    }
+
+    Write-Host " - Dang nap dataset mau MongoDB: $(Split-Path $mongoFile -Leaf) ..." -ForegroundColor Cyan
+
+    $mongoDb = "triviettutor"
+    $envFile = Join-Path $rootDir ".env"
+    if (Test-Path $envFile) {
+        foreach ($line in (Get-Content -LiteralPath $envFile)) {
+            if ($line -match '^\s*MONGODB_DATABASE\s*=\s*(.+)$') { $mongoDb = $Matches[1].Trim() }
+            elseif ($line -match '^\s*LOCAL_MONGO_DATABASE\s*=\s*(.+)$') { $mongoDb = $Matches[1].Trim() }
+        }
+    }
+
+    $dockerRunning = $false
+    try {
+        $null = docker info 2>&1
+        if ($LASTEXITCODE -eq 0) { $dockerRunning = $true }
+    } catch { $dockerRunning = $false }
+
+    if ($dockerRunning) {
+        $targetInContainer = "/tmp/" + (Split-Path $mongoFile -Leaf)
+        docker compose cp "$mongoFile" "mongodb:$targetInContainer" 2>$null | Out-Null
+        docker compose exec -T mongodb mongosh $mongoDb "$targetInContainer" 2>$null | Out-Null
+        Write-Host " - Da nap du lieu vao MongoDB container thanh cong!" -ForegroundColor Green
+    } else {
+        if (Get-Command mongosh -ErrorAction SilentlyContinue) {
+            mongosh "mongodb://localhost:27017/$mongoDb" "$mongoFile" 2>$null | Out-Null
+            Write-Host " - Da nap du lieu vao MongoDB host thanh cong!" -ForegroundColor Green
+        } elseif (Get-Command mongo -ErrorAction SilentlyContinue) {
+            mongo "mongodb://localhost:27017/$mongoDb" "$mongoFile" 2>$null | Out-Null
+            Write-Host " - Da nap du lieu vao MongoDB host thanh cong!" -ForegroundColor Green
+        } else {
+            Write-Host " - MongoDB host san sang (Backend se tu dong seed du lieu neu can)." -ForegroundColor DarkGray
+        }
+    }
+}
+
 do {
     Clear-Host
     Write-Host "===================================================" -ForegroundColor Cyan
@@ -117,38 +161,52 @@ do {
         }
     }
 
-    # 3. Kiem tra Database (PC vs Docker)
-    Write-Host "`n[3/6] Dang kiem tra Database PostgreSQL..." -ForegroundColor Yellow
-    $dbTest = Test-NetConnection -ComputerName "127.0.0.1" -Port 5432 -WarningAction SilentlyContinue -InformationLevel Quiet
-    if ($dbTest) {
-        Write-Host " - PostgreSQL dang chay tren port 5432 cua PC." -ForegroundColor Green
-        $dockerAvailable = $false
-        try {
-            $null = docker info 2>&1
-            if ($LASTEXITCODE -eq 0) { $dockerAvailable = $true }
-        } catch { $dockerAvailable = $false }
-    } else {
-        # Kiem tra xem Docker daemon co dang hoat dong khong
-        $dockerRunning = $false
-        try {
-            $null = docker info 2>&1
-            if ($LASTEXITCODE -eq 0) { $dockerRunning = $true }
-        } catch { $dockerRunning = $false }
+    # 3. Kiem tra Database (PostgreSQL & MongoDB: PC vs Docker)
+    Write-Host "`n[3/6] Dang kiem tra Database (PostgreSQL & MongoDB)..." -ForegroundColor Yellow
 
+    # Kiem tra xem Docker daemon co dang hoat dong khong
+    $dockerRunning = $false
+    try {
+        $null = docker info 2>&1
+        if ($LASTEXITCODE -eq 0) { $dockerRunning = $true }
+    } catch { $dockerRunning = $false }
+    $dockerAvailable = $dockerRunning
+
+    $pgRunning = Test-NetConnection -ComputerName "127.0.0.1" -Port 5432 -WarningAction SilentlyContinue -InformationLevel Quiet
+    $mongoRunning = Test-NetConnection -ComputerName "127.0.0.1" -Port 27017 -WarningAction SilentlyContinue -InformationLevel Quiet
+
+    if ($pgRunning) {
+        Write-Host " - PostgreSQL dang chay tren port 5432 cua PC." -ForegroundColor Green
+    }
+    if ($mongoRunning) {
+        Write-Host " - MongoDB dang chay tren port 27017 cua PC." -ForegroundColor Green
+    }
+
+    if (-not $pgRunning -or -not $mongoRunning) {
         if (-not $dockerRunning) {
+            $missingDbs = @()
+            if (-not $pgRunning) { $missingDbs += "PostgreSQL (5432)" }
+            if (-not $mongoRunning) { $missingDbs += "MongoDB (27017)" }
             Write-Host "`n=======================================================" -ForegroundColor Red
-            Write-Host "[LOI] Khong tim thay PostgreSQL tren PC va Docker chua duoc mo!" -ForegroundColor Red
+            Write-Host "[LOI] Khong tim thay $($missingDbs -join ' va ') tren PC va Docker chua duoc mo!" -ForegroundColor Red
             Write-Host "-> Vui long khoi dong Docker Desktop truoc khi chay script nay." -ForegroundColor Yellow
             Write-Host "=======================================================" -ForegroundColor Red
             Read-Host "`nNhan Enter de thoat"
             exit 1
         }
 
-        $dockerAvailable = $true
-        Write-Host " - Khoi dong PostgreSQL qua Docker Compose..." -ForegroundColor Cyan
-        docker compose up -d postgres
+        if (-not $pgRunning) {
+            Write-Host " - Khoi dong PostgreSQL qua Docker Compose..." -ForegroundColor Cyan
+            docker compose up -d postgres
+        }
+        if (-not $mongoRunning) {
+            Write-Host " - Khoi dong MongoDB qua Docker Compose..." -ForegroundColor Cyan
+            docker compose up -d mongodb
+        }
         Start-Sleep -Seconds 3
-        Write-Host " - PostgreSQL container san sang!" -ForegroundColor Green
+
+        if (-not $pgRunning) { Write-Host " - PostgreSQL container san sang!" -ForegroundColor Green }
+        if (-not $mongoRunning) { Write-Host " - MongoDB container san sang!" -ForegroundColor Green }
     }
 
     # 4. Khoi dong Backend (Spring Boot :8080)
@@ -184,8 +242,18 @@ do {
     )
     $foundDataFile = $dataCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
     if ($foundDataFile) {
-        Write-Host "`n[*] Dang kiem tra va cap nhat du lieu mau vao Database..." -ForegroundColor Yellow
+        Write-Host "`n[*] Dang kiem tra va cap nhat du lieu mau vao Database PostgreSQL..." -ForegroundColor Yellow
         Import-SampleData -dataFile $foundDataFile
+    }
+
+    $mongoCandidates = @(
+        (Join-Path $rootDir "data\mongo_seed.js"),
+        (Join-Path $rootDir "backend\src\main\resources\data\mongo_seed.js")
+    )
+    $foundMongoFile = $mongoCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if ($foundMongoFile) {
+        Write-Host "`n[*] Dang kiem tra va cap nhat du lieu mau vao Database MongoDB..." -ForegroundColor Yellow
+        Import-MongoSampleData -mongoFile $foundMongoFile
     }
 
     # 5. Khoi dong Frontend (React + Vite :5173)

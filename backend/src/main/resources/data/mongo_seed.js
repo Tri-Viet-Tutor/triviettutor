@@ -1,7 +1,6 @@
 // Seed LiveKit audit logs into MongoDB
-const dbName = 'triviettutor';
-const conn = new Mongo();
-const db = conn.getDB(dbName);
+var dbName = 'triviettutor';
+var targetDb = (typeof db !== 'undefined') ? db.getSiblingDB(dbName) : (new Mongo()).getDB(dbName);
 
 const sessionLogs = [
   {
@@ -3635,7 +3634,7 @@ const participantLogs = [
 
 print("Seeding meeting_session_logs (" + sessionLogs.length + " records)...");
 sessionLogs.forEach(doc => {
-    db.meeting_session_logs.updateOne(
+    targetDb.meeting_session_logs.updateOne(
         { sessionId: doc.sessionId },
         { $set: doc },
         { upsert: true }
@@ -3644,7 +3643,7 @@ sessionLogs.forEach(doc => {
 
 print("Seeding meeting_participant_logs (" + participantLogs.length + " records)...");
 participantLogs.forEach(doc => {
-    db.meeting_participant_logs.updateOne(
+    targetDb.meeting_participant_logs.updateOne(
         { sessionId: doc.sessionId, participantIdentity: doc.participantIdentity },
         { $set: doc },
         { upsert: true }

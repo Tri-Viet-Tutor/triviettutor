@@ -7,9 +7,9 @@ spring:
     name: viettritutor-backend
   servlet:
     multipart:
-      # Learning attachments allow up to 10 MB; avatars keep their own 2 MB limit in AvatarServiceImpl.
-      max-file-size: 10MB
-      max-request-size: 11MB
+      # Support audio voice recordings up to 50 MB; avatars keep their own 2 MB limit in AvatarServiceImpl.
+      max-file-size: 50MB
+      max-request-size: 55MB
   profiles:
     active: ${APP_PROFILE:dev}
   mail:
@@ -44,6 +44,8 @@ springdoc:
 
 # App-level settings
 app:
+  meetings:
+    recording-dir: ${RECORDING_DIR:uploads/recordings}
   mongodb:
     # Meeting audit logs are optional; fail fast instead of blocking requests 30s when MongoDB is down.
     server-selection-timeout-ms: ${MONGODB_SERVER_SELECTION_TIMEOUT_MS:3000}

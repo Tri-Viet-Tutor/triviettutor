@@ -1,16 +1,17 @@
-# Dac Ta Luu Tru Meeting Logs Va Attendance Voi MongoDB Atlas
+# Dac Ta Luu Tru Meeting Logs Va Attendance Voi MongoDB (Local & Docker)
 
-Ngay tao: 25/10/2026.
-Pham vi: Dac ta ket noi MongoDB Atlas va cau truc Document Collections cho viec ghi nhan nhat ky phong hoc truc tuyen (LiveKit Session Logs) va nhat ky diem danh nguoi tham gia (Participant Attendance Logs).
+Ngay tao: 25/10/2026. Cap nhat: 09/11/2026 (Ho tro chay Local & Docker Compose).
+Pham vi: Dac ta ket noi MongoDB (chay tren local host hoac Docker Compose container) va cau truc Document Collections cho viec ghi nhan nhat ky phong hoc truc tuyen (LiveKit Session Logs) va nhat ky diem danh nguoi tham gia (Participant Attendance Logs).
 
-## 1. Muc Dich Su Dung MongoDB Atlas
+## 1. Muc Dich Su Dung MongoDB
 
 He thong phong hoc LiveKit phat sinh luu luong event lien tuc voi tan suat cao (participant-joined, participant-left, track-published, track-muted, audio-energy-active, disconnect).
 PostgreSQL/Supabase duoc dung cho du lieu quan he cot loi (User, ClassGroup, Schedule, Enrollment, Payment).
-MongoDB Atlas duoc su dung lam kho luu tru Document Audit Log phi cau truc voi cac uu diem:
+MongoDB duoc su dung lam kho luu tru Document Audit Log phi cau truc voi cac uu diem:
 - Toc do ghi cao (High write throughput), phu hop ghi nhan event stream tu LiveKit Webhook.
 - Schema linh hoat (Flexible JSON schema) cho phep mo rong payload su kien, metadata cua LiveKit ma khong can chay migration schema PostgreSQL lien tuc.
 - Tach biet tai nguyen giua transaction nghiep vu (PostgreSQL) va nhat ky phong hoc (MongoDB).
+- Dong bo moi truong phat trien (Local / Docker): Thanh vien team co the chay MongoDB cuc bo tren may hoac tu dong bat container MongoDB qua Docker Compose thong qua `run_all.ps1`.
 
 ## 2. Bien Moi Truong Cau Hinh (No Hardcoding)
 
@@ -18,8 +19,10 @@ He thong doc cau hinh tu bien moi truong thong qua application.yml:
 
 | Bien Moi Truong | Y Nghia | Gia Tri Mac Dinh / Vi Du |
 |---|---|---|
-| MONGODB_URI | Chuoi ket noi MongoDB Atlas (chua credentials va replicaSet) | Doc tu .env, khong commit vao Git |
-| MONGODB_DATABASE | Ten database can su dung | triviettutor |
+| MONGODB_URI | Chuoi ket noi MongoDB | `mongodb://localhost:27017/triviettutor` (Host) hoac `mongodb://mongodb:27017/triviettutor` (Docker) |
+| MONGODB_DATABASE | Ten database can su dung | `triviettutor` |
+| LOCAL_MONGO_HOST_PORT | Cong port map tu Docker ra host | `27017` |
+| LOCAL_MONGO_DATABASE | Ten database khoi tao trong Docker | `triviettutor` |
 
 ## 3. Cau Truc Cac Document Collections
 

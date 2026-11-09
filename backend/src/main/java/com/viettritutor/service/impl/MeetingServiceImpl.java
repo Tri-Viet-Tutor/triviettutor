@@ -23,17 +23,25 @@ import livekit.LivekitWebhook;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -57,6 +65,9 @@ public class MeetingServiceImpl implements MeetingService {
 
     @Value("${livekit.api.secret:secret}")
     private String livekitApiSecret;
+
+    @Value("${app.meetings.recording-dir:uploads/recordings}")
+    private String recordingDir;
 
     private final SessionRepository sessionRepository;
     private final ClassGroupRepository classGroupRepository;

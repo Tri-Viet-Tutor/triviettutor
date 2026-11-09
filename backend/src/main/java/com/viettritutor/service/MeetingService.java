@@ -29,5 +29,15 @@ public interface MeetingService {
      * Retrieve MongoDB meeting audit logs and participant presence for a session.
      */
     MeetingSessionLogsResponse getSessionMeetingLogs(Long sessionId, User currentUser);
+
+    /**
+     * Upload and save an audio voice recording for a meeting session.
+     */
+    String saveMeetingAudioRecording(Long sessionId, org.springframework.web.multipart.MultipartFile file, User currentUser);
+
+    /**
+     * Retrieve the audio recording resource for streaming or download.
+     */
+    org.springframework.core.io.Resource getMeetingAudioRecording(Long sessionId, User currentUser);
 }
 

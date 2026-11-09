@@ -25,12 +25,30 @@ services:
       timeout: 5s
       retries: 5
 
+  mongodb:
+    image: mongo:7.0
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: ${LOCAL_MONGO_DATABASE:-triviettutor}
+    ports:
+      - "${DOCKER_BIND_ADDRESS:-127.0.0.1}:${LOCAL_MONGO_HOST_PORT:-27017}:27017"
+    volumes:
+      - mongodata:/data/db
+      - ./backend/src/main/resources/data/mongo_seed.js:/docker-entrypoint-initdb.d/mongo_seed.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
     restart: unless-stopped
     depends_on:
       postgres:
+        condition: service_healthy
+      mongodb:
         condition: service_healthy
     env_file:
       - .env
@@ -69,9 +87,8 @@ services:
       WALLET_TOPUP_MAX_AMOUNT: ${WALLET_TOPUP_MAX_AMOUNT:-50000000}
       WALLET_TOPUP_TTL_MINUTES: ${WALLET_TOPUP_TTL_MINUTES:-15}
       WALLET_VNPAY_RETURN_PATH: ${WALLET_VNPAY_RETURN_PATH:-/student/wallet}
-      # An empty MONGODB_URI (as copied from .env.example) is an invalid connection string and stops the
-      # backend from starting; ":-" also replaces an empty value. Meeting logs degrade gracefully without MongoDB.
-      MONGODB_URI: ${MONGODB_URI:-mongodb://localhost:27017/triviettutor}
+      # Local or Docker MongoDB for LiveKit Meeting & Attendance Logs.
+      MONGODB_URI: ${DOCKER_MONGODB_URI:-mongodb://mongodb:27017/triviettutor}
       MONGODB_DATABASE: ${MONGODB_DATABASE:-triviettutor}
       LIVEKIT_URL: ${LIVEKIT_URL:-ws://livekit:7880}
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
@@ -121,4 +138,5 @@ services:
 
 volumes:
   pgdata:
+  mongodata:
 
