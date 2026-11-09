@@ -1,0 +1,10 @@
+{
+  "name": "triviettutor",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "test:e2e": "npm --prefix frontend run test:e2e",
+    "test:e2e:ui": "npm --prefix frontend run test:e2e:ui",
+    "test:e2e:headed": "npm --prefix frontend run test:e2e:headed"
+  }
+}

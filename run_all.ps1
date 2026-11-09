@@ -1,3 +1,8 @@
+param(
+    [switch]$Playwright,
+    [switch]$PlaywrightUI
+)
+
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $Host.UI.RawUI.WindowTitle = "VietTriTutor - Startup Script"
 
@@ -222,22 +227,46 @@ do {
     Write-Host " - Mobile Metro:   http://localhost:8081 (scan QR via Expo Go)" -ForegroundColor Cyan
     Write-Host "===================================================" -ForegroundColor Cyan
 
-    Write-Host "`n=========================================================================" -ForegroundColor Magenta
-    Write-Host " [r] + Enter : KHOI DONG LAI TOAN BO (Restart services)" -ForegroundColor Yellow
-    Write-Host " [Enter]     : DONG CAC CUA SO VA THOAT (Stop & Exit)" -ForegroundColor Red
-    Write-Host "=========================================================================" -ForegroundColor Magenta
+    # Xu ly cac tham so dong lenh neu duoc truyen
+    if ($PlaywrightUI) {
+        Write-Host "`n[*] Tu dong khoi dong giao dien Playwright UI..." -ForegroundColor Cyan
+        Start-Process cmd.exe -WorkingDirectory "$rootDir\frontend" -ArgumentList "/k title VietTriTutor - Playwright UI && npm run test:e2e:ui"
+    } elseif ($Playwright) {
+        Write-Host "`n[*] Tu dong chay Playwright E2E Headed..." -ForegroundColor Cyan
+        Start-Process cmd.exe -WorkingDirectory "$rootDir\frontend" -ArgumentList "/k title VietTriTutor - Playwright Headed && npm run test:e2e:headed"
+    }
 
-    $inputChoice = Read-Host "`nNhap lua chon cua ban"
+    $inMenu = $true
+    $shouldRestart = $false
 
-    # Dong toan bo cac cua so truoc
-    Stop-AllServices -backend $backendProcess -frontend $frontendProcess -mobile $mobileProcess
+    while ($inMenu) {
+        Write-Host "`n=========================================================================" -ForegroundColor Magenta
+        Write-Host " [r] + Enter : KHOI DONG LAI TOAN BO (Restart services)" -ForegroundColor Yellow
+        Write-Host " [p] + Enter : MO GIAO DIEN PLAYWRIGHT UI (E2E Test Runner)" -ForegroundColor Cyan
+        Write-Host " [t] + Enter : CHAY PLAYWRIGHT HEADED (E2E Headed Mode)" -ForegroundColor Cyan
+        Write-Host " [Enter]     : DONG CAC CUA SO VA THOAT (Stop & Exit)" -ForegroundColor Red
+        Write-Host "=========================================================================" -ForegroundColor Magenta
 
-    if ($inputChoice.Trim() -ieq "r") {
-        Write-Host "`n[RESTART] Dang khoi dong lai tat ca cac dich vu sau 2 giay..." -ForegroundColor Yellow
-        Start-Sleep -Seconds 2
-        $shouldRestart = $true
-    } else {
-        $shouldRestart = $false
+        $inputChoice = Read-Host "`nNhap lua chon cua ban"
+        $choice = if ($inputChoice) { $inputChoice.Trim() } else { "" }
+
+        if ($choice -ieq "p") {
+            Write-Host "`n[*] Dang khoi dong giao dien Playwright UI tren cua so moi..." -ForegroundColor Cyan
+            Start-Process cmd.exe -WorkingDirectory "$rootDir\frontend" -ArgumentList "/k title VietTriTutor - Playwright UI && npm run test:e2e:ui"
+        } elseif ($choice -ieq "t") {
+            Write-Host "`n[*] Dang chay Playwright E2E Headed tren cua so moi..." -ForegroundColor Cyan
+            Start-Process cmd.exe -WorkingDirectory "$rootDir\frontend" -ArgumentList "/k title VietTriTutor - Playwright Headed && npm run test:e2e:headed"
+        } elseif ($choice -ieq "r") {
+            $inMenu = $false
+            Stop-AllServices -backend $backendProcess -frontend $frontendProcess -mobile $mobileProcess
+            Write-Host "`n[RESTART] Dang khoi dong lai tat ca cac dich vu sau 2 giay..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 2
+            $shouldRestart = $true
+        } else {
+            $inMenu = $false
+            Stop-AllServices -backend $backendProcess -frontend $frontendProcess -mobile $mobileProcess
+            $shouldRestart = $false
+        }
     }
 
 } while ($shouldRestart)
