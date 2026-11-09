@@ -1,0 +1,149 @@
+import type { HomeworkResponse, QuestionDraft, QuestionInput, QuestionResponse } from "@/interfaces/homework";
+import { formatClockTime, formatDate, weekdayName } from "@/utils/date";
+
+/* Các hàm dùng chung cho bài tập: hiển thị giờ, thời lượng trễ, câu hỏi đang soạn, ảnh chụp bài làm. */
+
+/** "Thứ Sáu, 12/06/2026, 09:55" theo giờ máy người xem */
+export function formatDateTime(iso: string): string {
+  const date = new Date(iso);
+  return `${weekdayName(date)}, ${formatDate(date)}, ${formatClockTime(date)}`;
+}
+
+/** Thời lượng kiểu "1 ngày 2 giờ 5 phút"; dưới một phút ghi "dưới 1 phút" */
+export function formatDuration(seconds: number): string {
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const parts = [days && `${days} ngày`, hours && `${hours} giờ`, minutes && `${minutes} phút`].filter(Boolean);
+  return parts.length ? parts.join(" ") : "dưới 1 phút";
+}
+
+/** Điểm gọn: 8 thay vì 8.00, 7.5 giữ nguyên */
+export function formatScore(value: number): string {
+  return String(Number(value.toFixed(2)));
+}
+
+/** ISO → giá trị cho ô <input type="datetime-local"> (giờ máy người xem) */
+export function toLocalInput(iso?: string): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
+/** Giá trị ô datetime-local → ISO có múi giờ; ô trống → undefined */
+export function fromLocalInput(value: string): string | undefined {
+  return value ? new Date(value).toISOString() : undefined;
+}
+
+/** Học viên đang ở giai đoạn nào của bài: chưa mở, đang mở, đã quá hạn (vẫn có thể nộp trễ) hay đã đóng */
+export function homeworkPhase(homework: HomeworkResponse, now: Date): "upcoming" | "open" | "overdue" | "closed" {
+  if (homework.status === "CLOSED") return "closed";
+  if (homework.openAt && new Date(homework.openAt).getTime() > now.getTime()) return "upcoming";
+  return new Date(homework.dueAt).getTime() > now.getTime() ? "open" : "overdue";
+}
+
+/** Học viên còn bắt đầu / sửa / nộp bài được không */
+export function acceptsWork(homework: HomeworkResponse, now: Date): boolean {
+  const phase = homeworkPhase(homework, now);
+  return phase === "open" || (phase === "overdue" && homework.allowLateSubmission);
+}
+
+let draftKey = 0;
+
+/** Câu hỏi trống mới để gia sư soạn */
+export function newQuestionDraft(type: QuestionDraft["type"]): QuestionDraft {
+  draftKey += 1;
+  return {
+    key: `q${draftKey}`,
+    type,
+    prompt: "",
+    options: type === "MULTIPLE_CHOICE" ? ["", "", "", ""] : [],
+    correctOption: 0,
+    points: "1",
+  };
+}
+
+/** Câu hỏi đã lưu → câu hỏi đang soạn */
+export function toQuestionDrafts(questions: QuestionResponse[] = []): QuestionDraft[] {
+  return questions.map((question) => ({
+    ...newQuestionDraft(question.type),
+    prompt: question.prompt,
+    options: question.options ?? [],
+    correctOption: question.correctOption ?? 0,
+    points: String(question.points),
+  }));
+}
+
+/** Câu hỏi đang soạn → dữ liệu gửi backend (bỏ các phương án để trống, dời đáp án đúng theo) */
+export function toQuestionInputs(drafts: QuestionDraft[]): QuestionInput[] {
+  return drafts.map((draft) => {
+    const points = Number(draft.points);
+    if (draft.type === "ESSAY") return { type: "ESSAY", prompt: draft.prompt.trim(), points };
+    const kept = draft.options.map((text, index) => ({ text: text.trim(), index })).filter((option) => option.text);
+    return {
+      type: "MULTIPLE_CHOICE",
+      prompt: draft.prompt.trim(),
+      options: kept.map((option) => option.text),
+      correctOption: Math.max(
+        0,
+        kept.findIndex((option) => option.index === draft.correctOption),
+      ),
+      points,
+    };
+  });
+}
+
+/** Lỗi đầu tiên của bộ câu hỏi (để báo trước khi gửi), hoặc null nếu hợp lệ */
+export function questionDraftError(drafts: QuestionDraft[]): string | null {
+  for (const [index, draft] of drafts.entries()) {
+    const label = `Câu ${index + 1}`;
+    if (!draft.prompt.trim()) return `${label}: chưa có nội dung câu hỏi.`;
+    const points = Number(draft.points);
+    if (!Number.isFinite(points) || points <= 0) return `${label}: điểm phải lớn hơn 0.`;
+    if (draft.type === "MULTIPLE_CHOICE") {
+      const filled = draft.options.filter((option) => option.trim()).length;
+      if (filled < 2) return `${label}: cần ít nhất 2 phương án.`;
+      if (!draft.options[draft.correctOption]?.trim()) return `${label}: hãy chọn đáp án đúng là một phương án có nội dung.`;
+    }
+  }
+  return null;
+}
+
+/** Tổng điểm các câu (làm tròn 2 chữ số như backend) */
+export function totalPoints(drafts: { points: string | number }[]): number {
+  return Math.round(drafts.reduce((sum, draft) => sum + (Number(draft.points) || 0), 0) * 100) / 100;
+}
+
+/** Ảnh lớn hơn mức này thì thu nhỏ trước khi gửi để điện thoại tải lên nhanh */
+const COMPRESS_ABOVE_BYTES = 1.5 * 1024 * 1024;
+const MAX_IMAGE_SIDE = 2000;
+const NATIVE_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+
+/**
+ * Chuẩn bị tệp trước khi gửi: PDF và ảnh nhỏ giữ nguyên; ảnh lớn hoặc định dạng khác (HEIC của iPhone…)
+ * vẽ lại thành JPEG cạnh dài tối đa 2000px. Trình duyệt không đọc được ảnh thì gửi nguyên tệp để backend báo lỗi.
+ */
+export async function prepareUpload(file: File): Promise<{ blob: Blob; name: string }> {
+  const native = NATIVE_TYPES.includes(file.type);
+  if (!file.type.startsWith("image/") || (native && file.size <= COMPRESS_ABOVE_BYTES)) return { blob: file, name: file.name };
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+    if (!blob) return { blob: file, name: file.name };
+    return { blob, name: file.name.replace(/\.[^.]+$/, "") + ".jpg" };
+  } catch {
+    return { blob: file, name: file.name };
+  }
+}
+
+/** Kích thước tệp dễ đọc: 820 KB, 2,4 MB */
+export function formatFileSize(bytes: number): string {
+  return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} MB`;
+}

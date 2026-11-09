@@ -2,7 +2,7 @@ import { api, unwrap } from "@/services/api";
 import type { ApiResponse, PageResponse } from "@/interfaces/api";
 import type { StudentWallet, WalletTopup, WalletTransaction, WalletPaymentConfirmation } from "@/interfaces/wallet";
 
-/** Adapted from Bike Exchange walletService; server IPN is the only top-up settlement path. */
+/** Adapted from Bike Exchange walletService. A verified VNPay return or IPN credits the wallet once. */
 export const walletService = {
   async getWallet(): Promise<StudentWallet> {
     return unwrap(await api.get<ApiResponse<StudentWallet>>("/wallet"));

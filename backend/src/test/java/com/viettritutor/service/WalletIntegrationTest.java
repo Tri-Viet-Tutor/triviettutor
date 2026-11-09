@@ -203,13 +203,20 @@ class WalletIntegrationTest {
         assertThat(query.substring(idx+16)).isEqualTo(hash(query.substring(0,idx)));
         assertThat(URLDecoder.decode(query,StandardCharsets.UTF_8)).contains("vnp_ReturnUrl=https://frontend.test.invalid/student/wallet");
     }
-    @Test void browserReturnNeverCreditsAndIpnCreditsOnce() throws Exception {
+    @Test void verifiedBrowserReturnCreditsOnceAndIpnDoesNotRepeatIt() throws Exception {
         long id=topup(100000); var f=callback(id,"00");
         http.perform(get("/api/v1/wallet/vnpay/return").header("Authorization",token(student)).params(signed(f)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("COMPLETED"));
+        balance("100000");
+        http.perform(get("/api/v1/wallet/vnpay/return").header("Authorization",token(student)).params(signed(f)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("COMPLETED"));
+        balance("100000");
+        var cancelled=callback(topup(20000),"24");
+        http.perform(get("/api/v1/wallet/vnpay/return").header("Authorization",token(student)).params(signed(cancelled)))
             .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("PENDING"));
-        balance("0");
+        balance("100000");
         http.perform(get("/api/v1/wallet/vnpay/return").header("Authorization",token(other)).params(signed(f))).andExpect(status().isForbidden());
-        ipn(f,"00"); ipn(f,"02"); balance("100000");
+        ipn(f,"02"); balance("100000");
         ipn(callback(id,"24"),"02"); balance("100000");
         var history=wallet.history(student,0,20);
         assertThat(history.getTotalElements()).isEqualTo(1);

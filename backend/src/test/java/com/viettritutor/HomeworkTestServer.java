@@ -61,10 +61,11 @@ public class HomeworkTestServer {
                 HomeworkRequest input = new HomeworkRequest();
                 input.setTitle("Expired homework fixture"); input.setInstructions("Read-only expiry fixture");
                 input.setDueAt(OffsetDateTime.now(clock).plusDays(3)); input.setMaxScore(BigDecimal.TEN);
+                input.setAllowLateSubmission(false);
                 var expired = homeworks.create(fixtureSessions.getFirst().getId(), input, actors.get("admin"));
                 HomeworkStatusRequest publish = new HomeworkStatusRequest(); publish.setStatus(HomeworkStatus.PUBLISHED); publish.setVersion(expired.getVersion());
                 homeworks.changeStatus(expired.getId(), publish, actors.get("admin"));
-                var started = submissions.start(expired.getId(), actors.get("student2"));
+                var started = submissions.start(expired.getId(), null, actors.get("student2"));
                 SubmissionRequest answer = new SubmissionRequest(); answer.setContent("Submitted before expiry"); answer.setVersion(started.getVersion());
                 submissions.save(expired.getId(), answer, actors.get("student2"), true);
                 homeworkRepository.findById(expired.getId()).orElseThrow().setDueAt(OffsetDateTime.now(clock).minusDays(1));

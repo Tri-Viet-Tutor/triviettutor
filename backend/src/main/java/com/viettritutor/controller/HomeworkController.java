@@ -36,7 +36,9 @@ public class HomeworkController {
     @PostMapping("/sessions/{sessionId}/homeworks")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN', 'TUTOR')")
-    @Operation(summary = "Create draft homework", description = "Admin or current session tutor only. Future dueAt required. Cancelled sessions reject creation.")
+    @Operation(summary = "Create draft homework", description = "Admin or current session tutor only. Future dueAt required; optional openAt before it. "
+            + "Optional accessPassword (4-100 chars), allowLateSubmission (default true) and questions (MULTIPLE_CHOICE / ESSAY; maxScore must equal their points). "
+            + "Cancelled sessions reject creation.")
     public ApiResponse<HomeworkResponse> create(@PathVariable @Positive Long sessionId,
             @Valid @RequestBody HomeworkRequest input, @Parameter(hidden = true) @CurrentUser User actor) {
         return ApiResponse.ok(homeworks.create(sessionId, input, actor));
@@ -82,8 +84,19 @@ public class HomeworkController {
         return ApiResponse.ok(homeworks.listForStudent(status, from, to, page, size, actor));
     }
 
+    @GetMapping("/tutor/homeworks")
+    @PreAuthorize("hasRole('TUTOR')")
+    @Operation(summary = "List homework of the sessions I currently teach",
+            description = "Newest deadline first, with counts of work awaiting grading and graded. page >= 0, size 1-100.")
+    public ApiResponse<PageResponse<TutorHomeworkResponse>> listForTutor(
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size,
+            @Parameter(hidden = true) @CurrentUser User actor) {
+        return ApiResponse.ok(homeworks.listForTutor(page, size, actor));
+    }
+
     @GetMapping("/homeworks/{homeworkId}")
-    @Operation(summary = "Read homework", description = "Admin/current tutor or ACTIVE enrolled student for the session date. Unpublished work returns 404 to students.")
+    @Operation(summary = "Read homework", description = "Admin/current tutor or ACTIVE enrolled student for the session date. Unpublished work returns 404 to students. "
+            + "Staff receive the questions with the answer key; students receive questions without it, and only after starting.")
     public ApiResponse<HomeworkResponse> get(@PathVariable @Positive Long homeworkId,
             @Parameter(hidden = true) @CurrentUser User actor) {
         return ApiResponse.ok(homeworks.get(homeworkId, actor));

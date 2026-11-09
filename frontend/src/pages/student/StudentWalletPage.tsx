@@ -50,8 +50,19 @@ function WalletContent({ userId, fullName }: { userId: number; fullName: string 
     refetchInterval: (q) => (q.state.data?.status === "PENDING" && q.state.dataUpdateCount < 21 ? 3000 : false),
   });
   const topup = detail.data ?? (returning ? returned.data : undefined);
+  const reconcile = useMutation({
+    mutationFn: (id: number) => walletService.reconcileTopup(id),
+    onSuccess: (value) => {
+      cache.setQueryData(["wallet-topup", userId, value.topupId], value);
+      setNotice(value.status === "COMPLETED" ? "VNPay đã xác nhận. Số tiền đã được cộng vào ví." : "VNPay chưa xác nhận giao dịch này đã thanh toán.");
+    },
+  });
+  const reconcileTopup = useRef(reconcile.mutate);
+  reconcileTopup.current = reconcile.mutate;
+  const handledReturn = useRef("");
   useEffect(() => {
-    if (!returning || !returned.data) return;
+    if (!returning || !returned.data || handledReturn.current === search) return;
+    handledReturn.current = search;
     const value = returned.data;
     setActiveId(value.topupId);
     const saved = { amount: value.amount, key: attempt.current?.key ?? crypto.randomUUID(), id: value.topupId };
@@ -59,11 +70,14 @@ function WalletContent({ userId, fullName }: { userId: number; fullName: string 
     saveTopup(userId, saved);
     cache.setQueryData(["wallet-topup", userId, value.topupId], value);
     const code = new URLSearchParams(search).get("vnp_ResponseCode");
-    setNotice(
-      code === "00"
-        ? "VNPay đã trả kết quả thành công. Số dư chỉ cập nhật sau khi hệ thống nhận xác nhận."
-        : "Bạn đã hủy hoặc VNPay chưa xác nhận thành công. Hãy kiểm tra trạng thái bên dưới.",
-    );
+    if (value.status === "COMPLETED") {
+      setNotice("VNPay đã xác nhận. Số tiền đã được cộng vào ví.");
+    } else if (code === "00") {
+      setNotice("VNPay đã xác nhận thanh toán. Hệ thống đang cộng tiền vào ví.");
+      reconcileTopup.current(value.topupId);
+    } else {
+      setNotice("Bạn đã hủy hoặc VNPay chưa xác nhận thành công. Hãy kiểm tra trạng thái bên dưới.");
+    }
     navigate(ROUTES.studentWallet, { replace: true });
   }, [returning, returned.data, cache, navigate, search, userId]);
   useEffect(() => {
@@ -89,13 +103,6 @@ function WalletContent({ userId, fullName }: { userId: number; fullName: string 
       setNotice("");
       cache.setQueryData(["wallet-topup", userId, value.topupId], value);
       if (value.paymentUrl) window.location.assign(value.paymentUrl);
-    },
-  });
-  const reconcile = useMutation({
-    mutationFn: (id: number) => walletService.reconcileTopup(id),
-    onSuccess: (value) => {
-      cache.setQueryData(["wallet-topup", userId, value.topupId], value);
-      setNotice(value.status === "COMPLETED" ? "" : "VNPay chưa xác nhận giao dịch này đã thanh toán.");
     },
   });
   const value = Number(amount);

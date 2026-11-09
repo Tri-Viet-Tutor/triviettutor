@@ -28,8 +28,14 @@ public class Homework {
     private String instructions;
     @Column(name = "resource_url", length = 2048)
     private String resourceUrl;
+    @Column(name = "open_at")
+    private OffsetDateTime openAt;
     @Column(name = "due_at", nullable = false)
     private OffsetDateTime dueAt;
+    @Column(name = "access_password_hash", length = 100)
+    private String accessPasswordHash;
+    @Column(name = "allow_late_submission", nullable = false)
+    private boolean allowLateSubmission;
     @Column(name = "max_score", nullable = false, precision = 10, scale = 2)
     private BigDecimal maxScore;
     @Enumerated(EnumType.STRING)
