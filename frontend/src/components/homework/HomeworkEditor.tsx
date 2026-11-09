@@ -222,7 +222,7 @@ export function HomeworkEditor({ homework, initialSessionId, onSaved, onCancel }
                 id="hw-max"
                 type="number"
                 min="0.01"
-                step="0.25"
+                step="0.01"
                 required
                 value={maxScore}
                 onChange={(event) => setMaxScore(event.target.value)}

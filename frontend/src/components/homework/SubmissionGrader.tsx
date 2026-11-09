@@ -121,7 +121,7 @@ export function SubmissionGrader({ homework, submission }: SubmissionGraderProps
                           type="number"
                           min="0"
                           max={question.points}
-                          step="0.25"
+                          step="0.01"
                           inputMode="decimal"
                           value={essayScores[question.id] ?? ""}
                           onChange={(event) => setEssayScores({ ...essayScores, [question.id]: event.target.value })}
@@ -178,7 +178,7 @@ export function SubmissionGrader({ homework, submission }: SubmissionGraderProps
                 type="number"
                 min="0"
                 max={homework.maxScore}
-                step="0.25"
+                step="0.01"
                 inputMode="decimal"
                 value={score}
                 onChange={(event) => setScore(event.target.value)}
