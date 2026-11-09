@@ -242,6 +242,7 @@ do {
     while ($inMenu) {
         Write-Host "`n=========================================================================" -ForegroundColor Magenta
         Write-Host " [r] + Enter : KHOI DONG LAI TOAN BO (Restart services)" -ForegroundColor Yellow
+        Write-Host " [d] + Enter : CHAY DEMO VAO LOP (Login -> Meet: Thay Hung va Minh Anh)" -ForegroundColor Green
         Write-Host " [p] + Enter : MO GIAO DIEN PLAYWRIGHT UI (E2E Test Runner)" -ForegroundColor Cyan
         Write-Host " [t] + Enter : CHAY PLAYWRIGHT HEADED (E2E Headed Mode)" -ForegroundColor Cyan
         Write-Host " [Enter]     : DONG CAC CUA SO VA THOAT (Stop & Exit)" -ForegroundColor Red
@@ -250,7 +251,10 @@ do {
         $inputChoice = Read-Host "`nNhap lua chon cua ban"
         $choice = if ($inputChoice) { $inputChoice.Trim() } else { "" }
 
-        if ($choice -ieq "p") {
+        if ($choice -ieq "d") {
+            Write-Host "`n[*] Dang chay Demo Dang nhap va Vao lop tren 2 trinh duyet tach biet..." -ForegroundColor Green
+            Start-Process cmd.exe -WorkingDirectory "$rootDir\frontend" -ArgumentList "/k title VietTriTutor - Demo Login to Meeting && npm run test:demo"
+        } elseif ($choice -ieq "p") {
             Write-Host "`n[*] Dang khoi dong giao dien Playwright UI tren cua so moi..." -ForegroundColor Cyan
             Start-Process cmd.exe -WorkingDirectory "$rootDir\frontend" -ArgumentList "/k title VietTriTutor - Playwright UI && npm run test:e2e:ui"
         } elseif ($choice -ieq "t") {

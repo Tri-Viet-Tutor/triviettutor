@@ -18,7 +18,9 @@
     "format:check": "prettier --check .",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "test:demo": "playwright test e2e/demo-login-to-meeting.spec.ts --headed",
+    "test:demo:ui": "playwright test e2e/demo-login-to-meeting.spec.ts --ui"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
