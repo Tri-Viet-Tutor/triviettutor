@@ -11,8 +11,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -31,10 +34,44 @@ public class SubmissionController {
 
     @PostMapping("/homeworks/{homeworkId}/submissions/me/start")
     @PreAuthorize("hasRole('STUDENT')")
-    @Operation(summary = "Start homework", description = "Creates one IN_PROGRESS record for the authenticated enrolled student. Repeated starts while IN_PROGRESS return the same record.")
+    @Operation(summary = "Start homework", description = "Creates one IN_PROGRESS record for the authenticated enrolled student once openAt is reached. "
+            + "Password-protected homework needs {\"password\"} on the first start (wrong password: 403 HOMEWORK_WRONG_PASSWORD). "
+            + "Repeated starts while IN_PROGRESS return the same record without the password.")
     public ApiResponse<SubmissionResponse> start(@PathVariable @Positive Long homeworkId,
+            @Valid @RequestBody(required = false) StartSubmissionRequest input,
             @Parameter(hidden = true) @CurrentUser User actor) {
-        return ApiResponse.ok(submissions.start(homeworkId, actor));
+        return ApiResponse.ok(submissions.start(homeworkId, input, actor));
+    }
+
+    @PostMapping(value = "/homeworks/{homeworkId}/submissions/me/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(summary = "Attach a photo or PDF of the work", description = "IN_PROGRESS only. JPEG/PNG/WEBP/PDF detected from the bytes, at most 10 MB each and 10 per submission. "
+            + "Allowed for homework without questions or with essay questions.")
+    public ApiResponse<AttachmentResponse> attach(@PathVariable @Positive Long homeworkId,
+            @RequestPart("file") MultipartFile file, @Parameter(hidden = true) @CurrentUser User actor) {
+        return ApiResponse.ok(submissions.attach(homeworkId, file, actor));
+    }
+
+    @DeleteMapping("/homeworks/{homeworkId}/submissions/me/attachments/{attachmentId}")
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(summary = "Remove one of my files", description = "IN_PROGRESS only.")
+    public ApiResponse<Void> detach(@PathVariable @Positive Long homeworkId, @PathVariable @Positive Long attachmentId,
+            @Parameter(hidden = true) @CurrentUser User actor) {
+        submissions.detach(homeworkId, attachmentId, actor);
+        return ApiResponse.ok();
+    }
+
+    @GetMapping("/submission-attachments/{attachmentId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TUTOR', 'STUDENT')")
+    @Operation(summary = "Download a submission file", description = "The owning student, the session's current tutor or Admin.")
+    public ResponseEntity<byte[]> download(@PathVariable @Positive Long attachmentId,
+            @Parameter(hidden = true) @CurrentUser User actor) {
+        var file = submissions.download(attachmentId, actor);
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(file.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.inline().filename(file.getFileName(), StandardCharsets.UTF_8).build().toString())
+                .cacheControl(CacheControl.noStore())
+                .body(file.getData());
     }
 
     @PutMapping("/homeworks/{homeworkId}/submissions/me/draft")
@@ -72,7 +109,9 @@ public class SubmissionController {
 
     @PatchMapping("/submissions/{submissionId}/grade")
     @PreAuthorize("hasAnyRole('ADMIN', 'TUTOR')")
-    @Operation(summary = "Grade submitted work", description = "Score 0..maxScore. Allowed after deadline and when homework is CLOSED. Only Admin can revise an existing grade, with reason and current version; every change is audited.")
+    @Operation(summary = "Grade submitted work", description = "Score 0..maxScore. For quizzes send answerScores for every essay question; the total adds the automatic multiple-choice score. "
+            + "A quiz graded automatically can be reviewed once by its tutor (e.g. to add feedback). Allowed after deadline and when homework is CLOSED. "
+            + "Only Admin can revise an existing grade, with reason and current version; every change is audited.")
     public ApiResponse<SubmissionResponse> grade(@PathVariable @Positive Long submissionId,
             @Valid @RequestBody GradeSubmissionRequest input, @Parameter(hidden = true) @CurrentUser User actor) {
         return ApiResponse.ok(submissions.grade(submissionId, input, actor));

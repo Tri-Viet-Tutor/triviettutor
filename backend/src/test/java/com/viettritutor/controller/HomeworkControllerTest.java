@@ -56,6 +56,7 @@ class HomeworkControllerTest {
     @Autowired HomeworkSubmissionRepository submissions;
     @Autowired HomeworkChangeRepository homeworkChanges;
     @Autowired SubmissionChangeRepository submissionChanges;
+    @Autowired NotificationRepository notificationRows;
     @Autowired JwtService jwt;
     User admin, tutor, substitute, student, outsider;
     Session session;
@@ -91,12 +92,15 @@ class HomeworkControllerTest {
         return mvc.perform(r);
     }
     JsonNode data(ResultActions r,int statusCode) throws Exception {
-        return json.readTree(r.andExpect(status().is(statusCode)).andReturn().getResponse().getContentAsString()).path("data");
+        return json.readTree(r.andExpect(status().is(statusCode)).andReturn().getResponse()
+                .getContentAsString(java.nio.charset.StandardCharsets.UTF_8)).path("data");
     }
     Map<String,Object> body() {
         var b=new LinkedHashMap<String,Object>();
         b.put("title","Algebra"); b.put("instructions","Solve the equations");
         b.put("resourceUrl","https://example.test/exercises"); b.put("dueAt",DUE.toString()); b.put("maxScore",10);
+        // The original suite covers strict deadlines; late work has its own tests below.
+        b.put("allowLateSubmission",false);
         return b;
     }
     JsonNode create() throws Exception { return data(call("POST",sessionPath(),body(),t),201); }
@@ -499,6 +503,154 @@ class HomeworkControllerTest {
         assertEquals(2,saved.getVersion());assertEquals(3,submissionChanges.count());
         if(saved.getStatus()==SubmissionStatus.GRADED){assertEquals("x=2",saved.getContent());assertEquals(0,new BigDecimal("7").compareTo(saved.getScore()));}
         else {assertEquals("replacement",saved.getContent());assertNull(saved.getScore());}
+    }
+
+    // ── Quiz: open window, password, late work, questions, photos, notifications ──
+
+    static final byte[] JPEG={(byte)0xFF,(byte)0xD8,(byte)0xFF,(byte)0xE0,0,16,'J','F','I','F',0};
+    Map<String,Object> mc(String prompt,int correct,int points) {
+        return Map.of("type","MULTIPLE_CHOICE","prompt",prompt,"options",List.of("A","B","C"),"correctOption",correct,"points",points);
+    }
+    Map<String,Object> essay(String prompt,int points) { return Map.of("type","ESSAY","prompt",prompt,"points",points); }
+    Map<String,Object> quizBody(List<Map<String,Object>> questions,int max) {
+        var b=body();b.remove("allowLateSubmission");b.put("questions",questions);b.put("maxScore",max);return b;
+    }
+    long publish(Map<String,Object> b) throws Exception {
+        long id=data(call("POST",sessionPath(),b,t),201).path("id").asLong();state(id,"PUBLISHED",0);return id;
+    }
+    ResultActions upload(long id,byte[] bytes,String name,String auth) throws Exception {
+        return mvc.perform(multipart(API+hw(id)+"/submissions/me/attachments")
+                .file(new org.springframework.mock.web.MockMultipartFile("file",name,"image/jpeg",bytes)).header("Authorization",auth));
+    }
+    List<Notification> notificationsOf(User u) { return notificationRows.findAll().stream().filter(n->n.getUserId().equals(u.getId())).toList(); }
+
+    @Test void lateWorkIsAcceptedAndTutorIsToldHowLate() throws Exception {
+        var b=body();b.remove("allowLateSubmission");long id=publish(b);var s=start(id);
+        when(clock.instant()).thenReturn(DUE.toInstant().plusSeconds(2*3600+5*60));
+        var late=data(call("PUT",hw(id)+"/submissions/me",Map.of("content","late answer","version",s.path("version").asLong()),st),200);
+        assertEquals("SUBMITTED",late.path("status").asText());assertEquals(7500,late.path("lateSeconds").asLong());
+        var note=notificationsOf(tutor).getFirst();
+        assertEquals("HOMEWORK_LATE_SUBMISSION",note.getType());assertTrue(note.getMessage().contains("trễ 2 giờ 5 phút"),note.getMessage());
+        assertEquals("/tutor/homeworks/"+id,note.getLink());
+        assertEquals(1,data(call("GET","/me/notifications/unread-count",null,t),200).path("count").asInt());
+        assertEquals(1,data(call("GET","/me/notifications?unreadOnly=true",null,t),200).path("totalElements").asInt());
+        call("PATCH","/me/notifications/"+note.getId()+"/read",null,st).andExpect(status().isNotFound());
+        data(call("PATCH","/me/notifications/read-all",null,t),200);
+        assertEquals(0,data(call("GET","/me/notifications/unread-count",null,t),200).path("count").asInt());
+        state(id,"CLOSED",1);
+        call("PUT",hw(id)+"/submissions/me",Map.of("content","after close","version",late.path("version").asLong()),st)
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test void openAtBlocksStartingUntilTheWindowOpens() throws Exception {
+        var b=body();b.put("openAt",NOW.plusSeconds(3600).toString());
+        long id=publish(b);
+        assertEquals(NOW.plusSeconds(3600),Instant.parse(data(call("GET",hw(id),null,st),200).path("openAt").asText()));
+        assertEquals("HOMEWORK_NOT_OPEN",json.readTree(call("POST",hw(id)+"/submissions/me/start",null,st)
+                .andExpect(status().isUnprocessableEntity()).andReturn().getResponse().getContentAsString()).path("errorCode").asText());
+        when(clock.instant()).thenReturn(NOW.plusSeconds(3600));
+        start(id);
+        b.put("openAt",DUE.plusSeconds(1).toString());
+        call("POST",sessionPath(),b,t).andExpect(status().isBadRequest());
+    }
+
+    @Test void passwordGuardsFirstStartAndQuestionsStayHiddenUntilThen() throws Exception {
+        var b=quizBody(List.of(mc("2+2?",1,10)),10);b.put("accessPassword","AiTA");
+        long id=publish(b);
+        var view=data(call("GET",hw(id),null,st),200);
+        assertTrue(view.path("passwordProtected").asBoolean());assertFalse(view.has("questions"));
+        assertFalse(homeworks.findById(id).orElseThrow().getAccessPasswordHash().contains("AiTA"));
+        call("POST",hw(id)+"/submissions/me/start",null,st).andExpect(status().isForbidden());
+        call("POST",hw(id)+"/submissions/me/start",Map.of("password","wrong"),st).andExpect(status().isForbidden());
+        data(call("POST",hw(id)+"/submissions/me/start",Map.of("password","AiTA"),st),200);
+        var question=data(call("GET",hw(id),null,st),200).path("questions").get(0);
+        assertEquals("2+2?",question.path("prompt").asText());assertFalse(question.has("correctOption"));
+        assertEquals(1,data(call("GET",hw(id),null,t),200).path("questions").get(0).path("correctOption").asInt());
+        start(id); // resuming needs no password
+        var weak=body();weak.put("accessPassword","abc");call("POST",sessionPath(),weak,t).andExpect(status().isBadRequest());
+    }
+
+    @Test void multipleChoiceOnlyQuizIsGradedOnSubmit() throws Exception {
+        long id=publish(quizBody(List.of(mc("Q1",0,4),mc("Q2",2,6)),10));
+        var s=start(id);var q=data(call("GET",hw(id),null,st),200).path("questions");
+        upload(id,JPEG,"photo.jpg",st).andExpect(status().isUnprocessableEntity());
+        var answers=List.of(Map.of("questionId",q.get(0).path("id").asLong(),"selectedOption",0),
+                Map.of("questionId",q.get(1).path("id").asLong(),"selectedOption",1));
+        var graded=data(call("PUT",hw(id)+"/submissions/me",Map.of("answers",answers,"version",s.path("version").asLong()),st),200);
+        assertEquals("GRADED",graded.path("status").asText());assertEquals(4,graded.path("score").asInt());
+        assertTrue(graded.path("autoGraded").asBoolean());assertEquals(4,graded.path("answers").get(0).path("score").asInt());
+        assertTrue(notificationsOf(tutor).getFirst().getMessage().contains("4/10"));
+        // The tutor may still review once to leave feedback; the score stays the computed one.
+        var reviewed=data(call("PATCH","/submissions/"+graded.path("id").asLong()+"/grade",
+                Map.of("feedback","Xem lại câu 2","version",graded.path("version").asLong()),t),200);
+        assertEquals(4,reviewed.path("score").asInt());assertEquals("Xem lại câu 2",reviewed.path("feedback").asText());
+        call("PATCH","/submissions/"+graded.path("id").asLong()+"/grade",Map.of("version",reviewed.path("version").asLong()),t)
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test void essayQuizTakesPhotosAndTutorGradesEachEssay() throws Exception {
+        long id=publish(quizBody(List.of(mc("Q1",0,4),essay("Prove it",6)),10));
+        var s=start(id);var q=data(call("GET",hw(id),null,st),200).path("questions");
+        long essayId=q.get(1).path("id").asLong();
+        var photo=data(upload(id,JPEG,"../../bài làm.jpg",st),200);
+        assertEquals("image/jpeg",photo.path("contentType").asText());assertEquals("bài làm.jpg",photo.path("fileName").asText());
+        upload(id,"not an image".getBytes(),"x.jpg",st).andExpect(status().isBadRequest());
+        var answers=List.of(Map.of("questionId",q.get(0).path("id").asLong(),"selectedOption",0),
+                Map.of("questionId",essayId,"textAnswer","See photo"));
+        var submitted=data(call("PUT",hw(id)+"/submissions/me",Map.of("answers",answers,"version",s.path("version").asLong()),st),200);
+        assertEquals("SUBMITTED",submitted.path("status").asText());assertEquals(4,submitted.path("autoScore").asInt());
+        assertFalse(submitted.path("answers").get(0).has("score")); // hidden until graded
+        upload(id,JPEG,"more.jpg",st).andExpect(status().isUnprocessableEntity());
+
+        var row=data(call("GET",hw(id)+"/submissions",null,t),200).path("content").get(0);
+        assertEquals("STUDENT",row.path("studentName").asText());assertEquals(1,row.path("attachments").size());
+        long fileId=row.path("attachments").get(0).path("id").asLong();
+        var file=mvc.perform(get(API+"/submission-attachments/"+fileId).header("Authorization",t)).andExpect(status().isOk()).andReturn().getResponse();
+        assertEquals("image/jpeg",file.getContentType());assertArrayEquals(JPEG,file.getContentAsByteArray());
+        enroll(outsider);
+        mvc.perform(get(API+"/submission-attachments/"+fileId).header("Authorization",token(outsider))).andExpect(status().isNotFound());
+        mvc.perform(get(API+"/submission-attachments/"+fileId).header("Authorization",token(substitute))).andExpect(status().isForbidden());
+
+        long sid=submitted.path("id").asLong(), v=submitted.path("version").asLong();
+        call("PATCH","/submissions/"+sid+"/grade",Map.of("score",9,"version",v),t).andExpect(status().isBadRequest());
+        call("PATCH","/submissions/"+sid+"/grade",Map.of("answerScores",Map.of(essayId,7),"version",v),t).andExpect(status().isBadRequest());
+        var graded=data(call("PATCH","/submissions/"+sid+"/grade",Map.of("answerScores",Map.of(essayId,5),"feedback","Tốt","version",v),t),200);
+        assertEquals(9,graded.path("score").asInt());
+        var mine=data(call("GET",hw(id)+"/submissions/me",null,st),200);
+        assertEquals(9,mine.path("score").asInt());assertEquals("Tốt",mine.path("feedback").asText());
+        assertEquals(5,mine.path("answers").get(1).path("score").asInt());
+        var note=notificationsOf(student).stream().filter(n->n.getType().equals("HOMEWORK_GRADED")).findFirst().orElseThrow();
+        assertTrue(note.getMessage().contains("9/10"),note.getMessage());
+    }
+
+    @Test void questionsMustMatchMaxScoreAndFreezeOncePublished() throws Exception {
+        call("POST",sessionPath(),quizBody(List.of(mc("Q1",0,4)),10),t).andExpect(status().isBadRequest());
+        call("POST",sessionPath(),quizBody(List.of(Map.of("type","MULTIPLE_CHOICE","prompt","Q","options",List.of("A"),"correctOption",0,"points",1)),1),t)
+                .andExpect(status().isBadRequest());
+        call("POST",sessionPath(),quizBody(List.of(mc("Q",3,1)),1),t).andExpect(status().isBadRequest());
+        call("POST",sessionPath(),quizBody(List.of(Map.of("type","ESSAY","prompt","Q","correctOption",0,"points",1)),1),t)
+                .andExpect(status().isBadRequest());
+        var draft=quizBody(List.of(mc("Q1",0,4)),4);
+        long id=data(call("POST",sessionPath(),draft,t),201).path("id").asLong();
+        draft.put("version",0);draft.put("questions",List.of(mc("Q1",1,4),essay("E",6)));draft.put("maxScore",10);
+        assertEquals(2,data(call("PUT",hw(id),draft,t),200).path("questions").size());
+        state(id,"PUBLISHED",1);
+        draft.put("version",2);draft.put("questions",List.of(mc("Q1",0,4),essay("E",6)));
+        call("PUT",hw(id),draft,t).andExpect(status().isUnprocessableEntity());
+        draft.remove("questions");draft.put("accessPassword","new-pass");
+        assertTrue(data(call("PUT",hw(id),draft,t),200).path("passwordProtected").asBoolean());
+    }
+
+    @Test void publishingNotifiesEnrolledStudentsAndTutorListCountsWork() throws Exception {
+        long id=publish(body());
+        var note=notificationsOf(student).getFirst();
+        assertEquals("HOMEWORK_PUBLISHED",note.getType());assertEquals("/student/homework/"+id,note.getLink());
+        assertTrue(notificationsOf(outsider).isEmpty());
+        submit(id);
+        var item=data(call("GET","/tutor/homeworks",null,t),200).path("content").get(0);
+        assertEquals(id,item.path("homework").path("id").asLong());assertEquals(1,item.path("submittedCount").asInt());
+        assertEquals(0,data(call("GET","/tutor/homeworks",null,token(substitute)),200).path("totalElements").asInt());
+        call("GET","/tutor/homeworks",null,st).andExpect(status().isForbidden());
     }
 
 }
