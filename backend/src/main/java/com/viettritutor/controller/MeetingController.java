@@ -12,10 +12,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/meetings")
@@ -81,5 +87,43 @@ public class MeetingController {
         log.info("Fetching meeting logs for session {} by user {} ({})",
                 sessionId, currentUser.getId(), currentUser.getRole());
         return ApiResponse.ok(meetingService.getSessionMeetingLogs(sessionId, currentUser));
+    }
+
+    @PostMapping(value = "/sessions/{sessionId}/recording", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ADMIN', 'TUTOR')")
+    @Operation(summary = "Upload and save an audio voice recording for a meeting session")
+    public ApiResponse<Map<String, String>> uploadSessionAudio(
+            @Parameter(description = "Session ID", required = true)
+            @PathVariable @Min(1) Long sessionId,
+            @RequestParam("file") MultipartFile file,
+            @CurrentUser User currentUser) {
+        log.info("Saving audio recording for session {} by user {} ({})",
+                sessionId, currentUser.getId(), currentUser.getRole());
+        String url = meetingService.saveMeetingAudioRecording(sessionId, file, currentUser);
+        return ApiResponse.ok(Map.of("recordingUrl", url));
+    }
+
+    @GetMapping("/sessions/{sessionId}/recording")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TUTOR', 'STUDENT')")
+    @Operation(summary = "Stream or download the meeting audio voice recording")
+    public ResponseEntity<Resource> getSessionAudio(
+            @Parameter(description = "Session ID", required = true)
+            @PathVariable @Min(1) Long sessionId,
+            @CurrentUser User currentUser) {
+        log.info("Streaming audio recording for session {} by user {} ({})",
+                sessionId, currentUser.getId(), currentUser.getRole());
+        Resource audioResource = meetingService.getMeetingAudioRecording(sessionId, currentUser);
+        String filename = audioResource.getFilename() != null ? audioResource.getFilename() : "session_recording.webm";
+        String contentType = filename.endsWith(".mp3") ? "audio/mpeg"
+                : filename.endsWith(".ogg") ? "audio/ogg"
+                : filename.endsWith(".wav") ? "audio/wav"
+                : filename.endsWith(".m4a") ? "audio/mp4"
+                : "audio/webm";
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                .body(audioResource);
     }
 }

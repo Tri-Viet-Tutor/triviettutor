@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getSessionMeetingToken, getSessionMeetingLogs } from "../services/meeting";
+import { getSessionMeetingToken, getSessionMeetingLogs, uploadMeetingRecording } from "../services/meeting";
 import { MeetingTokenResponse, MeetingSessionLogsResponse } from "../interfaces/api";
 import { useAuthStore } from "../stores/authStore";
 import { portalErrorMessage } from "../utils/errors";
@@ -22,6 +22,15 @@ export default function ClassroomPage() {
   const [showWhiteboard, setShowWhiteboard] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
+
+  // Voice Recording states
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<number | null>(null);
+  const [isSavingRecording, setIsSavingRecording] = useState(false);
+  const [recordingSaveNotice, setRecordingSaveNotice] = useState<string | null>(null);
 
   // WebRTC Media Streams
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -287,9 +296,89 @@ export default function ClassroomPage() {
     setInputMsg("");
   };
 
+  const startVoiceRecording = async () => {
+    try {
+      let streamToRecord: MediaStream | null = null;
+      if (localStream && localStream.getAudioTracks().length > 0) {
+        streamToRecord = new MediaStream(localStream.getAudioTracks());
+      } else if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+        streamToRecord = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      }
+
+      if (!streamToRecord) {
+        alert("Không tìm thấy micro khả dụng để ghi âm.");
+        return;
+      }
+
+      const mimeType = typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("audio/webm")
+        ? "audio/webm"
+        : typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("audio/ogg")
+        ? "audio/ogg"
+        : "";
+
+      const options = mimeType ? { mimeType } : undefined;
+      const recorder = new MediaRecorder(streamToRecord, options);
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || "audio/webm" });
+        if (audioBlob.size > 0 && sessionId) {
+          setIsSavingRecording(true);
+          try {
+            await uploadMeetingRecording(Number(sessionId), audioBlob);
+            setRecordingSaveNotice("Đã lưu bản ghi âm buổi học thành công vào hệ thống!");
+          } catch (err) {
+            console.error("Lỗi khi lưu bản ghi âm:", err);
+            setRecordingSaveNotice("Không thể tải bản ghi âm lên máy chủ. Vui lòng kiểm tra kết nối.");
+          } finally {
+            setIsSavingRecording(false);
+          }
+        }
+      };
+
+      recorder.start(1000);
+      mediaRecorderRef.current = recorder;
+      setIsRecordingVoice(true);
+      setRecordingSeconds(0);
+      setRecordingSaveNotice(null);
+
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+      recordingTimerRef.current = window.setInterval(() => {
+        setRecordingSeconds((prev) => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Không thể khởi động ghi âm:", err);
+      alert("Không thể khởi động ghi âm. Vui lòng cấp quyền truy cập micro cho trình duyệt.");
+    }
+  };
+
+  const stopVoiceRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    setIsRecordingVoice(false);
+  };
+
   const [confirmLeave, setConfirmLeave] = useState(false);
   const handleLeave = () => setConfirmLeave(true);
   const leaveRoom = () => {
+    if (isRecordingVoice) {
+      stopVoiceRecording();
+    }
     if (localStream) {
       localStream.getTracks().forEach((t) => t.stop());
     }
@@ -350,6 +439,12 @@ export default function ClassroomPage() {
             <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Live</span>
           </div>
+          {isRecordingVoice && (
+            <div className="flex items-center gap-1.5 rounded-full bg-rose-500/20 border border-rose-500/40 px-2.5 py-0.5 text-xs text-rose-300 font-semibold animate-pulse">
+              <span className="h-2 w-2 rounded-full bg-rose-500" />
+              <span>Ghi âm: {Math.floor(recordingSeconds / 60).toString().padStart(2, "0")}:{(recordingSeconds % 60).toString().padStart(2, "0")}</span>
+            </div>
+          )}
           <div className="h-4 w-px bg-slate-700" />
           <div>
             <h1 className="text-sm font-bold text-slate-100 leading-tight">
@@ -404,6 +499,22 @@ export default function ClassroomPage() {
           </button>
         </div>
       </header>
+
+      {/* Voice Recording Save Notice Banner */}
+      {recordingSaveNotice && (
+        <div className="bg-emerald-950/90 border-b border-emerald-800 px-4 py-2 text-xs text-emerald-300 flex items-center justify-between z-20">
+          <div className="flex items-center gap-2">
+            <span>🎙️</span>
+            <span>{recordingSaveNotice}</span>
+          </div>
+          <button
+            onClick={() => setRecordingSaveNotice(null)}
+            className="text-emerald-400 hover:text-white font-bold ml-2 text-xs"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Permission Denied Notice Banner */}
       {mediaPermissionDenied && (
@@ -675,6 +786,28 @@ export default function ClassroomPage() {
           <span>✋ {handRaised ? "Hạ tay xuống" : "Giơ tay"}</span>
         </button>
 
+        {/* Voice Record Toggle (Tutor & Admin) */}
+        {(isTutor || isAdmin) && (
+          <button
+            onClick={isRecordingVoice ? stopVoiceRecording : startVoiceRecording}
+            disabled={isSavingRecording}
+            className={`flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-semibold transition ${
+              isRecordingVoice
+                ? "bg-rose-600 text-white animate-pulse"
+                : "bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700"
+            }`}
+            title={isRecordingVoice ? "Dừng ghi âm buổi học" : "Bắt đầu ghi âm buổi học"}
+          >
+            <span>
+              {isSavingRecording
+                ? "⏳ Đang lưu ghi âm..."
+                : isRecordingVoice
+                ? "⏹️ Dừng ghi âm"
+                : "🎙️ Ghi âm buổi học"}
+            </span>
+          </button>
+        )}
+
         <div className="h-6 w-px bg-slate-800 mx-2" />
 
         {/* Leave Classroom */}
@@ -728,6 +861,40 @@ export default function ClassroomPage() {
                       <span className="text-slate-200 font-semibold">{sessionLogs.totalParticipants}</span>
                     </div>
                   </div>
+
+                  {/* Voice Recording Audio Player */}
+                  {sessionLogs.sessionLog?.recordingUrl ? (
+                    <div className="rounded-lg bg-indigo-950/40 border border-indigo-800/60 p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">🎙️</span>
+                          <span className="text-xs font-bold text-indigo-300 uppercase tracking-wide">
+                            Bản ghi âm buổi học (Voice Record)
+                          </span>
+                        </div>
+                        <a
+                          href={sessionLogs.sessionLog.recordingUrl}
+                          download={`session_${sessionId}_audio.webm`}
+                          className="text-[11px] font-semibold text-indigo-400 hover:text-indigo-200 underline"
+                        >
+                          Tải file ghi âm
+                        </a>
+                      </div>
+                      <audio
+                        controls
+                        className="w-full h-8 mt-2"
+                        src={sessionLogs.sessionLog.recordingUrl}
+                        preload="metadata"
+                      />
+                    </div>
+                  ) : (
+                    <div className="rounded-lg bg-slate-800/40 border border-slate-750 p-3 text-xs text-slate-400 flex items-center justify-between">
+                      <span>🎙️ Chưa có bản ghi âm được lưu cho buổi học này.</span>
+                      {(isTutor || isAdmin) && (
+                        <span className="text-[11px] text-amber-400">Bấm nút Ghi âm ở thanh công cụ trong khi dạy để tự động ghi.</span>
+                      )}
+                    </div>
+                  )}
 
                   {/* Participants List */}
                   <div>
