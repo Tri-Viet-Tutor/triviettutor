@@ -303,6 +303,19 @@ class UserControllerTest {
         assertFalse(tutors.existsById(tutor.getId()));
     }
 
+    @Test
+    void updateUserRejectsNameLongerThanTheColumn() throws Exception {
+        User admin = createUser("admin-long-name@example.test", "Admin", "ROLE_ADMIN");
+        User student = createUser("student-long-name@example.test", "Student", "ROLE_STUDENT");
+        String body = "{\"fullName\":\"" + "A".repeat(101) + "\",\"email\":\"student-long-name@example.test\"}";
+
+        mvc.perform(put("/api/v1/admin/users/{userId}", student.getId())
+                        .header("Authorization", bearer(admin))
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"));
+    }
+
     private User createUser(String email, String name, String role) {
         return users.saveAndFlush(User.builder()
                 .email(email).fullName(name).role(role).password("private-password-hash")

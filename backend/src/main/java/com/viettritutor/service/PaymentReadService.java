@@ -23,6 +23,7 @@ public class PaymentReadService {
     private final PaymentRepository payments;
     private final EnrollmentRepository enrollments;
     private final RefundRepository refunds;
+    private final WalletTransactionRepository walletTransactions;
     private final EnrollmentPaymentSupport support;
     private final ClassGroupRepository classes;
     private final MockPaymentPolicy mockPolicy;
@@ -42,7 +43,8 @@ public class PaymentReadService {
     public PaymentResponse response(Payment payment) {
         Long enrollmentId = enrollments.findByPaymentId(payment.getId()).map(Enrollment::getId).orElse(null);
         return PaymentResponse.from(payment, enrollmentId, refunds.findByPaymentIdIn(List.of(payment.getId())).stream()
-                .map(RefundResponse::from).toList());
+                .map(RefundResponse::from).toList(), enrollmentId == null ? null : walletTransactions.findByEnrollmentId(enrollmentId)
+                .map(WalletTransaction::getAmount).orElse(null));
     }
 
     public PageResponse<PaymentResponse> payments(User admin, PaymentStatus status, LocalDate from, LocalDate to, int page, int size) {
@@ -62,8 +64,12 @@ public class PaymentReadService {
                 .collect(Collectors.toMap(Enrollment::getPaymentId, Enrollment::getId));
         Map<Long, List<RefundResponse>> refundsByPayment = ids.isEmpty() ? Map.of() : refunds.findByPaymentIdIn(ids).stream()
                 .collect(Collectors.groupingBy(Refund::getPaymentId, Collectors.mapping(RefundResponse::from, Collectors.toList())));
+        Map<Long, java.math.BigDecimal> creditByEnrollment = enrollmentByPayment.isEmpty() ? Map.of() : walletTransactions
+                .findByEnrollmentIdIn(enrollmentByPayment.values()).stream()
+                .collect(Collectors.toMap(WalletTransaction::getEnrollmentId, WalletTransaction::getAmount));
         return PageResponse.from(result.map(payment -> PaymentResponse.from(payment, enrollmentByPayment.get(payment.getId()),
-                refundsByPayment.getOrDefault(payment.getId(), List.of()))));
+                refundsByPayment.getOrDefault(payment.getId(), List.of()),
+                creditByEnrollment.get(enrollmentByPayment.get(payment.getId())))));
     }
 
     public PageResponse<EnrollmentResponse> mine(User student, EnrollmentStatus status, int page, int size) {

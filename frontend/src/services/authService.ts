@@ -81,7 +81,10 @@ export const GOOGLE_LOGIN_ENABLED = import.meta.env.VITE_GOOGLE_LOGIN_ENABLED ==
 
 /** Địa chỉ bắt đầu đăng nhập Google của Spring Security; xong backend chuyển về /oauth2/success#token=… */
 export function googleLoginUrl(): string {
-  return `${backendOrigin()}/oauth2/authorization/google`;
+    // Không đặt VITE_OAUTH2_BASE_URL thì dùng origin của backend như các lời gọi API (không cố định localhost).
+    const oauthBaseUrl = import.meta.env.VITE_OAUTH2_BASE_URL || backendOrigin();
+
+    return `${oauthBaseUrl.replace(/\/+$/, "")}/oauth2/authorization/google`;
 }
 
 /** GET /me bằng token vừa nhận (chưa lưu vào store) — dùng ở trang hoàn tất đăng nhập Google */

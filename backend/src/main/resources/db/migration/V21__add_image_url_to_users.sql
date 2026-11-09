@@ -1,2 +1,2 @@
 ALTER TABLE users
-    ADD COLUMN image_url VARCHAR(2048);
+    ADD COLUMN IF NOT EXISTS image_url VARCHAR(2048);

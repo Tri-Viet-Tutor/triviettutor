@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -34,6 +35,10 @@ public class LearningFileController {
     static final long MAX_SIZE = 10L * 1024 * 1024;
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
             "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "png", "jpg", "jpeg", "gif", "webp", "zip", "rar");
+    /** Only these open in the browser; the type comes from the stored name, never from the uploader's Content-Type. */
+    private static final Map<String, MediaType> INLINE_TYPES = Map.of(
+            "pdf", MediaType.APPLICATION_PDF, "png", MediaType.IMAGE_PNG, "jpg", MediaType.IMAGE_JPEG,
+            "jpeg", MediaType.IMAGE_JPEG, "gif", MediaType.IMAGE_GIF, "webp", MediaType.parseMediaType("image/webp"));
 
     private final LearningFileRepository files;
     private final Clock clock;
@@ -75,15 +80,13 @@ public class LearningFileController {
             description = "Public link with an unguessable key, so it opens directly from homework and submission pages.")
     public ResponseEntity<byte[]> download(@PathVariable UUID key) {
         LearningFile file = files.findByFileKey(key).orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
-        MediaType type;
-        try {
-            type = MediaType.parseMediaType(file.getContentType());
-        } catch (Exception ex) {
-            type = MediaType.APPLICATION_OCTET_STREAM;
-        }
-        boolean inline = type.getType().equals("image") || MediaType.APPLICATION_PDF.includes(type);
+        // A client-chosen type such as image/svg+xml would run script on this origin, so it is ignored here.
+        String name = file.getFileName();
+        int dot = name.lastIndexOf('.');
+        MediaType type = dot < 0 ? null : INLINE_TYPES.get(name.substring(dot + 1).toLowerCase(Locale.ROOT));
+        boolean inline = type != null;
         ContentDisposition disposition = (inline ? ContentDisposition.inline() : ContentDisposition.attachment())
-                .filename(file.getFileName(), StandardCharsets.UTF_8).build();
+                .filename(name, StandardCharsets.UTF_8).build();
         return ResponseEntity.ok()
                 .contentType(inline ? type : MediaType.APPLICATION_OCTET_STREAM)
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())

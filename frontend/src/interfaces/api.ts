@@ -210,7 +210,10 @@ export type ErrorCode =
   | "PAYMENT_MOCK_DISABLED"
   | "ASSISTANT_RATE_LIMITED"
   | "ASSISTANT_UNAVAILABLE"
-  | "INTERNAL_ERROR";
+  | "INTERNAL_ERROR"
+  | "GOOGLE_NOT_LINKED"
+  | "GOOGLE_UNLINK_NOT_ALLOWED"
+  | "WRONG_CURRENT_PASSWORD";
 
 // ── Người dùng & đăng nhập (dto.auth, entity.User) ───────────────────────────
 
@@ -666,6 +669,7 @@ export interface TutorProfileResponse {
  */
 export interface MeResponse extends UserInfo {
   createdAt: IsoDateTime;
+  googleLinked: boolean;
   profile: Partial<StudentProfileResponse & TutorProfileResponse> | null;
 }
 
@@ -860,6 +864,8 @@ export interface TuitionPayment {
   transactionRef: string;
   refundReason: string | null;
   refunds: TuitionRefund[];
+  /** Ưu đãi lớp nhóm đã hoàn vào ví cho ghi danh của giao dịch này */
+  discountCredited?: number;
 }
 
 /** Chi tiết yêu cầu thanh toán: giao dịch và ghi danh đi kèm (nếu đã có) */

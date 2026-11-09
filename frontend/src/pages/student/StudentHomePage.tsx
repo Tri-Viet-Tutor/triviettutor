@@ -124,7 +124,12 @@ function HomeworkOverview({ now }: { now: Date }) {
   const homeworks = useQuery({ queryKey: ["my-homeworks"], queryFn: () => listMyHomeworks() });
   const todayIso = toIsoDate(now);
   const today = (homeworks.data?.content ?? []).filter(
-    (item) => stateOf(item) === "TODO" && toIsoDate(new Date(item.homework.dueAt)) === todayIso,
+    // Chỉ những bài còn nộp được: đang mở và chưa qua giờ hạn nộp hôm nay
+    (item) =>
+      stateOf(item) === "TODO" &&
+      item.homework.status === "PUBLISHED" &&
+      new Date(item.homework.dueAt).getTime() > now.getTime() &&
+      toIsoDate(new Date(item.homework.dueAt)) === todayIso,
   );
   const has = today.length > 0;
 

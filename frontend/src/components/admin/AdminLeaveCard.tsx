@@ -61,7 +61,8 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
   const canExcuse = !fromTutor && pending && !request.isLateNotice && session !== undefined && session.status !== "PENDING_RESCHEDULE" && session.status !== "CANCELLED";
   // Không cho chọn chính người đang dạy buổi đó làm người dạy thay
   const currentTeacher = session ? teacherOf(session) : null;
-  const substituteOptions = tutors.filter((tutor) => tutor.id !== currentTeacher);
+  // Gia sư đã bị khóa không dạy thay được (backend từ chối), nên không đưa vào danh sách
+  const substituteOptions = tutors.filter((tutor) => tutor.id !== currentTeacher && !tutor.locked);
   // Đơn đã duyệt "hủy buổi": vẫn xếp bù được nếu buổi gốc đã hủy chưa có buổi bù nào còn hiệu lực
   const cancelledWithoutMakeup =
     request.status === "APPROVED" &&

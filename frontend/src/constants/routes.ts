@@ -43,6 +43,7 @@ export const ROUTES = {
   tutorAvailability: "/tutor/availability",
   tutorLeave: "/tutor/leave",
   tutorProfile: "/tutor/profile",
+  tutorAssignmentsCreate: "/tutor/sessions/:sessionId/assignments/new",
   /** Thu nhập theo tháng */
   tutorPayroll: "/tutor/payroll",
   /** Bài tập / bài kiểm tra: danh sách, tạo mới (?buoi=<mã buổi>), soạn + chấm một bài */

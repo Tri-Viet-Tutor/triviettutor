@@ -30,6 +30,8 @@ public enum ErrorCode {
     OTP_ATTEMPTS_EXCEEDED     (HttpStatus.TOO_MANY_REQUESTS, "Too many incorrect codes; request a new verification code"),
     OTP_RESEND_TOO_SOON       (HttpStatus.TOO_MANY_REQUESTS, "Please wait before requesting another verification code"),
     ACCOUNT_LOCKED            (HttpStatus.FORBIDDEN,      "This account has been locked by an administrator"),
+    GOOGLE_NOT_LINKED         (HttpStatus.UNPROCESSABLE_ENTITY, "This account is not linked to a Google account"),
+    GOOGLE_UNLINK_NOT_ALLOWED (HttpStatus.UNPROCESSABLE_ENTITY, "Cannot unlink Google account; it is the only login method for this account"),
 
     // ── Authorization ─────────────────────────────────────────────────────────
     ACCESS_DENIED             (HttpStatus.FORBIDDEN,      "You do not have permission to perform this action"),
@@ -197,7 +199,9 @@ public enum ErrorCode {
 
     // ── Assistant chatbot ─────────────────────────────────────────
     ASSISTANT_RATE_LIMITED (HttpStatus.TOO_MANY_REQUESTS, "Too many assistant questions; try again later"),
-    ASSISTANT_UNAVAILABLE (HttpStatus.SERVICE_UNAVAILABLE, "The assistant is not available right now");
+    ASSISTANT_UNAVAILABLE (HttpStatus.SERVICE_UNAVAILABLE, "The assistant is not available right now"),
+    // Not 401: the caller is signed in, and the web client logs out on any 401.
+    WRONG_CURRENT_PASSWORD (HttpStatus.BAD_REQUEST, "Current password is incorrect");
 
     private final HttpStatus httpStatus;
     private final String defaultMessage;

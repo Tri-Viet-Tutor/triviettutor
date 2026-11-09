@@ -49,7 +49,7 @@ export function ClassStatusDialog({ classItem, mode, onClose, onSaved }: ClassSt
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (mode === "reopen" && !reason.trim()) return setFormError("Hãy nhập lý do mở lại lớp.");
-    if (mode === "reopen" && deadline && deadline > startDate) return setFormError("Hạn đăng ký phải trước hoặc bằng ngày khai giảng.");
+    if (mode === "reopen" && deadline && deadline >= startDate) return setFormError("Hạn đăng ký phải trước ngày khai giảng.");
     if (mode === "status" && !action) return;
     if (mode === "status" && action.danger && !reason.trim()) return setFormError("Hãy nhập lý do hủy lớp.");
     setFormError(null);

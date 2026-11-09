@@ -394,6 +394,29 @@ class TutorAssignmentServiceTest {
     }
 
     @Test
+    @DisplayName("Available tutors for a draft class without generated sessions check the schedule it would generate")
+    void availableTutors_draftWithoutSessions_usesPlannedSchedule() {
+        groupClass.setStatus(ClassStatus.DRAFT);
+        Session planned = session(1L, "2026-11-02", 18, SessionStatus.SCHEDULED);
+        ScheduleConflictResponse conflict = new ScheduleConflictResponse(null, 99L, 50L,
+                LocalDate.of(2026, 11, 2), LocalTime.of(18, 0), LocalTime.of(20, 0));
+        when(classRepository.findById(100L)).thenReturn(Optional.of(groupClass));
+        when(sessionRepository.findByClassGroupIdOrderBySessionNumberAsc(100L)).thenReturn(List.of());
+        when(scheduleService.plannedSessions(groupClass)).thenReturn(List.of(planned));
+        when(assignmentRepository.findByClassGroupIdAndStatus(100L, AssignmentStatus.ACTIVE)).thenReturn(Optional.empty());
+        when(userRepository.findByRoleOrderByIdAsc("ROLE_TUTOR")).thenReturn(List.of(tutor1, tutor2));
+        when(availabilityRepository.findByTutorIdIn(List.of(10L, 20L))).thenReturn(List.of());
+        when(conflictService.checkTutor(10L, List.of(planned))).thenReturn(List.of(conflict));
+        when(conflictService.checkTutor(20L, List.of(planned))).thenReturn(List.of());
+
+        List<AvailableTutorResponse> result = assignmentService.availableTutors(100L);
+
+        assertThat(result).extracting(AvailableTutorResponse::tutorId, AvailableTutorResponse::available)
+                .containsExactly(tuple(20L, true), tuple(10L, false));
+        verify(sessionRepository, never()).saveAll(any());
+    }
+
+    @Test
     @DisplayName("Available tutors: closed classes and classes without future sessions are rejected")
     void availableTutors_closedOrNoFutureSessions_rejects() {
         groupClass.setStatus(ClassStatus.COMPLETED);

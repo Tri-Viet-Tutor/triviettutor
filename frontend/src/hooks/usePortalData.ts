@@ -1,7 +1,17 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
+import {useMutation,
+    useQueries,
+    useQuery,
+    useQueryClient,
+} from "@tanstack/react-query";
 import type { MyLeaveRequestsQuery, SessionResponse } from "@/interfaces/api";
 import type { RecentAttendanceItem } from "@/interfaces/portal";
-import { fetchMe, fetchMyLeaveRequests, fetchMySessions, fetchSessionAttendance } from "@/services/portalService";
+import {
+    fetchMe,
+    fetchMyLeaveRequests,
+    fetchMySessions,
+    fetchSessionAttendance,
+    unlinkGoogle,
+} from "@/services/portalService";
 import { useAuthStore } from "@/stores/authStore";
 
 /** Khóa cache của dữ liệu "của tôi", gắn với mã người dùng để đổi tài khoản không thấy dữ liệu của người trước */
@@ -68,4 +78,23 @@ export function useRecentAttendance(pastSessions: SessionResponse[], limit: numb
     record: results[index].data?.records[0],
     isPending: results[index].isPending,
   }));
+}
+
+export function useUnlinkGoogle() {
+    const userId = useUserId();
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (password: string) => unlinkGoogle(password),
+
+        onSuccess: async (me) => {
+            // Cập nhật UI ngay lập tức bằng response từ Backend
+            queryClient.setQueryData(portalKeys.me(userId), me);
+
+            // Đồng bộ lại dữ liệu với Backend
+            await queryClient.invalidateQueries({
+                queryKey: portalKeys.me(userId),
+            });
+        },
+    });
 }

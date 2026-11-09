@@ -24,6 +24,7 @@ public class VnpayRefundTransactions {
     private final EnrollmentPaymentSupport support;
     private final PaymentIdempotencyService idempotency;
     private final LearningScheduleService learning;
+    private final WalletService wallet;
     private final EntityManager entityManager;
     private final Clock clock;
 
@@ -43,6 +44,12 @@ public class VnpayRefundTransactions {
         ClassGroup group = lock(payment, actor.getId());
         if (enrollment != null) entityManager.refresh(enrollment, LockModeType.PESSIMISTIC_WRITE);
         if (!"VNPAY".equals(payment.getMethod())) throw new BusinessException(ErrorCode.PAYMENT_PROVIDER_CONFLICT);
+        // The student key is fixed per enrollment, so a retry with reworded reason must not conflict; return the
+        // refund already sent to VNPay and leave reconcile/retry to admins.
+        if (studentCancel) {
+            var requested = refunds.findByPaymentId(payment.getId());
+            if (requested.isPresent()) return request(requested.get(), payment, false);
+        }
         String fingerprint = "VNPAY:" + payment.getId() + ":" + input.refundPercentage() + ":" + input.reason().trim();
         var replay = idempotency.replay(actor.getId(), PaymentOperationType.REFUND_ENROLLMENT, key, fingerprint);
         if (replay.isPresent()) return request(refunds.findById(replay.get()).orElseThrow(), payment, false);
@@ -62,7 +69,9 @@ public class VnpayRefundTransactions {
         if ((payment.getStatus() == PaymentStatus.REQUIRES_REFUND || support.fullRefundRequired(group))
                 && input.refundPercentage() != 100) throw new BusinessException(ErrorCode.INVALID_REFUND_PERCENTAGE);
         if (enrollment == null) enrollment = enrollments.findByPaymentId(payment.getId()).orElse(null);
-        BigDecimal amount = payment.getAmount().multiply(BigDecimal.valueOf(input.refundPercentage()))
+        // The group-size discount already credited to the wallet is part of the fee returned; refund only the rest.
+        BigDecimal refundable = payment.getAmount().subtract(wallet.classDiscountCredited(enrollment == null ? null : enrollment.getId()));
+        BigDecimal amount = refundable.multiply(BigDecimal.valueOf(input.refundPercentage()))
                 .divide(BigDecimal.valueOf(100)).setScale(0, RoundingMode.HALF_UP);
         if (amount.signum() <= 0 || amount.compareTo(payment.getAmount()) > 0) throw new BusinessException(ErrorCode.INVALID_REFUND_PERCENTAGE);
         OffsetDateTime now = OffsetDateTime.now(clock);
@@ -127,10 +136,22 @@ public class VnpayRefundTransactions {
                 learning.deactivate(enrollment.getId(), LearningScheduleStatus.CANCELLED);
             }
         } else if (("refund".equals(response.get("vnp_Command")) && Set.of("02", "03", "91", "95", "97").contains(code))
-                || (matchingRefund && "00".equals(code) && "09".equals(response.get("vnp_TransactionStatus")))) {
+                || (matchingRefund && "00".equals(code) && "09".equals(response.get("vnp_TransactionStatus")))
+                || neverReachedVnpay(refund, payment, response)) {
             refund.setStatus("FAILED");
         }
         return RefundResponse.from(refund);
+    }
+
+    // QueryDr still shows only the untouched original payment, so the refund command never reached VNPay.
+    // Only full refunds are released for retry: VNPay never refunds more than the paid amount, so a resend
+    // cannot pay twice. Partial refunds stay PENDING because a resend could stack a second partial refund.
+    private static boolean neverReachedVnpay(Refund refund, Payment payment, Map<String, String> response) {
+        return "querydr".equals(response.get("vnp_Command"))
+                && refund.getAmount().compareTo(payment.getAmount()) == 0
+                && "00".equals(response.get("vnp_ResponseCode"))
+                && "01".equals(response.get("vnp_TransactionType"))
+                && "00".equals(response.get("vnp_TransactionStatus"));
     }
 
     @Transactional

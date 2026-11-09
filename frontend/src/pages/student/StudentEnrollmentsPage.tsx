@@ -87,12 +87,15 @@ export function StudentEnrollmentsPage() {
   const active = all.filter((item) => item.status === "ACTIVE");
   const paid = all.reduce((sum, item) => sum + item.feeCharged, 0);
 
-  /** Còn đổi lớp được: còn tự hủy được (trước hạn chốt), lớp đang tuyển sinh và chưa từng đổi */
+  /**
+   * Còn đổi lớp được: còn tự hủy được (trước hạn chốt), lớp đang tuyển sinh và chưa từng đổi.
+   * Chỉ hiện khi backend báo rõ transferable = true: máy chủ chưa có POST /enrollments/{id}/transfer thì nút sẽ báo lỗi 404.
+   */
   function canTransfer(item: EnrollmentResponse) {
     return (
       item.status === "ACTIVE" &&
       item.cancellable &&
-      item.transferable !== false &&
+      item.transferable === true &&
       !item.transferredFromEnrollmentId &&
       classById.get(item.classGroupId)?.status === "ENROLLING"
     );

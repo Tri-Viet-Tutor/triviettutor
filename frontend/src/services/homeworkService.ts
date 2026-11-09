@@ -76,7 +76,13 @@ export async function listSessionHomeworks(sessionId: number): Promise<PageRespo
 
 /** GET /student/homeworks — toàn bộ bài của tôi, cho ô tổng quan ở trang chủ học viên */
 export async function listMyHomeworks(): Promise<PageResponse<StudentHomeworkSummary>> {
-  return unwrap(await api.get<ApiResponse<PageResponse<StudentHomeworkSummary>>>("/student/homeworks", { params: { size: 100 } }));
+  // Backend xếp theo hạn nộp tăng dần, tối đa 100 bài / trang: tải hết các trang để bài mới nhất không bị cắt mất
+  const get = async (page: number) =>
+    unwrap(await api.get<ApiResponse<PageResponse<StudentHomeworkSummary>>>("/student/homeworks", { params: { page, size: 100 } }));
+  const first = await get(0);
+  const content = [...first.content];
+  for (let page = 1; page < first.totalPages; page++) content.push(...(await get(page)).content);
+  return { ...first, content, size: content.length, totalPages: 1 };
 }
 
 /** GET /student/homeworks — bài tập của các lớp tôi đang học */

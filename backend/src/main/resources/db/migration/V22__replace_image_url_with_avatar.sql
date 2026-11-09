@@ -1,4 +1,4 @@
 ALTER TABLE users
-    DROP COLUMN image_url,
-    ADD COLUMN avatar BYTEA,
-    ADD COLUMN avatar_content_type VARCHAR(50);
+    DROP COLUMN IF EXISTS image_url,
+    ADD COLUMN IF NOT EXISTS avatar BYTEA,
+    ADD COLUMN IF NOT EXISTS avatar_content_type VARCHAR(50);
