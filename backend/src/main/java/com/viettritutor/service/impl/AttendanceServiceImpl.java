@@ -201,6 +201,45 @@ public class AttendanceServiceImpl implements AttendanceService {
         return true;
     }
 
+    @Override
+    @Transactional
+    public int autoMarkPresent(Long sessionId, Map<Long, Integer> minutesByStudent, int thresholdMinutes) {
+        if (thresholdMinutes < 1 || minutesByStudent.isEmpty()) return 0;
+        Session session = lock(sessionId);
+        if (effectivelyLocked(session) || deadlinePassed(session)) return 0;
+        try {
+            requireRecordable(session);
+        } catch (BusinessException notRecordable) {
+            return 0;
+        }
+        if (payrollGuard.map(guard -> guard.isDateFinalized(session.getSessionDate())).orElse(false)) return 0;
+        List<Long> roster = rosterIds(session);
+        Set<Long> recorded = records.findBySessionIdOrderByStudentId(sessionId).stream()
+                .map(AttendanceRecord::getStudentId).collect(Collectors.toSet());
+        // Only students nobody has recorded yet: a tutor's or admin's decision always wins.
+        List<Long> due = minutesByStudent.entrySet().stream()
+                .filter(e -> e.getValue() >= thresholdMinutes && roster.contains(e.getKey()) && !recorded.contains(e.getKey()))
+                .map(Map.Entry::getKey).sorted().toList();
+        if (due.isEmpty()) return 0;
+        captureRoster(session);
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        for (Long studentId : due) {
+            String note = "Tự động: có mặt " + minutesByStudent.get(studentId) + " phút trong phòng học (ngưỡng "
+                    + thresholdMinutes + " phút)";
+            // recorded_by must name a user; the session's teacher owns the record and can still change it.
+            AttendanceRecord record = records.saveAndFlush(AttendanceRecord.builder().sessionId(sessionId).studentId(studentId)
+                    .status(AttendanceStatus.PRESENT).note(note).recordedBy(teacher(session)).recordedAt(now).build());
+            changes.save(AttendanceChange.builder().sessionId(sessionId).recordId(record.getId()).studentId(studentId)
+                    .action(AttendanceChangeType.AUTO_PRESENT).actorId(null)
+                    .reason("Classroom presence reached the auto attendance threshold").changedAt(now)
+                    .previousStatus(null).newStatus(AttendanceStatus.PRESENT).previousNote(null).newNote(note)
+                    .previousLocked(session.isAttendanceLocked()).newLocked(session.isAttendanceLocked())
+                    .previousSessionStatus(session.getStatus()).newSessionStatus(session.getStatus())
+                    .taughtByTutorId(session.getTaughtByTutorId()).build());
+        }
+        return due.size();
+    }
+
     private Session lock(Long sessionId) {
         Long classId = sessions.findClassGroupId(sessionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));

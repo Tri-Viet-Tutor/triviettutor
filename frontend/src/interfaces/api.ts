@@ -77,6 +77,8 @@ export type ErrorCode =
   | "SESSION_ALREADY_TAUGHT"
   | "MEETING_NOT_AVAILABLE"
   | "PAYROLL_FINALIZED"
+  | "PAYROLL_LINE_NOT_FOUND"
+  | "PAYROLL_ALREADY_DISPUTED"
   | "SESSION_STATE_CHANGED"
   | "SCHEDULE_CONFLICT"
   | "INVALID_AVAILABILITY"
@@ -1014,7 +1016,7 @@ export interface EnrollmentsQuery {
 }
 
 /** Trạng thái bảng lương của một tháng */
-export type PayrollStatus = "DRAFT" | "FINALIZED";
+export type PayrollStatus = "DRAFT" | "FINALIZED" | "DISPUTED";
 
 /** dto.payroll.PayrollLineResponse — lương một gia sư trong một tháng */
 export interface PayrollLineResponse {
@@ -1037,6 +1039,9 @@ export interface PayrollLineResponse {
   totalPay: number;
   /** Đối soát từng buổi của tháng (backend luôn trả kèm) */
   reconciliation?: TeachingPeriodSummary | null;
+  /** Lý do và thời điểm gia sư khiếu nại phiếu lương (chỉ có khi status là DISPUTED) */
+  disputeReason?: string;
+  disputedAt?: IsoDateTime;
 }
 
 /** dto.attendance.TeachingSessionResponse — một buổi trong bảng đối soát lương */

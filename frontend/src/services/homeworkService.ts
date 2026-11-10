@@ -7,6 +7,7 @@ import type {
   HomeworkStatus,
   HomeworkUpdateInput,
   NotificationResponse,
+  QuestionImportResponse,
   StudentHomeworkResponse,
   StudentHomeworksQuery,
   SubmissionInput,
@@ -21,6 +22,17 @@ import { api, unwrap } from "@/services/api";
  */
 
 // ── Gia sư ──────────────────────────────────────────────────────────────────
+
+/** POST /homeworks/questions/import — đọc câu hỏi từ file .csv / .xlsx để điền vào form (không lưu) */
+export async function importQuestions(file: File): Promise<QuestionImportResponse> {
+  const form = new FormData();
+  form.append("file", file);
+  return unwrap(
+    await api.post<ApiResponse<QuestionImportResponse>>("/homeworks/questions/import", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  );
+}
 
 /** GET /tutor/homeworks — bài tập của các buổi tôi đang dạy, hạn nộp mới nhất trước */
 export async function fetchTutorHomeworks(page = 0, size = 20): Promise<PageResponse<TutorHomeworkResponse>> {

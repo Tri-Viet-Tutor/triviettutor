@@ -15,4 +15,9 @@ public interface AttendanceService {
     /** Corrects a locked session's record for a roster student, creating it when the student was never recorded. */
     AttendanceRecordResponse correctStudent(Long sessionId, Long studentId, AttendanceCorrection input, User admin);
     boolean autoLock(Long sessionId);
+    /**
+     * ATT-01: records PRESENT for roster students whose classroom minutes reach the threshold and who have no record yet.
+     * Never overrides a human record and skips locked or uneditable sessions. Returns how many students were marked.
+     */
+    int autoMarkPresent(Long sessionId, java.util.Map<Long, Integer> minutesByStudent, int thresholdMinutes);
 }

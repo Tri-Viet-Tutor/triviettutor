@@ -1,0 +1,19 @@
+package com.viettritutor.dto.learning;
+
+import com.viettritutor.enums.QuestionType;
+
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.List;
+
+/**
+ * HW-02: questions read from an uploaded file, not saved. The editor fills its form with them and saves
+ * through the normal homework API. publishTime (the file's publish_time column) becomes the homework openAt.
+ */
+public record QuestionImportResponse(List<ImportedQuestion> questions, OffsetDateTime publishTime, List<RowError> errors) {
+    public record ImportedQuestion(QuestionType type, String prompt, List<String> options, Integer correctOption,
+                                   BigDecimal points, boolean answerDetected) {}
+
+    /** row is the spreadsheet row number (the header is row 1). */
+    public record RowError(int row, String message) {}
+}

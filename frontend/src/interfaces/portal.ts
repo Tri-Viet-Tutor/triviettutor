@@ -6,6 +6,7 @@ import type {
   LeaveRequestResponse,
   MeResponse,
   AvailabilityResponse,
+  PayrollLineResponse,
 } from "@/interfaces/api";
 import type { PortalNavItem, SummaryRow, Tone } from "@/interfaces/ui";
 
@@ -423,4 +424,10 @@ export interface PortalDialogProps {
   children: ReactNode;
   /** Bề rộng tối đa, mặc định 560px */
   widthClassName?: string;
+}
+
+/** Props của PayrollDispute */
+export interface PayrollDisputeProps {
+  /** Phiếu lương một tháng của gia sư đang đăng nhập */
+  line: PayrollLineResponse;
 }

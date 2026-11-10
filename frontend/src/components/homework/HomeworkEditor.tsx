@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useMemo, useState } from "react";
 import { AuthNotice } from "@/components/auth/AuthNotice";
 import { QuestionBuilder } from "@/components/homework/QuestionBuilder";
+import { QuestionImport } from "@/components/homework/QuestionImport";
 import { AttachmentField } from "@/components/ui/AttachmentField";
 import { PORTAL_BTN_ACCENT, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
 import { useMySessions, useUserId } from "@/hooks/usePortalData";
@@ -241,6 +242,16 @@ export function HomeworkEditor({ homework, initialSessionId, onSaved, onCancel }
           Không thêm câu hỏi thì đây là bài tự do: học viên viết bài, dán link hoặc chụp ảnh nộp. Bài chỉ có trắc nghiệm được chấm điểm ngay
           khi nộp; có câu tự luận thì phần trắc nghiệm tự chấm, phần tự luận chờ bạn chấm.
         </p>
+        {!published && (
+          <QuestionImport
+            hasQuestions={questions.length > 0}
+            onImport={(imported, publishTime, mode) => {
+              setQuestions(mode === "append" ? [...questions, ...imported] : imported);
+              // publish_time của file là giờ mở bài
+              if (publishTime) setOpenAt(toLocalInput(publishTime));
+            }}
+          />
+        )}
         <QuestionBuilder questions={questions} onChange={setQuestions} readOnly={published} />
       </section>
 
