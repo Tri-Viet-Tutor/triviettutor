@@ -1,4 +1,5 @@
 package com.viettritutor.service;
+import com.viettritutor.service.impl.VnpayApiClientImpl;
 
 import com.viettritutor.config.VnpayProperties;
 import com.viettritutor.common.exception.BusinessException;
@@ -49,7 +50,7 @@ class VnpayProtocolTest {
                 "vnp_TransactionStatus","vnp_OrderInfo");
         var response=new HashMap<String,Object>(); response.put("vnp_ResponseId","reply1"); response.put("vnp_Command","refund");
         response.put("vnp_ResponseCode","00");response.put("vnp_TmnCode","TEST0001");response.put("vnp_TxnRef","fixture1");
-        VnpayApiClient client=new VnpayApiClient(p,signature) {
+        VnpayApiClient client=new VnpayApiClientImpl(p,signature) {
             @Override protected Map<String,Object> post(Map<String,String> body) {
                 assertThat(body.get("vnp_SecureHash")).isEqualTo(signature.hash("request-signing-data"));
                 return response;

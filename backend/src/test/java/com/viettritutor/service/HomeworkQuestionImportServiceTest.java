@@ -1,4 +1,6 @@
 package com.viettritutor.service;
+import com.viettritutor.service.impl.HomeworkQuestionTemplateServiceImpl;
+import com.viettritutor.service.impl.HomeworkQuestionImportServiceImpl;
 
 import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.common.exception.ErrorCode;
@@ -23,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class HomeworkQuestionImportServiceTest {
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-11-05T03:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
-    private final HomeworkQuestionImportService service = new HomeworkQuestionImportService(CLOCK);
+    private final HomeworkQuestionImportService service = new HomeworkQuestionImportServiceImpl(CLOCK);
 
     private static MockMultipartFile csv(String name, byte[] bytes) {
         return new MockMultipartFile("file", name, "text/csv", bytes);
@@ -146,7 +148,7 @@ class HomeworkQuestionImportServiceTest {
                 .isInstanceOf(BusinessException.class);
         assertThatThrownBy(() -> service.read(new MockMultipartFile("file", "q.csv", "text/csv", new byte[0])))
                 .isInstanceOf(BusinessException.class);
-        assertThatThrownBy(() -> service.read(csv("q.csv", new byte[(int) HomeworkQuestionImportService.MAX_BYTES + 1])))
+        assertThatThrownBy(() -> service.read(csv("q.csv", new byte[(int) HomeworkQuestionImportServiceImpl.MAX_BYTES + 1])))
                 .isInstanceOf(BusinessException.class);
         assertThatThrownBy(() -> service.read(new MockMultipartFile("file", "q.xlsx", "application/octet-stream", "not excel".getBytes())))
                 .isInstanceOf(BusinessException.class);
@@ -199,12 +201,12 @@ class HomeworkQuestionImportServiceTest {
     @Test
     @DisplayName("'All of the above' detection prefers option D and ignores unrelated text")
     void allCorrectDetection() {
-        assertThat(HomeworkQuestionImportService.isAllCorrect("Tất cả các đáp án trên đều đúng")).isTrue();
-        assertThat(HomeworkQuestionImportService.isAllCorrect("TẤT CẢ ĐỀU ĐÚNG")).isTrue();
-        assertThat(HomeworkQuestionImportService.isAllCorrect("All of the above")).isTrue();
-        assertThat(HomeworkQuestionImportService.isAllCorrect("Tất cả học sinh")).isFalse();
-        assertThat(HomeworkQuestionImportService.allCorrectIndex(List.of("a", "b", "c", "Tất cả đều đúng", "Tất cả các đáp án trên"))).isEqualTo(3);
-        assertThat(HomeworkQuestionImportService.allCorrectIndex(List.of("a", "b"))).isEqualTo(-1);
+        assertThat(HomeworkQuestionImportServiceImpl.isAllCorrect("Tất cả các đáp án trên đều đúng")).isTrue();
+        assertThat(HomeworkQuestionImportServiceImpl.isAllCorrect("TẤT CẢ ĐỀU ĐÚNG")).isTrue();
+        assertThat(HomeworkQuestionImportServiceImpl.isAllCorrect("All of the above")).isTrue();
+        assertThat(HomeworkQuestionImportServiceImpl.isAllCorrect("Tất cả học sinh")).isFalse();
+        assertThat(HomeworkQuestionImportServiceImpl.allCorrectIndex(List.of("a", "b", "c", "Tất cả đều đúng", "Tất cả các đáp án trên"))).isEqualTo(3);
+        assertThat(HomeworkQuestionImportServiceImpl.allCorrectIndex(List.of("a", "b"))).isEqualTo(-1);
     }
 
     // ── Word ────────────────────────────────────────────────────────────────
@@ -303,7 +305,7 @@ class HomeworkQuestionImportServiceTest {
     @Test
     @DisplayName("The downloadable Excel and Word templates read back without errors")
     void templates_roundTrip() {
-        HomeworkQuestionTemplateService templates = new HomeworkQuestionTemplateService();
+        HomeworkQuestionTemplateService templates = new HomeworkQuestionTemplateServiceImpl();
         QuestionImportResponse xlsx = service.read(new MockMultipartFile("file", "mau.xlsx", "application/octet-stream", templates.xlsx()));
         QuestionImportResponse docx = service.read(new MockMultipartFile("file", "mau.docx", "application/octet-stream", templates.docx()));
 

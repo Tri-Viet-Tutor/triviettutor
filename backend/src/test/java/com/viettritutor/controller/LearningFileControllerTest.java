@@ -1,27 +1,23 @@
 package com.viettritutor.controller;
 
-import com.viettritutor.entity.LearningFile;
-import com.viettritutor.repository.LearningFileRepository;
+import com.viettritutor.service.LearningFileService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
-import java.time.Clock;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class LearningFileControllerTest {
-    private final LearningFileRepository files = mock(LearningFileRepository.class);
-    private final LearningFileController controller = new LearningFileController(files, Clock.systemUTC());
+    private final LearningFileService files = mock(LearningFileService.class);
+    private final LearningFileController controller = new LearningFileController(files);
 
     private ResponseEntity<byte[]> download(String name, String storedType) {
         UUID key = UUID.randomUUID();
-        when(files.findByFileKey(key)).thenReturn(Optional.of(LearningFile.builder().fileKey(key).fileName(name)
-                .contentType(storedType).data(new byte[]{1}).build()));
+        when(files.load(key)).thenReturn(new LearningFileService.StoredFile(new byte[]{1}, name, storedType));
         return controller.download(key);
     }
 

@@ -1,5 +1,7 @@
 package com.viettritutor.service;
 
+import com.viettritutor.service.impl.VnpayPaymentServiceImpl;
+
 import com.fasterxml.jackson.databind.*;
 import com.viettritutor.common.exception.*;
 import com.viettritutor.entity.*;
@@ -229,12 +231,12 @@ class EnrollmentPaymentFlowTest {
         when(gateway.exchange(anyMap(), anyString(), eq("querydr"))).thenReturn(querydr(id, "00"));
         assertThat(reconcile(id, student, 200).path("intent").path("status").asText()).isEqualTo("PENDING");
         verify(gateway, times(1)).exchange(anyMap(), anyString(), eq("querydr"));
-        clock.value = clock.value.plus(VnpayPaymentService.RECONCILE_COOLDOWN);
+        clock.value = clock.value.plus(VnpayPaymentServiceImpl.RECONCILE_COOLDOWN);
         when(gateway.exchange(anyMap(), anyString(), eq("querydr"))).thenThrow(new BusinessException(ErrorCode.PAYMENT_GATEWAY_ERROR));
         reconcile(id, student, 502);
         assertThat(payments.findByIntentId(id)).isEmpty();
         assertThat(intents.findById(id).orElseThrow().getStatus()).isEqualTo(PaymentIntentStatus.PENDING);
-        clock.value = clock.value.plus(VnpayPaymentService.RECONCILE_COOLDOWN);
+        clock.value = clock.value.plus(VnpayPaymentServiceImpl.RECONCILE_COOLDOWN);
         doReturn(querydr(id, "00")).when(gateway).exchange(anyMap(), anyString(), eq("querydr"));
         assertThat(reconcile(id, student, 200).path("enrollment").path("status").asText()).isEqualTo("ACTIVE");
     }
