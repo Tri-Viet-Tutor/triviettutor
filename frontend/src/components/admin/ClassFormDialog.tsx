@@ -4,6 +4,7 @@ import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { Icon } from "@/components/ui/Icon";
 import { AUTH_ERROR, FOCUS_RING, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
 import { DELIVERY_MODE_OPTIONS, SCHEDULE_PATTERN_OPTIONS, TIME_SLOT_OPTIONS } from "@/constants/classOptions";
+import { weekdayMatchesPattern, patternWeekdayLabel } from "@/utils/classes";
 import { coursePricePerSession, gradeLabel, subjectLabel } from "@/constants/management";
 import { useAdminUsers } from "@/hooks/useAdminData";
 import { useAdminCourses } from "@/hooks/useManagementData";
@@ -91,12 +92,14 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
   const [sessions, setSessions] = useState("24");
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Mở lại thì xoá lỗi cũ; mở từ một khóa cụ thể thì chọn sẵn khóa đó
+  // Mở lại thì xoá lỗi cũ; mở từ một khóa cụ thể thì khóa luôn vào khóa đó, không cho đổi
   useEffect(() => {
     if (!open) return;
     setFormError(null);
     if (initialCourseId !== undefined) setCourseId(initialCourseId);
   }, [open, initialCourseId]);
+  // Mở từ "Tạo lớp đầu tiên ngay sau khi lưu" ở form khóa học: đã biết sẵn khóa, không cần chọn lại
+  const lockedToCourse = initialCourseId !== undefined;
 
   const course = courses.data?.content.find((item) => item.id === courseId);
   const sessionCount = Number(sessions) || 0;
@@ -123,6 +126,9 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
     if (tutorId === "") return setFormError("Hãy chọn gia sư phụ trách lớp.");
     if (!Number.isInteger(sessionCount) || sessionCount < 1 || sessionCount > 200) return setFormError("Số buổi phải từ 1 đến 200.");
     if (!startDate) return setFormError("Hãy chọn ngày khai giảng.");
+    if (!weekdayMatchesPattern(startDate, pattern)) {
+      return setFormError(`Ngày khai giảng phải rơi vào ${patternWeekdayLabel(pattern)} (đúng lịch học đã chọn).`);
+    }
     if (deadline && deadline >= startDate) return setFormError("Hạn đăng ký phải trước ngày khai giảng.");
     if (meetingUrl && !/^https:\/\/\S+$/.test(meetingUrl.trim())) return setFormError("Link lớp học phải bắt đầu bằng https://");
     setFormError(null);
@@ -155,19 +161,25 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
               <label htmlFor="class-course" className={PORTAL_LABEL}>
                 Khóa học
               </label>
-              <select
-                id="class-course"
-                value={courseId}
-                onChange={(event) => setCourseId(event.target.value ? Number(event.target.value) : "")}
-                className={PORTAL_INPUT}
-              >
-                <option value="">{courses.isPending ? "Đang tải…" : "Chọn khóa học"}</option>
-                {courses.data?.content.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} - {subjectLabel(item.subject)} {gradeLabel(item.gradeLevel)}
-                  </option>
-                ))}
-              </select>
+              {lockedToCourse ? (
+                <div className={`${PORTAL_INPUT} flex items-center bg-brand-sand/50 text-brand-ink`}>
+                  {course ? `${course.name} - ${subjectLabel(course.subject)} ${gradeLabel(course.gradeLevel)}` : "Đang tải…"}
+                </div>
+              ) : (
+                <select
+                  id="class-course"
+                  value={courseId}
+                  onChange={(event) => setCourseId(event.target.value ? Number(event.target.value) : "")}
+                  className={PORTAL_INPUT}
+                >
+                  <option value="">{courses.isPending ? "Đang tải…" : "Chọn khóa học"}</option>
+                  {courses.data?.content.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name} - {subjectLabel(item.subject)} {gradeLabel(item.gradeLevel)}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="min-w-0">
               <label htmlFor="class-tutor" className={PORTAL_LABEL}>
@@ -249,6 +261,11 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
                 onChange={(value) => changeStart(value)}
                 className={PORTAL_INPUT}
               />
+              {startDate && !weekdayMatchesPattern(startDate, pattern) && (
+                <p className="mt-1 text-[12px] font-medium text-amber-700">
+                  Ngày này không rơi vào {patternWeekdayLabel(pattern)} — buổi đầu sẽ tự dời sang ngày khớp gần nhất.
+                </p>
+              )}
             </div>
             <div>
               <label htmlFor="class-deadline" className={PORTAL_LABEL}>
@@ -290,7 +307,7 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
           </p>
         )}
 
-        <div className="flex justify-end gap-2 border-t border-brand-sandLine pt-4">
+        <div className="sticky bottom-0 -mx-6 -mb-6 flex justify-end gap-2 border-t border-brand-sandLine bg-white/95 px-6 py-4 backdrop-blur">
           <button type="button" onClick={onClose} className={PORTAL_BTN_SECONDARY}>
             Hủy
           </button>
