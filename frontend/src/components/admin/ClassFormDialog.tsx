@@ -100,13 +100,13 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
   // Mở từ "Tạo lớp đầu tiên ngay sau khi lưu" ở form khóa học: đã biết sẵn khóa, không cần chọn lại
   const lockedToCourse = initialCourseId !== undefined;
 
-  const course = courses.data?.content?.find(
-        (item) => item.id !== null && item.id === BigInt(courseId)
-  );
+  // id khóa học là number — so sánh trực tiếp (trước đây so với BigInt nên không bao giờ khớp)
+  const course = courseId === "" ? undefined : courses.data?.content?.find((item) => Number(item.id) === courseId);
 
   const sessionCount = Number(sessions) || 0;
     const validSchedule =
         Boolean(startDate) &&
+        weekdayMatchesPattern(startDate, pattern) &&
         Number.isInteger(sessionCount) &&
         sessionCount >= 1 &&
         sessionCount <= 200;
@@ -171,6 +171,9 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (courseId === "") return setFormError("Hãy chọn khóa học.");
+    if (!startDate) return setFormError("Hãy chọn ngày khai giảng.");
+    if (!weekdayMatchesPattern(startDate, pattern))
+      return setFormError(`Ngày khai giảng phải rơi vào ${patternWeekdayLabel(pattern)}.`);
       if (
           !availableTutorsQuery.isSuccess ||
           availableTutorsQuery.isFetching
@@ -185,12 +188,6 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
           return setFormError("Hãy chọn một gia sư đang khả dụng với lịch học này.");
       }
     if (!Number.isInteger(sessionCount) || sessionCount < 1 || sessionCount > 200) return setFormError("Số buổi phải từ 1 đến 200.");
-    if (!startDate) return setFormError("Hãy chọn ngày khai giảng.");
-      {startDate && !weekdayMatchesPattern(startDate, pattern) && (
-          <p className="mt-1 text-[12px] font-medium text-amber-700">
-              Ngày khai giảng phải rơi vào {patternWeekdayLabel(pattern)}.
-          </p>
-      )}
     if (deadline && deadline >= startDate) return setFormError("Hạn đăng ký phải trước ngày khai giảng.");
     if (meetingUrl && !/^https:\/\/\S+$/.test(meetingUrl.trim())) return setFormError("Link lớp học phải bắt đầu bằng https://");
     setFormError(null);
@@ -228,7 +225,11 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
               </label>
               {lockedToCourse ? (
                 <div className={`${PORTAL_INPUT} flex items-center bg-brand-sand/50 text-brand-ink`}>
-                  {course ? `${course.name} - ${subjectLabel(course.subject)} ${gradeLabel(course.gradeLevel)}` : "Đang tải…"}
+                  {course
+                    ? `${course.name} - ${subjectLabel(course.subject)} ${gradeLabel(course.gradeLevel)}`
+                    : courses.isPending
+                      ? "Đang tải…"
+                      : "Không tìm thấy khóa học (khóa chưa mở bán?)"}
                 </div>
               ) : (
                 <Select
@@ -259,7 +260,7 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
               >
                 <option value="">
                   {!validSchedule
-                    ? "Hãy nhập lịch học hợp lệ"
+                    ? "Chọn ngày khai giảng để xem gia sư"
                     : availableTutorsQuery.isFetching
                       ? "Đang kiểm tra lịch gia sư…"
                       : availableTutorsQuery.isError
