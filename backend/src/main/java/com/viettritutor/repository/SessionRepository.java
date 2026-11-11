@@ -34,6 +34,20 @@ public interface SessionRepository extends JpaRepository<Session, Long>, JpaSpec
 
     List<Session> findBySessionDateBetweenOrderBySessionDateAscStartTimeAscIdAsc(LocalDate from, LocalDate to);
 
+    @Query("""
+        select s from Session s
+        where s.sessionDate = :date
+          and s.status = com.viettritutor.enums.SessionStatus.SCHEDULED
+          and s.startTime >= :fromTime
+          and s.startTime <= :toTime
+          and s.reminderSentAt is null
+        order by s.startTime, s.id
+        """)
+    List<Session> findUpcomingSessionsForReminder(
+            @Param("date") LocalDate date,
+            @Param("fromTime") LocalTime fromTime,
+            @Param("toTime") LocalTime toTime);
+
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Session s where s.sessionDate between :from and :to order by s.id")

@@ -22,7 +22,8 @@ import {
 import { ENROLLMENT_STATUS } from "@/constants/labels";
 import { ROUTES } from "@/constants/routes";
 import { useMyEnrollments, useRefreshMine } from "@/hooks/useManagementData";
-import { useMySessions } from "@/hooks/usePortalData";
+import { useUserId } from "@/hooks/usePortalData";
+import { queryKeys } from "@/constants/queryKeys";
 import { cancelEnrollment } from "@/services/managementService";
 import { getTuitionClass } from "@/services/tuitionPaymentService";
 import { UserAvatar } from "@/components/ui/UserAvatar";
@@ -55,6 +56,7 @@ export function StudentEnrollmentsPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [ratingTutorId, setRatingTutorId] = useState<number | null>(null);
   const [transferring, setTransferring] = useState<EnrollmentResponse | null>(null);
+  const userId = useUserId();
   const queryClient = useQueryClient();
   const enrollments = useMyEnrollments();
   const sessions = useMySessions();
@@ -63,10 +65,22 @@ export function StudentEnrollmentsPage() {
 
   const cancel = useMutation({
     mutationFn: () => cancelEnrollment((cancelling as EnrollmentResponse).enrollmentId, reason.trim()),
+    meta: {
+      invalidates: [
+        queryKeys.me.all(userId),
+        queryKeys.me.enrollments(userId),
+        queryKeys.me.sessions(userId),
+        queryKeys.me.wallet(userId),
+        queryKeys.me.walletHistory(userId),
+        queryKeys.catalog.classes,
+      ],
+    },
     onSuccess: (result) => {
       setCancelling(null);
       setNotice(cancelNotice(result));
       void refreshMine();
+      void queryClient.invalidateQueries({ queryKey: queryKeys.me.enrollments(userId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.catalog.classes });
     },
     onError: (err) => setError(portalErrorMessage(err, "Chưa hủy được ghi danh. Vui lòng thử lại.")),
   });

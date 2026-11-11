@@ -86,6 +86,9 @@ public class Session {
     @Column(name = "teaching_confirmed_at")
     private OffsetDateTime teachingConfirmedAt;
 
+    @Column(name = "reminder_sent_at")
+    private OffsetDateTime reminderSentAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "original_session_id")
     private Session originalSession;

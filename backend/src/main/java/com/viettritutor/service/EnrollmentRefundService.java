@@ -7,6 +7,8 @@ import com.viettritutor.enums.*;
 import com.viettritutor.repository.*;
 import jakarta.persistence.*;
 import lombok.RequiredArgsConstructor;
+import com.viettritutor.notification.event.ClassRefundEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,9 @@ public class EnrollmentRefundService {
     private final MockPaymentPolicy mockPolicy;
     private final OrderRefundSync orderRefunds;
     private final WalletService wallet;
+    private final UserRepository users;
+    private final ClassGroupRepository classGroups;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public void cancel(Long enrollmentId, String reason, User student) {
@@ -109,6 +114,22 @@ public class EnrollmentRefundService {
         enrollment.setCancelledBy(actor.getId());
         learning.deactivate(enrollment.getId(), LearningScheduleStatus.CANCELLED);
         orderRefunds.refresh(payment);
+
+        String className = classGroups.findById(enrollment.getClassGroupId())
+                .map(ClassGroup::getName).orElse("Lớp học #" + enrollment.getClassGroupId());
+        User student = users.findById(payment.getStudentId()).orElse(null);
+        if (student != null) {
+            eventPublisher.publishEvent(new ClassRefundEvent(
+                    student.getId(),
+                    student.getEmail(),
+                    student.getFullName(),
+                    className,
+                    amount,
+                    reason.trim(),
+                    walletPayment ? "Ví học viên" : "Hoàn tiền hệ thống"
+            ));
+        }
+
         return refund;
     }
 }

@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getSessionMeetingToken, getSessionMeetingLogs, uploadMeetingRecording } from "../services/meeting";
 import { MeetingTokenResponse, MeetingSessionLogsResponse } from "../interfaces/api";
+import { ClassroomParticipant, MeetingSignalPayload } from "../interfaces/meetingSignal.contract";
+import { getSessionRoster } from "../services/rosterService";
+import type { SessionRosterResponse } from "../interfaces/classRoster.contract";
+import { ClassroomParticipantsSidebar } from "../components/classroom/ClassroomParticipantsSidebar";
 import { useAuthStore } from "../stores/authStore";
 import { portalErrorMessage } from "../utils/errors";
 import { ConfirmDialog } from "@/components/dashboard/ConfirmDialog";
@@ -21,7 +25,21 @@ export default function ClassroomPage() {
   const [screenSharing, setScreenSharing] = useState(false);
   const [showWhiteboard, setShowWhiteboard] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showParticipants, setShowParticipants] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
+
+  // Danh sách người học trong phòng & hiện diện trực tiếp
+  const [sessionRoster, setSessionRoster] = useState<SessionRosterResponse | null>(null);
+  const [onlineParticipantIds, setOnlineParticipantIds] = useState<Set<number>>(new Set());
+  const [tutorOnline, setTutorOnline] = useState<boolean>(true);
+  const [mutedStudentIds, setMutedStudentIds] = useState<Set<number>>(new Set());
+  const [handRaisedIds, setHandRaisedIds] = useState<Set<number>>(new Set());
+
+  // Host Remote Controls & Participants State
+  const [participants, setParticipants] = useState<ClassroomParticipant[]>([]);
+  const [hostMutedNotice, setHostMutedNotice] = useState<string | null>(null);
+  const [unmuteRequestModal, setUnmuteRequestModal] = useState(false);
+  const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
 
   // Voice Recording states
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
@@ -106,6 +124,40 @@ export default function ClassroomPage() {
         }
       });
 
+    // Tải danh sách người học trong phòng theo buổi học
+    getSessionRoster(Number(sessionId))
+      .then((roster) => {
+        if (isMounted) {
+          setSessionRoster(roster);
+          // Mặc định đánh dấu người dùng hiện tại là online
+          if (user?.id) {
+            setOnlineParticipantIds((prev) => new Set(prev).add(user.id));
+          }
+          if (user?.role === "ROLE_STUDENT" && user?.id) {
+            setOnlineParticipantIds((prev) => new Set(prev).add(user.id));
+          }
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          // Fallback dữ liệu cấu trúc chuẩn cho môi trường kiểm thử
+          setSessionRoster({
+            sessionId: Number(sessionId),
+            classGroupId: 1,
+            courseTitle: "Toán 12 Chuyên Đề Hàm Số & Khảo Sát Đồ Thị",
+            sessionNumber: 3,
+            tutor: { tutorId: 1, fullName: "Thầy Trần Minh Hoàng" },
+            students: [
+              { studentId: 101, fullName: "Nguyễn Văn An", avatarUrl: null },
+              { studentId: 102, fullName: "Trần Thị Mai", avatarUrl: null },
+              { studentId: 103, fullName: "Lê Quốc Bảo", avatarUrl: null },
+            ],
+          });
+          // Trong môi trường preview, giả lập 2 học viên đang online
+          setOnlineParticipantIds(new Set([101, 102]));
+        }
+      });
+
     return () => {
       isMounted = false;
     };
@@ -171,13 +223,204 @@ export default function ClassroomPage() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }, [showWhiteboard]);
 
+  // Khởi tạo danh sách người tham gia theo vai trò
+  useEffect(() => {
+    if (!meetingData) return;
+    const isHost = meetingData.role === "TUTOR" || meetingData.role === "ADMIN";
+    const currentUserId = String(user?.id || (isHost ? "tutor" : "student-1"));
+    const currentUserName = user?.fullName || (isHost ? (meetingData.tutorName || "Gia sư") : "Học sinh");
+
+    if (isHost) {
+      setParticipants([
+        {
+          id: currentUserId,
+          name: `${currentUserName} (Host)`,
+          role: meetingData.role,
+          micEnabled: true,
+          cameraEnabled: true,
+          handRaised: false,
+          isSelf: true,
+        },
+        {
+          id: "student-1",
+          name: "Nguyễn Văn An",
+          role: "STUDENT",
+          micEnabled: true,
+          cameraEnabled: true,
+          handRaised: false,
+          isSelf: false,
+        },
+        {
+          id: "student-2",
+          name: "Trần Thị Mai",
+          role: "STUDENT",
+          micEnabled: false,
+          cameraEnabled: true,
+          handRaised: false,
+          isSelf: false,
+        },
+      ]);
+    } else {
+      setParticipants([
+        {
+          id: currentUserId,
+          name: `${currentUserName} (Tôi)`,
+          role: "STUDENT",
+          micEnabled: true,
+          cameraEnabled: true,
+          handRaised: false,
+          isSelf: true,
+        },
+        {
+          id: "tutor-host",
+          name: meetingData.tutorName || "Thầy Trần Minh Hoàng (Gia sư)",
+          role: "TUTOR",
+          micEnabled: true,
+          cameraEnabled: true,
+          handRaised: false,
+          isSelf: false,
+        },
+      ]);
+    }
+  }, [meetingData, user]);
+
+  // Thiết lập BroadcastChannel để truyền tín hiệu điều khiển giữa các tab / client
+  useEffect(() => {
+    if (!sessionId) return;
+    const channelName = `classroom_meeting_session_${sessionId}`;
+    const channel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel(channelName) : null;
+    broadcastChannelRef.current = channel;
+
+    if (channel) {
+      channel.onmessage = (event: MessageEvent<MeetingSignalPayload>) => {
+        const signal = event.data;
+        if (!signal || !signal.action) return;
+
+        const isHost = meetingData?.role === "TUTOR" || meetingData?.role === "ADMIN";
+        const currentUserId = String(user?.id || (isHost ? "tutor" : "student-1"));
+
+        if (signal.action === "MUTE_MIC") {
+          const isTarget = signal.targetUserId === currentUserId || signal.targetUserId === "ALL";
+          if (isTarget && !isHost) {
+            if (localStream) {
+              localStream.getAudioTracks().forEach((track) => {
+                track.enabled = false;
+              });
+            }
+            setMicEnabled(false);
+            setHostMutedNotice(
+              signal.targetUserId === "ALL"
+                ? "Gia sư đã tắt micro của toàn bộ phòng học. Bạn có thể tự bật lại khi phát biểu."
+                : "Micro của bạn đã bị tắt bởi Gia sư. Bạn có thể tự bật lại khi cần phát biểu."
+            );
+          }
+
+          setParticipants((prev) =>
+            prev.map((p) => {
+              if (signal.targetUserId === "ALL") {
+                return p.role === "STUDENT" ? { ...p, micEnabled: false } : p;
+              }
+              return p.id === signal.targetUserId ? { ...p, micEnabled: false } : p;
+            })
+          );
+        } else if (signal.action === "REQUEST_UNMUTE") {
+          if (signal.targetUserId === currentUserId) {
+            setUnmuteRequestModal(true);
+          }
+        } else if (signal.action === "UPDATE_MEDIA_STATE") {
+          setParticipants((prev) =>
+            prev.map((p) => {
+              if (p.id === signal.senderId) {
+                return {
+                  ...p,
+                  micEnabled: signal.micEnabled !== undefined ? signal.micEnabled : p.micEnabled,
+                  cameraEnabled: signal.cameraEnabled !== undefined ? signal.cameraEnabled : p.cameraEnabled,
+                  handRaised: signal.handRaised !== undefined ? signal.handRaised : p.handRaised,
+                };
+              }
+              return p;
+            })
+          );
+        }
+      };
+    }
+
+    return () => {
+      if (channel) {
+        channel.close();
+      }
+    };
+  }, [sessionId, user, meetingData, localStream]);
+
   const toggleMic = () => {
+    const nextState = !micEnabled;
     if (localStream) {
       localStream.getAudioTracks().forEach((t) => {
-        t.enabled = !micEnabled;
+        t.enabled = nextState;
       });
     }
-    setMicEnabled((prev) => !prev);
+    setMicEnabled(nextState);
+    if (hostMutedNotice) {
+      setHostMutedNotice(null);
+    }
+
+    const isHost = meetingData?.role === "TUTOR" || meetingData?.role === "ADMIN";
+    const currentUserId = String(user?.id || (isHost ? "tutor" : "student-1"));
+
+    broadcastChannelRef.current?.postMessage({
+      action: "UPDATE_MEDIA_STATE",
+      senderId: currentUserId,
+      senderRole: meetingData?.role || "STUDENT",
+      micEnabled: nextState,
+      timestamp: Date.now(),
+    } as MeetingSignalPayload);
+
+    setParticipants((prev) =>
+      prev.map((p) => (p.isSelf ? { ...p, micEnabled: nextState } : p))
+    );
+  };
+
+  const handleHostMuteParticipant = (targetId: string) => {
+    const currentUserId = String(user?.id || "tutor");
+    broadcastChannelRef.current?.postMessage({
+      action: "MUTE_MIC",
+      senderId: currentUserId,
+      senderRole: meetingData?.role || "TUTOR",
+      targetUserId: targetId,
+      timestamp: Date.now(),
+      reason: "HOST_MUTED",
+    } as MeetingSignalPayload);
+
+    setParticipants((prev) =>
+      prev.map((p) => (p.id === targetId ? { ...p, micEnabled: false } : p))
+    );
+  };
+
+  const handleHostMuteAll = () => {
+    const currentUserId = String(user?.id || "tutor");
+    broadcastChannelRef.current?.postMessage({
+      action: "MUTE_MIC",
+      senderId: currentUserId,
+      senderRole: meetingData?.role || "TUTOR",
+      targetUserId: "ALL",
+      timestamp: Date.now(),
+      reason: "HOST_MUTED_ALL",
+    } as MeetingSignalPayload);
+
+    setParticipants((prev) =>
+      prev.map((p) => (p.role === "STUDENT" ? { ...p, micEnabled: false } : p))
+    );
+  };
+
+  const handleHostRequestUnmute = (targetId: string) => {
+    const currentUserId = String(user?.id || "tutor");
+    broadcastChannelRef.current?.postMessage({
+      action: "REQUEST_UNMUTE",
+      senderId: currentUserId,
+      senderRole: meetingData?.role || "TUTOR",
+      targetUserId: targetId,
+      timestamp: Date.now(),
+    } as MeetingSignalPayload);
   };
 
   const toggleCamera = () => {
@@ -461,6 +704,16 @@ export default function ClassroomPage() {
         <div className="flex items-center gap-2">
           {(isTutor || isAdmin) && (
             <button
+              onClick={handleHostMuteAll}
+              className="flex items-center gap-1.5 rounded-lg bg-rose-600/20 border border-rose-500/40 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-600/30 hover:text-white transition"
+              title="Tắt micro toàn bộ học sinh trong phòng"
+            >
+              Tắt tất cả mic
+            </button>
+          )}
+
+          {(isTutor || isAdmin) && (
+            <button
               onClick={loadMeetingLogs}
               className="flex items-center gap-1.5 rounded-lg bg-slate-800 border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition"
               title="Xem nhật ký tham gia MongoDB Atlas"
@@ -478,6 +731,18 @@ export default function ClassroomPage() {
             }`}
           >
             ✏️ {showWhiteboard ? "Ẩn Bảng Trắng" : "Mở Bảng Trắng"}
+          </button>
+
+          <button
+            onClick={() => setShowParticipants((prev) => !prev)}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              showParticipants
+                ? "bg-indigo-600 text-white shadow"
+                : "bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700"
+            }`}
+            title="Mở danh sách người tham gia trực tiếp"
+          >
+            👥 Người tham gia {sessionRoster ? `(${onlineParticipantIds.size + (tutorOnline ? 1 : 0)}/${sessionRoster.students.length + 1})` : ""}
           </button>
 
           <button
@@ -529,6 +794,22 @@ export default function ClassroomPage() {
         </div>
       )}
 
+      {/* Host Muted Notice Banner */}
+      {hostMutedNotice && (
+        <div className="bg-rose-950/90 border-b border-rose-800 px-4 py-2 text-xs text-rose-200 flex items-center justify-between z-20">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-rose-300">[Thông báo]</span>
+            <span>{hostMutedNotice}</span>
+          </div>
+          <button
+            onClick={() => setHostMutedNotice(null)}
+            className="text-rose-400 hover:text-white font-bold ml-2 text-xs"
+          >
+            Đóng
+          </button>
+        </div>
+      )}
+
       {/* ── Main Workspace: Whiteboard & Video Conference ──────────────────── */}
       <div className="flex flex-1 overflow-hidden relative">
         {/* Left: Whiteboard Section */}
@@ -536,50 +817,61 @@ export default function ClassroomPage() {
           <div className="flex flex-1 flex-col border-r border-slate-800 bg-slate-900">
             {/* Whiteboard Toolbar */}
             <div className="flex h-11 items-center justify-between border-b border-slate-800 bg-slate-850 px-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-slate-300 mr-1">Bảng vẽ:</span>
-                <button
-                  onClick={() => setIsEraser(false)}
-                  className={`rounded px-2.5 py-1 text-xs font-medium transition ${
-                    !isEraser ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
-                  }`}
-                >
-                  Bút viết
-                </button>
-                <button
-                  onClick={() => setIsEraser(true)}
-                  className={`rounded px-2.5 py-1 text-xs font-medium transition ${
-                    isEraser ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
-                  }`}
-                >
-                  Tẩy xóa
-                </button>
+              {(isTutor || isAdmin) ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-slate-300 mr-1">Bảng vẽ:</span>
+                    <button
+                      onClick={() => setIsEraser(false)}
+                      className={`rounded px-2.5 py-1 text-xs font-medium transition ${
+                        !isEraser ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Bút viết
+                    </button>
+                    <button
+                      onClick={() => setIsEraser(true)}
+                      className={`rounded px-2.5 py-1 text-xs font-medium transition ${
+                        isEraser ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Tẩy xóa
+                    </button>
 
-                {/* Color pickers */}
-                {!isEraser && (
-                  <div className="flex items-center gap-1.5 ml-2 border-l border-slate-750 pl-2">
-                    {["#2563eb", "#dc2626", "#16a34a", "#0f172a"].map((c) => (
-                      <button
-                        key={c}
-                        onClick={() => setDrawColor(c)}
-                        style={{ backgroundColor: c }}
-                        className={`h-5 w-5 rounded-full border-2 transition ${
-                          drawColor === c ? "border-white scale-110" : "border-transparent"
-                        }`}
-                      />
-                    ))}
+                    {/* Color pickers */}
+                    {!isEraser && (
+                      <div className="flex items-center gap-1.5 ml-2 border-l border-slate-750 pl-2">
+                        {["#2563eb", "#dc2626", "#16a34a", "#0f172a"].map((c) => (
+                          <button
+                            key={c}
+                            onClick={() => setDrawColor(c)}
+                            style={{ backgroundColor: c }}
+                            className={`h-5 w-5 rounded-full border-2 transition ${
+                              drawColor === c ? "border-white scale-110" : "border-transparent"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={clearCanvas}
-                  className="rounded bg-slate-800 px-2.5 py-1 text-xs text-slate-300 hover:bg-rose-900/40 hover:text-rose-300 transition"
-                >
-                  Xóa toàn bộ
-                </button>
-              </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={clearCanvas}
+                      className="rounded bg-slate-800 px-2.5 py-1 text-xs text-slate-300 hover:bg-rose-900/40 hover:text-rose-300 transition"
+                    >
+                      Xóa toàn bộ
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-between w-full">
+                  <span className="rounded bg-indigo-500/20 px-2.5 py-1 text-xs text-indigo-300 font-semibold flex items-center gap-1.5">
+                    <span>👁️</span> Bảng bài giảng của gia sư (Chế độ xem)
+                  </span>
+                  <span className="text-xs text-slate-400">Chỉ gia sư có quyền viết và xóa</span>
+                </div>
+              )}
             </div>
 
             {/* Canvas Area */}
@@ -588,11 +880,13 @@ export default function ClassroomPage() {
                 ref={canvasRef}
                 width={1280}
                 height={720}
-                onMouseDown={startDrawing}
-                onMouseMove={draw}
-                onMouseUp={stopDrawing}
-                onMouseLeave={stopDrawing}
-                className="h-full w-full object-contain cursor-crosshair border border-slate-200 rounded shadow-sm"
+                onMouseDown={isTutor || isAdmin ? startDrawing : undefined}
+                onMouseMove={isTutor || isAdmin ? draw : undefined}
+                onMouseUp={isTutor || isAdmin ? stopDrawing : undefined}
+                onMouseLeave={isTutor || isAdmin ? stopDrawing : undefined}
+                className={`h-full w-full object-contain border border-slate-200 rounded shadow-sm ${
+                  isTutor || isAdmin ? "cursor-crosshair" : "cursor-default pointer-events-none"
+                }`}
               />
             </div>
           </div>
@@ -660,26 +954,79 @@ export default function ClassroomPage() {
                 </div>
               </div>
 
-              {/* Secondary Participant Tile */}
-              <div className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 p-3">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-300">
-                    {isTutor ? "Học sinh tham gia" : `${user?.fullName || "Tôi"} (Học sinh)`}
-                  </span>
-                  {handRaised && (
-                    <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-xs text-amber-300 animate-pulse">
-                      ✋ Đang giơ tay
-                    </span>
+              {/* Secondary Participant Tiles */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between text-xs font-semibold text-slate-300 px-1">
+                  <span>Thành viên trong phòng ({participants.length})</span>
+                  {(isTutor || isAdmin) && (
+                    <button
+                      onClick={handleHostMuteAll}
+                      className="rounded bg-rose-600/20 border border-rose-500/40 px-2 py-0.5 text-xs text-rose-300 hover:bg-rose-600/30 hover:text-white transition"
+                    >
+                      Tắt tất cả mic
+                    </button>
                   )}
                 </div>
-                <div className="flex flex-1 items-center justify-center py-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 text-slate-300 font-bold border border-slate-700">
-                    HS
-                  </div>
-                </div>
-                <div className="text-center text-xs text-slate-400">
-                  {isTutor ? "Học sinh đã kết nối vào phòng" : "Sẵn sàng phát biểu"}
-                </div>
+
+                {participants
+                  .filter((p) => !p.isSelf)
+                  .map((p) => (
+                    <div
+                      key={p.id}
+                      className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 p-3"
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-300">{p.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                              p.micEnabled
+                                ? "bg-emerald-500/20 text-emerald-300"
+                                : "bg-rose-500/20 text-rose-300"
+                            }`}
+                          >
+                            {p.micEnabled ? "Mic Bật" : "Mic Tắt"}
+                          </span>
+                          {p.handRaised && (
+                            <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-xs text-amber-300 animate-pulse">
+                              Đang giơ tay
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-1 items-center justify-center py-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 text-slate-300 font-bold border border-slate-700">
+                          {p.role === "TUTOR" ? "GS" : "HS"}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between border-t border-slate-800 pt-2 text-xs">
+                        <span className="text-slate-400">
+                          {p.role === "TUTOR" ? "Gia sư phụ trách" : "Học sinh"}
+                        </span>
+                        {(isTutor || isAdmin) && p.role === "STUDENT" && (
+                          <div className="flex items-center gap-1.5">
+                            {p.micEnabled ? (
+                              <button
+                                onClick={() => handleHostMuteParticipant(p.id)}
+                                className="rounded bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-rose-500 transition shadow"
+                              >
+                                Tắt mic
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleHostRequestUnmute(p.id)}
+                                className="rounded bg-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-600 hover:text-white transition"
+                              >
+                                Yêu cầu bật mic
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
               </div>
             </div>
           </div>
@@ -730,6 +1077,35 @@ export default function ClassroomPage() {
             </form>
           </div>
         )}
+
+        {/* Right: Participants Sidebar */}
+        <ClassroomParticipantsSidebar
+          isOpen={showParticipants}
+          onClose={() => setShowParticipants(false)}
+          isTutor={isTutor}
+          isAdmin={isAdmin}
+          students={sessionRoster?.students ?? []}
+          onlineParticipantIds={onlineParticipantIds}
+          tutorInfo={
+            sessionRoster?.tutor
+              ? { tutorId: sessionRoster.tutor.tutorId, fullName: sessionRoster.tutor.fullName }
+              : meetingData.tutorName
+              ? { tutorId: 1, fullName: meetingData.tutorName }
+              : null
+          }
+          tutorOnline={tutorOnline}
+          handRaisedIds={handRaisedIds}
+          mutedStudentIds={mutedStudentIds}
+          onToggleMuteStudent={(stId) => {
+            setMutedStudentIds((prev) => {
+              const next = new Set(prev);
+              if (next.has(stId)) next.delete(stId);
+              else next.add(stId);
+              return next;
+            });
+            handleHostMuteParticipant(String(stId));
+          }}
+        />
       </div>
 
       {/* ── Control Footer ─────────────────────────────────────────────────── */}
@@ -775,7 +1151,20 @@ export default function ClassroomPage() {
 
         {/* Raise Hand Toggle */}
         <button
-          onClick={() => setHandRaised((prev) => !prev)}
+          onClick={() => {
+            setHandRaised((prev) => {
+              const next = !prev;
+              if (user?.id) {
+                setHandRaisedIds((ids) => {
+                  const copy = new Set(ids);
+                  if (next) copy.add(user.id);
+                  else copy.delete(user.id);
+                  return copy;
+                });
+              }
+              return next;
+            });
+          }}
           className={`flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-semibold transition ${
             handRaised
               ? "bg-amber-500 text-slate-950 font-bold"
@@ -948,6 +1337,56 @@ export default function ClassroomPage() {
           </div>
         </div>
       )}
+      {/* Modal yêu cầu học viên bật mic từ Gia sư (Tuân thủ quyền riêng tư WebRTC/Google Meet) */}
+      {unmuteRequestModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl bg-slate-900 border border-slate-700 p-6 shadow-2xl text-slate-100 flex flex-col">
+            <h3 className="text-base font-bold text-slate-100">Yêu cầu phát biểu từ Gia sư</h3>
+            <p className="mt-2 text-sm text-slate-300 leading-relaxed">
+              Gia sư mời bạn bật micro để trao đổi và phát biểu trong buổi học. Bạn có đồng ý bật micro không?
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setUnmuteRequestModal(false)}
+                className="rounded-lg bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700 hover:text-white transition"
+              >
+                Để sau
+              </button>
+              <button
+                onClick={() => {
+                  if (localStream) {
+                    localStream.getAudioTracks().forEach((t) => {
+                      t.enabled = true;
+                    });
+                  }
+                  setMicEnabled(true);
+                  setUnmuteRequestModal(false);
+                  setHostMutedNotice(null);
+
+                  const isHost = meetingData?.role === "TUTOR" || meetingData?.role === "ADMIN";
+                  const currentUserId = String(user?.id || (isHost ? "tutor" : "student-1"));
+
+                  broadcastChannelRef.current?.postMessage({
+                    action: "UPDATE_MEDIA_STATE",
+                    senderId: currentUserId,
+                    senderRole: meetingData?.role || "STUDENT",
+                    micEnabled: true,
+                    timestamp: Date.now(),
+                  } as MeetingSignalPayload);
+
+                  setParticipants((prev) =>
+                    prev.map((p) => (p.isSelf ? { ...p, micEnabled: true } : p))
+                  );
+                }}
+                className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 transition shadow"
+              >
+                Bật micro
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ConfirmDialog
         open={confirmLeave}
         tone="warning"

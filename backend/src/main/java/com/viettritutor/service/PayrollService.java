@@ -12,6 +12,8 @@ import com.viettritutor.repository.*;
 import com.viettritutor.service.impl.DefaultPayrollGuard;
 import jakarta.persistence.*;
 import lombok.RequiredArgsConstructor;
+import com.viettritutor.notification.event.PayrollFinalizedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +34,7 @@ public class PayrollService {
     private final ObjectMapper json;
     private final EntityManager entityManager;
     private final Clock clock;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly=true)
     public PayrollResponse get(int year,int month,User actor) {
@@ -79,6 +82,21 @@ public class PayrollService {
         }
         lines.flush();
         claimKey(key,saved);
+
+        Map<Long, String> tutorEmailMap = tutors.stream()
+                .filter(t -> t.getUser() != null)
+                .collect(Collectors.toMap(TutorProfile::getId, t -> t.getUser().getEmail(), (a, b) -> a));
+        List<PayrollFinalizedEvent.TutorPayItem> notices = preview.getLines().stream()
+                .map(l -> new PayrollFinalizedEvent.TutorPayItem(
+                        l.getTutorId(),
+                        tutorEmailMap.get(l.getTutorId()),
+                        l.getTutorName(),
+                        l.getTotalPay(),
+                        l.getValidSessions()
+                ))
+                .toList();
+        eventPublisher.publishEvent(new PayrollFinalizedEvent(year, month, notices));
+
         return snapshot(saved);
     }
 

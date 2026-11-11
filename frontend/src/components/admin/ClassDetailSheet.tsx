@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CourseCover } from "@/components/admin/CourseCover";
 import { StatusChip } from "@/components/dashboard/StatusChip";
 import { Icon } from "@/components/ui/Icon";
@@ -60,6 +60,7 @@ export function ClassDetailSheet({ classItem, onClose, onChangeStatus, onAssign 
 }
 
 function SheetBody({ item, onClose, onChangeStatus, onAssign }: { item: AdminClassResponse } & Omit<ClassDetailSheetProps, "classItem">) {
+  const [activeTab, setActiveTab] = useState<"overview" | "students" | "sessions">("overview");
   const style = CLASS_STATUS[item.status];
   const next = classNextStep(item, new Date());
   const actions = classStatusActions(item, new Date());
@@ -133,110 +134,188 @@ function SheetBody({ item, onClose, onChangeStatus, onAssign }: { item: AdminCla
             </div>
           </div>
         )}
+        {/* Thanh chuyển Tab */}
+        <div className="mt-5 flex border-b border-brand-sandLine">
+          <button
+            type="button"
+            onClick={() => setActiveTab("overview")}
+            className={`flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-[13.5px] font-bold transition-colors ${
+              activeTab === "overview"
+                ? "border-brand-navy text-brand-navy"
+                : "border-transparent text-brand-muted hover:text-brand-ink"
+            }`}
+          >
+            <Icon name="info" className="text-[17px]" />
+            Tổng quan
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("students")}
+            className={`flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-[13.5px] font-bold transition-colors ${
+              activeTab === "students"
+                ? "border-brand-navy text-brand-navy"
+                : "border-transparent text-brand-muted hover:text-brand-ink"
+            }`}
+          >
+            <Icon name="group" className="text-[17px]" />
+            Danh sách học viên
+            <span className="ml-1 rounded-full bg-brand-sand px-2 py-0.5 text-[11px] font-extrabold text-brand-navy">
+              {item.currentStudents}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("sessions")}
+            className={`flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-[13.5px] font-bold transition-colors ${
+              activeTab === "sessions"
+                ? "border-brand-navy text-brand-navy"
+                : "border-transparent text-brand-muted hover:text-brand-ink"
+            }`}
+          >
+            <Icon name="calendar_month" className="text-[17px]" />
+            Lịch từng buổi
+            {sessionList.length > 0 && (
+              <span className="ml-1 rounded-full bg-brand-sand px-2 py-0.5 text-[11px] font-extrabold text-brand-navy">
+                {sessionList.length}
+              </span>
+            )}
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 overflow-y-auto overscroll-contain">
-        {/* Thông tin chính */}
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-b border-brand-sandLine p-6">
-          <Fact label="Lịch học" value={patternLabel(item.schedulePattern)} sub={item.timeSlotLabel} />
-          <Fact label="Thời gian" value={`${isoToText(item.startDate)} → ${isoToText(endDate)}`} sub={`${item.totalSessions} buổi`} />
-          <Fact
-            label="Hình thức"
-            value={`${CLASS_TYPE_LABEL[item.classType]} - ${item.deliveryMode === "ONLINE" ? "Online" : "Tại trung tâm"}`}
-            sub={item.deliveryMode === "ONLINE" && item.meetingUrl ? item.meetingUrl : undefined}
-          />
-          <Fact label="Gia sư" value={tutor ?? "Chưa phân công"} muted={!tutor} />
-          {showDeadline && <Fact label="Hạn đăng ký" value={isoToText(item.enrollmentDeadline)} />}
-        </dl>
+        {/* Tab 1: Tổng quan */}
+        {activeTab === "overview" && (
+          <div>
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-b border-brand-sandLine p-6">
+              <Fact label="Lịch học" value={patternLabel(item.schedulePattern)} sub={item.timeSlotLabel} />
+              <Fact label="Thời gian" value={`${isoToText(item.startDate)} → ${isoToText(endDate)}`} sub={`${item.totalSessions} buổi`} />
+              <Fact
+                label="Hình thức"
+                value={`${CLASS_TYPE_LABEL[item.classType]} - ${item.deliveryMode === "ONLINE" ? "Online" : "Tại trung tâm"}`}
+                sub={item.deliveryMode === "ONLINE" && item.meetingUrl ? item.meetingUrl : undefined}
+              />
+              <Fact label="Gia sư" value={tutor ?? "Chưa phân công"} muted={!tutor} />
+              {showDeadline && <Fact label="Hạn đăng ký" value={isoToText(item.enrollmentDeadline)} />}
+            </dl>
 
-        {/* Sĩ số và học phí theo sĩ số */}
-        <section className="border-b border-brand-sandLine p-6">
-          <div className="flex items-baseline justify-between gap-4">
-            <p className="text-[22px] font-extrabold tabular-nums text-brand-ink">
-              {item.currentStudents}
-              <span className="text-[14px] font-semibold text-brand-muted">/{item.maxStudents} học viên</span>
-            </p>
-            <p className="text-right text-[13.5px] text-brand-muted">
-              <strong className="font-semibold tabular-nums text-brand-ink">
-                {formatVnd(Math.round(item.basePrice1on1 * (1 - discount)))}
-              </strong>
-              /người - {sizeTierLabel(item.classType, size)}
-              {discount > 0 && `, −${Math.round(discount * 100)}%`}
-            </p>
+            <section className="p-6">
+              <h3 className="text-[15px] font-bold text-brand-navy mb-3">Sĩ số & Học phí theo quy mô</h3>
+              <div className="flex items-baseline justify-between gap-4">
+                <p className="text-[22px] font-extrabold tabular-nums text-brand-ink">
+                  {item.currentStudents}
+                  <span className="text-[14px] font-semibold text-brand-muted">/{item.maxStudents} học viên</span>
+                </p>
+                <p className="text-right text-[13.5px] text-brand-muted">
+                  <strong className="font-semibold tabular-nums text-brand-ink">
+                    {formatVnd(Math.round(item.basePrice1on1 * (1 - discount)))}
+                  </strong>
+                  /người - {sizeTierLabel(item.classType, size)}
+                  {discount > 0 && `, −${Math.round(discount * 100)}%`}
+                </p>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-brand-sand" aria-hidden="true">
+                <div className={`h-full rounded-full ${item.full ? "bg-emerald-500" : "bg-brand-navy"}`} style={{ width: `${percent}%` }} />
+              </div>
+            </section>
           </div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-brand-sand" aria-hidden="true">
-            <div className={`h-full rounded-full ${item.full ? "bg-emerald-500" : "bg-brand-navy"}`} style={{ width: `${percent}%` }} />
-          </div>
-        </section>
+        )}
 
-        {/* Học viên */}
-        <section className="border-b border-brand-sandLine p-6">
-          <h3 className="text-[15px] font-bold text-brand-navy">Học viên</h3>
-          {enrollments.isPending ? (
-            <p className="mt-3 text-[14px] text-brand-muted">Đang tải…</p>
-          ) : enrollments.isError ? (
-            <p className="mt-3 text-[14px] text-red-700">Không tải được danh sách học viên.</p>
-          ) : enrollments.data.content.length === 0 ? (
-            <p className="mt-3 text-[14px] text-brand-muted">Chưa có học viên.</p>
-          ) : (
-            <ul className="mt-3 divide-y divide-brand-sandLine rounded-xl border border-brand-sandLine">
-              {enrollments.data.content.map((enrollment) => {
-                const status = ENROLLMENT_STATUS[enrollment.status];
-                return (
-                  <li key={enrollment.enrollmentId} className="flex items-center gap-3 px-4 py-3 text-[14px]">
-                    <span className="min-w-0 flex-1 truncate font-medium text-brand-ink">
-                      {directory.nameOf(enrollment.studentId) ?? `Học viên ${displayCode("student", enrollment.studentId)}`}
-                    </span>
-                    {enrollment.status !== "ACTIVE" && (
+        {/* Tab 2: Danh sách học viên */}
+        {activeTab === "students" && (
+          <section className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[16px] font-bold text-brand-navy">Danh sách học viên ghi danh</h3>
+              <span className="text-[13px] text-brand-muted">Tổng cộng: {item.currentStudents} học viên</span>
+            </div>
+            {enrollments.isPending ? (
+              <p className="text-[14px] text-brand-muted py-8 text-center">Đang tải danh sách học viên…</p>
+            ) : enrollments.isError ? (
+              <p className="text-[14px] text-red-700 py-8 text-center">Không tải được danh sách học viên.</p>
+            ) : enrollments.data.content.length === 0 ? (
+              <div className="rounded-2xl border border-brand-sandLine bg-brand-sand/30 p-8 text-center text-brand-muted">
+                <Icon name="person_off" className="text-[32px] mb-2" />
+                <p className="text-[14px]">Chưa có học viên nào ghi danh vào lớp này.</p>
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-brand-sandLine">
+                <table className="w-full text-left text-[13.5px]">
+                  <thead className="bg-brand-sand/50 text-[12.5px] font-bold text-brand-muted border-b border-brand-sandLine">
+                    <tr>
+                      <th className="py-2.5 pl-4 pr-2">Học viên</th>
+                      <th className="py-2.5 px-2">Trạng thái</th>
+                      <th className="py-2.5 pl-2 pr-4 text-right">Học phí</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-brand-sandLine">
+                    {enrollments.data.content.map((enrollment) => {
+                      const status = ENROLLMENT_STATUS[enrollment.status];
+                      return (
+                        <tr key={enrollment.enrollmentId} className="hover:bg-brand-sand/20 transition-colors">
+                          <td className="py-3 pl-4 pr-2">
+                            <div className="font-semibold text-brand-ink">
+                              {directory.nameOf(enrollment.studentId) ?? `Học viên ${displayCode("student", enrollment.studentId)}`}
+                            </div>
+                            <div className="text-[11.5px] text-brand-muted">
+                              Mã HV: {displayCode("student", enrollment.studentId)}
+                            </div>
+                          </td>
+                          <td className="py-3 px-2">
+                            <StatusChip tone={status.tone} icon={status.icon}>
+                              {status.label}
+                            </StatusChip>
+                          </td>
+                          <td className="py-3 pl-2 pr-4 text-right tabular-nums font-semibold text-brand-ink">
+                            {formatVnd(enrollment.feeCharged)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Tab 3: Lịch từng buổi */}
+        {activeTab === "sessions" && (
+          <div className="p-6">
+            <h3 className="text-[16px] font-bold text-brand-navy mb-4">Lịch trình các buổi học</h3>
+            {sessions.isPending ? (
+              <p className="text-[14px] text-brand-muted py-8 text-center">Đang tải lịch học…</p>
+            ) : sessionList.length === 0 ? (
+              <div className="rounded-2xl border border-brand-sandLine bg-brand-sand/30 p-8 text-center text-brand-muted">
+                <Icon name="event_busy" className="text-[32px] mb-2" />
+                <p className="text-[14px]">Lịch sẽ được tự động tạo khi lớp mở đăng ký.</p>
+              </div>
+            ) : (
+              <ol className="divide-y divide-brand-sandLine rounded-xl border border-brand-sandLine">
+                {sessionList.map((session) => {
+                  const status = SESSION_STATUS[session.status] ?? SESSION_STATUS.SCHEDULED;
+                  return (
+                    <li key={session.sessionId} className="flex items-center gap-3 px-4 py-3 text-[13.5px] hover:bg-brand-sand/20 transition-colors">
+                      <span className="w-8 shrink-0 text-right font-mono font-bold text-brand-muted">
+                        #{session.sessionNumber}
+                      </span>
+                      <span className="flex-1 tabular-nums text-brand-ink">
+                        {isoToText(session.date)} • {session.startTime.slice(0, 5)}–{session.endTime.slice(0, 5)}
+                        {session.originalSessionId !== null && (
+                          <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">
+                            học bù
+                          </span>
+                        )}
+                      </span>
                       <StatusChip tone={status.tone} icon={status.icon}>
                         {status.label}
                       </StatusChip>
-                    )}
-                    <span className="shrink-0 tabular-nums text-brand-muted">{formatVnd(enrollment.feeCharged)}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-
-        {/* Lịch từng buổi: thu gọn, mở khi cần */}
-        <details className="group p-6">
-          <summary
-            className={`flex cursor-pointer list-none items-center justify-between rounded-lg text-[15px] font-bold text-brand-navy ${FOCUS_RING}`}
-          >
-            Lịch từng buổi
-            <span className="flex items-center gap-1 text-[13px] font-semibold text-brand-muted">
-              {sessionList.length > 0 ? `${sessionList.length} buổi` : ""}
-              <Icon name="expand_more" className="text-[20px] transition-transform group-open:rotate-180" />
-            </span>
-          </summary>
-          {sessions.isPending ? (
-            <p className="mt-3 text-[14px] text-brand-muted">Đang tải…</p>
-          ) : sessionList.length === 0 ? (
-            <p className="mt-3 text-[14px] text-brand-muted">Lịch được tạo khi lớp mở đăng ký.</p>
-          ) : (
-            <ol className="mt-3 divide-y divide-brand-sandLine rounded-xl border border-brand-sandLine">
-              {sessionList.map((session) => {
-                const status = SESSION_STATUS[session.status] ?? SESSION_STATUS.SCHEDULED;
-                return (
-                  <li key={session.sessionId} className="flex items-center gap-3 px-4 py-2.5 text-[13.5px]">
-                    <span className="w-7 shrink-0 text-right tabular-nums text-brand-muted">{session.sessionNumber}</span>
-                    <span className="flex-1 tabular-nums text-brand-ink">
-                      {isoToText(session.date)} - {session.startTime.slice(0, 5)}–{session.endTime.slice(0, 5)}
-                      {session.originalSessionId !== null && <span className="ml-2 text-[12px] text-amber-700">học bù</span>}
-                    </span>
-                    {session.status !== "SCHEDULED" && (
-                      <StatusChip tone={status.tone} icon={status.icon}>
-                        {status.label}
-                      </StatusChip>
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-        </details>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

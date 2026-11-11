@@ -4,6 +4,7 @@ import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { Icon } from "@/components/ui/Icon";
 import { PORTAL_BTN_ACCENT, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
 import { monthLabel } from "@/constants/management";
+import { queryKeys } from "@/constants/queryKeys";
 import { useUserId } from "@/hooks/usePortalData";
 import type { PayrollDisputeProps } from "@/interfaces/portal";
 import { disputePayroll } from "@/services/managementService";
@@ -26,10 +27,19 @@ export function PayrollDispute({ line }: PayrollDisputeProps) {
   const [reason, setReason] = useState("");
   const send = useMutation({
     mutationFn: () => disputePayroll(line.year, line.month, reason.trim()),
+    meta: {
+      invalidates: [
+        queryKeys.me.payroll(userId),
+        queryKeys.admin.payroll(line.year, line.month),
+        queryKeys.admin.allPayroll,
+      ],
+    },
     onSuccess: () => {
       setOpen(false);
       setReason("");
-      void cache.invalidateQueries({ queryKey: ["me", userId, "payroll"] });
+      void cache.invalidateQueries({ queryKey: queryKeys.me.payroll(userId) });
+      void cache.invalidateQueries({ queryKey: queryKeys.admin.allPayroll });
+      void cache.invalidateQueries({ queryKey: queryKeys.admin.payroll(line.year, line.month) });
     },
   });
   const length = reason.trim().length;

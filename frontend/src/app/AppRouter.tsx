@@ -53,6 +53,7 @@ import { AdminReviewsPage } from "@/pages/admin/AdminReviewsPage";
 
 // Trang gia sư
 import { TutorHomePage } from "@/pages/tutor/TutorHomePage";
+import { TutorClassesPage } from "@/pages/tutor/TutorClassesPage";
 import { TutorSchedulePage } from "@/pages/tutor/TutorSchedulePage";
 import { TutorAvailabilityPage } from "@/pages/tutor/TutorAvailabilityPage";
 import { TutorLeavePage } from "@/pages/tutor/TutorLeavePage";
@@ -137,6 +138,7 @@ export function AppRouter() {
           <Route element={<RoleRoute allowedRole="ROLE_TUTOR" />}>
             <Route element={<TutorLayout />}>
               <Route path={ROUTES.tutor} element={<TutorHomePage />} />
+              <Route path={ROUTES.tutorClasses} element={<TutorClassesPage />} />
               <Route path={ROUTES.tutorSessions} element={<TutorSchedulePage />} />
               <Route path={ROUTES.tutorAvailability} element={<TutorAvailabilityPage />} />
               <Route path={ROUTES.tutorLeave} element={<TutorLeavePage />} />

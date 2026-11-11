@@ -2,6 +2,8 @@ package com.viettritutor;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,6 +20,8 @@ import java.nio.file.Path;
  * - Security (JWT) lives under com.viettritutor.security.*
  * - Configuration beans live under com.viettritutor.config.*
  */
+@EnableAsync
+@EnableScheduling
 @SpringBootApplication
 public class VietTriTutorApplication {
 

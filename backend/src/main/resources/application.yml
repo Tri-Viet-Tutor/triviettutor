@@ -83,7 +83,7 @@ app:
     topup-ttl-minutes: ${WALLET_TOPUP_TTL_MINUTES:15}
     vnpay-return-path: ${WALLET_VNPAY_RETURN_PATH:/student/wallet}
   jwt:
-    expiration-ms: 86400000 # 24 hours
+    expiration-ms: ${JWT_EXPIRATION_MS:7776000000} # 90 days (7776000 seconds)
 
 # LiveKit settings
 livekit:

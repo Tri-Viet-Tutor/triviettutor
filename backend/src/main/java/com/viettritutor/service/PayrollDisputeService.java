@@ -17,6 +17,12 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.viettritutor.notification.event.PayrollDisputeEvent;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -40,6 +46,7 @@ public class PayrollDisputeService {
     private final UserRepository users;
     private final PayrollDisputeMailer mailer;
     private final Clock clock;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public PayrollLineResponse dispute(int year,int month,String reason,User actor) {
@@ -61,10 +68,18 @@ public class PayrollDisputeService {
         String tutorName=line.getTutorName();
         String total=line.getTotalPay().toPlainString();
         String text=saved.getReason();
-        // Email only once the complaint is stored, so a rolled-back complaint never reaches an admin.
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override public void afterCommit() { mailer.notifyAdmins(admins,tutorName,year,month,total,text); }
-        });
+
+        eventPublisher.publishEvent(new PayrollDisputeEvent(
+                actor.getId(),
+                actor.getEmail(),
+                tutorName,
+                year,
+                month,
+                line.getTotalPay(),
+                text,
+                admins
+        ));
+
         PayrollLineResponse mine=payroll.mine(year,month,0,1,actor).getContent().getFirst();
         return withDispute(mine,saved);
     }

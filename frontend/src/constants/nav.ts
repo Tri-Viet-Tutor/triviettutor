@@ -33,6 +33,7 @@ export const STUDENT_NAV: PortalNavItem[] = [
 /** Các trang của khu gia sư. Hồ sơ mở từ menu avatar trên thanh trên. */
 export const TUTOR_NAV: PortalNavItem[] = [
   { to: ROUTES.tutor, label: "Tổng quan", icon: "home", end: true },
+  { to: ROUTES.tutorClasses, label: "Lớp phụ trách", icon: "school" },
   { to: ROUTES.tutorSessions, label: "Lịch dạy", icon: "calendar_month" },
   { to: ROUTES.tutorHomeworks, label: "Bài tập", icon: "assignment" },
   { to: ROUTES.tutorAvailability, label: "Lịch rảnh", icon: "event_available" },
