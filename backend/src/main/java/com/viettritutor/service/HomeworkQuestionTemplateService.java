@@ -19,7 +19,8 @@ public class HomeworkQuestionTemplateService {
     private static final List<List<String>> ROWS = List.of(
             List.of("2 + 3 bằng bao nhiêu?", "trắc nghiệm", "4", "5", "6", "7", "B", "1", "2026-12-01 19:30"),
             List.of("Số nào là số chẵn?", "trắc nghiệm", "2", "4", "6", ALL_CORRECT, "", "1", ""),
-            List.of("Trình bày cách giải phương trình bậc nhất.", "tự luận", "", "", "", "", "", "2", ""));
+            List.of("Trình bày cách giải phương trình bậc nhất.", "tự luận", "", "", "", "", "", "2", ""),
+            List.of("Những số nào là số nguyên tố? (chọn 2 đáp án)", "trắc nghiệm", "2", "4", "3", "9", "A, C", "1", ""));
 
     /** Excel: header row + examples; publish_time is text so Excel does not reformat it */
     public byte[] xlsx() {
@@ -61,7 +62,7 @@ public class HomeworkQuestionTemplateService {
             String[] lines = {
                     "Mỗi dòng ở trang \"Cau hoi\" là một câu. Giữ nguyên dòng tiêu đề.",
                     "loai: trắc nghiệm hoặc tự luận (để trống: có phương án là trắc nghiệm, không có là tự luận).",
-                    "A–D (có thể thêm cột E…J): các phương án. dap_an: một chữ cái, ví dụ B.",
+                    "A–D (có thể thêm cột E…J): các phương án. dap_an: chữ cái của đáp án đúng, ví dụ B; câu nhiều đáp án đúng ghi \"A, C\" (học viên phải chọn đủ và đúng mới có điểm).",
                     "Để trống dap_an nếu có phương án \"" + ALL_CORRECT + "\" — hệ thống tự chọn phương án đó.",
                     "diem: số điểm của câu (để trống = 1). publish_time: giờ mở bài, ví dụ 2026-12-01 19:30 (chỉ cần ghi ở một dòng).",
             };
@@ -81,7 +82,7 @@ public class HomeworkQuestionTemplateService {
             paragraph(doc, "MẪU CÂU HỎI BÀI TẬP", true, 16);
             paragraph(doc, "Cách viết: mỗi câu bắt đầu bằng \"Câu 1:\", \"Câu 2:\"…; trong ngoặc sau số câu có thể ghi loại và điểm, "
                     + "ví dụ \"Câu 3 (tự luận, 2 điểm):\" (mặc định 1 điểm). Phương án viết \"A. …\", \"B. …\" — mỗi phương án một dòng "
-                    + "hoặc nhiều phương án trên một dòng. Đáp án ghi \"Đáp án: B\" hoặc đánh dấu * trước chữ cái (\"*B. 5\"). "
+                    + "hoặc nhiều phương án trên một dòng. Đáp án ghi \"Đáp án: B\" hoặc đánh dấu * trước chữ cái (\"*B. 5\"); câu nhiều đáp án đúng ghi \"Đáp án: A, C\" (học viên phải chọn đủ và đúng mới có điểm). "
                     + "Câu có phương án \"" + ALL_CORRECT + "\" có thể bỏ trống đáp án. Dòng \"Giờ mở bài:\" là không bắt buộc. "
                     + "Các dòng trước \"Câu 1\" (như dòng hướng dẫn này) được bỏ qua.", false, 10);
             paragraph(doc, "", false, 11);
@@ -98,6 +99,10 @@ public class HomeworkQuestionTemplateService {
             paragraph(doc, "D. " + ALL_CORRECT, false, 12);
             paragraph(doc, "", false, 11);
             paragraph(doc, "Câu 3 (tự luận, 2 điểm): Trình bày cách giải phương trình bậc nhất.", true, 12);
+            paragraph(doc, "", false, 11);
+            paragraph(doc, "Câu 4: Những số nào là số nguyên tố? (chọn 2 đáp án)", true, 12);
+            paragraph(doc, "A. 2\t\tB. 4\t\tC. 3\t\tD. 9", false, 12);
+            paragraph(doc, "Đáp án: A, C", false, 12);
             doc.write(out);
             return out.toByteArray();
         } catch (IOException ex) {

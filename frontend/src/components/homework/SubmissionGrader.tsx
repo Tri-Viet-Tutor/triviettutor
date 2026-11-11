@@ -11,7 +11,7 @@ import { useUserId } from "@/hooks/usePortalData";
 import { gradeSubmission } from "@/services/homeworkService";
 import { portalErrorMessage } from "@/utils/errors";
 import { attachmentName } from "@/services/fileService";
-import { formatDateTime, formatDuration, formatScore } from "@/utils/homework";
+import { correctOptionsOf, formatDateTime, formatDuration, formatScore, optionLetters, pickedOptions, sameOptions } from "@/utils/homework";
 import type { SubmissionGraderProps } from "@/interfaces/homework";
 
 const OPTION_LETTERS = "ABCDEFGHIJ";
@@ -92,7 +92,9 @@ export function SubmissionGrader({ homework, submission }: SubmissionGraderProps
         <ol className="mt-4 space-y-3">
           {questions.map((question, index) => {
             const answer = answerOf(question.id);
-            const correct = question.type === "MULTIPLE_CHOICE" && answer?.selectedOption === question.correctOption;
+            const picks = pickedOptions(answer);
+            const key = correctOptionsOf(question);
+            const correct = question.type === "MULTIPLE_CHOICE" && sameOptions(picks, key);
             return (
               <li key={question.id} className="rounded-xl border border-brand-sandLine bg-brand-sand/40 p-3.5">
                 <p className="text-[14.5px] font-semibold text-brand-ink">
@@ -102,12 +104,12 @@ export function SubmissionGrader({ homework, submission }: SubmissionGraderProps
                 {question.type === "MULTIPLE_CHOICE" ? (
                   <p className={`mt-1.5 flex items-center gap-1.5 text-[14px] ${correct ? "text-emerald-700" : "text-red-700"}`}>
                     <Icon name={correct ? "check_circle" : "cancel"} className="text-[18px]" />
-                    {answer?.selectedOption !== undefined
-                      ? `Chọn ${OPTION_LETTERS[answer.selectedOption]}. ${question.options?.[answer.selectedOption] ?? ""}`
-                      : "Bỏ trống"}
-                    {!correct && question.correctOption !== undefined && (
-                      <span className="text-brand-muted"> · đáp án {OPTION_LETTERS[question.correctOption]}</span>
-                    )}
+                    {picks.length === 1
+                      ? `Chọn ${OPTION_LETTERS[picks[0]]}. ${question.options?.[picks[0]] ?? ""}`
+                      : picks.length > 1
+                        ? `Chọn ${optionLetters(picks)}`
+                        : "Bỏ trống"}
+                    {!correct && key.length > 0 && <span className="text-brand-muted"> · đáp án {optionLetters(key)}</span>}
                   </p>
                 ) : (
                   <>

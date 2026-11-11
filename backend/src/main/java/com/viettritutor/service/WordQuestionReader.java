@@ -59,11 +59,16 @@ final class WordQuestionReader {
     private static final Pattern OPTION = Pattern.compile("(?:^|\\s+)(\\*?)\\s*([A-J])\\s*[.)]\\s*");
     /** "2 điểm", "1,5đ", "0.5 diem" inside the brackets after "Câu n" */
     private static final Pattern POINTS_IN = Pattern.compile("(\\d+(?:[.,]\\d+)?)\\s*(?:điểm|diem|đ|d)(?!\\p{L})", FLAGS);
-    /** "Chọn C", "Đáp án: C", "Đáp án đúng là C" inside a solution or on its own line */
-    private static final Pattern CHOOSE = Pattern.compile("(?:chọn|chon|đáp án(?: đúng)?(?: là)?|dap an(?: dung)?(?: la)?)\\s*[:.]?\\s*([A-J])(?![\\p{L}\\d])", FLAGS);
-    /** Answer-key entries: "1C", "1.C", "1-C", "1: C", "Câu 1: C", "Câu 1. Chọn C" */
+    /** One letter or a set of letters for multi-answer questions: "C", "AC", "A, C", "A và C", "A+C" */
+    private static final String LETTER_SET = "[A-J](?:\\s*(?:,|;|&|\\+|và|va|and)\\s*[A-J]|[A-J])*(?![\\p{L}\\d])";
+    /** "Chọn C", "Đáp án: C", "Đáp án đúng là A, C" inside a solution or on its own line */
+    private static final Pattern CHOOSE = Pattern.compile(
+            "(?:chọn|chon|đáp án(?: đúng)?(?: là)?|dap an(?: dung)?(?: la)?)\\s*[:.]?\\s*(" + LETTER_SET + ")", FLAGS);
+    /** Answer-key entries: "1C", "1.C", "1-C", "1: C", "Câu 1: C", "Câu 1. Chọn C", "3AC" */
     private static final Pattern KEY_ENTRY = Pattern.compile(
-            "(?:câu|cau)?\\s*(\\d{1,3})\\s*[.:)\\-–]?\\s*(?:(?:chọn|chon|đáp án|dap an)\\s*:?\\s*)?([A-J])(?![\\p{L}\\d])", FLAGS);
+            "(?:câu|cau)?\\s*(\\d{1,3})\\s*[.:)\\-–]?\\s*(?:(?:chọn|chon|đáp án|dap an)\\s*:?\\s*)?(" + LETTER_SET + ")", FLAGS);
+    /** A table cell holding one letter or a set ("A,C") */
+    private static final String CELL_LETTERS = "(?i)[A-J](?:\\s*[,;&+]?\\s*[A-J])*";
     private static final Set<String> KEY_HEADINGS = Set.of("dap an", "bang dap an", "dap an tham khao", "dap an va huong dan giai",
             "dap an va loi giai", "huong dan giai", "huong dan giai chi tiet", "loi giai", "loi giai chi tiet", "key", "answer key",
             "answers", "bang dap an trac nghiem", "dap an trac nghiem", "dap an chi tiet");
@@ -229,7 +234,7 @@ final class WordQuestionReader {
             int to = keyPart + 1 < partStarts.size() ? partStarts.get(keyPart + 1) : questions.size();
             for (int i = from; i < to; i++) {
                 if (numbers.get(i) == number) {
-                    if (questions.get(i)[ANSWER].isEmpty()) questions.get(i)[ANSWER] = letter.toUpperCase(Locale.ROOT);
+                    if (questions.get(i)[ANSWER].isEmpty()) questions.get(i)[ANSWER] = letterSet(letter);
                     return;
                 }
             }
@@ -325,7 +330,8 @@ final class WordQuestionReader {
                     for (String[] option : options) {
                         int index = LETTERS.indexOf(option[1].charAt(0));
                         current[FIRST_OPTION + index] = option[2];
-                        if (!option[0].isEmpty()) current[ANSWER] = option[1];
+                        if (!option[0].isEmpty()) // several "*" marks → several correct options
+                            current[ANSWER] = current[ANSWER].matches("[A-J](,[A-J])*") ? current[ANSWER] + "," + option[1] : option[1];
                         b.lastOption = index;
                     }
                     continue;
@@ -342,7 +348,7 @@ final class WordQuestionReader {
                     case "solution" -> {
                         b.inSolution = true;
                         Matcher choose = CHOOSE.matcher(keyValue[1]);
-                        if (choose.find() && current[ANSWER].isEmpty()) current[ANSWER] = choose.group(1).toUpperCase(Locale.ROOT);
+                        if (choose.find() && current[ANSWER].isEmpty()) current[ANSWER] = letterSet(choose.group(1));
                     }
                     default -> { /* not reached */ }
                 }
@@ -350,7 +356,7 @@ final class WordQuestionReader {
             }
             Matcher choose = CHOOSE.matcher(line);
             if (choose.lookingAt() || (b.inSolution && choose.find())) {
-                if (current[ANSWER].isEmpty()) current[ANSWER] = choose.group(1).toUpperCase(Locale.ROOT);
+                if (current[ANSWER].isEmpty()) current[ANSWER] = letterSet(choose.group(1));
                 continue;
             }
             if (b.inSolution) continue;
@@ -367,7 +373,7 @@ final class WordQuestionReader {
      * of that solution), or a line made only of entries ("1C 2B 3-D"). Other solution text is skipped, so "I = 2 A"
      * in a worked answer is not read as "question 2: A".
      */
-    private static final Pattern LEADING_LETTER = Pattern.compile("^\\*?\\s*([A-J])(?![\\p{L}\\d])");
+    private static final Pattern LEADING_LETTER = Pattern.compile("^\\*?\\s*(" + LETTER_SET + ")");
 
     private static void keyLine(String line, Builder b) {
         Matcher q = QUESTION.matcher(line);
@@ -411,7 +417,7 @@ final class WordQuestionReader {
                 String c = cell.strip();
                 if (c.isEmpty()) continue;
                 filled++;
-                if (c.matches("(?i)[A-J]") || c.matches("\\d{1,3}") || c.matches("(?i)\\d{1,3}\\s*[.:)\\-–]?\\s*[A-J]")) keyCells++;
+                if (c.matches(CELL_LETTERS) || c.matches("\\d{1,3}") || c.matches("(?i)\\d{1,3}\\s*[.:)\\-–]?\\s*[A-J]+")) keyCells++;
             }
         }
         return keyCells >= 4 && keyCells * 10 >= filled * 7;
@@ -426,7 +432,7 @@ final class WordQuestionReader {
                 List<String> below = rows.get(r + 1);
                 for (int c = 0; c < row.size() && c < below.size(); c++) {
                     String n = row.get(c).strip(), letter = below.get(c).strip();
-                    if (n.matches("\\d{1,3}") && letter.matches("(?i)[A-J]")) b.key(Integer.parseInt(n), letter);
+                    if (n.matches("\\d{1,3}") && letter.matches(CELL_LETTERS)) b.key(Integer.parseInt(n), letter);
                 }
                 r++;
                 continue;
@@ -440,8 +446,15 @@ final class WordQuestionReader {
         return type.equals("tu luan") || type.equals("tl") || type.equals("essay");
     }
 
-    /** "Đáp án: B. 5" → "B"; anything else is kept for the parser to judge */
+    /** "A, C" / "AC" / "a và c" → "A,C" (letters in order of appearance, no repeats) */
+    static String letterSet(String text) {
+        String letters = text.replaceAll("(?iu)và|va|and", " ").replaceAll("[^A-Ja-j]", "").toUpperCase(Locale.ROOT);
+        return String.join(",", new LinkedHashSet<>(Arrays.asList(letters.split(""))));
+    }
+
+    /** "Đáp án: B. 5" → "B"; "Đáp án: A, C" → "A,C"; anything else is kept for the parser to judge */
     private static String answerLetter(String value) {
+        if (value.strip().matches("(?iu)\\*?[A-J](?:\\s*(?:,|;|&|\\+|và|va|and|\\s)\\s*\\*?[A-J])+")) return letterSet(value);
         Matcher m = Pattern.compile("^\\s*\\*?\\s*([A-Ja-j])(?:\\s*[.)]|\\s|$).*$", Pattern.DOTALL).matcher(value);
         return m.matches() ? m.group(1).toUpperCase(Locale.ROOT) : value.strip();
     }

@@ -128,7 +128,7 @@ export function QuestionImport({ hasQuestions, onImport }: QuestionImportProps) 
         <strong className="font-semibold">Word:</strong> mỗi câu bắt đầu bằng “Câu 1:”, có thể ghi “(tự luận, 2 điểm)”; phương án “A. …”;
         đáp án “Đáp án: B” hoặc đánh dấu “*B.”. <strong className="font-semibold">Excel/CSV:</strong> mỗi dòng một câu với các cột cau_hoi,
         loai, A–D, dap_an, diem, publish_time. Để trống đáp án nếu có phương án “Tất cả các đáp án trên đều đúng”, hệ thống tự chọn phương
-        án đó.
+        án đó. Câu nhiều đáp án đúng ghi “A, C” (hoặc đánh dấu “*” ở từng đáp án) — học viên phải chọn đủ và đúng mới có điểm.
       </p>
 
       {template.error && (

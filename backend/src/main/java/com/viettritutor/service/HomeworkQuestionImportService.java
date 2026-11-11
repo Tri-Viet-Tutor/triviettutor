@@ -157,12 +157,30 @@ public class HomeworkQuestionImportService {
             if (allIndex < 0) throw new IllegalArgumentException("Đáp án là \"tất cả\" nhưng không có phương án \"Tất cả các đáp án trên đều đúng\"");
             return new ImportedQuestion(type, prompt, options, allIndex, points, false);
         }
-        int letter = a.length() == 1 ? LETTERS.indexOf(Character.toUpperCase(a.charAt(0)))
-                : a.matches("\\d{1,2}") ? Integer.parseInt(a) - 1 : -1;
-        if (letter < 0 || letter >= LETTERS.length()) throw new IllegalArgumentException("Đáp án \"" + answer + "\" phải là một chữ A–J");
-        Integer index = letterToIndex.get(letter);
-        if (index == null) throw new IllegalArgumentException("Đáp án " + LETTERS.charAt(letter) + " trỏ tới phương án đang để trống");
-        return new ImportedQuestion(type, prompt, options, index, points, false);
+        List<Integer> letters = answerLetters(a);
+        if (letters == null) throw new IllegalArgumentException("Đáp án \"" + answer + "\" phải là chữ cái A–J, nhiều đáp án ghi \"A, C\"");
+        TreeSet<Integer> indexes = new TreeSet<>();
+        for (int letter : letters) {
+            Integer index = letterToIndex.get(letter);
+            if (index == null) throw new IllegalArgumentException("Đáp án " + LETTERS.charAt(letter) + " trỏ tới phương án đang để trống");
+            indexes.add(index);
+        }
+        return new ImportedQuestion(type, prompt, options, indexes.first(), List.copyOf(indexes), points, false);
+    }
+
+    /**
+     * Answer text (already plain) → letter positions: "b", "2", "a c", "a, c", "a va c", "ac". Null when it is none of these.
+     */
+    static List<Integer> answerLetters(String plainAnswer) {
+        String a = plainAnswer.replaceAll("\\b(va|and)\\b", " ").replaceAll("[\\s_]+", " ").trim();
+        if (a.matches("\\d{1,2}")) {
+            int n = Integer.parseInt(a) - 1;
+            return n >= 0 && n < LETTERS.length() ? List.of(n) : null;
+        }
+        String compact = a.replace(" ", "");
+        if (!compact.matches("[a-j]{1,10}") || (a.contains(" ") && !a.matches("[a-j]( [a-j])+"))) return null;
+        List<Integer> letters = compact.chars().map(ch -> LETTERS.indexOf(Character.toUpperCase(ch))).distinct().boxed().toList();
+        return letters;
     }
 
     /** Index of the "all of the above" option, preferring D; -1 when there is none. */

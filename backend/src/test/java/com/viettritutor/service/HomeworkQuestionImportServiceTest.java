@@ -309,10 +309,11 @@ class HomeworkQuestionImportServiceTest {
 
         for (QuestionImportResponse result : List.of(xlsx, docx)) {
             assertThat(result.errors()).isEmpty();
-            assertThat(result.questions()).hasSize(3);
+            assertThat(result.questions()).hasSize(4);
             assertThat(result.questions().get(0).correctOption()).isEqualTo(1);
             assertThat(result.questions().get(1).answerDetected()).isTrue();
             assertThat(result.questions().get(2).type()).isEqualTo(QuestionType.ESSAY);
+            assertThat(result.questions().get(3).correctOptions()).containsExactly(0, 2);
             assertThat(result.publishTime()).isEqualTo(OffsetDateTime.parse("2026-12-01T19:30+07:00"));
         }
     }
@@ -392,5 +393,35 @@ class HomeworkQuestionImportServiceTest {
             assertThat(error.label()).isEqualTo("Câu 1");
             assertThat(error.message()).contains("bảng đáp án");
         });
+    }
+
+    @Test
+    @DisplayName("Multi-answer: 'A, C' / 'AC' / 'A và C' in a sheet, several '*' marks or 'Đáp án: B, D' in Word, '3AC' in a key")
+    void multipleCorrectOptions() throws Exception {
+        QuestionImportResponse sheet = service.read(csv("""
+                cau_hoi,A,B,C,D,dap_an
+                Q1,a,b,c,d,"A, C"
+                Q2,a,b,c,d,BD
+                Q3,a,b,c,d,A và D
+                Q4,a,b,c,d,A
+                Q5,a,b,c,d,A1
+                """));
+        assertThat(sheet.questions()).hasSize(4);
+        assertThat(sheet.questions().get(0).correctOptions()).containsExactly(0, 2);
+        assertThat(sheet.questions().get(0).correctOption()).isZero();
+        assertThat(sheet.questions().get(1).correctOptions()).containsExactly(1, 3);
+        assertThat(sheet.questions().get(2).correctOptions()).containsExactly(0, 3);
+        assertThat(sheet.questions().get(3).correctOptions()).containsExactly(0);
+        assertThat(sheet.errors()).singleElement().satisfies(error -> assertThat(error.row()).isEqualTo(6));
+
+        QuestionImportResponse word = service.read(docx("de.docx",
+                "Câu 1: Chọn hai", "*A. x", "B. y", "*C. z",
+                "Câu 2: Chọn hai", "A. x    B. y    C. z    D. t", "Đáp án: B, D",
+                "Câu 3: Chọn hai", "A. x", "B. y", "C. z",
+                "ĐÁP ÁN", "3AC"));
+        assertThat(word.errors()).isEmpty();
+        assertThat(word.questions().get(0).correctOptions()).containsExactly(0, 2);
+        assertThat(word.questions().get(1).correctOptions()).containsExactly(1, 3);
+        assertThat(word.questions().get(2).correctOptions()).containsExactly(0, 2);
     }
 }

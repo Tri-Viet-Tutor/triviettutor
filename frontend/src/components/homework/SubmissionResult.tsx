@@ -4,7 +4,7 @@ import { Icon } from "@/components/ui/Icon";
 import { PORTAL_CARD, PORTAL_LABEL, PORTAL_TEXT_LINK } from "@/constants/classNames";
 import { SUBMISSION_STATUS } from "@/constants/labels";
 import { attachmentName } from "@/services/fileService";
-import { formatDateTime, formatDuration, formatScore } from "@/utils/homework";
+import { formatDateTime, formatDuration, formatScore, optionLetters, pickedOptions } from "@/utils/homework";
 import type { SubmissionResultProps } from "@/interfaces/homework";
 
 const OPTION_LETTERS = "ABCDEFGHIJ";
@@ -69,10 +69,16 @@ export function SubmissionResult({ homework, submission }: SubmissionResultProps
                   </p>
                   <p className="mt-1.5 whitespace-pre-line text-brand-ink">
                     {question.type === "MULTIPLE_CHOICE"
-                      ? answer?.selectedOption !== undefined
-                        ? `Bạn chọn ${OPTION_LETTERS[answer.selectedOption]}. ${question.options?.[answer.selectedOption] ?? ""}`
-                        : "Bỏ trống"
+                      ? (() => {
+                          const picks = pickedOptions(answer);
+                          if (picks.length === 0) return "Bỏ trống";
+                          if (picks.length === 1) return `Bạn chọn ${OPTION_LETTERS[picks[0]]}. ${question.options?.[picks[0]] ?? ""}`;
+                          return `Bạn chọn ${optionLetters(picks)}`;
+                        })()
                       : (answer?.textAnswer ?? "Không viết (xem ảnh đã gửi)")}
+                    {question.type === "MULTIPLE_CHOICE" && (question.selectCount ?? 1) > 1 && (
+                      <span className="text-brand-muted"> (câu chọn {question.selectCount} đáp án, đúng đủ mới có điểm)</span>
+                    )}
                   </p>
                   {graded && (
                     <p className="mt-1 font-semibold text-brand-navy">

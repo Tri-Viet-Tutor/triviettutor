@@ -240,20 +240,40 @@ public class SubmissionService {
             HomeworkQuestion q = byId.get(in.getQuestionId());
             if (q == null || !seen.add(q.getId())) throw new BusinessException(ErrorCode.INVALID_ANSWER);
             String text = access.text(in.getTextAnswer());
+            List<Integer> picks = picks(in);
             if (q.getType() == QuestionType.MULTIPLE_CHOICE) {
-                if (text != null || (in.getSelectedOption() != null && in.getSelectedOption() >= questions.options(q).size()))
+                // At most as many picks as there are correct options ("Chọn 2 đáp án"), each in range
+                if (text != null || picks.size() > q.correctSet().size()
+                        || (!picks.isEmpty() && picks.get(picks.size() - 1) >= questions.options(q).size()))
                     throw new BusinessException(ErrorCode.INVALID_ANSWER);
-            } else if (in.getSelectedOption() != null) {
+            } else if (!picks.isEmpty()) {
                 throw new BusinessException(ErrorCode.INVALID_ANSWER);
             }
             HomeworkAnswer a = saved.getOrDefault(q.getId(), HomeworkAnswer.builder().submissionId(s.getId()).questionId(q.getId()).build());
-            a.setSelectedOption(in.getSelectedOption()); a.setTextAnswer(text); a.setScore(null);
+            a.setSelectedOption(picks.isEmpty() ? null : picks.get(0));
+            a.setSelectedOptions(OptionIndexes.format(picks));
+            a.setTextAnswer(text); a.setScore(null);
             answers.save(a);
         }
         answers.flush();
     }
 
-    /** Scores multiple-choice answers; without essay questions the quiz is final immediately. */
+    /** The options an answer picks, sorted: selectedOptions when given (selectedOption must then be its first), else selectedOption */
+    private static List<Integer> picks(AnswerRequest in) {
+        if (in.getSelectedOptions() != null && !in.getSelectedOptions().isEmpty()) {
+            List<Integer> picks = in.getSelectedOptions().stream().distinct().sorted().toList();
+            if (picks.size() != in.getSelectedOptions().size()
+                    || (in.getSelectedOption() != null && !in.getSelectedOption().equals(picks.get(0))))
+                throw new BusinessException(ErrorCode.INVALID_ANSWER);
+            return picks;
+        }
+        return in.getSelectedOption() == null ? List.of() : List.of(in.getSelectedOption());
+    }
+
+    /**
+     * Scores multiple-choice answers: full points only for exactly the set of correct options (all of them, nothing
+     * extra), otherwise zero. Without essay questions the quiz is final immediately.
+     */
     private void autoGrade(HomeworkSubmission s, List<HomeworkQuestion> quiz) {
         Map<Long, HomeworkAnswer> given = answers.findBySubmissionId(s.getId()).stream()
                 .collect(Collectors.toMap(HomeworkAnswer::getQuestionId, Function.identity()));
@@ -261,7 +281,7 @@ public class SubmissionService {
         for (HomeworkQuestion q : quiz) {
             if (q.getType() != QuestionType.MULTIPLE_CHOICE) continue;
             HomeworkAnswer a = given.get(q.getId());
-            BigDecimal earned = a != null && Objects.equals(a.getSelectedOption(), q.getCorrectOption()) ? q.getPoints() : BigDecimal.ZERO;
+            BigDecimal earned = a != null && a.selectedSet().equals(q.correctSet()) ? q.getPoints() : BigDecimal.ZERO;
             if (a != null) a.setScore(earned);
             total = total.add(earned);
         }

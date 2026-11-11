@@ -588,6 +588,53 @@ class HomeworkControllerTest {
                 .andExpect(status().isUnprocessableEntity());
     }
 
+    @Test void multiAnswerQuestionNeedsExactlyTheCorrectSet() throws Exception {
+        var multi=Map.<String,Object>of("type","MULTIPLE_CHOICE","prompt","Số nguyên tố?","options",List.of("2","4","3","9"),
+                "correctOptions",List.of(2,0),"points",3);
+        // correctOption, when sent too, must be the first correct index; indexes must be in range
+        call("POST",sessionPath(),quizBody(List.of(Map.of("type","MULTIPLE_CHOICE","prompt","Q","options",List.of("A","B"),
+                "correctOption",1,"correctOptions",List.of(0,1),"points",1)),1),t).andExpect(status().isBadRequest());
+        call("POST",sessionPath(),quizBody(List.of(Map.of("type","MULTIPLE_CHOICE","prompt","Q","options",List.of("A","B"),
+                "correctOptions",List.of(0,5),"points",1)),1),t).andExpect(status().isBadRequest());
+        long id=publish(quizBody(List.of(multi,mc("Q2",1,1)),4));
+
+        var staffView=data(call("GET",hw(id),null,t),200).path("questions").get(0);
+        assertEquals("[0,2]",staffView.path("correctOptions").toString());assertEquals(0,staffView.path("correctOption").asInt());
+        assertEquals(2,staffView.path("selectCount").asInt());
+        var s=start(id);var q=data(call("GET",hw(id),null,st),200).path("questions");
+        assertEquals(2,q.get(0).path("selectCount").asInt());assertEquals(1,q.get(1).path("selectCount").asInt());
+        assertFalse(q.get(0).has("correctOptions"));assertFalse(q.get(0).has("correctOption"));
+        long q1=q.get(0).path("id").asLong(), q2=q.get(1).path("id").asLong();
+
+        // More picks than the question asks for, or a repeated pick, is rejected
+        call("PUT",hw(id)+"/submissions/me/draft",Map.of("answers",List.of(Map.of("questionId",q1,"selectedOptions",List.of(0,1,2))),
+                "version",s.path("version").asLong()),st).andExpect(status().isBadRequest());
+        call("PUT",hw(id)+"/submissions/me/draft",Map.of("answers",List.of(Map.of("questionId",q2,"selectedOptions",List.of(0,1))),
+                "version",s.path("version").asLong()),st).andExpect(status().isBadRequest());
+        call("PUT",hw(id)+"/submissions/me/draft",Map.of("answers",List.of(Map.of("questionId",q1,"selectedOptions",List.of(0,0))),
+                "version",s.path("version").asLong()),st).andExpect(status().isBadRequest());
+
+        // Only half of the correct set scores nothing; the single-answer question still works with selectedOption
+        var half=data(call("PUT",hw(id)+"/submissions/me/draft",Map.of("answers",List.of(Map.of("questionId",q1,"selectedOptions",List.of(0)),
+                Map.of("questionId",q2,"selectedOption",1)),"version",s.path("version").asLong()),st),200);
+        assertEquals("[0]",half.path("answers").get(0).path("selectedOptions").toString());
+        var graded=data(call("PUT",hw(id)+"/submissions/me",Map.of("answers",List.of(Map.of("questionId",q1,"selectedOptions",List.of(2,0)),
+                Map.of("questionId",q2,"selectedOption",1)),"version",half.path("version").asLong()),st),200);
+        assertEquals("GRADED",graded.path("status").asText());assertEquals(4,graded.path("score").asInt());
+        assertEquals("[0,2]",graded.path("answers").get(0).path("selectedOptions").toString());
+        assertEquals(3,graded.path("answers").get(0).path("score").asInt());
+    }
+
+    @Test void multiAnswerPartialPickScoresZero() throws Exception {
+        var multi=Map.<String,Object>of("type","MULTIPLE_CHOICE","prompt","Q","options",List.of("A","B","C"),
+                "correctOptions",List.of(0,1),"points",2);
+        long id=publish(quizBody(List.of(multi),2));
+        var s=start(id);long q1=data(call("GET",hw(id),null,st),200).path("questions").get(0).path("id").asLong();
+        var graded=data(call("PUT",hw(id)+"/submissions/me",Map.of("answers",List.of(Map.of("questionId",q1,"selectedOptions",List.of(0,2))),
+                "version",s.path("version").asLong()),st),200);
+        assertEquals(0,graded.path("score").asInt());
+    }
+
     @Test void essayQuizTakesPhotosAndTutorGradesEachEssay() throws Exception {
         long id=publish(quizBody(List.of(mc("Q1",0,4),essay("Prove it",6)),10));
         var s=start(id);var q=data(call("GET",hw(id),null,st),200).path("questions");
