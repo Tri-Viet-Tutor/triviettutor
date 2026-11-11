@@ -205,12 +205,17 @@ export default {
       boxShadow: {
         soft: "0 1px 2px rgba(11, 58, 140, 0.05), 0 14px 34px -14px rgba(11, 58, 140, 0.16)",
       },
+      /* Thang bo tròn kéo xuống cho cả web: góc gãy gọn hơn, hợp với tông giấy và sách của giao diện.
+       * Sửa ở đây là đổi cả web, không phải đi từng file. Riêng `full` giữ nguyên vì avatar,
+       * viên thuốc trạng thái và nút tròn cần thật sự tròn. */
       borderRadius: {
-        DEFAULT: "0.25rem",
-        lg: "0.5rem",
-        xl: "0.75rem",
-        "2xl": "1rem",
-        "3xl": "1.5rem",
+        sm: "0.0625rem" /* 1px */,
+        DEFAULT: "0.125rem" /* 2px */,
+        md: "0.1875rem" /* 3px */,
+        lg: "0.25rem" /* 4px */,
+        xl: "0.3125rem" /* 5px */,
+        "2xl": "0.375rem" /* 6px */,
+        "3xl": "0.5rem" /* 8px */,
         full: "9999px",
       },
       fontFamily: {
