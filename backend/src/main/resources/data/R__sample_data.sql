@@ -34,10 +34,11 @@ INSERT INTO users (id, email, password, full_name, role, created_at, enabled, go
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (34, 'hoangphuc.le@viettritutor.local', '$2a$10$KzZwTZY8sMvl5xDMCIyOb.qhIhl/b37BBJ211UoXp7gUntLeReQSa', 'Lê Hoàng Phúc', 'ROLE_STUDENT', '2026-10-05 09:00:00', TRUE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (35, 'thaovy.bui@viettritutor.local', '$2a$10$FteMmoa0htGl8hDe3pDezuv8yVdGPaZmSIhk0x6hJfow9emkaa2qO', 'Bùi Thảo Vy', 'ROLE_STUDENT', '2026-10-05 09:00:00', TRUE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (36, 'votranngochuu@gmail.com', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'Võ Trần Ngọc Hữu', 'ROLE_STUDENT', '2026-10-05 09:00:00', TRUE, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (37, 'triviettutor.app@gmail.com', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'Tri Viet Tutor', 'ROLE_STUDENT', '2026-10-05 09:00:00', TRUE, NULL) ON CONFLICT DO NOTHING;
 SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(id) FROM users), 1));
 
 -- ------------------------------------------------------------
--- Table: student_profiles (11 records)
+-- Table: student_profiles (12 records)
 -- ------------------------------------------------------------
 INSERT INTO student_profiles (id, phone, address) VALUES (22, 0912345671, '12 Nguyễn Văn Cừ, Phường 4, Quận 5, TP. Hồ Chí Minh') ON CONFLICT DO NOTHING;
 INSERT INTO student_profiles (id, phone, address) VALUES (23, 0912345672, '45 Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh') ON CONFLICT DO NOTHING;
@@ -50,6 +51,7 @@ INSERT INTO student_profiles (id, phone, address) VALUES (10, 0912345010, '34 L�
 INSERT INTO student_profiles (id, phone, address) VALUES (13, 0912345013, '56 Hai Bà Trưng, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh') ON CONFLICT DO NOTHING;
 INSERT INTO student_profiles (id, phone, address) VALUES (14, 0912345014, '78 Pasteur, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh') ON CONFLICT DO NOTHING;
 INSERT INTO student_profiles (id, phone, address) VALUES (36, 0912345036, '90 Nam Kỳ Khởi Nghĩa, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh') ON CONFLICT DO NOTHING;
+INSERT INTO student_profiles (id, phone, address) VALUES (37, 0909999888, '227 Nguyễn Văn Cừ, Phường 4, Quận 5, TP. Hồ Chí Minh') ON CONFLICT DO NOTHING;
 SELECT setval(pg_get_serial_sequence('student_profiles', 'id'), COALESCE((SELECT MAX(id) FROM student_profiles), 1));
 
 -- ------------------------------------------------------------
@@ -88,6 +90,7 @@ INSERT INTO wallets (id, student_id, balance, created_at) VALUES (3, 13, 5000000
 INSERT INTO wallets (id, student_id, balance, created_at) VALUES (6, 3, 9000000, '2026-10-26 14:59:36.049447+00') ON CONFLICT DO NOTHING;
 INSERT INTO wallets (id, student_id, balance, created_at) VALUES (7, 14, 5000000, '2026-10-26 08:00:00+00') ON CONFLICT DO NOTHING;
 INSERT INTO wallets (id, student_id, balance, created_at) VALUES (8, 36, 5000000, '2026-10-26 08:00:00+00') ON CONFLICT DO NOTHING;
+INSERT INTO wallets (id, student_id, balance, created_at) VALUES (9, 37, 10000000, '2026-11-11 12:00:00+00') ON CONFLICT DO NOTHING;
 SELECT setval(pg_get_serial_sequence('wallets', 'id'), COALESCE((SELECT MAX(id) FROM wallets), 1));
 
 -- ------------------------------------------------------------
@@ -163,15 +166,16 @@ INSERT INTO enrollments (id, student_id, class_group_id, payment_id, fee_charged
 INSERT INTO enrollments (id, student_id, class_group_id, payment_id, fee_charged, discount_rate, enrollment_size_at_time, status, enrolled_at, cancelled_at, cancellation_reason, cancelled_by) VALUES (11, 3, 5, 13, 100000, 0.000, 1, 'ACTIVE', '2026-10-26 15:00:40.72131+00', NULL, NULL, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO enrollments (id, student_id, class_group_id, payment_id, fee_charged, discount_rate, enrollment_size_at_time, status, enrolled_at, cancelled_at, cancellation_reason, cancelled_by) VALUES (12, 13, 9, 14, 120000, 0.000, 1, 'ACTIVE', '2026-10-27 16:40:07.033263+00', NULL, NULL, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO enrollments (id, student_id, class_group_id, payment_id, fee_charged, discount_rate, enrollment_size_at_time, status, enrolled_at, cancelled_at, cancellation_reason, cancelled_by) VALUES (13, 13, 7, 15, 96000, 0.000, 1, 'ACTIVE', '2026-10-27 16:40:24.845644+00', NULL, NULL, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO enrollments (id, student_id, class_group_id, payment_id, fee_charged, discount_rate, enrollment_size_at_time, status, enrolled_at, cancelled_at, cancellation_reason, cancelled_by) VALUES (14, 3, 14, NULL, 6000000, 0.000, 1, 'ACTIVE', '2026-11-06 10:00:00+00', NULL, NULL, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO enrollments (id, student_id, class_group_id, payment_id, fee_charged, discount_rate, enrollment_size_at_time, status, enrolled_at, cancelled_at, cancellation_reason, cancelled_by) VALUES (15, 10, 14, NULL, 6000000, 0.000, 2, 'ACTIVE', '2026-11-06 10:05:00+00', NULL, NULL, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO enrollments (id, student_id, class_group_id, payment_id, fee_charged, discount_rate, enrollment_size_at_time, status, enrolled_at, cancelled_at, cancellation_reason, cancelled_by) VALUES (16, 13, 14, NULL, 6000000, 0.000, 3, 'ACTIVE', '2026-11-06 10:10:00+00', NULL, NULL, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO enrollments (id, student_id, class_group_id, payment_id, fee_charged, discount_rate, enrollment_size_at_time, status, enrolled_at, cancelled_at, cancellation_reason, cancelled_by) VALUES (17, 14, 14, NULL, 6000000, 0.000, 4, 'ACTIVE', '2026-11-06 10:15:00+00', NULL, NULL, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO enrollments (id, student_id, class_group_id, payment_id, fee_charged, discount_rate, enrollment_size_at_time, status, enrolled_at, cancelled_at, cancellation_reason, cancelled_by) VALUES (18, 36, 14, NULL, 6000000, 0.000, 5, 'ACTIVE', '2026-11-06 10:20:00+00', NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO enrollments (id, student_id, class_group_id, payment_id, fee_charged, discount_rate, enrollment_size_at_time, status, enrolled_at, cancelled_at, cancellation_reason, cancelled_by) VALUES (14, 3, 14, 16, 6000000, 0.000, 1, 'ACTIVE', '2026-11-06 10:00:00+00', NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO enrollments (id, student_id, class_group_id, payment_id, fee_charged, discount_rate, enrollment_size_at_time, status, enrolled_at, cancelled_at, cancellation_reason, cancelled_by) VALUES (15, 10, 14, 17, 6000000, 0.000, 2, 'ACTIVE', '2026-11-06 10:05:00+00', NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO enrollments (id, student_id, class_group_id, payment_id, fee_charged, discount_rate, enrollment_size_at_time, status, enrolled_at, cancelled_at, cancellation_reason, cancelled_by) VALUES (16, 13, 14, 18, 6000000, 0.000, 3, 'ACTIVE', '2026-11-06 10:10:00+00', NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO enrollments (id, student_id, class_group_id, payment_id, fee_charged, discount_rate, enrollment_size_at_time, status, enrolled_at, cancelled_at, cancellation_reason, cancelled_by) VALUES (17, 14, 14, 19, 6000000, 0.000, 4, 'ACTIVE', '2026-11-06 10:15:00+00', NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO enrollments (id, student_id, class_group_id, payment_id, fee_charged, discount_rate, enrollment_size_at_time, status, enrolled_at, cancelled_at, cancellation_reason, cancelled_by) VALUES (18, 36, 14, 20, 6000000, 0.000, 5, 'ACTIVE', '2026-11-06 10:20:00+00', NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO enrollments (id, student_id, class_group_id, payment_id, fee_charged, discount_rate, enrollment_size_at_time, status, enrolled_at, cancelled_at, cancellation_reason, cancelled_by) VALUES (19, 37, 14, 21, 6000000, 0.000, 6, 'ACTIVE', '2026-11-06 10:25:00+00', NULL, NULL, NULL) ON CONFLICT DO NOTHING;
 SELECT setval(pg_get_serial_sequence('enrollments', 'id'), COALESCE((SELECT MAX(id) FROM enrollments), 1));
 
 -- ------------------------------------------------------------
--- Table: learning_schedules (18 records)
+-- Table: learning_schedules (19 records)
 -- ------------------------------------------------------------
 INSERT INTO learning_schedules (id, enrollment_id, student_id, class_group_id, start_date, end_date, status, created_at, updated_at) VALUES (1, 1, 22, 2, '2026-11-02', '2027-01-25', 'ACTIVE', '2026-10-19 09:11:47.27108', '2026-10-19 09:11:47.27108') ON CONFLICT DO NOTHING;
 INSERT INTO learning_schedules (id, enrollment_id, student_id, class_group_id, start_date, end_date, status, created_at, updated_at) VALUES (2, 2, 23, 3, '2026-11-02', '2027-01-25', 'ACTIVE', '2026-10-19 09:11:47.27108', '2026-10-19 09:11:47.27108') ON CONFLICT DO NOTHING;
@@ -191,6 +195,7 @@ INSERT INTO learning_schedules (id, enrollment_id, student_id, class_group_id, s
 INSERT INTO learning_schedules (id, enrollment_id, student_id, class_group_id, start_date, end_date, status, created_at, updated_at) VALUES (16, 16, 13, 14, '2026-11-09', '2027-01-29', 'ACTIVE', '2026-11-06 10:10:00', '2026-11-06 10:10:00') ON CONFLICT DO NOTHING;
 INSERT INTO learning_schedules (id, enrollment_id, student_id, class_group_id, start_date, end_date, status, created_at, updated_at) VALUES (17, 17, 14, 14, '2026-11-09', '2027-01-29', 'ACTIVE', '2026-11-06 10:15:00', '2026-11-06 10:15:00') ON CONFLICT DO NOTHING;
 INSERT INTO learning_schedules (id, enrollment_id, student_id, class_group_id, start_date, end_date, status, created_at, updated_at) VALUES (18, 18, 36, 14, '2026-11-09', '2027-01-29', 'ACTIVE', '2026-11-06 10:20:00', '2026-11-06 10:20:00') ON CONFLICT DO NOTHING;
+INSERT INTO learning_schedules (id, enrollment_id, student_id, class_group_id, start_date, end_date, status, created_at, updated_at) VALUES (19, 19, 37, 14, '2026-11-09', '2027-01-29', 'ACTIVE', '2026-11-06 10:25:00', '2026-11-06 10:25:00') ON CONFLICT DO NOTHING;
 SELECT setval(pg_get_serial_sequence('learning_schedules', 'id'), COALESCE((SELECT MAX(id) FROM learning_schedules), 1));
 
 -- ------------------------------------------------------------
@@ -274,6 +279,7 @@ INSERT INTO email_verifications (id, user_id, email, otp_code, expires_at, verif
 INSERT INTO email_verifications (id, user_id, email, otp_code, expires_at, verified, created_at) VALUES (15, 3, 'bobnguyen1906@gmail.com', 519284, '2026-10-22 13:24:06.658406', TRUE, '2026-10-22 13:19:06.662328') ON CONFLICT DO NOTHING;
 INSERT INTO email_verifications (id, user_id, email, otp_code, expires_at, verified, created_at) VALUES (16, 10, 'hoangnk2003@gmail.com', 742193, '2026-10-22 13:24:06.658406', TRUE, '2026-10-22 13:19:06.662328') ON CONFLICT DO NOTHING;
 INSERT INTO email_verifications (id, user_id, email, otp_code, expires_at, verified, created_at) VALUES (17, 36, 'votranngochuu@gmail.com', 619472, '2026-10-22 13:24:06.658406', TRUE, '2026-10-22 13:19:06.662328') ON CONFLICT DO NOTHING;
+INSERT INTO email_verifications (id, user_id, email, otp_code, expires_at, verified, created_at) VALUES (18, 37, 'triviettutor.app@gmail.com', 888999, '2026-11-20 12:00:00', TRUE, '2026-11-11 12:00:00') ON CONFLICT DO NOTHING;
 SELECT setval(pg_get_serial_sequence('email_verifications', 'id'), COALESCE((SELECT MAX(id) FROM email_verifications), 1));
 
 -- ------------------------------------------------------------
@@ -339,6 +345,12 @@ INSERT INTO payment_intents (id, student_id, class_group_id, course_id, amount, 
 INSERT INTO payment_intents (id, student_id, class_group_id, course_id, amount, status, created_at, expires_at, vnpay_reference, vnpay_return_url, vnpay_created_at, cancelled_at) VALUES (24, 13, 14, 1, 4800000, 'PENDING', '2026-10-27 16:04:23.405608+00', '2026-10-27 16:09:23.405608+00', NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO payment_intents (id, student_id, class_group_id, course_id, amount, status, created_at, expires_at, vnpay_reference, vnpay_return_url, vnpay_created_at, cancelled_at) VALUES (25, 13, 9, 11, 120000, 'COMPLETED', '2026-10-27 16:33:29.253169+00', '2026-10-27 16:38:29.253169+00', 'TVT8e107d6116614ada926092f3452d9c5d', 'http://localhost:5173/student/checkout', '2026-10-27 16:33:29+00', NULL) ON CONFLICT DO NOTHING;
 INSERT INTO payment_intents (id, student_id, class_group_id, course_id, amount, status, created_at, expires_at, vnpay_reference, vnpay_return_url, vnpay_created_at, cancelled_at) VALUES (26, 13, 7, 10, 96000, 'COMPLETED', '2026-10-27 16:39:34.276424+00', '2026-10-27 16:44:34.276424+00', 'TVT998f29613999440aa8d75e1ba80b9e72', 'http://localhost:5173/student/checkout', '2026-10-27 16:39:34+00', NULL) ON CONFLICT DO NOTHING;
+INSERT INTO payment_intents (id, student_id, class_group_id, course_id, amount, status, created_at, expires_at, vnpay_reference, vnpay_return_url, vnpay_created_at, cancelled_at) VALUES (27, 3, 14, 1, 6000000, 'COMPLETED', '2026-11-06 09:55:00+00', '2026-11-06 10:00:00+00', NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO payment_intents (id, student_id, class_group_id, course_id, amount, status, created_at, expires_at, vnpay_reference, vnpay_return_url, vnpay_created_at, cancelled_at) VALUES (28, 10, 14, 1, 6000000, 'COMPLETED', '2026-11-06 10:00:00+00', '2026-11-06 10:05:00+00', NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO payment_intents (id, student_id, class_group_id, course_id, amount, status, created_at, expires_at, vnpay_reference, vnpay_return_url, vnpay_created_at, cancelled_at) VALUES (29, 13, 14, 1, 6000000, 'COMPLETED', '2026-11-06 10:05:00+00', '2026-11-06 10:10:00+00', NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO payment_intents (id, student_id, class_group_id, course_id, amount, status, created_at, expires_at, vnpay_reference, vnpay_return_url, vnpay_created_at, cancelled_at) VALUES (30, 14, 14, 1, 6000000, 'COMPLETED', '2026-11-06 10:10:00+00', '2026-11-06 10:15:00+00', NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO payment_intents (id, student_id, class_group_id, course_id, amount, status, created_at, expires_at, vnpay_reference, vnpay_return_url, vnpay_created_at, cancelled_at) VALUES (31, 36, 14, 1, 6000000, 'COMPLETED', '2026-11-06 10:15:00+00', '2026-11-06 10:20:00+00', NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO payment_intents (id, student_id, class_group_id, course_id, amount, status, created_at, expires_at, vnpay_reference, vnpay_return_url, vnpay_created_at, cancelled_at) VALUES (32, 37, 14, 1, 6000000, 'COMPLETED', '2026-11-06 10:20:00+00', '2026-11-06 10:25:00+00', NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
 SELECT setval(pg_get_serial_sequence('payment_intents', 'id'), COALESCE((SELECT MAX(id) FROM payment_intents), 1));
 
 -- ------------------------------------------------------------
@@ -390,6 +402,12 @@ INSERT INTO payments (id, intent_id, student_id, class_group_id, amount, refunde
 INSERT INTO payments (id, intent_id, student_id, class_group_id, amount, refunded_amount, method, status, transaction_ref, created_at, paid_at, provider_transaction_no, refund_reason, order_id, order_item_id) VALUES (13, 22, 3, 5, 100000, 0, 'WALLET', 'COMPLETED', 'WALLET-adef81dd-da53-4abf-a399-e764dcf61601', '2026-10-26 15:00:40.72131+00', '2026-10-26 15:00:40.72131+00', NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO payments (id, intent_id, student_id, class_group_id, amount, refunded_amount, method, status, transaction_ref, created_at, paid_at, provider_transaction_no, refund_reason, order_id, order_item_id) VALUES (14, 25, 13, 9, 120000, 0, 'VNPAY', 'COMPLETED', 'TVT8e107d6116614ada926092f3452d9c5d', '2026-10-27 16:40:06.148038+00', '2026-10-27 16:38:18+00', 15716720, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO payments (id, intent_id, student_id, class_group_id, amount, refunded_amount, method, status, transaction_ref, created_at, paid_at, provider_transaction_no, refund_reason, order_id, order_item_id) VALUES (15, 26, 13, 7, 96000, 0, 'VNPAY', 'COMPLETED', 'TVT998f29613999440aa8d75e1ba80b9e72', '2026-10-27 16:40:24.654655+00', '2026-10-27 16:40:11+00', 15716721, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO payments (id, intent_id, student_id, class_group_id, amount, refunded_amount, method, status, transaction_ref, created_at, paid_at, provider_transaction_no, refund_reason, order_id, order_item_id) VALUES (16, 27, 3, 14, 6000000, 0, 'WALLET', 'COMPLETED', 'WALLET-demo-c14-s3', '2026-11-06 10:00:00+00', '2026-11-06 10:00:00+00', NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO payments (id, intent_id, student_id, class_group_id, amount, refunded_amount, method, status, transaction_ref, created_at, paid_at, provider_transaction_no, refund_reason, order_id, order_item_id) VALUES (17, 28, 10, 14, 6000000, 0, 'WALLET', 'COMPLETED', 'WALLET-demo-c14-s10', '2026-11-06 10:05:00+00', '2026-11-06 10:05:00+00', NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO payments (id, intent_id, student_id, class_group_id, amount, refunded_amount, method, status, transaction_ref, created_at, paid_at, provider_transaction_no, refund_reason, order_id, order_item_id) VALUES (18, 29, 13, 14, 6000000, 0, 'WALLET', 'COMPLETED', 'WALLET-demo-c14-s13', '2026-11-06 10:10:00+00', '2026-11-06 10:10:00+00', NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO payments (id, intent_id, student_id, class_group_id, amount, refunded_amount, method, status, transaction_ref, created_at, paid_at, provider_transaction_no, refund_reason, order_id, order_item_id) VALUES (19, 30, 14, 14, 6000000, 0, 'WALLET', 'COMPLETED', 'WALLET-demo-c14-s14', '2026-11-06 10:15:00+00', '2026-11-06 10:15:00+00', NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO payments (id, intent_id, student_id, class_group_id, amount, refunded_amount, method, status, transaction_ref, created_at, paid_at, provider_transaction_no, refund_reason, order_id, order_item_id) VALUES (20, 31, 36, 14, 6000000, 0, 'WALLET', 'COMPLETED', 'WALLET-demo-c14-s36', '2026-11-06 10:20:00+00', '2026-11-06 10:20:00+00', NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO payments (id, intent_id, student_id, class_group_id, amount, refunded_amount, method, status, transaction_ref, created_at, paid_at, provider_transaction_no, refund_reason, order_id, order_item_id) VALUES (21, 32, 37, 14, 6000000, 0, 'WALLET', 'COMPLETED', 'WALLET-demo-c14-s37', '2026-11-06 10:25:00+00', '2026-11-06 10:25:00+00', NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
 SELECT setval(pg_get_serial_sequence('payments', 'id'), COALESCE((SELECT MAX(id) FROM payments), 1));
 
 -- ------------------------------------------------------------
@@ -567,15 +585,17 @@ INSERT INTO attendance_roster (id, session_id, student_id, enrollment_id) VALUES
 INSERT INTO attendance_roster (id, session_id, student_id, enrollment_id) VALUES (15, 58, 13, 16) ON CONFLICT DO NOTHING;
 INSERT INTO attendance_roster (id, session_id, student_id, enrollment_id) VALUES (16, 58, 14, 17) ON CONFLICT DO NOTHING;
 INSERT INTO attendance_roster (id, session_id, student_id, enrollment_id) VALUES (17, 58, 36, 18) ON CONFLICT DO NOTHING;
+INSERT INTO attendance_roster (id, session_id, student_id, enrollment_id) VALUES (23, 58, 37, 19) ON CONFLICT DO NOTHING;
 INSERT INTO attendance_roster (id, session_id, student_id, enrollment_id) VALUES (18, 57, 3, 14) ON CONFLICT DO NOTHING;
 INSERT INTO attendance_roster (id, session_id, student_id, enrollment_id) VALUES (19, 57, 10, 15) ON CONFLICT DO NOTHING;
 INSERT INTO attendance_roster (id, session_id, student_id, enrollment_id) VALUES (20, 57, 13, 16) ON CONFLICT DO NOTHING;
 INSERT INTO attendance_roster (id, session_id, student_id, enrollment_id) VALUES (21, 57, 14, 17) ON CONFLICT DO NOTHING;
 INSERT INTO attendance_roster (id, session_id, student_id, enrollment_id) VALUES (22, 57, 36, 18) ON CONFLICT DO NOTHING;
+INSERT INTO attendance_roster (id, session_id, student_id, enrollment_id) VALUES (24, 57, 37, 19) ON CONFLICT DO NOTHING;
 SELECT setval(pg_get_serial_sequence('attendance_roster', 'id'), COALESCE((SELECT MAX(id) FROM attendance_roster), 1));
 
 -- ------------------------------------------------------------
--- Table: attendance_records (17 records)
+-- Table: attendance_records (18 records)
 -- ------------------------------------------------------------
 INSERT INTO attendance_records (id, session_id, student_id, status, note, arrived_at, recorded_by, recorded_at) VALUES (1, 1, 22, 'EXCUSED', 'Vắng có phép, đã sắp xếp buổi học bù.', NULL, 25, '2026-10-19 09:35:41.546935+00') ON CONFLICT DO NOTHING;
 INSERT INTO attendance_records (id, session_id, student_id, status, note, arrived_at, recorded_by, recorded_at) VALUES (2, 2, 23, 'EXCUSED', 'Vắng có phép, đã sắp xếp buổi học bù.', NULL, 26, '2026-10-19 09:35:41.546935+00') ON CONFLICT DO NOTHING;
@@ -594,6 +614,7 @@ INSERT INTO attendance_records (id, session_id, student_id, status, note, arrive
 INSERT INTO attendance_records (id, session_id, student_id, status, note, arrived_at, recorded_by, recorded_at) VALUES (15, 57, 13, 'PRESENT', 'Tham gia đầy đủ buổi học.', '2026-11-09 18:05:00+00', 25, '2026-11-09 20:00:00+00') ON CONFLICT DO NOTHING;
 INSERT INTO attendance_records (id, session_id, student_id, status, note, arrived_at, recorded_by, recorded_at) VALUES (16, 57, 14, 'PRESENT', 'Tham gia đầy đủ buổi học.', '2026-11-09 18:00:00+00', 25, '2026-11-09 20:00:00+00') ON CONFLICT DO NOTHING;
 INSERT INTO attendance_records (id, session_id, student_id, status, note, arrived_at, recorded_by, recorded_at) VALUES (17, 57, 36, 'PRESENT', 'Tham gia đầy đủ buổi học.', '2026-11-09 18:03:00+00', 25, '2026-11-09 20:00:00+00') ON CONFLICT DO NOTHING;
+INSERT INTO attendance_records (id, session_id, student_id, status, note, arrived_at, recorded_by, recorded_at) VALUES (18, 57, 37, 'PRESENT', 'Tham gia đầy đủ buổi học.', '2026-11-09 18:04:00+00', 25, '2026-11-09 20:00:00+00') ON CONFLICT DO NOTHING;
 SELECT setval(pg_get_serial_sequence('attendance_records', 'id'), COALESCE((SELECT MAX(id) FROM attendance_records), 1));
 
 -- ------------------------------------------------------------
@@ -658,6 +679,7 @@ INSERT INTO tutor_reviews (id, student_id, tutor_id, rating, comment, created_at
 INSERT INTO tutor_reviews (id, student_id, tutor_id, rating, comment, created_at, updated_at) VALUES (27, 10, 25, 5, 'Thầy hỗ trợ giải đáp bài tập rất nhanh, ôn thi bám sát chương trình.', NOW() - INTERVAL '2 days', NOW()) ON CONFLICT DO NOTHING;
 INSERT INTO tutor_reviews (id, student_id, tutor_id, rating, comment, created_at, updated_at) VALUES (28, 14, 25, 5, 'Gia sư tận tâm, giải thích cặn kẽ từng công thức toán.', NOW() - INTERVAL '1 days', NOW()) ON CONFLICT DO NOTHING;
 INSERT INTO tutor_reviews (id, student_id, tutor_id, rating, comment, created_at, updated_at) VALUES (29, 36, 25, 5, 'Buổi học rất bổ ích, thầy luôn chuẩn bị slide và ví dụ chi tiết.', NOW(), NOW()) ON CONFLICT DO NOTHING;
+INSERT INTO tutor_reviews (id, student_id, tutor_id, rating, comment, created_at, updated_at) VALUES (30, 37, 25, 5, 'Khóa học của Thầy Cường rất chất lượng, kiến thức thực tế và dễ áp dụng.', NOW(), NOW()) ON CONFLICT DO NOTHING;
 SELECT setval(pg_get_serial_sequence('tutor_reviews', 'id'), COALESCE((SELECT MAX(id) FROM tutor_reviews), 1));
 
 -- ------------------------------------------------------------
@@ -684,6 +706,7 @@ INSERT INTO homework_submissions (id, version, homework_id, student_id, status, 
 INSERT INTO homework_submissions (id, version, homework_id, student_id, status, content, resource_url, started_at, updated_at, submitted_at, score, feedback, graded_by, graded_at) VALUES (7, 0, 7, 14, 'SUBMITTED', 'Em Phương nộp bài tập lượng giác ạ. Em đã làm xong các bài 1 đến 5.', NULL, '2026-11-12 13:00:00+07', '2026-11-12 14:00:00+07', '2026-11-12 14:00:00+07', NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO homework_submissions (id, version, homework_id, student_id, status, content, resource_url, started_at, updated_at, submitted_at, score, feedback, graded_by, graded_at) VALUES (8, 0, 7, 10, 'GRADED', 'Em Hoàng gửi bài giải chi tiết các phương trình lượng giác nâng cao.', NULL, '2026-11-12 12:45:00+07', '2026-11-12 13:30:00+07', '2026-11-12 13:30:00+07', 9.50, 'Bài làm rất tốt, cách biến đổi lượng giác tối ưu và chính xác.', 25, '2026-11-12 14:30:00+07') ON CONFLICT DO NOTHING;
 INSERT INTO homework_submissions (id, version, homework_id, student_id, status, content, resource_url, started_at, updated_at, submitted_at, score, feedback, graded_by, graded_at) VALUES (9, 0, 7, 3, 'IN_PROGRESS', 'Đang giải phương trình câu số 3...', NULL, '2026-11-12 13:00:00+07', '2026-11-12 13:00:00+07', NULL, NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO homework_submissions (id, version, homework_id, student_id, status, content, resource_url, started_at, updated_at, submitted_at, score, feedback, graded_by, graded_at) VALUES (10, 0, 7, 37, 'SUBMITTED', 'Em Tri Viet Tutor nộp bài tập lượng giác ạ. Em đã hoàn thành đủ các dạng bài tập.', NULL, '2026-11-12 13:10:00+07', '2026-11-12 14:15:00+07', '2026-11-12 14:15:00+07', NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
 SELECT setval(pg_get_serial_sequence('homework_submissions', 'id'), COALESCE((SELECT MAX(id) FROM homework_submissions), 1));
 
 -- ------------------------------------------------------------
@@ -696,13 +719,14 @@ INSERT INTO homework_changes (id, homework_id, actor_id, action, details, change
 SELECT setval(pg_get_serial_sequence('homework_changes', 'id'), COALESCE((SELECT MAX(id) FROM homework_changes), 1));
 
 -- ------------------------------------------------------------
--- Table: submission_changes (5 records)
+-- Table: submission_changes (6 records)
 -- ------------------------------------------------------------
 INSERT INTO submission_changes (id, submission_id, actor_id, action, details, changed_at) VALUES (1, 1, 22, 'START', 'Học viên bắt đầu làm bài.', '2026-10-19 09:35:41.546935+00') ON CONFLICT DO NOTHING;
 INSERT INTO submission_changes (id, submission_id, actor_id, action, details, changed_at) VALUES (2, 2, 23, 'START', 'Học viên bắt đầu làm bài.', '2026-10-19 09:35:41.546935+00') ON CONFLICT DO NOTHING;
 INSERT INTO submission_changes (id, submission_id, actor_id, action, details, changed_at) VALUES (3, 3, 24, 'START', 'Học viên bắt đầu làm bài.', '2026-10-19 09:35:41.546935+00') ON CONFLICT DO NOTHING;
 INSERT INTO submission_changes (id, submission_id, actor_id, action, details, changed_at) VALUES (4, 7, 14, 'SUBMIT', 'Học viên Phạm Thu Phương nộp bài tập.', '2026-11-12 14:00:00+07') ON CONFLICT DO NOTHING;
 INSERT INTO submission_changes (id, submission_id, actor_id, action, details, changed_at) VALUES (5, 8, 25, 'GRADE', 'Gia sư chấm điểm bài làm: 9.5', '2026-11-12 14:30:00+07') ON CONFLICT DO NOTHING;
+INSERT INTO submission_changes (id, submission_id, actor_id, action, details, changed_at) VALUES (6, 10, 37, 'SUBMIT', 'Học viên Tri Viet Tutor nộp bài tập.', '2026-11-12 14:15:00+07') ON CONFLICT DO NOTHING;
 SELECT setval(pg_get_serial_sequence('submission_changes', 'id'), COALESCE((SELECT MAX(id) FROM submission_changes), 1));
 
 SET session_replication_role = 'origin';
