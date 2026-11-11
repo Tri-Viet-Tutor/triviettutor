@@ -10,12 +10,10 @@ import { pendingResumesCheckout, readPendingEmail, savePendingEmail } from "@/ut
 import type { AuthLocationState } from "@/interfaces/auth";
 import { getRoleHome } from "@/services/authService";
 
-/**
- * Trang nhập mã OTP kích hoạt tài khoản (POST /auth/verify-email).
- * Tới từ trang đăng ký (mã vừa gửi) hoặc từ trang đăng nhập khi tài khoản chưa kích hoạt.
- * Mã đúng thì backend trả luôn phiên đăng nhập, nên vào thẳng trang của vai trò
- * (hoặc quay lại trang thanh toán nếu đang mua khóa học dở).
- */
+// Trang nhập mã OTP kích hoạt tài khoản (POST /auth/verify-email).
+// Tới từ trang đăng ký (mã vừa gửi) hoặc từ trang đăng nhập khi tài khoản chưa kích hoạt.
+// Mã đúng thì backend trả luôn phiên đăng nhập, nên vào thẳng trang của vai trò
+// (hoặc quay lại trang thanh toán nếu đang mua khóa học dở).
 export function VerifyEmailPage() {
   const navigate = useNavigate();
   const state = useLocation().state as AuthLocationState | null;
@@ -27,7 +25,7 @@ export function VerifyEmailPage() {
   // Đang mua khóa học dở: xác thực xong quay lại trang thanh toán
   const [resumeCheckout] = useState(() => state?.resumeCheckout ?? pendingResumesCheckout());
 
-  /** Chốt email rồi chuyển sang bước nhập mã */
+  // Chốt email rồi chuyển sang bước nhập mã
   function handleEmailSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!email.trim()) return;

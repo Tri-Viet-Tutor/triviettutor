@@ -9,16 +9,14 @@ import { FOCUS_RING } from "@/constants/classNames";
 import { ROUTES } from "@/constants/routes";
 import { useNow } from "@/hooks/useNow";
 
-/** Liên kết dạng nút chính */
+// Liên kết dạng nút chính
 const PRIMARY_LINK =
   "inline-flex h-11 items-center justify-center rounded-xl bg-brand-navy px-6 text-[15px] font-semibold text-white transition-colors hover:bg-brand-navyDeep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
 
 type View = "timetable" | "list";
 
-/**
- * Trang Lịch học của học viên: mặc định là thời khóa biểu tuần dạng "đảo nổi"; chế độ Danh sách giữ các buổi
- * sắp tới / đã qua gom theo tháng. Bấm một buổi để xem chi tiết, điểm danh và xin nghỉ.
- */
+// Trang Lịch học của học viên: mặc định là thời khóa biểu tuần dạng "đảo nổi"; chế độ Danh sách giữ các buổi
+// sắp tới / đã qua gom theo tháng. Bấm một buổi để xem chi tiết, điểm danh và xin nghỉ.
 export function StudentSchedulePage() {
   const now = useNow();
   const [view, setView] = useState<View>("timetable");

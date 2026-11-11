@@ -17,15 +17,14 @@ import type { SubmissionGraderProps } from "@/interfaces/homework";
 
 const OPTION_LETTERS = "ABCDEFGHIJ";
 
-/**
- * Một bài nộp trong trang chấm của gia sư: thời điểm nộp (kèm thời gian trễ), từng câu trả lời,
- * ảnh chụp / PDF, rồi ô chấm điểm tự luận + nhận xét. Bấm chấm là học viên thấy điểm và nhận thông báo.
- */
+// Một bài nộp trong trang chấm của gia sư: thời điểm nộp (kèm thời gian trễ), từng câu trả lời,
+// ảnh chụp / PDF, rồi ô chấm điểm tự luận + nhận xét. Bấm chấm là học viên thấy điểm và nhận thông báo.
 export function SubmissionGrader({ homework, submission }: SubmissionGraderProps) {
   const userId = useUserId();
   const queryClient = useQueryClient();
   const questions = homework.questions ?? [];
   const essays = questions.filter((question) => question.type === "ESSAY");
+  // Câu trả lời của học viên cho một câu hỏi
   const answerOf = (questionId: number) => submission.answers?.find((answer) => answer.questionId === questionId);
 
   // Bài trắc nghiệm hệ thống đã chấm nhưng gia sư chưa xem: vẫn được gửi nhận xét một lần
@@ -53,6 +52,7 @@ export function SubmissionGrader({ homework, submission }: SubmissionGraderProps
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: homeworkKeys.all(userId) }),
   });
 
+  // Kiểm tra điểm các câu tự luận rồi gửi chấm bài
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
@@ -111,7 +111,7 @@ export function SubmissionGrader({ homework, submission }: SubmissionGraderProps
                       : picks.length > 1
                         ? `Chọn ${optionLetters(picks)}`
                         : "Bỏ trống"}
-                    {!correct && key.length > 0 && <span className="text-brand-muted"> · đáp án {optionLetters(key)}</span>}
+                    {!correct && key.length > 0 && <span className="text-brand-muted"> - đáp án {optionLetters(key)}</span>}
                   </p>
                 ) : (
                   <>
@@ -170,7 +170,7 @@ export function SubmissionGrader({ homework, submission }: SubmissionGraderProps
         <form onSubmit={handleSubmit} className="mt-5 space-y-3 border-t border-brand-sandLine pt-4">
           {questions.length > 0 ? (
             <p className="text-[14.5px] text-brand-ink">
-              Trắc nghiệm (tự chấm): <b>{formatScore(submission.autoScore ?? 0)}</b> · Tổng điểm:{" "}
+              Trắc nghiệm (tự chấm): <b>{formatScore(submission.autoScore ?? 0)}</b> - Tổng điểm:{" "}
               <b className="text-brand-navy">
                 {formatScore(total)} / {formatScore(homework.maxScore)}
               </b>
@@ -218,7 +218,7 @@ export function SubmissionGrader({ homework, submission }: SubmissionGraderProps
             <b className="text-brand-navy">
               {formatScore(submission.score ?? 0)} / {formatScore(homework.maxScore)}
             </b>
-            {submission.gradedAt && <span className="text-brand-muted"> · chấm lúc {formatDateTime(submission.gradedAt)}</span>}
+            {submission.gradedAt && <span className="text-brand-muted"> - chấm lúc {formatDateTime(submission.gradedAt)}</span>}
           </p>
           {submission.feedback && <p className="mt-1.5 whitespace-pre-line">Nhận xét: {submission.feedback}</p>}
         </div>

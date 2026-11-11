@@ -6,8 +6,9 @@ import { FOCUS_RING } from "@/constants/classNames";
 import { AVATAR_MAX_BYTES, deleteMyAvatar, uploadMyAvatar } from "@/services/avatarService";
 import { useAvatarVersion } from "@/stores/avatarStore";
 import { portalErrorMessage } from "@/utils/errors";
+import { validateFile } from "@/utils/validation";
 
-/** Ảnh đại diện trong trang Hồ sơ: bấm để chọn ảnh mới (PNG / JPEG ≤ 2 MB), hoặc xóa ảnh */
+// Ảnh đại diện trong trang Hồ sơ: bấm để chọn ảnh mới (PNG / JPEG ≤ 2 MB), hoặc xóa ảnh
 export function AvatarUploader({ userId, name }: { userId: number; name: string }) {
   const input = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
@@ -15,6 +16,7 @@ export function AvatarUploader({ userId, name }: { userId: number; name: string 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Chạy một thao tác ảnh đại diện, hiện trạng thái đang xử lý và lỗi nếu có
   async function run(action: () => Promise<void>) {
     setBusy(true);
     setError(null);
@@ -30,10 +32,16 @@ export function AvatarUploader({ userId, name }: { userId: number; name: string 
     }
   }
 
+  // Kiểm tra ảnh vừa chọn (PNG / JPG, dung lượng) rồi tải lên
   function pick(file: File | undefined) {
     if (!file) return;
-    if (!["image/png", "image/jpeg"].includes(file.type)) return setError("Chỉ nhận ảnh PNG hoặc JPEG.");
-    if (file.size > AVATAR_MAX_BYTES) return setError("Ảnh tối đa 2 MB.");
+    const fileError = validateFile(file, {
+      accept: ["image/png", "image/jpeg"],
+      maxBytes: AVATAR_MAX_BYTES,
+      sizeLabel: "2 MB",
+      typeLabel: "ảnh PNG hoặc JPEG",
+    });
+    if (fileError) return setError(fileError);
     void run(() => uploadMyAvatar(file));
   }
 

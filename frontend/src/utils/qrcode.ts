@@ -1,14 +1,14 @@
 
 
-/** Số byte sửa lỗi của mỗi khối, mức M, phiên bản 1 – 10 */
+// Số byte sửa lỗi của mỗi khối, mức M, phiên bản 1 – 10
 const ECC_PER_BLOCK = [10, 16, 26, 18, 24, 16, 18, 22, 22, 26];
 
-/** Số khối sửa lỗi, mức M, phiên bản 1 – 10 */
+// Số khối sửa lỗi, mức M, phiên bản 1 – 10
 const NUM_BLOCKS = [1, 1, 1, 2, 2, 4, 4, 4, 5, 5];
 
 const MAX_VERSION = ECC_PER_BLOCK.length;
 
-/** Số ô dùng cho dữ liệu + sửa lỗi của một phiên bản (đã trừ các hoa văn cố định) */
+// Số ô dùng cho dữ liệu + sửa lỗi của một phiên bản (đã trừ các hoa văn cố định)
 function rawDataModules(version: number): number {
   let result = (16 * version + 128) * version + 64;
   if (version >= 2) {
@@ -19,12 +19,12 @@ function rawDataModules(version: number): number {
   return result;
 }
 
-/** Số byte dữ liệu thực (đã trừ byte sửa lỗi) mà một phiên bản chứa được */
+// Số byte dữ liệu thực (đã trừ byte sửa lỗi) mà một phiên bản chứa được
 function dataCodewords(version: number): number {
   return Math.floor(rawDataModules(version) / 8) - ECC_PER_BLOCK[version - 1] * NUM_BLOCKS[version - 1];
 }
 
-/** Nhân hai số trong trường GF(2^8) với đa thức 0x11D */
+// Nhân hai số trong trường GF(2^8) với đa thức 0x11D
 function gfMultiply(x: number, y: number): number {
   let z = 0;
   for (let i = 7; i >= 0; i--) {
@@ -34,7 +34,7 @@ function gfMultiply(x: number, y: number): number {
   return z;
 }
 
-/** Hệ số của đa thức sinh Reed–Solomon bậc `degree` */
+// Hệ số của đa thức sinh Reed–Solomon bậc `degree`
 function reedSolomonDivisor(degree: number): number[] {
   const result = new Array<number>(degree).fill(0);
   result[degree - 1] = 1;
@@ -49,7 +49,7 @@ function reedSolomonDivisor(degree: number): number[] {
   return result;
 }
 
-/** Phần dư khi chia dữ liệu cho đa thức sinh — chính là các byte sửa lỗi */
+// Phần dư khi chia dữ liệu cho đa thức sinh — chính là các byte sửa lỗi
 function reedSolomonRemainder(data: number[], divisor: number[]): number[] {
   const result = new Array<number>(divisor.length).fill(0);
   for (const byte of data) {
@@ -62,7 +62,7 @@ function reedSolomonRemainder(data: number[], divisor: number[]): number[] {
   return result;
 }
 
-/** Chia dữ liệu thành khối, thêm byte sửa lỗi rồi xen kẽ các khối theo chuẩn */
+// Chia dữ liệu thành khối, thêm byte sửa lỗi rồi xen kẽ các khối theo chuẩn
 function addErrorCorrection(data: number[], version: number): number[] {
   const blockCount = NUM_BLOCKS[version - 1];
   const eccLength = ECC_PER_BLOCK[version - 1];
@@ -92,7 +92,7 @@ function addErrorCorrection(data: number[], version: number): number[] {
   return result;
 }
 
-/** Toạ độ tâm các hoa văn căn chỉnh của một phiên bản */
+// Toạ độ tâm các hoa văn căn chỉnh của một phiên bản
 function alignmentPositions(version: number): number[] {
   if (version === 1) return [];
   const count = Math.floor(version / 7) + 2;
@@ -103,7 +103,7 @@ function alignmentPositions(version: number): number[] {
   return result;
 }
 
-/** 8 mặt nạ chuẩn: ô (x, y) nào thỏa điều kiện thì bị đảo màu */
+// 8 mặt nạ chuẩn: ô (x, y) nào thỏa điều kiện thì bị đảo màu
 const MASKS: ((x: number, y: number) => boolean)[] = [
   (x, y) => (x + y) % 2 === 0,
   (_x, y) => y % 2 === 0,
@@ -115,7 +115,7 @@ const MASKS: ((x: number, y: number) => boolean)[] = [
   (x, y) => (((x + y) % 2) + ((x * y) % 3)) % 2 === 0,
 ];
 
-/** Điểm phạt của một ma trận: dãy cùng màu dài, khối 2×2 cùng màu, lệch tỉ lệ đen – trắng */
+// Điểm phạt của một ma trận: dãy cùng màu dài, khối 2×2 cùng màu, lệch tỉ lệ đen – trắng
 function penalty(modules: boolean[][]): number {
   const size = modules.length;
   let score = 0;
@@ -142,11 +142,9 @@ function penalty(modules: boolean[][]): number {
   return score + Math.floor(Math.abs((dark * 20) / (size * size) - 10)) * 10;
 }
 
-/**
- * Mã hoá một chuỗi thành ma trận QR.
- * @returns ma trận vuông, `true` là ô đen; chưa gồm viền trắng chung quanh
- * @throws nếu chuỗi dài quá sức chứa của phiên bản 10
- */
+// Mã hoá một chuỗi thành ma trận QR.
+// @returns ma trận vuông, `true` là ô đen; chưa gồm viền trắng chung quanh
+// @throws nếu chuỗi dài quá sức chứa của phiên bản 10
 export function encodeQr(text: string): boolean[][] {
   const bytes = Array.from(new TextEncoder().encode(text));
 
@@ -161,6 +159,7 @@ export function encodeQr(text: string): boolean[][] {
   // ── Dãy bit dữ liệu ──
   const capacityBits = dataCodewords(version) * 8;
   const bits: number[] = [];
+  // Thêm các bit của một số vào dãy bit
   const pushBits = (value: number, length: number) => {
     for (let i = length - 1; i >= 0; i--) bits.push((value >>> i) & 1);
   };
@@ -182,6 +181,7 @@ export function encodeQr(text: string): boolean[][] {
   const size = version * 4 + 17;
   const modules = Array.from({ length: size }, () => new Array<boolean>(size).fill(false));
   const reserved = Array.from({ length: size }, () => new Array<boolean>(size).fill(false));
+  // Đánh dấu một ô là ô cố định của mã QR
   const setFunction = (x: number, y: number, dark: boolean) => {
     modules[y][x] = dark;
     reserved[y][x] = true;
@@ -222,12 +222,13 @@ export function encodeQr(text: string): boolean[][] {
     });
   });
 
-  /** Ghi 15 bit định dạng (mức sửa lỗi M + số mặt nạ) vào hai vị trí quy định */
+  // Ghi 15 bit định dạng (mức sửa lỗi M + số mặt nạ) vào hai vị trí quy định
   const drawFormat = (mask: number) => {
     const formatData = mask; // mức M có mã 00 nên chỉ còn số mặt nạ
     let remainder = formatData;
     for (let i = 0; i < 10; i++) remainder = (remainder << 1) ^ ((remainder >>> 9) * 0x537);
     const formatBits = ((formatData << 10) | remainder) ^ 0x5412;
+    // Bit thứ i của chuỗi định dạng
     const bit = (i: number) => ((formatBits >>> i) & 1) !== 0;
 
     for (let i = 0; i <= 5; i++) setFunction(8, i, bit(i));
@@ -256,7 +257,7 @@ export function encodeQr(text: string): boolean[][] {
     }
   }
 
-  //Rải dữ liệu theo đường dích dắc từ góc dưới phải
+  // Rải dữ liệu theo đường dích dắc từ góc dưới phải
   let bitIndex = 0;
   for (let right = size - 1; right >= 1; right -= 2) {
     if (right === 6) right = 5;

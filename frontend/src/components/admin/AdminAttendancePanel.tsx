@@ -8,11 +8,12 @@ import { AUTH_LABEL, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_TEXT_LINK } from
 import { ATTENDANCE_STATUS, ATTENDANCE_STATUS_ORDER } from "@/constants/labels";
 import { useRefreshAdmin } from "@/hooks/useAdminData";
 import { portalKeys, useSessionAttendance, useUserId } from "@/hooks/usePortalData";
-import type { AttendanceRecordResponse, AttendanceStatus } from "@/interfaces/api";
-import { correctStudentAttendance, setAttendanceLock } from "@/services/admin";
+import type { AttendanceRecordResponse, AttendanceStatus } from "@/interfaces/dto";
+import { correctStudentAttendance, setAttendanceLock } from "@/services/adminService";
 import { studentLabel as formatStudent, isRecordable, sessionEnd } from "@/utils/sessions";
 import type { AdminAttendancePanelProps } from "@/interfaces/admin";
 
+// Khung điểm danh của một buổi cho admin: xem, sửa điểm danh từng học viên và khóa / mở khóa điểm danh
 export function AdminAttendancePanel({ session, now, nameOf }: AdminAttendancePanelProps) {
   const userId = useUserId();
   const queryClient = useQueryClient();
@@ -54,7 +55,7 @@ export function AdminAttendancePanel({ session, now, nameOf }: AdminAttendancePa
     },
   });
 
-  /** Mở form sửa, điền sẵn giá trị cũ (học viên chưa có bản ghi thì mặc định Có mặt) */
+  // Mở form sửa, điền sẵn giá trị cũ (học viên chưa có bản ghi thì mặc định Có mặt)
   function startEditing(studentId: number, record: AttendanceRecordResponse | undefined) {
     correct.reset();
     setEditing({ studentId, record: record ?? null });
@@ -62,11 +63,14 @@ export function AdminAttendancePanel({ session, now, nameOf }: AdminAttendancePa
     setNote(record?.note ?? "");
   }
 
+  // Tên hiển thị của học viên theo id
   const studentLabel = (studentId: number) => formatStudent(studentId, nameOf);
 
   return (
     <div className="space-y-3">
-      {/* Đã khóa: danh sách chỉ đọc, sửa từng dòng. Chưa khóa: dùng bộ điểm danh như gia sư */}
+      {
+        // Đã khóa: danh sách chỉ đọc, sửa từng dòng. Chưa khóa: dùng bộ điểm danh như gia sư
+      }
       {data?.locked ? (
         <>
           <ul className="divide-y divide-brand-sandLine rounded-xl border border-brand-sandLine bg-white">
@@ -152,7 +156,9 @@ export function AdminAttendancePanel({ session, now, nameOf }: AdminAttendancePa
         />
       )}
 
-      {/* Chỉ khóa / mở khóa được khi buổi đã kết thúc */}
+      {
+        // Chỉ khóa / mở khóa được khi buổi đã kết thúc
+      }
       {data && ended && !editing && (
         <div>
           {lockOpen ? (

@@ -1,12 +1,12 @@
-import type { GradeLevel } from "@/interfaces/api";
+import type { GradeLevel } from "@/interfaces/dto";
 
 // ── components/contact ──
-/** Giá trị form trong ConsultLetterForm — kiểm tra bằng `letterSchema` */
+// Giá trị form trong ConsultLetterForm — kiểm tra bằng `letterSchema`
 export interface ConsultLetterFormValues {
   fullName: string;
   phone: string;
   email: string;
-  /** Chỉ lớp 10 – 12 (THPT) */
+  // Chỉ lớp 10 – 12 (THPT)
   gradeLevel: GradeLevel;
   subject: string;
   deliveryMode: string;
@@ -14,18 +14,18 @@ export interface ConsultLetterFormValues {
 }
 
 // ── constants/contact.ts ──
-/** Một cách liên hệ (email, điện thoại, địa chỉ) */
+// Một cách liên hệ (email, điện thoại, địa chỉ)
 export interface ContactChannel {
-  /** Tên biểu tượng Material Symbols */
+  // Tên biểu tượng Material Symbols
   icon: string;
-  /** Tên cách liên hệ */
+  // Tên cách liên hệ
   label: string;
-  /** Mỗi phần tử một dòng; có `href` thì bấm được (gửi thư, gọi điện) */
+  // Mỗi phần tử một dòng; có `href` thì bấm được (gửi thư, gọi điện)
   lines: { text: string; href?: string }[];
 }
 
 // ── utils/contact.ts ──
-/** Nội dung một thư đăng ký tư vấn, các nhãn đã đổi sang chữ hiển thị */
+// Nội dung một thư đăng ký tư vấn, các nhãn đã đổi sang chữ hiển thị
 export interface ConsultLetter {
   fullName: string;
   phone: string;

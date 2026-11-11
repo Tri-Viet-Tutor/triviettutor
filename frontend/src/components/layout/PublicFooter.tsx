@@ -1,22 +1,17 @@
 import { Link } from "react-router-dom";
 import { ASSETS } from "@/constants/assets";
+import { PUBLIC_FOOTER_LINKS } from "@/constants/nav";
 import { ROUTES } from "@/constants/routes";
 import { CONTACT_ADDRESS, CONTACT_EMAIL, CONTACT_PHONES } from "@/constants/contact";
 
-/* Các trang công khai, cùng tên với thanh menu */
-const FOOTER_LINKS = [
-  { label: "Khối lớp / Môn học", to: ROUTES.subjects },
-  { label: "Tìm gia sư", to: ROUTES.tutorSearch },
-  { label: "Mua khóa học", to: ROUTES.pricing },
-  { label: "Đăng ký tư vấn", to: ROUTES.contactForm },
-];
-
-/** Chân trang của các trang công khai: thương hiệu, liên kết nhanh, thông tin liên hệ. */
+// Chân trang của các trang công khai: thương hiệu, liên kết nhanh, thông tin liên hệ.
 export function PublicFooter() {
   return (
     <footer className="w-full bg-[#082A66] text-white pt-14 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-12 gap-8 mb-10">
-        {/* Thương hiệu */}
+        {
+          // Thương hiệu
+        }
         <div className="lg:col-span-5 flex flex-col gap-4">
           <Link to={ROUTES.home} className="flex items-center gap-3 shrink-0 group w-fit">
             <div className="w-11 h-11 rounded-full p-0.5 shadow-sm ring-2 ring-white/20 flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform bg-white">
@@ -39,11 +34,13 @@ export function PublicFooter() {
           </p>
         </div>
 
-        {/* Cột: liên kết trang */}
+        {
+          // Cột: liên kết trang
+        }
         <div className="lg:col-span-3 flex flex-col gap-3">
           <h4 className="text-sm text-white font-bold border-l-2 border-[#F5A00F] pl-2 uppercase">Khám phá</h4>
           <ul className="flex flex-col gap-2.5 text-[13px] text-white/70">
-            {FOOTER_LINKS.map((link) => (
+            {PUBLIC_FOOTER_LINKS.map((link) => (
               <li key={link.to}>
                 <Link to={link.to} className="hover:text-white transition-colors">
                   {link.label}
@@ -53,7 +50,9 @@ export function PublicFooter() {
           </ul>
         </div>
 
-        {/* Cột: liên hệ */}
+        {
+          // Cột: liên hệ
+        }
         <div className="lg:col-span-4 flex flex-col gap-3">
           <h4 className="text-sm text-white font-bold border-l-2 border-[#F5A00F] pl-2 uppercase">Liên hệ</h4>
           <div className="flex flex-col gap-2.5 text-[13px] text-white/70">
@@ -76,7 +75,9 @@ export function PublicFooter() {
         </div>
       </div>
 
-      {/* Dòng bản quyền */}
+      {
+        // Dòng bản quyền
+      }
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 border-t border-white/15 text-center sm:text-left text-[13px] text-white/60">
         © 2026 Tri Viet Tutor
       </div>

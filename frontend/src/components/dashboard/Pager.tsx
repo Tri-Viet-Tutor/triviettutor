@@ -1,7 +1,7 @@
 import { PORTAL_BTN_SECONDARY } from "@/constants/classNames";
 import type { PagerProps } from "@/interfaces/portal";
 
-/** Nút "Trang trước / Trang sau" cho danh sách phân trang; tự ẩn khi chỉ có một trang. */
+// Nút "Trang trước / Trang sau" cho danh sách phân trang; tự ẩn khi chỉ có một trang.
 export function Pager({ page, totalPages, onChange, label }: PagerProps) {
   if (totalPages <= 1) return null;
   return (

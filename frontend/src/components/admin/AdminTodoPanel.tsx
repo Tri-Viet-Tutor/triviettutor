@@ -4,7 +4,7 @@ import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING } from "@/constants/classNames";
 import type { AdminTodoPanelProps } from "@/interfaces/admin";
 
-/** Bảng xanh "Việc cần xử lý" ở đầu trang Tổng quan của quản trị: mỗi ô là một việc, bấm để sang trang xử lý. */
+// Bảng xanh "Việc cần xử lý" ở đầu trang Tổng quan của quản trị: mỗi ô là một việc, bấm để sang trang xử lý.
 export function AdminTodoPanel({ name, tiles }: AdminTodoPanelProps) {
   // Tổng số việc cần xử lý quyết định câu nói của chú kiến
   const loaded = tiles.every((tile) => tile.count !== undefined);

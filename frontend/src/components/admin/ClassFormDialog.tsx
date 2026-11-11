@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { Icon } from "@/components/ui/Icon";
 import { AUTH_ERROR, FOCUS_RING, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
-import { DELIVERY_MODE_OPTIONS, SCHEDULE_PATTERN_OPTIONS, TIME_SLOT_OPTIONS, timeSlotRange } from "@/constants/classOptions";
+import { DELIVERY_MODE_OPTIONS, SCHEDULE_PATTERN_OPTIONS, TIME_SLOT_OPTIONS, TIME_SLOT_START, timeSlotRange } from "@/constants/classOptions";
 import { weekdayMatchesPattern, patternWeekdayLabel } from "@/utils/classes";
 import { coursePricePerSession, gradeLabel, subjectLabel } from "@/constants/management";
 import { useAdminUsers } from "@/hooks/useAdminData";
@@ -13,7 +13,8 @@ import { estimatedEndDate } from "@/utils/classes";
 import { formatVnd } from "@/utils/currency";
 import { addDays, formatDate, parseIsoDate, startOfToday, toIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
-import type { AdminClassResponse, ClassType, CreateClassRequest, DeliveryMode, SchedulePattern, TimeSlot } from "@/interfaces/api";
+import { validateEnrollmentDeadline, validateHttpsUrl, validateSessionCount } from "@/utils/validation";
+import type { AdminClassResponse, ClassType, CreateClassRequest, DeliveryMode, SchedulePattern, TimeSlot } from "@/interfaces/dto";
 import type { ClassFormDialogProps } from "@/interfaces/admin";
 import { DateField } from "@/components/ui/DateField";
 import { Select } from "@/components/ui/Select";
@@ -23,7 +24,7 @@ const CLASS_TYPE_OPTIONS: { value: ClassType; label: string; hint: string }[] = 
   { value: "ONE_ON_ONE", label: "1 kèm 1", hint: "1 học viên" },
 ];
 
-/** Nhóm nút chọn một (segmented control); có `hint` thì hiện dòng phụ nhỏ bên dưới */
+// Nhóm nút chọn một (segmented control); có `hint` thì hiện dòng phụ nhỏ bên dưới
 function Segmented<T extends string>({
   label,
   options,
@@ -63,7 +64,7 @@ function Segmented<T extends string>({
   );
 }
 
-/** Tiêu đề nhóm trường trong form */
+// Tiêu đề nhóm trường trong form
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-4">
@@ -73,7 +74,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-/** Hộp thoại mở lớp mới từ một khóa học đang bán (POST /admin/classes), kèm gia sư phụ trách. */
+// Hộp thoại mở lớp mới từ một khóa học đang bán (POST /admin/classes), kèm gia sư phụ trách.
 export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: ClassFormDialogProps) {
   const courses = useAdminCourses({ active: true, size: 100 });
   const tutors = useAdminUsers({ role: "ROLE_TUTOR", size: 100 });
@@ -89,7 +90,7 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
   // Chưa tự chọn hạn đăng ký thì hạn đi theo ngày khai giảng (3 ngày trước)
   const [deadlineTouched, setDeadlineTouched] = useState(false);
   const [meetingUrl, setMeetingUrl] = useState("");
-  /** Số buổi của lớp (chuỗi để gõ tự do; kiểm tra 1 – 200 khi lưu) */
+  // Số buổi của lớp (chuỗi để gõ tự do; kiểm tra 1 – 200 khi lưu)
   const [sessions, setSessions] = useState("24");
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -109,12 +110,18 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
     [startDate, pattern, sessionCount],
   );
   const classPrice = course && sessionCount > 0 ? Math.round(coursePricePerSession(course) * sessionCount) : null;
-  // Giờ tan của ca phụ thuộc thời lượng khóa đã chọn, không phải lúc nào cũng 2 tiếng
+  // Chưa chọn khóa thì chưa biết giờ tan, chỉ nêu giờ vào ca; chọn rồi mới hiện khoảng giờ thật
   const slotOptions = useMemo(
-    () => TIME_SLOT_OPTIONS.map((option) => ({ ...option, hint: timeSlotRange(option.value, course?.durationMinutes) })),
-    [course?.durationMinutes],
+    () =>
+      TIME_SLOT_OPTIONS.map((option, index) => ({
+        ...option,
+        label: `Ca ${index + 1} - ${option.label}`,
+        hint: course ? timeSlotRange(option.value, course.durationMinutes) : `Từ ${TIME_SLOT_START[option.value]}`,
+      })),
+    [course],
   );
 
+  // Đổi ngày khai giảng; chưa sửa hạn đăng ký thì tự đặt hạn trước khai giảng 3 ngày
   function changeStart(value: string) {
     setStartDate(value);
     if (!deadlineTouched && value) setDeadline(toIsoDate(addDays(parseIsoDate(value), -3)));
@@ -126,17 +133,21 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
     onError: (error) => setFormError(portalErrorMessage(error, "Chưa mở được lớp. Vui lòng thử lại.")),
   });
 
+  // Kiểm tra form rồi gửi tạo lớp mới
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (courseId === "") return setFormError("Hãy chọn khóa học.");
     if (tutorId === "") return setFormError("Hãy chọn gia sư phụ trách lớp.");
-    if (!Number.isInteger(sessionCount) || sessionCount < 1 || sessionCount > 200) return setFormError("Số buổi phải từ 1 đến 200.");
+    const sessionError = validateSessionCount(sessionCount);
+    if (sessionError) return setFormError(sessionError);
     if (!startDate) return setFormError("Hãy chọn ngày khai giảng.");
     if (!weekdayMatchesPattern(startDate, pattern)) {
       return setFormError(`Ngày khai giảng phải rơi vào ${patternWeekdayLabel(pattern)} (đúng lịch học đã chọn).`);
     }
-    if (deadline && deadline >= startDate) return setFormError("Hạn đăng ký phải trước ngày khai giảng.");
-    if (meetingUrl && !/^https:\/\/\S+$/.test(meetingUrl.trim())) return setFormError("Link lớp học phải bắt đầu bằng https://");
+    const deadlineError = validateEnrollmentDeadline(deadline, startDate);
+    if (deadlineError) return setFormError(deadlineError);
+    const linkError = validateHttpsUrl(meetingUrl, "Link lớp học");
+    if (linkError) return setFormError(linkError);
     setFormError(null);
     save.mutate({
       courseId,

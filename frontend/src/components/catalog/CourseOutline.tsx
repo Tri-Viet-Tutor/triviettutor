@@ -1,6 +1,6 @@
 import type { CourseOutlineProps } from "@/interfaces/catalog";
 
-/** Lộ trình của khóa đang chọn, viết trên trang vở giống nhật ký ở trang chủ. */
+// Lộ trình của khóa đang chọn, viết trên trang vở giống nhật ký ở trang chủ.
 export function CourseOutline({ course }: CourseOutlineProps) {
   return (
     <div className="diary-page rounded-[20px] border border-brand-navy/10 py-7 pl-[60px] pr-5 shadow-soft sm:py-8 sm:pl-[92px] sm:pr-9">

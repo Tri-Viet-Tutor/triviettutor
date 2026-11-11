@@ -4,6 +4,7 @@ import type { QrCodeProps } from "@/interfaces/ui";
 
 const QUIET_ZONE = 4;
 
+// Vẽ mã QR dạng SVG từ một chuỗi
 export function QrCode({ value, label, className = "" }: QrCodeProps) {
   const { path, size } = useMemo(() => {
     const modules = encodeQr(value);

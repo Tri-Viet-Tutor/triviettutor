@@ -20,12 +20,11 @@ import {
 } from "@/utils/homework";
 import { sessionOptionLabel, teacherOf } from "@/utils/sessions";
 import type { HomeworkEditorProps, HomeworkInput, QuestionDraft } from "@/interfaces/homework";
+import { requireMinLength, validateBefore } from "@/utils/validation";
 
-/**
- * Form tạo / sửa bài tập của gia sư: buổi học, đề bài, giờ mở + hạn nộp, mật khẩu vào làm,
- * cho phép nộp trễ và bộ câu hỏi trắc nghiệm / tự luận. Bài đã công bố chỉ sửa được phần thời gian,
- * mật khẩu và nộp trễ (backend giữ nguyên đề để không ảnh hưởng học viên đang làm).
- */
+// Form tạo / sửa bài tập của gia sư: buổi học, đề bài, giờ mở + hạn nộp, mật khẩu vào làm,
+// cho phép nộp trễ và bộ câu hỏi trắc nghiệm / tự luận. Bài đã công bố chỉ sửa được phần thời gian,
+// mật khẩu và nộp trễ (backend giữ nguyên đề để không ảnh hưởng học viên đang làm).
 export function HomeworkEditor({ homework, initialSessionId, onSaved, onCancel }: HomeworkEditorProps) {
   const userId = useUserId();
   const sessions = useMySessions();
@@ -56,13 +55,16 @@ export function HomeworkEditor({ homework, initialSessionId, onSaved, onCancel }
     onSuccess: onSaved,
   });
 
+  // Kiểm tra form bài tập rồi lưu
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
     if (!homework && !sessionId) return setFormError("Hãy chọn buổi học cho bài tập.");
     if (!dueAt) return setFormError("Hãy nhập hạn nộp.");
-    if (openAt && new Date(openAt) >= new Date(dueAt)) return setFormError("Giờ mở bài phải trước hạn nộp.");
-    if (password && password.trim().length < 4) return setFormError("Mật khẩu cần từ 4 ký tự trở lên.");
+    const openError = validateBefore(openAt, dueAt, "Giờ mở bài", "hạn nộp");
+    if (openError) return setFormError(openError);
+    const passwordError = requireMinLength(password, "Mật khẩu", 4);
+    if (passwordError) return setFormError(passwordError);
     const questionError = questionDraftError(questions);
     if (questionError) return setFormError(questionError);
     save.mutate({

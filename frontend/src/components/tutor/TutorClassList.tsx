@@ -1,13 +1,15 @@
 import { useMemo } from "react";
-import { StatusChip } from "@/components/dashboard/StatusChip";
+import { useQueries } from "@tanstack/react-query";
 import { PortalEmpty, PortalLoading, PortalError } from "@/components/dashboard/PortalState";
 import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING } from "@/constants/classNames";
 import { useMySessions, useUserId } from "@/hooks/usePortalData";
-import type { SessionResponse } from "@/interfaces/api";
+import type { SessionResponse, TuitionClass } from "@/interfaces/dto";
+import { getTuitionClass } from "@/services/tuitionPaymentService";
+import { subjectLabel, subjectSpine } from "@/constants/management";
 import { displayCode } from "@/utils/classes";
-import { parseIsoDate } from "@/utils/date";
-import { formatLongDate, isUpcoming, needsAttendance, sessionStart } from "@/utils/sessions";
+import { formatDate, parseIsoDate } from "@/utils/date";
+import { isUpcoming, needsAttendance, sessionStart } from "@/utils/sessions";
 
 interface ClassGroup {
   classGroupId: number;
@@ -18,7 +20,7 @@ interface ClassGroup {
   attentionCount: number;
 }
 
-/** Gom các buổi của tôi theo lớp, lớp có buổi gần nhất lên trước */
+// Gom các buổi của tôi theo lớp, lớp có buổi gần nhất lên trước
 function groupByClass(sessions: SessionResponse[], tutorId: number | undefined, now: Date): ClassGroup[] {
   const byClass = new Map<number, SessionResponse[]>();
   for (const session of sessions) {
@@ -48,10 +50,12 @@ function groupByClass(sessions: SessionResponse[], tutorId: number | undefined, 
   return groups;
 }
 
-/**
- * Tầng "Lớp học": gom các buổi dạy của gia sư theo lớp, mỗi thẻ là một lớp.
- * Bấm vào một lớp để xem "Danh sách buổi học" của riêng lớp đó.
- */
+// Khối lớp "GRADE_11" → "11"
+const gradeNumber = (grade: string) => grade.replace("GRADE_", "");
+
+// Tầng "Lớp học": lớp còn buổi sắp tới quay bìa ra, lớp đã dạy xong cất vào kệ chỉ thấy gáy sách.
+// Mỗi thẻ là một lớp; bấm vào để xem "Danh sách buổi học" của riêng lớp đó.
+// Bấm vào một lớp để xem "Danh sách buổi học" của riêng lớp đó.
 export function TutorClassList({
   now,
   onSelect,
@@ -62,6 +66,18 @@ export function TutorClassList({
   const tutorId = useUserId();
   const sessionsQuery = useMySessions();
   const groups = useMemo(() => groupByClass(sessionsQuery.data ?? [], tutorId, now), [sessionsQuery.data, tutorId, now]);
+
+  // Buổi dạy chỉ mang classGroupId, nên lấy thêm chi tiết lớp để hiện tên khóa, môn và khối
+  const details = useQueries({
+    queries: groups.map((group) => ({
+      queryKey: ["catalog-class", group.classGroupId],
+      queryFn: () => getTuitionClass(group.classGroupId),
+      staleTime: 5 * 60_000,
+      retry: false,
+    })),
+  });
+  // Thông tin lớp đã tải theo thứ tự trong danh sách
+  const detailOf = (index: number): TuitionClass | undefined => details[index]?.data;
 
   if (sessionsQuery.isPending) return <PortalLoading label="Đang tải danh sách lớp" rows={3} />;
   if (sessionsQuery.isError) return <PortalError message="Không tải được danh sách lớp." onRetry={() => void sessionsQuery.refetch()} />;
@@ -74,37 +90,80 @@ export function TutorClassList({
       />
     );
 
-  return (
-    <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {groups.map((group) => (
-        <li key={group.classGroupId}>
-          <button
-            type="button"
-            onClick={() => onSelect(group.classGroupId)}
-            className={`flex h-full w-full flex-col gap-2.5 rounded-2xl border border-brand-sandLine bg-white p-4 text-left shadow-sm transition-colors hover:border-brand-navy ${FOCUS_RING}`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-1.5 text-[15px] font-extrabold text-brand-navy">
-                <Icon name="school" className="text-[19px]" />
-                {displayCode("class", group.classGroupId)}
+  // Bìa sách: nền sáng để tách khỏi thanh điều hướng navy, màu môn chỉ xuất hiện ở ba chỗ
+  // (dải trên, dòng môn, thanh tiến độ) nên cả lưới vẫn yên mắt dù mỗi lớp một màu.
+  function cover(group: ClassGroup) {
+    const detail = detailOf(groups.indexOf(group));
+    const live = group.nextSession !== null;
+    const tone = subjectSpine(detail?.subject ?? "");
+    const accent = live ? tone : "#9AA3B2";
+    const total = detail?.totalSessions ?? group.sessions.length;
+    const taught = Math.min(group.past.length, total);
+    const code = displayCode("class", group.classGroupId);
+    return (
+      <button
+        type="button"
+        onClick={() => onSelect(group.classGroupId)}
+        className={`flex h-full w-full flex-col overflow-hidden rounded-sm border border-brand-sandLine bg-white text-left transition-shadow hover:shadow-[0_14px_28px_-20px_rgba(20,33,61,0.6)] ${
+          live ? "" : "bg-brand-sand/50"
+        } ${FOCUS_RING}`}
+      >
+        {
+          // Dải màu môn trên đầu bìa, như màu bộ sách của một nhà xuất bản
+        }
+        <span aria-hidden="true" className="block h-1.5 w-full" style={{ backgroundColor: accent }} />
+
+        <span className="flex flex-1 flex-col gap-4 p-5">
+          <span className="flex items-baseline justify-between gap-3">
+            <span className="text-[11.5px] font-bold uppercase tracking-[0.16em]" style={{ color: accent }}>
+              {detail ? subjectLabel(detail.subject) : code}
+            </span>
+            {detail && <span className="shrink-0 text-[11.5px] font-semibold text-brand-muted">Lớp {gradeNumber(detail.gradeLevel)}</span>}
+          </span>
+
+          <span className={`block text-[22px] font-bold leading-[1.15] tracking-tight ${live ? "text-brand-ink" : "text-brand-muted"}`}>
+            {detail?.courseName ?? code}
+          </span>
+
+          <span className="mt-auto block border-t border-brand-sandLine pt-3.5">
+            <span className="flex items-center justify-between gap-3 text-[12.5px] text-brand-muted">
+              <span className="font-semibold">{code}</span>
+              {detail && <span className="tabular-nums">{detail.timeSlotLabel}</span>}
+            </span>
+
+            <span className="mt-3 flex items-baseline justify-between gap-3">
+              <span className="text-[13.5px] font-semibold text-brand-ink">
+                {group.nextSession ? `Buổi kế tiếp ${formatDate(parseIsoDate(group.nextSession.date))}` : "Đã dạy xong"}
               </span>
               {group.attentionCount > 0 && (
-                <StatusChip tone="amber" icon="fact_check">
-                  {group.attentionCount} cần điểm danh
-                </StatusChip>
+                <span className="flex shrink-0 items-center gap-1 text-[12.5px] font-bold text-amber-800">
+                  <Icon name="fact_check" className="text-[15px]" />
+                  {group.attentionCount}
+                </span>
               )}
-            </div>
-            <p className="text-[13px] text-brand-muted">
-              {group.sessions.length} buổi · {group.upcoming.length} sắp tới · {group.past.length} đã qua
-            </p>
-            <p className="mt-auto flex items-center gap-1.5 text-[13.5px] font-semibold text-brand-ink">
-              <Icon name="event" className="text-[16px] text-brand-muted" />
-              {group.nextSession
-                ? `Buổi kế tiếp: ${formatLongDate(parseIsoDate(group.nextSession.date))}`
-                : "Không còn buổi sắp tới"}
-            </p>
-          </button>
-        </li>
+            </span>
+
+            <span className="mt-2.5 flex items-center gap-2.5">
+              <span aria-hidden="true" className="h-[3px] flex-1 overflow-hidden bg-brand-sandDeep">
+                <span
+                  className="block h-full"
+                  style={{ width: `${Math.round((taught / Math.max(total, 1)) * 100)}%`, backgroundColor: accent }}
+                />
+              </span>
+              <span className="shrink-0 text-[12px] tabular-nums text-brand-muted">
+                {taught}/{total} buổi
+              </span>
+            </span>
+          </span>
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {groups.map((group) => (
+        <li key={group.classGroupId}>{cover(group)}</li>
       ))}
     </ul>
   );

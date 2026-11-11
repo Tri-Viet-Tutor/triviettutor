@@ -9,10 +9,8 @@ const TONES = {
   primary: { badge: "bg-brand-tint text-brand-navy ring-brand-navy/10", button: "bg-brand-navy hover:bg-brand-navyDeep" },
 };
 
-/**
- * Hộp xác nhận thay cho window.confirm: biểu tượng, tiêu đề, nội dung và hai nút.
- * onConfirm có thể là hàm async; lỗi ném ra sẽ hiện ngay trong hộp, hộp chỉ đóng khi thành công.
- */
+// Hộp xác nhận thay cho window.confirm: biểu tượng, tiêu đề, nội dung và hai nút.
+// onConfirm có thể là hàm async; lỗi ném ra sẽ hiện ngay trong hộp, hộp chỉ đóng khi thành công.
 export function ConfirmDialog({
   open,
   title,
@@ -34,7 +32,7 @@ export function ConfirmDialog({
   confirmLabel?: string;
   pendingLabel?: string;
   cancelLabel?: string;
-  /** Câu báo khi lỗi mà backend không trả lời được */
+  // Câu báo khi lỗi mà backend không trả lời được
   errorFallback?: string;
   onClose: () => void;
   onConfirm: () => void | Promise<void>;
@@ -54,6 +52,7 @@ export function ConfirmDialog({
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
+  // Chạy thao tác khi bấm đồng ý; lỗi thì giữ hộp và hiện lỗi
   async function confirm() {
     setPending(true);
     setError(null);

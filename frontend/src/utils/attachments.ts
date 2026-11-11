@@ -1,14 +1,10 @@
-/**
- * Nhận diện loại tệp/link đính kèm (bài tập, bài nộp) từ resourceUrl để hiện đúng xem trước:
- * ảnh hiện thumbnail, video hiện trình phát, link YouTube nhúng iframe, còn lại chỉ là liên kết.
- * Thuần phía giao diện — không có trường "loại" riêng ở backend (HomeworkRequest từ chối field lạ).
- */
-export type AttachmentKind = "image" | "video" | "youtube" | "file";
+import type { AttachmentKind } from "@/interfaces/homework";
+
 
 const IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/i;
 const VIDEO_EXT = /\.(mp4|webm|mov|m4v|ogv)(\?.*)?$/i;
 
-/** Link YouTube (xem thường hoặc youtu.be) → URL nhúng iframe, hoặc null nếu không phải YouTube */
+// Link YouTube (xem thường hoặc youtu.be) → URL nhúng iframe, hoặc null nếu không phải YouTube
 export function youtubeEmbedUrl(url: string): string | null {
   try {
     const parsed = new URL(url);
@@ -31,7 +27,7 @@ export function youtubeEmbedUrl(url: string): string | null {
   return null;
 }
 
-/** Loại đính kèm suy ra từ phần mở rộng của URL (ảnh / video) hoặc nền tảng (YouTube), còn lại coi là tệp/link thường */
+// Loại đính kèm suy ra từ phần mở rộng của URL (ảnh / video) hoặc nền tảng (YouTube), còn lại coi là tệp/link thường
 export function attachmentKind(url: string): AttachmentKind {
   if (youtubeEmbedUrl(url)) return "youtube";
   const path = url.split("?")[0];

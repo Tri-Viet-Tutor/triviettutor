@@ -9,18 +9,17 @@ import { formatVnd } from "@/utils/currency";
 import { formatDate } from "@/utils/date";
 import { GoogleAccountSection } from "@/components/dashboard/GoogleAccountSection";
 import { googleLoginUrl } from "@/services/authService";
-import { apiErrorMessage } from "@/services/api";
+import { apiErrorMessage } from "@/services/apiClient";
 
-/**
- * Trang Hồ sơ dùng chung cho ba khu (GET / PUT /me): xem và sửa thông tin của chính mình.
- * Gia sư thấy thêm lương cơ bản và thù lao mỗi buổi — hai số này chỉ quản trị viên sửa được.
- */
+// Trang Hồ sơ dùng chung cho ba khu (GET / PUT /me): xem và sửa thông tin của chính mình.
+// Gia sư thấy thêm lương cơ bản và thù lao mỗi buổi — hai số này chỉ quản trị viên sửa được.
 export function ProfilePage() {
   const meQuery = useMe();
   const me = meQuery.data;
 
     const unlinkGoogleMutation = useUnlinkGoogle();
 
+    // Hỏi mật khẩu rồi hủy liên kết Google
     const handleUnlinkGoogle = () => {
         const password = window.prompt(
             "Nhập mật khẩu hiện tại để hủy liên kết Google:"
@@ -65,7 +64,9 @@ export function ProfilePage() {
             </div>
           </div>
 
-          {/* Gia sư: lương và thù lao (chỉ xem, quản trị sửa) */}
+          {
+            // Gia sư: lương và thù lao (chỉ xem, quản trị sửa)
+          }
           {me.role === "ROLE_TUTOR" && (
             <dl className="grid grid-cols-2 divide-x divide-brand-sandLine border-b border-brand-sandLine text-center">
               <div className="px-3 py-4">

@@ -6,14 +6,14 @@ import { CONTAINER } from "@/constants/classNames";
 import { CONTACT_TITLE_LINES } from "@/constants/contact";
 import { riseDelay } from "@/utils/motion";
 
-/**
- * Toàn bộ trang "Liên hệ" trong một phần: bên trái là tiêu đề và các cách liên hệ,
- * bên phải là lá thư đăng ký tư vấn. Nền tím nhạt, nhạt dần về màu giấy.
- */
+// Toàn bộ trang "Liên hệ" trong một phần: bên trái là tiêu đề và các cách liên hệ,
+// bên phải là lá thư đăng ký tư vấn. Nền tím nhạt, nhạt dần về màu giấy.
 export function ContactSection() {
   return (
     <section className="relative overflow-hidden bg-[linear-gradient(150deg,#E4DFF6_0%,#EFEAF5_42%,#F5F1E9_100%)]">
-      {/* Chấm bi mờ ở góc trái và mép dưới hoà vào nền giấy */}
+      {
+        // Chấm bi mờ ở góc trái và mép dưới hoà vào nền giấy
+      }
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(11,58,140,0.16)_1.3px,transparent_1.3px)] bg-[length:22px_22px] [mask-image:linear-gradient(120deg,black,transparent_55%)]"

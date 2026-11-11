@@ -1,93 +1,93 @@
 import type { Course } from "@/interfaces/course";
 
-/* Kiểu dữ liệu gia sư hiển thị ở các trang công khai. */
+// Kiểu dữ liệu gia sư hiển thị ở các trang công khai.
 
-/** Một gia sư trên tấm quảng cáo */
+// Một gia sư trên tấm quảng cáo
 export interface Tutor {
   name: string;
-  /** Môn phụ trách, ví dụ "Gia sư Toán THPT" */
+  // Môn phụ trách, ví dụ "Gia sư Toán THPT"
   role: string;
-  /** Đường dẫn ảnh */
+  // Đường dẫn ảnh
   image: string;
-  /** Mô tả ảnh */
+  // Mô tả ảnh
   alt: string;
 }
 
-/** Hồ sơ một gia sư trên trang "Tìm gia sư" */
+// Hồ sơ một gia sư trên trang "Tìm gia sư"
 export interface TutorProfile {
-  /** Mã không dấu lấy từ tên, dùng làm key và id phần tử */
+  // Mã không dấu lấy từ tên, dùng làm key và id phần tử
   id: string;
   name: string;
-  /** Đường dẫn ảnh chân dung */
+  // Đường dẫn ảnh chân dung
   image: string;
-  /** Giới thiệu ngắn */
+  // Giới thiệu ngắn
   bio: string;
-  /** Mảng chuyên môn */
+  // Mảng chuyên môn
   specialties: string[];
-  /** Bằng cấp, kinh nghiệm, thành tích có thật (có thể chưa có) */
+  // Bằng cấp, kinh nghiệm, thành tích có thật (có thể chưa có)
   credentials: string[];
-  /** Khóa học gia sư đang đứng lớp */
+  // Khóa học gia sư đang đứng lớp
   course: Course;
 }
 
 // ── components/tutors ──
-/** Props của TutorFinderSection */
+// Props của TutorFinderSection
 export interface TutorFinderSectionProps {
-  /** Gia sư khớp với ô tìm và môn đang lọc */
+  // Gia sư khớp với ô tìm và môn đang lọc
   tutors: TutorProfile[];
-  /** Gia sư đang xem hồ sơ */
+  // Gia sư đang xem hồ sơ
   selectedId: string;
   onSelect: (tutorId: string) => void;
-  /** Tên môn đang lọc để ghi vào dòng kết quả, rỗng = mọi môn */
+  // Tên môn đang lọc để ghi vào dòng kết quả, rỗng = mọi môn
   subjectLabel: string;
-  /** Xóa ô tìm và bộ lọc môn */
+  // Xóa ô tìm và bộ lọc môn
   onReset: () => void;
 }
 
-/** Props của TutorPhotoFan */
+// Props của TutorPhotoFan
 export interface TutorPhotoFanProps {
-  /** Ba gia sư đưa lên ảnh, mỗi người một môn */
+  // Ba gia sư đưa lên ảnh, mỗi người một môn
   tutors: TutorProfile[];
-  /** Bấm một ảnh */
+  // Bấm một ảnh
   onPickTutor: (tutorId: string) => void;
 }
 
-/** Props của TutorProfilePanel */
+// Props của TutorProfilePanel
 export interface TutorProfilePanelProps {
-  /** Gia sư đang xem */
+  // Gia sư đang xem
   tutor: TutorProfile;
-  /** Chuyển sang hồ sơ gia sư khác (người cùng dạy khóa) */
+  // Chuyển sang hồ sơ gia sư khác (người cùng dạy khóa)
   onSelect: (tutorId: string) => void;
 }
 
-/** Props của TutorResultList */
+// Props của TutorResultList
 export interface TutorResultListProps {
   tutors: TutorProfile[];
-  /** Gia sư đang chọn */
+  // Gia sư đang chọn
   selectedId: string;
   onSelect: (tutorId: string) => void;
 }
 
-/** Props của TutorSearchHero */
+// Props của TutorSearchHero
 export interface TutorSearchHeroProps {
-  /** Chữ trong ô tìm tên gia sư */
+  // Chữ trong ô tìm tên gia sư
   query: string;
-  /** Mã môn đang lọc, rỗng = mọi môn */
+  // Mã môn đang lọc, rỗng = mọi môn
   subject: string;
   onQueryChange: (query: string) => void;
   onSubjectChange: (subject: string) => void;
-  /** Bấm nút "Tìm" hoặc nhấn Enter */
+  // Bấm nút "Tìm" hoặc nhấn Enter
   onSubmit: () => void;
-  /** Ba gia sư trên xấp ảnh */
+  // Ba gia sư trên xấp ảnh
   featuredTutors: TutorProfile[];
-  /** Bấm một ảnh gia sư */
+  // Bấm một ảnh gia sư
   onPickTutor: (tutorId: string) => void;
 }
 
 // ── constants/tutors.ts ──
-/** Một điều trung tâm bảo đảm */
+// Một điều trung tâm bảo đảm
 export interface TutorAssurance {
-  /** Tên biểu tượng Material Symbols */
+  // Tên biểu tượng Material Symbols
   icon: string;
   title: string;
   description: string;

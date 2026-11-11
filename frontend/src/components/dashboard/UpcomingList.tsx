@@ -8,7 +8,7 @@ import { dayLabel, formatTimeRange } from "@/utils/sessions";
 import type { UpcomingListProps } from "@/interfaces/portal";
 import { displayCode } from "@/utils/classes";
 
-/** Vài buổi sắp tới ở trang Tổng quan; bấm một buổi để mở nó ở trang lịch. */
+// Vài buổi sắp tới ở trang Tổng quan; bấm một buổi để mở nó ở trang lịch.
 export function UpcomingList({ title, sessions, today, scheduleTo, emptyText }: UpcomingListProps) {
   return (
     <section className={`p-4 ${PORTAL_CARD}`} aria-labelledby="upcoming-title">
@@ -48,7 +48,9 @@ export function UpcomingList({ title, sessions, today, scheduleTo, emptyText }: 
                       </span>
                     )}
                   </span>
-                  {/* Chỉ hiện nhãn khi trạng thái khác "Sắp học" */}
+                  {
+                    // Chỉ hiện nhãn khi trạng thái khác "Sắp học"
+                  }
                   {session.status !== "SCHEDULED" && (
                     <span className="hidden sm:block">
                       <StatusChip tone={status.tone}>{status.label}</StatusChip>

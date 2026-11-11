@@ -8,7 +8,7 @@ import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/
 import { StatTile } from "@/components/dashboard/StatTile";
 import { StatusChip } from "@/components/dashboard/StatusChip";
 import { TransferClassDialog } from "@/components/student/TransferClassDialog";
-import { TutorRatingBadge, TutorRatingDialog } from "@/components/student/TutorRatingDialog";
+import { RateTutorDialog, TutorRatingBadge } from "@/components/student/RateTutor";
 import { Icon } from "@/components/ui/Icon";
 import {
   AUTH_ERROR,
@@ -30,10 +30,11 @@ import { formatVnd } from "@/utils/currency";
 import { formatDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 import { formatTimeRange, nextSession, splitSessions, teacherOf } from "@/utils/sessions";
-import type { EnrollmentResponse, EnrollmentStatus } from "@/interfaces/api";
+import type { EnrollmentResponse, EnrollmentStatus, StudentTutor } from "@/interfaces/dto";
 import { displayCode } from "@/utils/classes";
+import { REASON_MAX, requireText } from "@/utils/validation";
 
-/** Câu báo đúng với kết quả hủy: hoàn ngay (ví/mock) hay đang chờ VNPay hoàn tiền */
+// Câu báo đúng với kết quả hủy: hoàn ngay (ví/mock) hay đang chờ VNPay hoàn tiền
 function cancelNotice(result: EnrollmentResponse): string {
   if (result.status === "REFUNDED") return "Đã hủy ghi danh và hoàn học phí.";
   if (result.refundStatus === "PENDING") return "Đã gửi yêu cầu hủy. VNPay đang hoàn tiền; lớp sẽ chuyển sang “Đã hoàn tiền” khi hoàn tất.";
@@ -41,19 +42,17 @@ function cancelNotice(result: EnrollmentResponse): string {
   return "Đã hủy ghi danh lớp học.";
 }
 
-/**
- * Các lớp học viên đã đóng học phí: học phí, ưu đãi, tiến độ buổi học, buổi kế tiếp, đổi lớp và hủy ghi danh.
- * Đổi lớp: trước hạn chốt, sang lớp khác cùng khóa còn trước hạn chốt, mỗi lớp một lần (POST /enrollments/{id}/transfer).
- * API: GET /enrollments/my, DELETE /enrollments/{id} (kèm lý do), GET /me/sessions để ghép tiến độ.
- * Lớp đã có buổi học hoàn tất thì đánh giá được gia sư dạy gần nhất (POST /tutors/{id}/ratings, PUT /ratings/{id}).
- */
+// Các lớp học viên đã đóng học phí: học phí, ưu đãi, tiến độ buổi học, buổi kế tiếp, đổi lớp và hủy ghi danh.
+// Đổi lớp: trước hạn chốt, sang lớp khác cùng khóa còn trước hạn chốt, mỗi lớp một lần (POST /enrollments/{id}/transfer).
+// API: GET /enrollments/my, DELETE /enrollments/{id} (kèm lý do), GET /me/sessions để ghép tiến độ.
+// Lớp đã có buổi học hoàn tất thì đánh giá được gia sư dạy gần nhất (POST /tutors/{id}/ratings, PUT /ratings/{id}).
 export function StudentEnrollmentsPage() {
   const [filter, setFilter] = useState<EnrollmentStatus | "ALL">("ALL");
   const [cancelling, setCancelling] = useState<EnrollmentResponse | null>(null);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [ratingTutorId, setRatingTutorId] = useState<number | null>(null);
+  const [rating, setRating] = useState<StudentTutor | null>(null);
   const [transferring, setTransferring] = useState<EnrollmentResponse | null>(null);
   const queryClient = useQueryClient();
   const enrollments = useMyEnrollments();
@@ -87,10 +86,8 @@ export function StudentEnrollmentsPage() {
   const active = all.filter((item) => item.status === "ACTIVE");
   const paid = all.reduce((sum, item) => sum + item.feeCharged, 0);
 
-  /**
-   * Còn đổi lớp được: còn tự hủy được (trước hạn chốt), lớp đang tuyển sinh và chưa từng đổi.
-   * Chỉ hiện khi backend báo rõ transferable = true: máy chủ chưa có POST /enrollments/{id}/transfer thì nút sẽ báo lỗi 404.
-   */
+  // Còn đổi lớp được: còn tự hủy được (trước hạn chốt), lớp đang tuyển sinh và chưa từng đổi.
+  // Chỉ hiện khi backend báo rõ transferable = true: máy chủ chưa có POST /enrollments/{id}/transfer thì nút sẽ báo lỗi 404.
   function canTransfer(item: EnrollmentResponse) {
     return (
       item.status === "ACTIVE" &&
@@ -101,14 +98,14 @@ export function StudentEnrollmentsPage() {
     );
   }
 
-  /** Tiến độ và buổi kế tiếp của một lớp, lấy từ lịch học của tôi */
+  // Tiến độ và buổi kế tiếp của một lớp, lấy từ lịch học của tôi
   function progressOf(classGroupId: number) {
     const mine = (sessions.data ?? []).filter((session) => session.classGroupId === classGroupId && session.status !== "CANCELLED");
     const { upcoming, past } = splitSessions(mine, now);
     return { done: past.length, total: mine.length, next: nextSession(upcoming) };
   }
 
-  /** Gia sư dạy buổi hoàn tất gần nhất của lớp — người học viên được đánh giá; chưa học xong buổi nào thì null */
+  // Gia sư dạy buổi hoàn tất gần nhất của lớp — người học viên được đánh giá; chưa học xong buổi nào thì null
   function ratedTutorOf(classGroupId: number): number | null {
     const completed = (sessions.data ?? [])
       .filter((session) => session.classGroupId === classGroupId && session.status === "COMPLETED" && teacherOf(session) !== null)
@@ -281,7 +278,18 @@ export function StudentEnrollmentsPage() {
                         <Icon name="person" className="text-[19px] text-brand-navy" />
                         <TutorRatingBadge tutorId={tutorId} />
                       </span>
-                      <button type="button" onClick={() => setRatingTutorId(tutorId)} className={PORTAL_BTN_GHOST}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const cls = classById.get(item.classGroupId);
+                          setRating({
+                            id: tutorId,
+                            name: cls?.tutorId === tutorId && cls.tutorName ? cls.tutorName : `Gia sư ${displayCode("tutor", tutorId)}`,
+                            classes: cls ? [cls] : [],
+                          });
+                        }}
+                        className={PORTAL_BTN_GHOST}
+                      >
                         <Icon name="star" className="text-[18px]" />
                         Đánh giá gia sư
                       </button>
@@ -337,7 +345,7 @@ export function StudentEnrollmentsPage() {
         </ul>
       )}
 
-      <TutorRatingDialog tutorId={ratingTutorId} onClose={() => setRatingTutorId(null)} />
+      <RateTutorDialog tutor={rating} onClose={() => setRating(null)} />
 
       <TransferClassDialog
         enrollment={transferring}
@@ -362,7 +370,8 @@ export function StudentEnrollmentsPage() {
           noValidate
           onSubmit={(event) => {
             event.preventDefault();
-            if (!reason.trim()) return setError("Hãy cho trung tâm biết lý do hủy.");
+            const reasonError = requireText(reason, "Lý do hủy", REASON_MAX);
+            if (reasonError) return setError(reasonError);
             setError(null);
             cancel.mutate();
           }}

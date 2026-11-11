@@ -9,14 +9,14 @@ import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/
 import { LEAVE_STATUS } from "@/constants/labels";
 import { useNow } from "@/hooks/useNow";
 import { useMyLeaveRequests, useMySessions } from "@/hooks/usePortalData";
-import type { LeaveRequestStatus } from "@/interfaces/api";
+import type { LeaveRequestStatus } from "@/interfaces/dto";
 import { canRequestLeave, pendingLeaveOf, splitSessions } from "@/utils/sessions";
 import type { LeaveCenterProps } from "@/interfaces/portal";
 
-/** Số đơn mỗi trang */
+// Số đơn mỗi trang
 const PAGE_SIZE = 10;
 
-/** Các thẻ lọc đơn theo trạng thái; chuỗi rỗng là tất cả */
+// Các thẻ lọc đơn theo trạng thái; chuỗi rỗng là tất cả
 const FILTERS: { value: LeaveRequestStatus | ""; label: string }[] = [
   { value: "", label: "Tất cả" },
   { value: "PENDING", label: LEAVE_STATUS.PENDING.label },
@@ -24,10 +24,8 @@ const FILTERS: { value: LeaveRequestStatus | ""; label: string }[] = [
   { value: "REJECTED", label: LEAVE_STATUS.REJECTED.label },
 ];
 
-/**
- * Trang Xin nghỉ dùng chung cho học viên và gia sư: gửi đơn cho một buổi sắp tới và theo dõi các đơn đã gửi.
- * Mở kèm ?buoi=<mã buổi> thì buổi đó được chọn sẵn trong form.
- */
+// Trang Xin nghỉ dùng chung cho học viên và gia sư: gửi đơn cho một buổi sắp tới và theo dõi các đơn đã gửi.
+// Mở kèm ?buoi=<mã buổi> thì buổi đó được chọn sẵn trong form.
 export function LeaveCenter({ role, scheduleTo, isEligible }: LeaveCenterProps) {
   const now = useNow();
   const [searchParams] = useSearchParams();

@@ -2,7 +2,7 @@ import { Icon } from "@/components/ui/Icon";
 import { nameInitial } from "@/utils/sessions";
 import type { PortalGreetingProps } from "@/interfaces/portal";
 
-/** Lời chào gọn ở đầu trang Tổng quan: chữ cái đại diện, lời chào và ngày hôm nay. */
+// Lời chào gọn ở đầu trang Tổng quan: chữ cái đại diện, lời chào và ngày hôm nay.
 export function PortalGreeting({ fullName, name, description, stats }: PortalGreetingProps) {
   return (
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3">

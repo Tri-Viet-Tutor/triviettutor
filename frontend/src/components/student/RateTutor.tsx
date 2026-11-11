@@ -5,13 +5,32 @@ import { Icon } from "@/components/ui/Icon";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT } from "@/constants/classNames";
 import { subjectLabel } from "@/constants/management";
-import type { StudentTutor } from "@/hooks/useRatingData";
-import { createRating, deleteRating, fetchMyRating, updateRating } from "@/services/ratingService";
+import type { StudentTutor } from "@/interfaces/dto";
+import { createRating, deleteRating, fetchMyRating, fetchRatingSummary, updateRating } from "@/services/ratingService";
+import { displayCode } from "@/utils/classes";
 import { portalErrorMessage } from "@/utils/errors";
 
 const STAR_HINT = ["", "Chưa hài lòng", "Tạm được", "Bình thường", "Tốt", "Rất tốt"];
 
-/** Chọn số sao 1-5; rê chuột xem trước */
+// Chọn số sao 1-5; rê chuột xem trước
+// Tên gia sư kèm điểm trung bình "★ 4.5 (3 đánh giá)" nếu đã có đánh giá
+export function TutorRatingBadge({ tutorId }: { tutorId: number }) {
+  const summary = useQuery({ queryKey: ["rating-summary", tutorId], queryFn: () => fetchRatingSummary(tutorId), retry: false });
+  const data = summary.data;
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-2 text-[14px] text-brand-ink">
+      <span className="font-semibold">{data?.tutorName || `Gia sư ${displayCode("tutor", tutorId)}`}</span>
+      {data && data.totalRatings > 0 && (
+        <span className="inline-flex items-center gap-1 text-[13px] font-semibold">
+          <Icon name="star" className="text-[17px] text-brand-orange" />
+          {Number(data.averageRating).toFixed(1)}
+          <span className="font-normal text-brand-muted">({data.totalRatings} đánh giá)</span>
+        </span>
+      )}
+    </span>
+  );
+}
+
 function StarPicker({ value, onChange }: { value: number; onChange: (value: number) => void }) {
   const [hover, setHover] = useState(0);
   const shown = hover || value;
@@ -38,10 +57,8 @@ function StarPicker({ value, onChange }: { value: number; onChange: (value: numb
   );
 }
 
-/**
- * Khung bật lên để chấm sao gia sư: 1-5 sao, nhận xét không bắt buộc.
- * Chưa đánh giá thì gửi mới (POST /tutors/{id}/ratings); đã có thì sửa (PUT /ratings/{id}) hoặc xóa.
- */
+// Khung bật lên để chấm sao gia sư: 1-5 sao, nhận xét không bắt buộc.
+// Chưa đánh giá thì gửi mới (POST /tutors/{id}/ratings); đã có thì sửa (PUT /ratings/{id}) hoặc xóa.
 export function RateTutorDialog({ tutor, onClose }: { tutor: StudentTutor | null; onClose: () => void }) {
   const cache = useQueryClient();
   const tutorId = tutor?.id ?? 0;
@@ -58,6 +75,7 @@ export function RateTutorDialog({ tutor, onClose }: { tutor: StudentTutor | null
     setComment(mine.data?.comment ?? "");
   }, [tutor, mine.data]);
 
+  // Tải lại đánh giá của tôi, điểm trung bình và thông tin lớp sau khi lưu
   const refresh = () => {
     void cache.invalidateQueries({ queryKey: ["my-rating", tutorId] });
     void cache.invalidateQueries({ queryKey: ["rating-summary", tutorId] });
@@ -81,10 +99,12 @@ export function RateTutorDialog({ tutor, onClose }: { tutor: StudentTutor | null
     },
   });
 
+  // Gửi đánh giá khi đã chọn số sao
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (stars > 0) save.mutate();
   }
+  // Đóng khung đánh giá và xóa trạng thái gửi
   function close() {
     save.reset();
     remove.reset();

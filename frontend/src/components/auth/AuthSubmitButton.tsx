@@ -1,6 +1,6 @@
 import type { AuthSubmitButtonProps } from "@/interfaces/auth";
 
-/** Nút gửi của các form xác thực: thanh xanh mảnh, bo góc nhẹ. */
+// Nút gửi của các form xác thực: thanh xanh mảnh, bo góc nhẹ.
 export function AuthSubmitButton({ id, label, pendingLabel, isPending, disabled = false }: AuthSubmitButtonProps) {
   return (
     <button

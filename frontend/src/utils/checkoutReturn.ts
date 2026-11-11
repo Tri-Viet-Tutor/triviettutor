@@ -2,7 +2,7 @@ import { ROUTES } from "@/constants/routes";
 
 const STORAGE_KEY = "tuition-login-return";
 
-/** Only checkout/wallet paths may survive login; never accept an external redirect. */
+// Only checkout/wallet paths may survive login; never accept an external redirect.
 export function checkoutReturnPath(value: unknown): string | null {
   if (typeof value !== "string" || value.length > 16000 || !value.startsWith("/") || value.startsWith("//")) return null;
   try {
@@ -18,6 +18,7 @@ export function checkoutReturnPath(value: unknown): string | null {
   }
 }
 
+// Ghi nhớ trang cần quay lại sau khi đăng nhập để thanh toán
 export function saveCheckoutReturn(value: string): void {
   const path = checkoutReturnPath(value);
   if (!path) return;
@@ -28,6 +29,7 @@ export function saveCheckoutReturn(value: string): void {
   }
 }
 
+// Lấy và xóa trang cần quay lại sau khi đăng nhập
 export function consumeCheckoutReturn(): string | null {
   try {
     const path = checkoutReturnPath(sessionStorage.getItem(STORAGE_KEY));

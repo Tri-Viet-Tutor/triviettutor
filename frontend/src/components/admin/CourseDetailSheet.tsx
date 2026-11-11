@@ -5,14 +5,12 @@ import { FOCUS_RING } from "@/constants/classNames";
 import { coursePriceTiers, gradeLabel, subjectLabel } from "@/constants/management";
 import { CourseCover } from "@/components/admin/CourseCover";
 import type { CourseDetailSheetProps } from "@/interfaces/admin";
-import type { CourseResponse } from "@/interfaces/api";
+import type { CourseResponse } from "@/interfaces/dto";
 import { formatVnd } from "@/utils/currency";
 
-/**
- * Ngăn chi tiết khóa học trượt từ cạnh phải (thẻ <dialog> gốc: giữ tiêu điểm trong ngăn, Esc để đóng).
- * Gồm: tên khóa và thao tác (sửa, mở / ngừng bán), thông số, mô tả, thang học phí theo sĩ số và các lớp của khóa.
- * Các hộp thoại tạo lớp / đổi trạng thái mở chồng lên trên ngăn này.
- */
+// Ngăn chi tiết khóa học trượt từ cạnh phải (thẻ <dialog> gốc: giữ tiêu điểm trong ngăn, Esc để đóng).
+// Gồm: tên khóa và thao tác (sửa, mở / ngừng bán), thông số, mô tả, thang học phí theo sĩ số và các lớp của khóa.
+// Các hộp thoại tạo lớp / đổi trạng thái mở chồng lên trên ngăn này.
 export function CourseDetailSheet({ course, onClose, toggling, onEdit, onToggle, onCreateClass, onChangeStatus }: CourseDetailSheetProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const open = course !== null;
@@ -53,6 +51,7 @@ export function CourseDetailSheet({ course, onClose, toggling, onEdit, onToggle,
   );
 }
 
+// Nội dung ngăn chi tiết khóa học: thông tin khóa, học phí và các lớp đang mở
 function SheetBody({
   course,
   onClose,
@@ -64,7 +63,9 @@ function SheetBody({
 }: Omit<CourseDetailSheetProps, "course"> & { course: CourseResponse }) {
   return (
     <div className="flex h-full flex-col bg-white text-brand-ink shadow-[-30px_0_80px_-30px_rgba(8,42,102,0.45)]">
-      {/* Đầu ngăn: luôn hiển thị khi cuộn */}
+      {
+        // Đầu ngăn: luôn hiển thị khi cuộn
+      }
       <header className="shrink-0 border-b border-brand-sandLine p-6">
         <div className="flex items-start gap-4">
           <CourseCover subject={course.subject} gradeLevel={course.gradeLevel} size="lg" muted={!course.active} />
@@ -87,7 +88,9 @@ function SheetBody({
           </button>
         </div>
 
-        {/* Công tắc bán và nút sửa trên cùng một hàng */}
+        {
+          // Công tắc bán và nút sửa trên cùng một hàng
+        }
         <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-brand-sand/60 py-2 pl-3 pr-2">
           <SaleSwitch active={course.active} disabled={toggling} onToggle={() => onToggle(course)} />
           <button
@@ -116,7 +119,7 @@ function SheetBody({
   );
 }
 
-/** Công tắc mở / ngừng bán */
+// Công tắc mở / ngừng bán
 function SaleSwitch({ active, disabled, onToggle }: { active: boolean; disabled: boolean; onToggle: () => void }) {
   return (
     <button
@@ -138,10 +141,8 @@ function SaleSwitch({ active, disabled, onToggle }: { active: boolean; disabled:
   );
 }
 
-/**
- * Học phí mỗi học viên theo sĩ số lúc đăng ký: 4 thẻ ngang hàng (2 cột trên điện thoại),
- * mỗi thẻ ghi sĩ số, số tiền và mức giảm so với giá gốc 1 kèm 1.
- */
+// Học phí mỗi học viên theo sĩ số lúc đăng ký: 4 thẻ ngang hàng (2 cột trên điện thoại),
+// mỗi thẻ ghi sĩ số, số tiền và mức giảm so với giá gốc 1 kèm 1.
 function PriceLadder({ course }: { course: CourseResponse }) {
   return (
     <section aria-labelledby="price-ladder-title">

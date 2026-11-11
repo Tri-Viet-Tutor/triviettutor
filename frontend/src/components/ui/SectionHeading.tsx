@@ -4,7 +4,7 @@ import { Icon } from "@/components/ui/Icon";
 import { TEXT_LINK } from "@/constants/classNames";
 import type { SectionHeadingProps } from "@/interfaces/ui";
 
-/** Tiêu đề một phần: tiêu đề, mô tả ngắn và liên kết tuỳ chọn ở bên phải. */
+// Tiêu đề một phần: tiêu đề, mô tả ngắn và liên kết tuỳ chọn ở bên phải.
 export function SectionHeading({ title, description, action, icon }: SectionHeadingProps) {
   return (
     <Reveal className="flex flex-col md:flex-row md:items-end md:justify-between gap-5 mb-10">

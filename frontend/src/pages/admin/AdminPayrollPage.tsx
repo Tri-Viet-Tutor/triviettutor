@@ -20,22 +20,20 @@ import { portalErrorMessage } from "@/utils/errors";
 import { displayCode } from "@/utils/classes";
 import { downloadPayrollCsv } from "@/utils/payrollExport";
 
-/** Tháng trước của (năm, tháng) */
+// Tháng trước của (năm, tháng)
 function shiftMonth(year: number, month: number, delta: number) {
   const date = new Date(year, month - 1 + delta, 1);
   return { year: date.getFullYear(), month: date.getMonth() + 1 };
 }
 
-/** Mã chống gửi trùng cho lần chốt lương */
+// Mã chống gửi trùng cho lần chốt lương
 function newIdempotencyKey(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `payroll-${Date.now()}-${Math.random()}`;
 }
 
-/**
- * Bảng lương tháng của gia sư: lương cứng + thù lao theo buổi hợp lệ, các buổi bị hủy / được dạy thay / chưa chốt,
- * và nút chốt bảng lương khi không còn buổi nào chặn.
- * API: GET /admin/payroll/{year}/{month}, POST /admin/payroll/{year}/{month}/finalize (kèm Idempotency-Key).
- */
+// Bảng lương tháng của gia sư: lương cứng + thù lao theo buổi hợp lệ, các buổi bị hủy / được dạy thay / chưa chốt,
+// và nút chốt bảng lương khi không còn buổi nào chặn.
+// API: GET /admin/payroll/{year}/{month}, POST /admin/payroll/{year}/{month}/finalize (kèm Idempotency-Key).
 export function AdminPayrollPage() {
   const now = new Date();
   // Mặc định xem tháng trước (tháng thường được chốt lương)
@@ -46,6 +44,7 @@ export function AdminPayrollPage() {
   const [expanded, setExpanded] = useState<number | null>(null);
   const payroll = usePayroll(period.year, period.month);
   const refresh = useRefreshAdmin();
+  // Tháng kế tiếp nằm ở tương lai thì không cho chuyển tới
   const isFutureNext = (() => {
     const next = shiftMonth(period.year, period.month, 1);
     return next.year > now.getFullYear() || (next.year === now.getFullYear() && next.month > now.getMonth() + 1);
@@ -79,7 +78,9 @@ export function AdminPayrollPage() {
         description="Lương cứng cộng thù lao theo từng buổi dạy hợp lệ. Chốt bảng lương khi mọi buổi trong tháng đã khóa điểm danh."
       />
 
-      {/* Chọn tháng */}
+      {
+        // Chọn tháng
+      }
       <div className={`mb-6 flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4 ${PORTAL_CARD}`}>
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -195,10 +196,10 @@ export function AdminPayrollPage() {
                       <th className="px-5 py-3 font-bold">Gia sư</th>
                       <th className="px-3 py-3 text-right font-bold">Lương cứng</th>
                       <th className="px-3 py-3 text-right font-bold">Thù lao / buổi</th>
-                      <th className="px-3 py-3 text-center font-bold">Hợp lệ</th>
-                      <th className="px-3 py-3 text-center font-bold">Hủy</th>
-                      <th className="px-3 py-3 text-center font-bold">Được dạy thay</th>
-                      <th className="px-3 py-3 text-center font-bold">Chưa chốt</th>
+                      <th className="px-3 py-3 text-center font-bold">Buổi hợp lệ</th>
+                      <th className="px-3 py-3 text-center font-bold">Buổi hủy</th>
+                      <th className="px-3 py-3 text-center font-bold">Buổi được dạy thay</th>
+                      <th className="px-3 py-3 text-center font-bold">Buổi chưa chốt</th>
                       <th className="px-5 py-3 text-right font-bold">Thực nhận</th>
                     </tr>
                   </thead>

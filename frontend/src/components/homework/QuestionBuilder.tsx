@@ -9,27 +9,25 @@ import type { QuestionBuilderProps, QuestionDraft } from "@/interfaces/homework"
 
 const MAX_OPTIONS = 10;
 const OPTION_LETTERS = "ABCDEFGHIJ";
-/** Đúng các đuôi ảnh mà /api/v1/files nhận và trả về inline cho thẻ img */
+// Đúng các đuôi ảnh mà /api/v1/files nhận và trả về inline cho thẻ img
 const IMAGE_ACCEPT = "image/png,image/jpeg,image/gif,image/webp";
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
-/**
- * Soạn danh sách câu hỏi: trắc nghiệm (một hoặc nhiều đáp án đúng, hệ thống tự chấm — câu nhiều đáp án phải chọn
- * đủ và đúng mới có điểm) hoặc tự luận
- * (học viên viết / chụp ảnh bài làm, gia sư chấm). Bài đã công bố thì chỉ xem.
- */
+// Soạn danh sách câu hỏi: trắc nghiệm (một hoặc nhiều đáp án đúng, hệ thống tự chấm — câu nhiều đáp án phải chọn
+// đủ và đúng mới có điểm) hoặc tự luận
+// (học viên viết / chụp ảnh bài làm, gia sư chấm). Bài đã công bố thì chỉ xem.
 export function QuestionBuilder({ questions, onChange, readOnly = false }: QuestionBuilderProps) {
   // Câu đang tải ảnh và lỗi tải của từng câu, khóa theo question.key
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<Record<string, string>>({});
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  /** Sửa một câu theo vị trí */
+  // Sửa một câu theo vị trí
   function patch(index: number, change: Partial<QuestionDraft>) {
     onChange(questions.map((question, i) => (i === index ? { ...question, ...change } : question)));
   }
 
-  /** Tải ảnh lên kho chung rồi gắn link trả về vào câu hỏi */
+  // Tải ảnh lên kho chung rồi gắn link trả về vào câu hỏi
   async function uploadImage(index: number, file: File) {
     const question = questions[index];
     setUploadError((errors) => ({ ...errors, [question.key]: "" }));
@@ -48,7 +46,7 @@ export function QuestionBuilder({ questions, onChange, readOnly = false }: Quest
     }
   }
 
-  /** Đổi chỗ câu `index` với câu kế bên */
+  // Đổi chỗ câu `index` với câu kế bên
   function move(index: number, offset: -1 | 1) {
     const next = [...questions];
     [next[index], next[index + offset]] = [next[index + offset], next[index]];
@@ -63,7 +61,7 @@ export function QuestionBuilder({ questions, onChange, readOnly = false }: Quest
             <li key={question.key} className="rounded-2xl border border-brand-sandLine bg-brand-sand/40 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-[14.5px] font-bold text-brand-navy">
-                  Câu {index + 1} ·{" "}
+                  Câu {index + 1} -{" "}
                   {question.type === "ESSAY"
                     ? "Tự luận"
                     : question.multiple
@@ -142,8 +140,8 @@ export function QuestionBuilder({ questions, onChange, readOnly = false }: Quest
                     {question.mediaType === "IMAGE" ? (
                       <img src={question.mediaUrl} alt={`Minh họa câu ${index + 1}`} className="max-h-40 rounded-lg object-contain" />
                     ) : (
-                      <a href={question.mediaUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-[14px] font-semibold text-brand-navy underline">
-                        <Icon name="smart_display" className="text-[19px]" />
+                      <a href={question.mediaUrl} target="_blank" rel="noreferrer" className="inline-block text-[14px] font-semibold text-brand-navy underline">
+                        <Icon name="smart_display" className="mr-1.5 text-[19px]" />
                         Xem video đã gắn
                       </a>
                     )}

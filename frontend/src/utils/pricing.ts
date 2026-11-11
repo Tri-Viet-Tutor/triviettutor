@@ -6,21 +6,21 @@ import type { EnrollmentFilter, EnrollmentStatus, EnrollmentWindow, ShopFilters,
 import { diffDays, formatDate } from "@/utils/date";
 import { normalizeText } from "@/utils/text";
 
-/* Hàm tính trạng thái đợt đăng ký, lịch học và lọc / sắp xếp khóa học. */
+// Hàm tính trạng thái đợt đăng ký, lịch học và lọc / sắp xếp khóa học.
 
-/** Đợt mở đăng ký của một khóa (không có nếu khóa chưa đặt ngày) */
+// Đợt mở đăng ký của một khóa (không có nếu khóa chưa đặt ngày)
 export function enrollmentWindowOf(course: Course): EnrollmentWindow | undefined {
   return ENROLLMENT_WINDOWS.find((window) => window.course.id === course.id);
 }
 
-/** Trạng thái của một đợt đăng ký so với hôm nay */
+// Trạng thái của một đợt đăng ký so với hôm nay
 export function enrollmentStatus(window: EnrollmentWindow, today: Date): EnrollmentStatus {
   if (today < window.opens) return "UPCOMING";
   if (today <= window.deadline) return "OPEN";
   return today < window.starts ? "CLOSED" : "STARTED";
 }
 
-/** Câu ghi trên nhãn trạng thái, ví dụ "Đang mở - còn 21 ngày" */
+// Câu ghi trên nhãn trạng thái, ví dụ "Đang mở - còn 21 ngày"
 export function enrollmentStatusLabel(window: EnrollmentWindow, today: Date): string {
   switch (enrollmentStatus(window, today)) {
     case "UPCOMING":
@@ -36,7 +36,7 @@ export function enrollmentStatusLabel(window: EnrollmentWindow, today: Date): st
   }
 }
 
-/** Lịch học của một khóa ở dạng chữ, ví dụ { days: "Thứ 2 – 4 – 6", time: "18:00 – 20:00" } */
+// Lịch học của một khóa ở dạng chữ, ví dụ { days: "Thứ 2 – 4 – 6", time: "18:00 – 20:00" }
 export function courseSchedule(course: Course): { days: string; time: string } | undefined {
   if (!course.schedule) return undefined;
   const { pattern, timeSlot } = course.schedule;
@@ -45,7 +45,7 @@ export function courseSchedule(course: Course): { days: string; time: string } |
   return days && time ? { days, time } : undefined;
 }
 
-/** Khớp ô tìm: so không dấu với tên khóa, tên môn, mô tả, tên gia sư và lộ trình */
+// Khớp ô tìm: so không dấu với tên khóa, tên môn, mô tả, tên gia sư và lộ trình
 function matchesQuery(course: Course, query: string): boolean {
   const keyword = normalizeText(query);
   if (!keyword) return true;
@@ -53,21 +53,21 @@ function matchesQuery(course: Course, query: string): boolean {
   return normalizeText(haystack.join(" ")).includes(keyword);
 }
 
-/** Khớp bộ lọc đợt đăng ký */
+// Khớp bộ lọc đợt đăng ký
 function matchesEnrollment(course: Course, filter: EnrollmentFilter, today: Date): boolean {
   if (filter === "ALL") return true;
   const window = enrollmentWindowOf(course);
   return window !== undefined && enrollmentStatus(window, today) === filter;
 }
 
-/** Khớp học phí tối đa */
+// Khớp học phí tối đa
 function matchesFee(course: Course, maxFee: number): boolean {
   // Khóa chưa có học phí chỉ hiện khi chưa giới hạn học phí
   if (course.tuitionFee === undefined) return maxFee >= FEE_RANGE.max;
   return course.tuitionFee <= maxFee;
 }
 
-/** Các khóa khớp ô tìm và bộ lọc */
+// Các khóa khớp ô tìm và bộ lọc
 export function filterCourses(filters: ShopFilters, today: Date): Course[] {
   return COURSES.filter(
     (course) =>
@@ -79,10 +79,11 @@ export function filterCourses(filters: ShopFilters, today: Date): Course[] {
   );
 }
 
-/** Sắp xếp kết quả; khóa thiếu học phí / ngày khai giảng luôn xếp cuối */
+// Sắp xếp kết quả; khóa thiếu học phí / ngày khai giảng luôn xếp cuối
 export function sortCourses(courses: Course[], sort: ShopSort): Course[] {
   if (sort === "DEFAULT") return courses;
   const missingLast = Number.POSITIVE_INFINITY;
+  // Giá trị dùng để sắp xếp khóa (ngày mở đăng ký hoặc học phí)
   const key = (course: Course): number => {
     if (sort === "START_ASC") return enrollmentWindowOf(course)?.starts.getTime() ?? missingLast;
     const fee = course.tuitionFee ?? (sort === "FEE_ASC" ? missingLast : -1);
@@ -91,7 +92,7 @@ export function sortCourses(courses: Course[], sort: ShopSort): Course[] {
   return [...courses].sort((first, second) => key(first) - key(second));
 }
 
-/** Có đang lọc gì không (để hiện nút "Xóa bộ lọc") */
+// Có đang lọc gì không (để hiện nút "Xóa bộ lọc")
 export function hasActiveFilters(filters: ShopFilters): boolean {
   return (
     filters.query.trim() !== "" ||

@@ -2,7 +2,7 @@ import { Sparkle } from "@/components/motion/Sparkle";
 import { DOODLE_STROKE } from "@/constants/doodle";
 import type { Doodle } from "@/interfaces/ui";
 
-/** Nét vẽ tay quanh chủ đề liên lạc: phong bì, máy bay giấy, a còng, bong bóng trò chuyện, điện thoại, ghim bản đồ */
+// Nét vẽ tay quanh chủ đề liên lạc: phong bì, máy bay giấy, a còng, bong bóng trò chuyện, điện thoại, ghim bản đồ
 const DOODLES: Doodle[] = [
   {
     id: "envelope",
@@ -96,7 +96,7 @@ const DOODLES: Doodle[] = [
   },
 ];
 
-/** Sao nhấp nháy xen giữa các nét vẽ */
+// Sao nhấp nháy xen giữa các nét vẽ
 const SPARKLES = [
   { left: 26, top: 14, size: 18, delay: 0 },
   { left: 78, top: 16, size: 13, delay: 1.1 },
@@ -104,10 +104,8 @@ const SPARKLES = [
   { left: 34, top: 95, size: 13, delay: 1.8 },
 ];
 
-/**
- * Nét vẽ tay trôi nhẹ quanh phần chữ của trang "Liên hệ", lấp khoảng trống ở nửa trái.
- * Chỉ để trang trí nên ẩn với trình đọc màn hình, và chỉ hiện từ màn hình lớn (lg).
- */
+// Nét vẽ tay trôi nhẹ quanh phần chữ của trang "Liên hệ", lấp khoảng trống ở nửa trái.
+// Chỉ để trang trí nên ẩn với trình đọc màn hình, và chỉ hiện từ màn hình lớn (lg).
 export function ContactDoodles() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 hidden w-[41%] select-none lg:block">

@@ -3,7 +3,7 @@ import { DOODLE_STROKE } from "@/constants/doodle";
 import type { SparkleSpot } from "@/interfaces/ui";
 import type { CatalogDoodle } from "@/interfaces/catalog";
 
-/** Mỗi nét vẽ gợi một môn đang dạy: Toán, Hóa, Tiếng Anh, Tin học, Ngữ Văn */
+// Mỗi nét vẽ gợi một môn đang dạy: Toán, Hóa, Tiếng Anh, Tin học, Ngữ Văn
 const DOODLES: CatalogDoodle[] = [
   {
     id: "formula",
@@ -108,7 +108,7 @@ const DOODLES: CatalogDoodle[] = [
   },
 ];
 
-/** Sao bốn cánh nhấp nháy xen giữa các nét vẽ */
+// Sao bốn cánh nhấp nháy xen giữa các nét vẽ
 const SPARKLES: SparkleSpot[] = [
   { left: 33, top: 22, size: 18, delay: 0 },
   { left: 94, top: 39, size: 14, delay: 0.9 },
@@ -117,11 +117,9 @@ const SPARKLES: SparkleSpot[] = [
   { left: 72, top: 10, size: 12, delay: 2.1 },
 ];
 
-/**
- * Nét vẽ tay trôi nhẹ quanh phần chữ mở đầu trang "Khối lớp / Môn học",
- * lấp khoảng trống ở nửa trái. Chỉ để trang trí nên ẩn với trình đọc màn hình,
- * và chỉ hiện từ màn hình lớn (lg) — nơi phần chữ mới có khoảng trống chung quanh.
- */
+// Nét vẽ tay trôi nhẹ quanh phần chữ mở đầu trang "Khối lớp / Môn học",
+// lấp khoảng trống ở nửa trái. Chỉ để trang trí nên ẩn với trình đọc màn hình,
+// và chỉ hiện từ màn hình lớn (lg) — nơi phần chữ mới có khoảng trống chung quanh.
 export function HeroDoodles() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 hidden w-1/2 select-none lg:block">
@@ -144,7 +142,9 @@ export function HeroDoodles() {
         <Sparkle key={`${sparkle.left}-${sparkle.top}`} {...sparkle} />
       ))}
 
-      {/* Mũi tên nét đứt cong từ dòng mô tả sang các bong bóng môn học */}
+      {
+        // Mũi tên nét đứt cong từ dòng mô tả sang các bong bóng môn học
+      }
       <svg
         viewBox="0 0 240 96"
         fill="none"

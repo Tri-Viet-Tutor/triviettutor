@@ -5,7 +5,7 @@ import type { RecentAttendanceProps } from "@/interfaces/portal";
 import { formatDayMonth, parseIsoDate, weekdayName } from "@/utils/date";
 import { formatTimeRange } from "@/utils/sessions";
 
-/** Điểm danh của tôi ở mấy buổi đã học gần đây nhất. */
+// Điểm danh của tôi ở mấy buổi đã học gần đây nhất.
 export function RecentAttendance({ items }: RecentAttendanceProps) {
   return (
     <section className={`p-4 ${PORTAL_CARD}`} aria-labelledby="recent-attendance-title">

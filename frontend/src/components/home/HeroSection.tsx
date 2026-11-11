@@ -6,11 +6,13 @@ import { CONTAINER, FOCUS_RING } from "@/constants/classNames";
 import { HERO_SLIDE_MS, HERO_SLIDES, HERO_TITLE_LINES } from "@/constants/home";
 import { riseDelay } from "@/utils/motion";
 
-/** Phần mở đầu: tiêu đề, khung ảnh tự chuyển và thẻ đeo "Tìm kiếm gia sư". */
+// Phần mở đầu: tiêu đề, khung ảnh tự chuyển và thẻ đeo "Tìm kiếm gia sư".
 export function HeroSection() {
   return (
     <section className="paper-grid relative bg-[#E8E2D5]">
-      {/* Thẻ đeo "Tìm kiếm gia sư" thả từ mép trên xuống — chỉ hiện trên màn hình rộng */}
+      {
+        // Thẻ đeo "Tìm kiếm gia sư" thả từ mép trên xuống — chỉ hiện trên màn hình rộng
+      }
       <div className={`${CONTAINER} relative z-10 hidden xl:block`}>
         <LanyardTag className="absolute left-[53.5%] top-0 -translate-x-1/2" />
       </div>
@@ -45,7 +47,9 @@ export function HeroSection() {
         </div>
         <div className="hero-rise lg:col-span-5" style={riseDelay(400)}>
           <FramedSlideshow slides={HERO_SLIDES} intervalMs={HERO_SLIDE_MS}>
-            {/* Nhãn nổi: bấm để cuộn tới phần đội ngũ gia sư */}
+            {
+              // Nhãn nổi: bấm để cuộn tới phần đội ngũ gia sư
+            }
             <a
               href="#tutors-showcase"
               onClick={(event) => {

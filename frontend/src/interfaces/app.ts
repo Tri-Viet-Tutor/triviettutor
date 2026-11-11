@@ -1,21 +1,21 @@
 import type { ReactNode } from "react";
-import type { Role } from "@/interfaces/api";
+import type { Role } from "@/interfaces/dto";
 
 // ── app/AppProviders.tsx ──
-/** Props của AppProviders */
+// Props của AppProviders
 export interface AppProvidersProps {
   children: ReactNode;
 }
 
 // ── components/routing ──
-/** Props của LegacyRedirect */
+// Props của LegacyRedirect
 export interface LegacyRedirectProps {
-  /** Đường dẫn mới */
+  // Đường dẫn mới
   to: string;
 }
 
-/** Props của RoleRoute */
+// Props của RoleRoute
 export interface RoleRouteProps {
-  /** Vai trò được phép vào nhóm trang này */
+  // Vai trò được phép vào nhóm trang này
   allowedRole: Role;
 }

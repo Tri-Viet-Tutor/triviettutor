@@ -26,7 +26,7 @@ const TABS: { value: StatusTab; label: string }[] = [
   { value: "GRADED", label: "Đã có điểm" },
 ];
 
-/** Trang Bài tập của học viên: bài tập gia sư đã công bố cho các lớp đang học, bấm vào để làm hoặc xem điểm. */
+// Trang Bài tập của học viên: bài tập gia sư đã công bố cho các lớp đang học, bấm vào để làm hoặc xem điểm.
 export function StudentHomeworksPage() {
   const now = useNow();
   const [tab, setTab] = useState<StatusTab>("ALL");
@@ -43,6 +43,7 @@ export function StudentHomeworksPage() {
       retry: false,
     })),
   });
+  // Tên khóa của lớp, chưa tải được thì hiện mã lớp
   const courseName = (id: number) => classes[classIds.indexOf(id)]?.data?.courseName ?? `Lớp ${displayCode("class", id)}`;
 
   return (
@@ -88,7 +89,7 @@ export function StudentHomeworksPage() {
                   <div className="min-w-0">
                     <p className="truncate text-[16px] font-bold text-brand-navy">{homework.title}</p>
                     <p className="mt-0.5 text-[14px] text-brand-muted">
-                      {courseName(classGroupId)} · Hạn nộp {formatDateTime(homework.dueAt)}
+                      {courseName(classGroupId)} - Hạn nộp {formatDateTime(homework.dueAt)}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">

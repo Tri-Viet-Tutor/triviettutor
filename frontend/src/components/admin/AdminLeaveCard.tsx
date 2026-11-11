@@ -8,14 +8,15 @@ import { AUTH_LABEL, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORT
 import { LEAVE_RESOLUTION, LEAVE_STATUS, SESSION_STATUS } from "@/constants/labels";
 import { ROUTES } from "@/constants/routes";
 import { adminKeys, useAdminSession, useCanOfferMakeup, useRefreshAdmin, useUserDirectory } from "@/hooks/useAdminData";
-import type { AdminLeaveRequestsQuery, Role } from "@/interfaces/api";
-import { assignSubstitute, cancelSession, excuseLeaveRequest, fetchAdminLeaveRequests, rejectLeaveRequest } from "@/services/admin";
+import type { AdminLeaveRequestsQuery, Role } from "@/interfaces/dto";
+import { assignSubstitute, cancelSession, excuseLeaveRequest, fetchAdminLeaveRequests, rejectLeaveRequest } from "@/services/adminService";
 import { formatClockTime, formatDate, parseIsoDate } from "@/utils/date";
-import { formatLongDate, formatTimeRange, teacherOf } from "@/utils/sessions";
+import { formatLongDate, formatTimeRange, leaveResolutionText, teacherOf } from "@/utils/sessions";
 import type { AdminLeaveCardProps, LeaveCardAction } from "@/interfaces/admin";
 import { displayCode } from "@/utils/classes";
 import { Select } from "@/components/ui/Select";
 
+// Thẻ một đơn xin nghỉ cho admin: duyệt, từ chối, nhờ dạy thay, hủy buổi hoặc xếp học bù
 export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
   const refresh = useRefreshAdmin();
   const { tutors, label } = useUserDirectory();
@@ -25,7 +26,7 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
   // Dữ liệu form dạy thay
   const [substituteId, setSubstituteId] = useState("");
 
-  /** Xử lý xong: đóng form và tải lại dữ liệu khu quản trị */
+  // Xử lý xong: đóng form và tải lại dữ liệu khu quản trị
   const done = () => {
     setAction(null);
     void refresh();
@@ -72,7 +73,7 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
     session.originalSessionId === null;
   const canMakeupCancelled = useCanOfferMakeup(request.sessionId, session?.classGroupId ?? 0, cancelledWithoutMakeup) === true;
 
-  /** Mở form của một cách xử lý, xóa lỗi cũ của các form khác */
+  // Mở form của một cách xử lý, xóa lỗi cũ của các form khác
   function open(next: LeaveCardAction) {
     reject.reset();
     excuse.reset();
@@ -120,7 +121,7 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
           )}
         </p>
       )}
-      {request.resolutionReason && <p className="mt-1 text-[14.5px] text-brand-ink">Ghi chú xử lý: {request.resolutionReason}</p>}
+      {request.resolutionReason && <p className="mt-1 text-[14.5px] text-brand-ink">Ghi chú xử lý: {leaveResolutionText(request.resolutionReason)}</p>}
 
       <p className="mt-3 text-[13px] text-brand-muted">
         Gửi lúc {formatClockTime(requestedAt)} ngày {formatDate(requestedAt)} -{" "}

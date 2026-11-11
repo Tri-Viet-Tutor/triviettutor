@@ -5,13 +5,13 @@ import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING as FOCUS, TODAY_PANEL_CTA } from "@/constants/classNames";
 import { SESSION_STATUS } from "@/constants/labels";
 import { LATE_NOTICE_HOURS } from "@/constants/rules";
-import type { SessionResponse } from "@/interfaces/api";
+import type { SessionResponse } from "@/interfaces/dto";
 import { diffDays, formatDayMonth, parseIsoDate, startOfToday, weekdayName } from "@/utils/date";
 import { canJoinNow, canRequestLeave, dayLabel, formatTimeRange, sessionEnd, sessionStart } from "@/utils/sessions";
 import type { TodayPanelProps } from "@/interfaces/portal";
 import { displayCode } from "@/utils/classes";
 
-/** "Còn 2 giờ 15 phút", "Còn 3 ngày", hoặc "Đang diễn ra" */
+// "Còn 2 giờ 15 phút", "Còn 3 ngày", hoặc "Đang diễn ra"
 function countdown(session: SessionResponse, now: Date): string {
   const start = sessionStart(session).getTime();
   if (now.getTime() >= start && now.getTime() < sessionEnd(session).getTime()) return "Đang diễn ra";
@@ -22,10 +22,8 @@ function countdown(session: SessionResponse, now: Date): string {
   return `Còn ${Math.floor(hours / 24)} ngày`;
 }
 
-/**
- * Bảng xanh mở đầu trang Tổng quan của học viên và gia sư: buổi hôm nay (hoặc buổi kế tiếp),
- * nút vào lớp trực tuyến, lối xin nghỉ, và chú kiến nhắc lịch trong bong bóng lời nói.
- */
+// Bảng xanh mở đầu trang Tổng quan của học viên và gia sư: buổi hôm nay (hoặc buổi kế tiếp),
+// nút vào lớp trực tuyến, lối xin nghỉ, và chú kiến nhắc lịch trong bong bóng lời nói.
 export function TodayPanel({
   role,
   session,
@@ -100,7 +98,9 @@ export function TodayPanel({
                 </div>
               </div>
 
-              {/* Phòng học nội bộ /classroom mở trong khung giờ vào lớp, kể cả khi buổi chưa gắn link ngoài */}
+              {
+                // Phòng học nội bộ /classroom mở trong khung giờ vào lớp, kể cả khi buổi chưa gắn link ngoài
+              }
               {canJoinNow(session, now) ? (
                 <Link to={`/classroom/${session.sessionId}`} className={TODAY_PANEL_CTA}>
                   Vào lớp
@@ -114,7 +114,9 @@ export function TodayPanel({
               )}
             </div>
 
-            {/* Dòng nhắc xin nghỉ: đã xin / còn xin được / đã bắt đầu */}
+            {
+              // Dòng nhắc xin nghỉ: đã xin / còn xin được / đã bắt đầu
+            }
             <p className="flex items-center gap-2.5 px-4 py-3 text-[14px] text-brand-muted">
               {hasPendingLeave ? (
                 <>

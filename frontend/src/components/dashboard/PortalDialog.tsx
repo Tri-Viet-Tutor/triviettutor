@@ -3,10 +3,8 @@ import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING } from "@/constants/classNames";
 import type { PortalDialogProps } from "@/interfaces/portal";
 
-/**
- * Hộp thoại dùng thẻ <dialog> gốc của trình duyệt (tự giữ tiêu điểm bàn phím trong hộp, Esc để đóng).
- * Dùng cho các form tạo / sửa trong khu quản trị.
- */
+// Hộp thoại dùng thẻ <dialog> gốc của trình duyệt (tự giữ tiêu điểm bàn phím trong hộp, Esc để đóng).
+// Dùng cho các form tạo / sửa trong khu quản trị.
 export function PortalDialog({ open, title, description, onClose, children, widthClassName = "max-w-[560px]" }: PortalDialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
 

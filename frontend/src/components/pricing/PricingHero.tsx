@@ -9,27 +9,31 @@ import { ROUTES } from "@/constants/routes";
 import { riseDelay } from "@/utils/motion";
 import type { PricingHeroProps } from "@/interfaces/pricing";
 
-/**
- * Phần mở đầu trang "Mua khóa học": chữ bên trái (có nét vẽ tay chung quanh cho đỡ trống),
- * thẻ giá treo dây bên phải, nền hồng đào nhạt có một tấm ảnh mờ phía sau.
- */
+// Phần mở đầu trang "Mua khóa học": chữ bên trái (có nét vẽ tay chung quanh cho đỡ trống),
+// thẻ giá treo dây bên phải, nền hồng đào nhạt có một tấm ảnh mờ phía sau.
 export function PricingHero({ onViewFees }: PricingHeroProps) {
   return (
     <section className="relative overflow-hidden bg-[linear-gradient(155deg,#FCDFC9_0%,#FBEBDA_46%,#F5F1E9_100%)]">
-      {/* Ảnh nền mờ: nữ sinh mỉm cười làm bài, hoà vào nền hồng đào và tan dần ở hai mép trên dưới.
-          Trên màn hình lớn ảnh rộng hơn khung và neo mép phải để nụ cười nằm giữa phần chữ và thẻ giá. */}
+      {
+        // Ảnh nền mờ: nữ sinh mỉm cười làm bài, hoà vào nền hồng đào và tan dần ở hai mép trên dưới.
+        // Trên màn hình lớn ảnh rộng hơn khung và neo mép phải để nụ cười nằm giữa phần chữ và thẻ giá.
+      }
       <img
         src={PRICING_HERO_BACKDROP}
         alt=""
         aria-hidden="true"
         className="pointer-events-none absolute inset-y-0 right-0 h-full w-full max-w-none object-cover object-[center_26%] opacity-[0.28] mix-blend-multiply lg:w-[114%] [mask-image:linear-gradient(to_bottom,transparent_0%,black_22%,black_70%,transparent_100%)]"
       />
-      {/* Lớp sáng bên trái giữ cho chữ dễ đọc trên ảnh */}
+      {
+        // Lớp sáng bên trái giữ cho chữ dễ đọc trên ảnh
+      }
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(252,231,214,0.78)_0%,rgba(252,231,214,0.35)_48%,transparent_78%)]"
       />
-      {/* Chấm bi mờ ở góc phải và mép dưới hoà vào nền giấy */}
+      {
+        // Chấm bi mờ ở góc phải và mép dưới hoà vào nền giấy
+      }
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(11,58,140,0.16)_1.3px,transparent_1.3px)] bg-[length:22px_22px] [mask-image:linear-gradient(240deg,black,transparent_55%)]"

@@ -2,10 +2,8 @@ import { useEffect, useState } from "react";
 import { prefersReducedMotion } from "@/utils/motion";
 import type { FramedSlideshowProps } from "@/interfaces/ui";
 
-/**
- * Khung ảnh tự chuyển ở phần mở đầu trang chủ: ảnh mờ dần và thu phóng chậm,
- * khung bo góc lớn viền trắng, khối xanh đặt lệch phía sau, vòng cam và mảng chấm bi.
- */
+// Khung ảnh tự chuyển ở phần mở đầu trang chủ: ảnh mờ dần và thu phóng chậm,
+// khung bo góc lớn viền trắng, khối xanh đặt lệch phía sau, vòng cam và mảng chấm bi.
 export function FramedSlideshow({ slides, intervalMs = 5000, children }: FramedSlideshowProps) {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -20,14 +18,20 @@ export function FramedSlideshow({ slides, intervalMs = 5000, children }: FramedS
 
   return (
     <div className="relative mx-auto max-w-md lg:max-w-none">
-      {/* Khối xanh đặt lệch phía sau ảnh */}
+      {
+        // Khối xanh đặt lệch phía sau ảnh
+      }
       <div
         aria-hidden="true"
         className="absolute inset-0 translate-x-4 translate-y-4 rotate-2 rounded-[36px] rounded-tr-[120px] bg-brand-navy"
       />
-      {/* Vòng cam nằm trong góc bo lớn */}
+      {
+        // Vòng cam nằm trong góc bo lớn
+      }
       <div aria-hidden="true" className="absolute -right-3 -top-4 h-[84px] w-[84px] rounded-full border-[13px] border-brand-orange" />
-      {/* Mảng chấm bi */}
+      {
+        // Mảng chấm bi
+      }
       <div
         aria-hidden="true"
         className="absolute -bottom-8 -left-8 h-28 w-28 bg-[radial-gradient(theme(colors.brand.navy)_1.6px,transparent_1.6px)] bg-[length:14px_14px] opacity-30"
@@ -49,7 +53,9 @@ export function FramedSlideshow({ slides, intervalMs = 5000, children }: FramedS
             }`}
           />
         ))}
-        {/* Chấm chuyển ảnh */}
+        {
+          // Chấm chuyển ảnh
+        }
         {slides.length > 1 && (
           <div className="absolute bottom-3 right-4 flex items-center">
             {slides.map((slide, index) => (

@@ -2,11 +2,11 @@ import { Icon } from "@/components/ui/Icon";
 import { PORTAL_CARD } from "@/constants/classNames";
 import type { PortalEmptyProps, PortalErrorProps, PortalLoadingProps } from "@/interfaces/portal";
 
-/** Nút viền xanh "Thử lại" */
+// Nút viền xanh "Thử lại"
 const BTN =
   "inline-flex h-10 shrink-0 items-center justify-center rounded-xl border border-brand-navy px-4 text-[14px] font-semibold text-brand-navy transition-colors hover:bg-brand-navy hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
 
-/** Khung giữ chỗ trong lúc tải dữ liệu. */
+// Khung giữ chỗ trong lúc tải dữ liệu.
 export function PortalLoading({ label, rows = 3 }: PortalLoadingProps) {
   return (
     <div role="status" aria-label={label} className="space-y-3">
@@ -20,7 +20,7 @@ export function PortalLoading({ label, rows = 3 }: PortalLoadingProps) {
   );
 }
 
-/** Báo không tải được dữ liệu, kèm nút thử lại. */
+// Báo không tải được dữ liệu, kèm nút thử lại.
 export function PortalError({ message, onRetry }: PortalErrorProps) {
   return (
     <div
@@ -40,7 +40,7 @@ export function PortalError({ message, onRetry }: PortalErrorProps) {
   );
 }
 
-/** Chỗ chưa có dữ liệu: nói rõ vì sao trống và làm gì tiếp. */
+// Chỗ chưa có dữ liệu: nói rõ vì sao trống và làm gì tiếp.
 export function PortalEmpty({ icon, title, description, action }: PortalEmptyProps) {
   return (
     <div className="rounded-2xl border-2 border-dashed border-brand-sandLine bg-white/70 px-6 py-12 text-center">

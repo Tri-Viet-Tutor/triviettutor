@@ -7,9 +7,9 @@ import { DELIVERY_MODE_OPTIONS, GRADE_OPTIONS, SCHEDULE_PATTERN_OPTIONS } from "
 import { PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT } from "@/constants/classNames";
 import { portalKeys } from "@/hooks/usePortalData";
 import { formatClock, useCountdown } from "@/hooks/useCountdown";
-import type { DeliveryMode, GradeLevel, VnpayRedirect } from "@/interfaces/api";
+import type { DeliveryMode, GradeLevel, VnpayRedirect } from "@/interfaces/dto";
 import type { CheckoutFlowProps, SeatHoldProps, StudentPaymentProps } from "@/interfaces/checkout";
-import { getApiError } from "@/services/api";
+import { getApiError } from "@/services/apiClient";
 import { saveCheckoutReturn } from "@/utils/checkoutReturn";
 import {
   cancelIntent,
@@ -36,7 +36,7 @@ import { displayCode } from "@/utils/classes";
 const labelOf = <T extends string>(options: readonly { value: T; label: string }[], value: T) =>
   options.find((option) => option.value === value)?.label ?? value;
 
-/** Câu báo cho các mã lỗi thanh toán thường gặp */
+// Câu báo cho các mã lỗi thanh toán thường gặp
 const PAYMENT_ERRORS: Record<string, string> = {
   PAYMENT_GATEWAY_DISABLED: "Cổng VNPay chưa được cấu hình. Vui lòng liên hệ trung tâm.",
   CLASS_FULL: "Lớp đã hết chỗ. Vui lòng chọn lớp khác.",
@@ -54,12 +54,12 @@ const PAYMENT_ERRORS: Record<string, string> = {
   PAYMENT_PROVIDER_CONFLICT: "Yêu cầu đã bắt đầu bằng phương thức khác. Hãy tiếp tục tại VNPay hoặc hủy để tạo yêu cầu mới.",
 };
 
-/** Câu báo lỗi thanh toán dễ đọc */
+// Câu báo lỗi thanh toán dễ đọc
 function errorMessage(error: unknown): string {
   return PAYMENT_ERRORS[getApiError(error).errorCode ?? ""] ?? "Chưa xử lý được yêu cầu. Vui lòng thử lại.";
 }
 
-/** Mã yêu cầu thanh toán đang dở của học viên (lưu trong sessionStorage) */
+// Mã yêu cầu thanh toán đang dở của học viên (lưu trong sessionStorage)
 function storedIntent(userId: number): number | null {
   try {
     const value = Number(sessionStorage.getItem(`tuition-intent-${userId}`));
@@ -69,7 +69,7 @@ function storedIntent(userId: number): number | null {
   }
 }
 
-/** Đồng hồ đếm ngược thời gian giữ chỗ */
+// Đồng hồ đếm ngược thời gian giữ chỗ
 function SeatHold({ expiresAt }: SeatHoldProps) {
   const [left] = useCountdown(Math.max(0, Math.floor((Date.parse(expiresAt) - Date.now()) / 1000)));
   return (
@@ -79,10 +79,8 @@ function SeatHold({ expiresAt }: SeatHoldProps) {
   );
 }
 
-/**
- * Đăng ký lớp và thanh toán học phí qua VNPay Sandbox. Chỉ tài khoản học viên mới đăng ký được:
- * chọn lớp → giữ chỗ → sang VNPay; quay về thì kiểm tra kết quả và ghi danh.
- */
+// Đăng ký lớp và thanh toán học phí qua VNPay Sandbox. Chỉ tài khoản học viên mới đăng ký được:
+// chọn lớp → giữ chỗ → sang VNPay; quay về thì kiểm tra kết quả và ghi danh.
 export function CheckoutFlow({ shopTo = ROUTES.pricing }: CheckoutFlowProps) {
   const user = useAuthStore((state) => state.user);
   const { search } = useLocation();
@@ -120,7 +118,7 @@ export function CheckoutFlow({ shopTo = ROUTES.pricing }: CheckoutFlowProps) {
   );
 }
 
-/** Phần đăng ký và thanh toán của học viên đã đăng nhập */
+// Phần đăng ký và thanh toán của học viên đã đăng nhập
 function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
   const cache = useQueryClient();
   const navigate = useNavigate();
@@ -194,13 +192,14 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
     enabled: Boolean(summaryClassId),
   });
 
+  // Ghi nhớ yêu cầu thanh toán đang mở để tải lại trang vẫn tiếp tục được
   function saveIntent(id: number | null) {
     setActiveId(id);
     try {
       if (id === null) sessionStorage.removeItem(`tuition-intent-${userId}`);
       else sessionStorage.setItem(`tuition-intent-${userId}`, String(id));
     } catch {
-      /* Recovery still works through the signed return URL. */
+      // Recovery still works through the signed return URL.
     }
   }
   const start = useMutation({
@@ -263,6 +262,7 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
     },
   });
 
+  // Bỏ yêu cầu thanh toán hiện tại và quay lại bước chọn lớp
   function reset() {
     saveIntent(null);
     setRedirect(null);
@@ -307,7 +307,7 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
   // Bước hiện tại: 1 chọn lớp, 2 thanh toán, 3 đã ghi danh
   const step = state?.enrollment?.status === "ACTIVE" ? 3 : summaryClassId ? 2 : 1;
 
-  /** Chọn VNPay hoặc ví — hiện khi chưa có kết quả thanh toán */
+  // Chọn VNPay hoặc ví — hiện khi chưa có kết quả thanh toán
   const methods = !state?.payment && !returning && (
     <fieldset disabled={busy} className="min-w-0 space-y-2.5">
       <legend className="mb-2.5 text-[13px] font-bold uppercase tracking-wide text-brand-muted">Phương thức thanh toán</legend>
@@ -406,7 +406,9 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
             </div>
             <p className="mt-1 text-[14.5px] text-brand-muted">Kiểm tra lớp và lịch học, chọn cách thanh toán để giữ chỗ và ghi danh.</p>
           </div>
-          {/* Các bước đăng ký */}
+          {
+            // Các bước đăng ký
+          }
           <ol className="flex items-center gap-1.5 whitespace-nowrap text-[13px] font-semibold sm:gap-2">
             {["Chọn lớp", "Thanh toán", "Ghi danh"].map((label, index) => {
               const n = index + 1;
@@ -435,7 +437,9 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
       {paymentError && <AuthNotice tone="error">{errorMessage(paymentError)}</AuthNotice>}
       {wallet.isError && paymentMethod === "WALLET" && <AuthNotice tone="error">{walletError(wallet.error)}</AuthNotice>}
 
-      {/* Yêu cầu thanh toán đang dở hoặc kết quả từ VNPay */}
+      {
+        // Yêu cầu thanh toán đang dở hoặc kết quả từ VNPay
+      }
       {(intentId || returning) && (
         <section className={`${PORTAL_CARD} overflow-hidden`} aria-live="polite">
           {state && (
@@ -612,7 +616,9 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
           {selected.isError && <AuthNotice tone="error">Không tải được lịch của lớp đã chọn.</AuthNotice>}
           {course && (
             <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-              {/* Thông tin lớp */}
+              {
+                // Thông tin lớp
+              }
               <section className={`${PORTAL_CARD} overflow-hidden`}>
                 <div className="flex items-start gap-4 p-5 sm:p-6">
                   <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-navy text-white">
@@ -691,7 +697,9 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
                 </div>
               </section>
 
-              {/* Tóm tắt thanh toán */}
+              {
+                // Tóm tắt thanh toán
+              }
               <aside className={`${PORTAL_CARD} p-5 sm:p-6 lg:sticky lg:top-24`}>
                 <h2 className="text-[16px] font-extrabold text-brand-navy">Tóm tắt thanh toán</h2>
                 <dl className="mt-4 space-y-2 text-[14px]">

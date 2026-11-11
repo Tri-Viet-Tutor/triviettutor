@@ -6,7 +6,7 @@ import { ROUTES } from "@/constants/routes";
 import { formatVnd } from "@/utils/currency";
 import type { ClassSlipProps } from "@/interfaces/catalog";
 
-/** Phiếu tóm tắt lớp vừa chọn: mép trên răng cưa như phiếu xé, cập nhật theo từng lựa chọn. */
+// Phiếu tóm tắt lớp vừa chọn: mép trên răng cưa như phiếu xé, cập nhật theo từng lựa chọn.
 export function ClassSlip({ course, grade, deliveryMode, schedulePattern, timeSlot }: ClassSlipProps) {
   // Các dòng của phiếu: nhãn bên trái, giá trị bên phải
   const rows = [
@@ -28,7 +28,9 @@ export function ClassSlip({ course, grade, deliveryMode, schedulePattern, timeSl
             <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-brand-muted">Tri Viet Tutor</p>
             <h2 className="mt-1 text-[22px] font-extrabold leading-snug text-brand-navy">Phiếu chọn lớp</h2>
           </div>
-          {/* Con dấu */}
+          {
+            // Con dấu
+          }
           <span
             aria-hidden="true"
             className="flex h-14 w-14 shrink-0 -rotate-12 items-center justify-center rounded-full border-2 border-dashed border-brand-orangeHover text-brand-orangeHover"
@@ -41,7 +43,9 @@ export function ClassSlip({ course, grade, deliveryMode, schedulePattern, timeSl
           {rows.map((row) => (
             <div key={row.label} className="grid grid-cols-[88px,1fr] gap-3 py-3">
               <dt className="text-[13px] font-semibold text-brand-muted">{row.label}</dt>
-              {/* key đổi theo giá trị để dòng vừa đổi nháy nhẹ một lần */}
+              {
+                // key đổi theo giá trị để dòng vừa đổi nháy nhẹ một lần
+              }
               <dd key={row.value} className="diary-flip text-[15px] font-bold leading-snug text-brand-navy">
                 {row.value}
               </dd>

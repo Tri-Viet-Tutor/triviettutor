@@ -9,8 +9,8 @@ import { FOCUS_RING, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD } fro
 import { ROUTES } from "@/constants/routes";
 import { patternLabel, subjectIcon, subjectLabel } from "@/constants/management";
 import { cartKey, useCart, useCartMutations } from "@/hooks/useCart";
-import type { ErrorCode, CartOrderResponse, TuitionClass } from "@/interfaces/api";
-import { apiErrorMessage, getApiError } from "@/services/api";
+import type { ErrorCode, CartOrderResponse, TuitionClass } from "@/interfaces/dto";
+import { apiErrorMessage, getApiError } from "@/services/apiClient";
 import { cancelOrder, checkoutCart, payOrderMock } from "@/services/cartService";
 import { listTuitionClasses } from "@/services/tuitionPaymentService";
 import { useAuthStore } from "@/stores/authStore";
@@ -21,7 +21,7 @@ import { formatVnd } from "@/utils/currency";
 import { formatDate, parseIsoDate } from "@/utils/date";
 import { displayCode } from "@/utils/classes";
 
-/** Câu báo cho các lỗi của giỏ hàng / đơn hàng */
+// Câu báo cho các lỗi của giỏ hàng / đơn hàng
 const CART_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   CART_CHANGED: "Giỏ hàng vừa thay đổi ở nơi khác. Đã tải lại giỏ, hãy chọn lớp và đặt đơn lại.",
   CART_LIMIT_EXCEEDED: "Giỏ hàng chứa tối đa 20 môn.",
@@ -38,13 +38,12 @@ const CART_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   PAYMENT_PRICE_CHANGED: "Học phí vừa thay đổi. Hãy đặt đơn lại.",
 };
 
+// Câu báo lỗi giỏ hàng dễ hiểu theo mã lỗi
 const errorText = (error: unknown, fallback: string) => apiErrorMessage(error, CART_ERROR_TEXT, fallback);
 
-/**
- * Giỏ hàng của học viên (/student/cart): mỗi dòng là một môn; chọn một lớp đang mở cho từng môn,
- * đặt đơn (máy chủ tính giá, kể cả giảm theo sĩ số, và giữ giá trong thời hạn đơn) rồi thanh toán cả đơn.
- * Muốn mua đúng một lớp thì dùng "Mua ngay" ở trang Khóa học đang mở.
- */
+// Giỏ hàng của học viên (/student/cart): mỗi dòng là một môn; chọn một lớp đang mở cho từng môn,
+// đặt đơn (máy chủ tính giá, kể cả giảm theo sĩ số, và giữ giá trong thời hạn đơn) rồi thanh toán cả đơn.
+// Muốn mua đúng một lớp thì dùng "Mua ngay" ở trang Khóa học đang mở.
 export function StudentCartPage() {
   const userId = useAuthStore((state) => state.user?.id);
   const queryClient = useQueryClient();
@@ -196,7 +195,9 @@ export function StudentCartPage() {
               const picking = changing === item.id || (!selected && classes.length > 0);
               return (
                 <li key={item.id} className={`overflow-hidden ${PORTAL_CARD}`}>
-                  {/* Môn + lớp đang chọn */}
+                  {
+                    // Môn + lớp đang chọn
+                  }
                   <div className="flex items-start gap-4 p-4 sm:p-5">
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-tint text-brand-navy">
                       <Icon name={subjectIcon(item.subjectName)} className="text-[23px]" />
@@ -240,7 +241,9 @@ export function StudentCartPage() {
                     </div>
                   </div>
 
-                  {/* Danh sách lớp để chọn / đổi */}
+                  {
+                    // Danh sách lớp để chọn / đổi
+                  }
                   {picking && (
                     <fieldset className="border-t border-brand-sandLine bg-brand-sand/40 px-4 py-3 sm:px-5">
                       <legend className="sr-only">Chọn lớp {subjectLabel(item.subjectName)}</legend>
@@ -324,7 +327,7 @@ export function StudentCartPage() {
   );
 }
 
-/** Đơn đã đặt, chờ thanh toán: giá chốt từng lớp, hạn giữ giá, thanh toán hoặc hủy */
+// Đơn đã đặt, chờ thanh toán: giá chốt từng lớp, hạn giữ giá, thanh toán hoặc hủy
 function PendingOrder({
   order,
   paying,
@@ -372,7 +375,7 @@ function PendingOrder({
   );
 }
 
-/** Đơn đã thanh toán xong */
+// Đơn đã thanh toán xong
 function PaidOrder({ order }: { order: CartOrderResponse }) {
   return (
     <section className={`mx-auto max-w-[560px] p-8 text-center ${PORTAL_CARD}`}>
@@ -390,7 +393,7 @@ function PaidOrder({ order }: { order: CartOrderResponse }) {
   );
 }
 
-/** Thông tin gọn của lớp đang chọn trong giỏ */
+// Thông tin gọn của lớp đang chọn trong giỏ
 function ClassSummary({ group }: { group: TuitionClass }) {
   return (
     <div className="mt-0.5 min-w-0">

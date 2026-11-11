@@ -11,17 +11,15 @@ import { formatLongDate, givenName } from "@/utils/sessions";
 import { useAuthStore } from "@/stores/authStore";
 import { startOfToday, toIsoDate } from "@/utils/date";
 
-/** Số buổi học hiện ở trang Tổng quan */
+// Số buổi học hiện ở trang Tổng quan
 const UPCOMING_PREVIEW = 6;
-/** Số đơn chờ duyệt hiện ở trang Tổng quan */
+// Số đơn chờ duyệt hiện ở trang Tổng quan
 const PENDING_PREVIEW = 4;
 
-/**
- * Trang Tổng quan của quản trị: việc cần xử lý (đơn chờ duyệt, buổi chờ xếp lại lịch, buổi học hôm nay),
- * sơ đồ tổng quan (buổi học 7 ngày tới, lớp theo trạng thái, người dùng, sĩ số lớp đang tuyển sinh),
- * các buổi học từ hôm nay và đơn xin nghỉ mới.
- * Dữ liệu từ GET /admin/leave-requests, /admin/sessions và /admin/users.
- */
+// Trang Tổng quan của quản trị: việc cần xử lý (đơn chờ duyệt, buổi chờ xếp lại lịch, buổi học hôm nay),
+// sơ đồ tổng quan (buổi học 7 ngày tới, lớp theo trạng thái, người dùng, sĩ số lớp đang tuyển sinh),
+// các buổi học từ hôm nay và đơn xin nghỉ mới.
+// Dữ liệu từ GET /admin/leave-requests, /admin/sessions và /admin/users.
 export function AdminHomePage() {
   const user = useAuthStore((state) => state.user);
   const today = startOfToday();

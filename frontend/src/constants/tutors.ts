@@ -4,12 +4,10 @@ import type { TutorProfile, TutorAssurance } from "@/interfaces/tutor";
 import type { Faq } from "@/interfaces/ui";
 import { normalizeText } from "@/utils/text";
 
-/*
- * Danh sách gia sư của trang "Tìm gia sư", gom từ gia sư của từng khóa học.
- * Backend hiện lưu gia sư bằng users.full_name và tutor_profiles.bio; gia sư gắn với lớp qua tutor_assignments.
- * Chưa có API công khai trả danh sách gia sư nên tạm lấy từ dữ liệu khóa học — thêm gia sư vào
- * constants/courses.ts là trang này tự có.
- */
+// Danh sách gia sư của trang "Tìm gia sư", gom từ gia sư của từng khóa học.
+// Backend hiện lưu gia sư bằng users.full_name và tutor_profiles.bio; gia sư gắn với lớp qua tutor_assignments.
+// Chưa có API công khai trả danh sách gia sư nên tạm lấy từ dữ liệu khóa học — thêm gia sư vào
+// constants/courses.ts là trang này tự có.
 export const TUTOR_PROFILES: TutorProfile[] = COURSES.flatMap((course) =>
   course.tutors.map((tutor) => ({
     id: normalizeText(tutor.name).replace(/ /g, "-"),
@@ -22,24 +20,20 @@ export const TUTOR_PROFILES: TutorProfile[] = COURSES.flatMap((course) =>
   })),
 );
 
-/*
- * Ba điều trung tâm bảo đảm cho mọi gia sư — hiện trên từng hồ sơ.
- * Hai ý sau ứng với chức năng backend đã có (điểm danh từng buổi; xếp dạy thay / học bù khi gia sư nghỉ).
- */
+// Ba điều trung tâm bảo đảm cho mọi gia sư — hiện trên từng hồ sơ.
+// Hai ý sau ứng với chức năng backend đã có (điểm danh từng buổi; xếp dạy thay / học bù khi gia sư nghỉ).
 export const TUTOR_ASSURANCES: TutorAssurance[] = [
   { icon: "how_to_reg", title: "Được tuyển chọn", description: "Phỏng vấn và dạy thử trước khi đứng lớp." },
   { icon: "fact_check", title: "Dạy có ghi nhận", description: "Mỗi buổi đều điểm danh trên hệ thống." },
   { icon: "co_present", title: "Không để trống lớp", description: "Có gia sư dạy thay hoặc học bù khi vắng." },
 ];
 
-/** Hai dòng tiêu đề ở phần mở đầu */
+// Hai dòng tiêu đề ở phần mở đầu
 export const TUTOR_SEARCH_TITLE_LINES = ["Tìm Gia Sư", "Theo Môn Học"];
 
-/*
- * Câu hỏi thường gặp ở trang "Tìm gia sư". Mỗi câu trả lời dựa trên một chức năng backend đã có:
- * phân công gia sư cho lớp (tutor_assignments), dạy thay / học bù (session_changes),
- * đường dẫn phòng học từng buổi (sessions.meeting_url), điểm danh (attendance_records), xin nghỉ (leave_requests).
- */
+// Câu hỏi thường gặp ở trang "Tìm gia sư". Mỗi câu trả lời dựa trên một chức năng backend đã có:
+// phân công gia sư cho lớp (tutor_assignments), dạy thay / học bù (session_changes),
+// đường dẫn phòng học từng buổi (sessions.meeting_url), điểm danh (attendance_records), xin nghỉ (leave_requests).
 export const TUTOR_FAQS: Faq[] = [
   {
     question: "Tôi có được chọn gia sư không?",

@@ -3,11 +3,9 @@ import { Icon } from "@/components/ui/Icon";
 import { AUTH_ERROR, AUTH_INPUT, AUTH_LABEL } from "@/constants/classNames";
 import type { AuthFieldProps } from "@/interfaces/auth";
 
-/**
- * Một ô nhập của trang xác thực: nhãn, ô nhập, câu báo lỗi.
- * Ô mật khẩu (type="password") có thêm nút hiện / ẩn mật khẩu.
- * Dùng forwardRef để gắn thẳng `register(...)` của react-hook-form.
- */
+// Một ô nhập của trang xác thực: nhãn, ô nhập, câu báo lỗi.
+// Ô mật khẩu (type="password") có thêm nút hiện / ẩn mật khẩu.
+// Dùng forwardRef để gắn thẳng 'register(...)' của react-hook-form.
 export const AuthField = forwardRef<HTMLInputElement, AuthFieldProps>(function AuthField(
   { id, label, error, labelAction, type = "text", className = "", ...inputProps },
   ref,

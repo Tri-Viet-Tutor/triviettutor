@@ -10,7 +10,7 @@ import { COURSES } from "@/constants/courses";
 import type { ClassOption } from "@/interfaces/course";
 import type { ClassBuilderSectionProps } from "@/interfaces/catalog";
 
-/** Môn học lấy từ danh sách khóa (thêm khóa là ô chọn tự có thêm môn); `value` là mã môn gửi cho backend */
+// Môn học lấy từ danh sách khóa (thêm khóa là ô chọn tự có thêm môn); `value` là mã môn gửi cho backend
 const SUBJECT_OPTIONS: ClassOption<string>[] = COURSES.map((course) => ({
   value: course.subject,
   label: course.subjectLabel,
@@ -18,16 +18,14 @@ const SUBJECT_OPTIONS: ClassOption<string>[] = COURSES.map((course) => ({
   icon: course.icon,
 }));
 
-/** Tìm lựa chọn theo giá trị; không thấy thì lấy lựa chọn đầu tiên */
+// Tìm lựa chọn theo giá trị; không thấy thì lấy lựa chọn đầu tiên
 function find<T extends string>(options: ClassOption<T>[], value: T): ClassOption<T> {
   return options.find((option) => option.value === value) ?? options[0];
 }
 
-/**
- * Phiếu chọn lớp: năm mục ứng với năm thuộc tính của một lớp trong backend
- * (khối lớp, môn, hình thức, lịch tuần, ca học). Bên phải là phiếu tóm tắt.
- * Khi backend có GET /catalog/classes, năm giá trị này (cùng classType = GROUP) là bộ lọc gửi đi.
- */
+// Phiếu chọn lớp: năm mục ứng với năm thuộc tính của một lớp trong backend
+// (khối lớp, môn, hình thức, lịch tuần, ca học). Bên phải là phiếu tóm tắt.
+// Khi backend có GET /catalog/classes, năm giá trị này (cùng classType = GROUP) là bộ lọc gửi đi.
 export function ClassBuilderSection({ subject, onSubjectChange }: ClassBuilderSectionProps) {
   // Bốn lựa chọn còn lại do phiếu tự giữ; mặc định ca tối (SLOT_EVENING)
   const [gradeLevel, setGradeLevel] = useState(GRADE_OPTIONS[0].value);

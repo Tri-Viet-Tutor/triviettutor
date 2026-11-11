@@ -1,4 +1,5 @@
-import { getApiError } from "@/services/api";
+import { getApiError } from "@/services/apiClient";
+import type { TopupAttempt } from "@/interfaces/wallet";
 
 const MESSAGES: Record<string, string> = {
   WALLET_INSUFFICIENT_FUNDS: "Số dư ví chưa đủ. Bạn có thể nạp thêm hoặc thanh toán trực tiếp bằng VNPay.",
@@ -12,14 +13,12 @@ const MESSAGES: Record<string, string> = {
   IDEMPOTENCY_CONFLICT: "Yêu cầu đã được dùng với dữ liệu khác. Hãy tạo yêu cầu mới.",
   VALIDATION_ERROR: "Vui lòng kiểm tra số tiền nạp.",
 };
+// Câu báo lỗi ví dễ hiểu theo mã lỗi
 export function walletError(error: unknown): string {
   return MESSAGES[getApiError(error).errorCode ?? ""] ?? "Chưa xử lý được yêu cầu ví. Vui lòng thử lại.";
 }
-export interface TopupAttempt {
-  amount: number;
-  key: string;
-  id?: number;
-}
+
+// Đọc lần nạp tiền đang chờ (lưu trên trình duyệt)
 export function readTopup(userId: number): TopupAttempt | null {
   try {
     const saved: Partial<TopupAttempt> = JSON.parse(sessionStorage.getItem(`wallet-topup-${userId}`) ?? "null") ?? {};
@@ -33,10 +32,11 @@ export function readTopup(userId: number): TopupAttempt | null {
     return null;
   }
 }
+// Ghi nhớ lần nạp tiền đang chờ
 export function saveTopup(userId: number, attempt: TopupAttempt): void {
   try {
     sessionStorage.setItem(`wallet-topup-${userId}`, JSON.stringify(attempt));
   } catch {
-    /* Signed return still recovers the top-up. */
+    // Signed return still recovers the top-up.
   }
 }

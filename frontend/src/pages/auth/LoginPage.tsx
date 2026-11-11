@@ -17,17 +17,15 @@ import { getRoleHome, googleLoginUrl, login as loginRequest } from "@/services/a
 import { useAuthStore } from "@/stores/authStore";
 import { checkoutReturnPath, consumeCheckoutReturn } from "@/utils/checkoutReturn";
 
-/** Kiểm tra form đăng nhập */
+// Kiểm tra form đăng nhập
 const loginSchema = z.object({
   email: z.string().email("Email chưa đúng"),
   password: z.string().min(PASSWORD_MIN, `Mật khẩu có ít nhất ${PASSWORD_MIN} ký tự`),
 });
 
-/**
- * Trang đăng nhập: đăng nhập xong thì chuyển tới trang chủ của vai trò (BR-01),
- * hoặc quay lại trang thanh toán nếu đang mua khóa học dở.
- * Tài khoản chưa kích hoạt (ACCOUNT_NOT_VERIFIED) được dẫn sang trang nhập mã OTP.
- */
+// Trang đăng nhập: đăng nhập xong thì chuyển tới trang chủ của vai trò (BR-01),
+// hoặc quay lại trang thanh toán nếu đang mua khóa học dở.
+// Tài khoản chưa kích hoạt (ACCOUNT_NOT_VERIFIED) được dẫn sang trang nhập mã OTP.
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -59,7 +57,7 @@ export function LoginPage() {
     defaultValues: { email: locationState?.email ?? "", password: "" },
   });
 
-  /** Gửi đăng nhập; thành công thì lưu phiên và chuyển trang */
+  // Gửi đăng nhập; thành công thì lưu phiên và chuyển trang
   function onSubmit(data: LoginFormValues) {
     login(data, {
       onSuccess: (response) => {
@@ -74,7 +72,7 @@ export function LoginPage() {
     });
   }
 
-  /** Tài khoản chưa kích hoạt: sang trang nhập mã OTP với email đang gõ */
+  // Tài khoản chưa kích hoạt: sang trang nhập mã OTP với email đang gõ
   function goToVerification() {
     const email = getValues("email");
     savePendingEmail(email, false, resumeCheckout);
@@ -112,7 +110,9 @@ export function LoginPage() {
           {...register("password")}
         />
 
-        {/* "Quên mật khẩu?" nằm dưới ô mật khẩu, ngay trên nút đăng nhập */}
+        {
+          // "Quên mật khẩu?" nằm dưới ô mật khẩu, ngay trên nút đăng nhập
+        }
         <p className="!mt-2.5 text-right">
           <Link to={ROUTES.forgotPassword} className={`text-[13.5px] ${AUTH_TEXT_LINK}`}>
             Quên mật khẩu?
@@ -134,7 +134,9 @@ export function LoginPage() {
       </form>
 
         <>
-          {/* Đăng nhập Google đi thẳng tới backend (Spring Security OAuth2), xong quay về /oauth2/success */}
+          {
+            // Đăng nhập Google đi thẳng tới backend (Spring Security OAuth2), xong quay về /oauth2/success
+          }
             <div
                 className="my-5 flex items-center gap-3 text-[13px] text-brand-muted"
                 aria-hidden="true"
@@ -144,7 +146,9 @@ export function LoginPage() {
                 <span className="h-px flex-1 bg-brand-sandLine" />
             </div>
 
-            {/* Google Login Button */}
+            {
+              // Google Login Button
+            }
             <a
                 id="login-google"
                 href={googleLoginUrl()}

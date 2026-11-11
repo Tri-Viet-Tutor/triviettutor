@@ -1,7 +1,7 @@
 import { Icon } from "@/components/ui/Icon";
 import type { PortalPageHeaderProps } from "@/interfaces/portal";
 
-/** Tiêu đề của một trang trong các khu sau đăng nhập: biểu tượng, tiêu đề có gạch bút dạ cam, dòng mô tả và nút bên phải. */
+// Tiêu đề của một trang trong các khu sau đăng nhập: biểu tượng, tiêu đề có gạch bút dạ cam, dòng mô tả và nút bên phải.
 export function PortalPageHeader({ title, description, action, icon }: PortalPageHeaderProps) {
   return (
     <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -16,7 +16,9 @@ export function PortalPageHeader({ title, description, action, icon }: PortalPag
         )}
         <div className="min-w-0">
           <h1 className="text-[26px] font-extrabold leading-tight tracking-tight text-brand-navy sm:text-[30px]">
-            {/* Nét bút dạ vàng dưới chữ, giống tiêu đề các trang công khai */}
+            {
+              // Nét bút dạ vàng dưới chữ, giống tiêu đề các trang công khai
+            }
             <span className="bg-[linear-gradient(transparent_62%,#FFD98A_62%,#FFD98A_90%,transparent_90%)] [box-decoration-break:clone]">
               {title}
             </span>

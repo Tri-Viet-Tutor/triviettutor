@@ -1,17 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 
-/**
- * Đếm ngược theo giây. Trả về số giây còn lại và hàm bắt đầu đếm lại.
- * Tính theo mốc thời gian thật nên không lệch khi tab bị trình duyệt cho ngủ.
- *
- * @param initialSeconds số giây lúc đầu; 0 nghĩa là chưa đếm
- */
+// Đếm ngược theo giây. Trả về số giây còn lại và hàm bắt đầu đếm lại.
+// Tính theo mốc thời gian thật nên không lệch khi tab bị trình duyệt cho ngủ.
+// @param initialSeconds số giây lúc đầu; 0 nghĩa là chưa đếm
 export function useCountdown(initialSeconds: number): [number, (seconds: number) => void] {
   const [deadline, setDeadline] = useState(() => (initialSeconds > 0 ? Date.now() + initialSeconds * 1000 : 0));
   const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
 
   useEffect(() => {
     if (!deadline) return;
+    // Tính lại số giây còn lại
     const tick = () => setSecondsLeft(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
     tick();
     const timer = window.setInterval(tick, 500);
@@ -26,7 +24,7 @@ export function useCountdown(initialSeconds: number): [number, (seconds: number)
   return [secondsLeft, restart];
 }
 
-/** Đổi số giây sang dạng mm:ss: 125 → "02:05" */
+// Đổi số giây sang dạng mm:ss: 125 → "02:05"
 export function formatClock(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;

@@ -9,16 +9,16 @@ import { SessionDetail } from "@/components/student/SessionDetail";
 import { Icon } from "@/components/ui/Icon";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { FOCUS_RING } from "@/constants/classNames";
-import { TIME_SLOT_OPTIONS } from "@/constants/classOptions";
+import { TIME_SLOT_OPTIONS, TIME_SLOT_START } from "@/constants/classOptions";
 import { subjectIcon } from "@/constants/management";
 import { useMyLeaveRequests, useMySessions } from "@/hooks/usePortalData";
-import type { SessionResponse, TuitionClass } from "@/interfaces/api";
+import type { SessionResponse, TuitionClass } from "@/interfaces/dto";
 import { getTuitionClass } from "@/services/tuitionPaymentService";
 import { displayCode } from "@/utils/classes";
 import { addDays, parseIsoDate, startOfWeek, toIsoDate } from "@/utils/date";
 import { pendingLeaveOf } from "@/utils/sessions";
 
-/** Màu nhấn theo lớp, chỉ lấy trong bảng màu của web (navy, cam, xanh lá đồi cỏ, xanh trời) */
+// Màu nhấn theo lớp, chỉ lấy trong bảng màu của web (navy, cam, xanh lá đồi cỏ, xanh trời)
 const CLASS_TONES = [
   { chip: "bg-brand-tint text-brand-navy", bar: "bg-brand-navy" },
   { chip: "bg-brand-orangeSubtle text-brand-orangeHover", bar: "bg-brand-orange" },
@@ -28,19 +28,26 @@ const CLASS_TONES = [
 ];
 
 const WEEKDAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"];
-/** Ca học của backend (TimeSlot): "08:00-10:00"… */
-/** Lưới chung: cột ca học 140px + 7 cột ngày */
+// Ca học của backend (TimeSlot): "08:00-10:00"…
+// Lưới chung: cột ca học 140px + 7 cột ngày
 const GRID = "grid grid-cols-[140px_repeat(7,minmax(0,1fr))] gap-x-2.5";
-const SLOTS = TIME_SLOT_OPTIONS.map((option) => (option.hint ?? "").replace(/\s*–\s*/, "-")).filter(Boolean);
+// Bốn ca của trung tâm, nhận theo giờ bắt đầu; giờ tan hiện trên từng buổi vì mỗi khóa một thời lượng
+const SLOT_ROWS = TIME_SLOT_OPTIONS.map((option, index) => ({
+  start: TIME_SLOT_START[option.value] ?? "",
+  label: option.label,
+  order: index + 1,
+})).filter((row) => row.start);
+const SLOT_STARTS = SLOT_ROWS.map((row) => row.start);
+// Ngày dạng dd/mm
 const shortDate = (date: Date) => `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
+// Giờ dạng "HH:mm" từ "HH:mm:ss"
 const time = (value: string) => value.slice(0, 5);
-const slotOf = (session: SessionResponse) => `${time(session.startTime)}-${time(session.endTime)}`;
+// Ca học của buổi (theo giờ bắt đầu)
+const slotOf = (session: SessionResponse) => time(session.startTime);
 
-/**
- * Thời khóa biểu tuần của học viên kiểu "tổ kiến" (mặt cắt dưới lòng đất): hàng là ca học, cột là ngày;
- * mỗi buổi là một thẻ đặt trong một "phòng" của tổ, nối với nhau bằng đường hầm. Mọi nội dung lấy từ backend:
- * /me/sessions (ngày, giờ, buổi, trạng thái), /me/leave-requests (chờ duyệt nghỉ), /catalog/classes/{id} (tên khóa, tổng buổi, gia sư).
- */
+// Thời khóa biểu tuần của học viên kiểu "tổ kiến" (mặt cắt dưới lòng đất): hàng là ca học, cột là ngày;
+// mỗi buổi là một thẻ đặt trong một "phòng" của tổ, nối với nhau bằng đường hầm. Mọi nội dung lấy từ backend:
+// /me/sessions (ngày, giờ, buổi, trạng thái), /me/leave-requests (chờ duyệt nghỉ), /catalog/classes/{id} (tên khóa, tổng buổi, gia sư).
 export function StudentTimetable({ now }: { now: Date }) {
   const sessionsQuery = useMySessions();
   const leaveQuery = useMyLeaveRequests({ page: 0, size: 100 });
@@ -56,7 +63,9 @@ export function StudentTimetable({ now }: { now: Date }) {
     queries: classIds.map((id) => ({ queryKey: ["catalog-class", id], queryFn: () => getTuitionClass(id), staleTime: 5 * 60_000, retry: false })),
   });
   const classInfo = new Map<number, TuitionClass | undefined>(classIds.map((id, index) => [id, classQueries[index]?.data]));
+  // Màu của lớp trên thời khóa biểu
   const toneOf = (classId: number) => CLASS_TONES[Math.max(0, classIds.indexOf(classId)) % CLASS_TONES.length];
+  // Tên khóa của lớp, chưa tải được thì hiện mã lớp
   const nameOf = (classId: number) => classInfo.get(classId)?.courseName ?? `Lớp ${displayCode("class", classId)}`;
 
   useEffect(() => {
@@ -71,10 +80,8 @@ export function StudentTimetable({ now }: { now: Date }) {
   const dayIsos = days.map(toIsoDate);
   const todayIso = toIsoDate(now);
   const weekSessions = sessions.filter((session) => dayIsos.includes(session.date));
-  const sessionSlots = [...new Set(weekSessions.map(slotOf))];
-  // Khóa ngắn hơn 2 tiếng có khung giờ riêng, nên chỉ kẻ thêm ca mặc định nào chưa có buổi nào cùng giờ bắt đầu
-  const sessionStarts = new Set(sessionSlots.map((slot) => slot.slice(0, 5)));
-  const slots = [...sessionSlots, ...SLOTS.filter((slot) => !sessionStarts.has(slot.slice(0, 5)))].sort();
+  // Bốn ca luôn có mặt để lưới không rỗng khi tuần chỉ có một buổi, cộng giờ lạ nếu có
+  const slots = [...new Set([...SLOT_STARTS, ...weekSessions.map(slotOf)])].sort();
   const next = sessions
     .filter((session) => session.status === "SCHEDULED" && new Date(`${session.date}T${session.startTime}`) > now)
     .sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`))[0];
@@ -87,10 +94,14 @@ export function StudentTimetable({ now }: { now: Date }) {
 
   return (
     <div className="space-y-5">
-      {/* Khung nét đứt nhẹ, nền trong suốt để hòa với nền giấy của trang */}
-      <section className="relative overflow-hidden rounded-[28px] border-2 border-dashed border-brand-line bg-white/40 px-4 pb-8 pt-5 sm:px-6">
+      {
+        // Khung nét đứt nhẹ, nền trong suốt để hòa với nền giấy của trang
+      }
+      <section className="relative overflow-hidden rounded-3xl border-2 border-dashed border-brand-line bg-white/40 px-4 pb-8 pt-5 sm:px-6">
 
-        {/* Bảng tên + chuyển tuần + chú kiến */}
+        {
+          // Bảng tên + chuyển tuần + chú kiến
+        }
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-1 rounded-xl bg-white/80 p-1 shadow-sm ring-1 ring-brand-line backdrop-blur">
             <WeekButton icon="chevron_left" label="Tuần trước" onClick={() => setWeekStart(addDays(weekStart, -7))} />
@@ -130,7 +141,9 @@ export function StudentTimetable({ now }: { now: Date }) {
           </div>
         </div>
 
-        {/* Lưới: mỗi ca học là một "tầng hầm" chạy ngang qua 7 ngày */}
+        {
+          // Lưới: mỗi ca học là một "tầng hầm" chạy ngang qua 7 ngày
+        }
         <div className="relative -mx-4 mt-6 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6">
           <div className="min-w-[1080px]">
             <div className={`${GRID} mb-3`}>
@@ -153,10 +166,12 @@ export function StudentTimetable({ now }: { now: Date }) {
 
             <div className="space-y-2.5">
               {slots.map((slot, row) => {
-                const [start, end] = slot.split("-");
+                const slotRow = SLOT_ROWS.find((item) => item.start === slot);
                 return (
                   <div key={slot} className={`relative ${GRID} items-center`}>
-                    {/* Đường hầm của tầng này */}
+                    {
+                      // Đường hầm của tầng này
+                    }
                     <span aria-hidden="true" className="pointer-events-none absolute inset-y-[45%] left-[140px] right-0 rounded-full bg-brand-navy/45" />
                     <TunnelAnt
                       row={row}
@@ -167,12 +182,18 @@ export function StudentTimetable({ now }: { now: Date }) {
                       visible={row < 3}
                     />
 
+                    {
+                      // Nhãn ca: khối cố định, xếp chồng nên bốn hàng rộng bằng nhau dù tên ca dài ngắn khác nhau
+                    }
                     <span className="relative flex items-center">
-                      <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white py-1 pl-1 pr-3 text-[12.5px] font-bold tabular-nums text-brand-navy ring-1 ring-brand-line">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-tint text-brand-navy">
-                          <Icon name="schedule" className="text-[15px]" />
+                      <span className="w-full border-l-2 border-brand-navy/25 pl-2.5">
+                        <span className="block text-[10.5px] font-bold uppercase tracking-[0.12em] text-brand-muted">
+                          {slotRow ? `Ca ${slotRow.order} - ${slotRow.label}` : "Ca thêm"}
                         </span>
-                        {start} – {end}
+                        <span className="block text-[15px] font-extrabold tabular-nums leading-tight text-brand-ink">
+                          <span className="text-[11.5px] font-semibold text-brand-muted">Từ </span>
+                          {slot}
+                        </span>
                       </span>
                     </span>
 
@@ -182,9 +203,9 @@ export function StudentTimetable({ now }: { now: Date }) {
                       return (
                         <div key={iso} className="relative flex min-h-[112px] items-center py-2">
                           {cell.length > 0 ? (
-                            /* Phòng trong tổ: khung bo tròn màu kem ôm thẻ buổi học */
+                            // Phòng trong tổ: khung bo tròn màu kem ôm thẻ buổi học
                             <div
-                              className={`relative z-10 w-full space-y-2 rounded-[22px] p-1.5 ${
+                              className={`relative z-10 w-full space-y-2 rounded-2xl p-1.5 ${
                                 today ? "bg-brand-orangeSubtle ring-1 ring-brand-orange/50" : "bg-brand-tint ring-1 ring-brand-line"
                               }`}
                             >
@@ -213,7 +234,9 @@ export function StudentTimetable({ now }: { now: Date }) {
         </div>
       </section>
 
-      {/* Lớp đang học */}
+      {
+        // Lớp đang học
+      }
       <section>
         <h2 className="mb-3 text-[16px] font-bold text-brand-navy">Lớp đang học</h2>
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -275,7 +298,7 @@ export function StudentTimetable({ now }: { now: Date }) {
   );
 }
 
-/** Thẻ buổi học đặt trên đảo: dải trạng thái (nếu có), biểu tượng sách, "Lớp LH010 - Buổi 4" */
+// Thẻ buổi học đặt trên đảo: dải trạng thái (nếu có), biểu tượng sách, "Lớp LH010 - Buổi 4"
 function SessionCard({
   session,
   info,
@@ -322,7 +345,10 @@ function SessionCard({
           {displayCode("class", session.classGroupId)}
         </span>
       </span>
-      {info && <span className="mt-1 block truncate text-[11.5px] font-semibold text-brand-navy">{info.courseName}</span>}
+      <span className="mt-1 block text-[11.5px] font-semibold tabular-nums text-brand-muted">
+        {time(session.startTime)} đến {time(session.endTime)}
+      </span>
+      {info && <span className="mt-0.5 block truncate text-[11.5px] font-semibold text-brand-navy">{info.courseName}</span>}
       <span className="block truncate text-[11px] text-brand-muted">
         Buổi {session.sessionNumber}
         {info?.totalSessions ? `/${info.totalSessions}` : ""}
@@ -331,20 +357,17 @@ function SessionCard({
   );
 }
 
-/**
- * Chú kiến vàng trên đường hầm của mỗi ca học. Chỉ đặt vào ô trống (không đè lên thẻ buổi học), nằm giữa hai chấm.
- * `hiding`: chú kiến núp dưới chiếc lá, chỉ ló đầu và râu ra.
- */
-/**
- * Tốc độ bò của từng chú (một lượt bò hết đường hầm = nửa vòng đi về):
- * ca 1 (núp lá) 3 phút, ca 2 (giữa) 2 phút 30 giây, ca 3 2 phút. Chân bước chậm; mỗi chú xuất phát lệch nhau.
- */
+// Chú kiến vàng trên đường hầm của mỗi ca học. Chỉ đặt vào ô trống (không đè lên thẻ buổi học), nằm giữa hai chấm.
+// `hiding`: chú kiến núp dưới chiếc lá, chỉ ló đầu và râu ra.
+// Tốc độ bò của từng chú (một lượt bò hết đường hầm = nửa vòng đi về):
+// ca 1 (núp lá) 3 phút, ca 2 (giữa) 2 phút 30 giây, ca 3 2 phút. Chân bước chậm; mỗi chú xuất phát lệch nhau.
 const ANT_TIMING: { duration: string; delay: string }[] = [
   { duration: "360s", delay: "-20s" },
   { duration: "300s", delay: "-90s" },
   { duration: "240s", delay: "-150s" },
 ];
 
+// Chú kiến bò dọc đường hầm của một hàng trên thời khóa biểu
 function TunnelAnt({ row, hiding, visible }: { row: number; emptyColumns: number[]; hiding: boolean; visible: boolean }) {
   if (!visible) return null;
   const timing = ANT_TIMING[row % ANT_TIMING.length];
@@ -353,7 +376,7 @@ function TunnelAnt({ row, hiding, visible }: { row: number; emptyColumns: number
   return (
     <span aria-hidden="true" className="pointer-events-none absolute left-[150px] right-3 top-[calc(50%+7px)] z-[1] h-0" style={speed}>
       {hiding ? (
-        /* Chú kiến núp lá cũng bò qua bò lại theo cùng chuyển động của kiến trang chủ */
+        // Chú kiến núp lá cũng bò qua bò lại theo cùng chuyển động của kiến trang chủ
         <span className="ant-lane is-active absolute inset-x-0 bottom-full block h-[40px]">
           <span className="ant-walker absolute bottom-0 block -translate-x-1/2">
             <span className="ant-body block">
@@ -362,17 +385,17 @@ function TunnelAnt({ row, hiding, visible }: { row: number; emptyColumns: number
           </span>
         </span>
       ) : (
-        /* Dùng lại con kiến bò qua bò lại của trang chủ (ca 3 màu nâu sáng hơn cho khác nhau); bò khuất sau các phòng */
+        // Dùng lại con kiến bò qua bò lại của trang chủ (ca 3 màu nâu sáng hơn cho khác nhau); bò khuất sau các phòng
         <CrawlingAnt className="inset-x-0" color={row === 2 ? "#8A5427" : undefined} />
       )}
     </span>
   );
 }
 
-/** Màu chú kiến: thân vàng mật, viền cam đậm, má hồng */
+// Màu chú kiến: thân vàng mật, viền cam đậm, má hồng
 const ANT = { body: "#FFB627", light: "#FFD873", line: "#C9790A", cheek: "#FF9B8A", eye: "#1F2A44" };
 
-/** Chú kiến núp dưới chiếc lá xanh: lá úp lên lưng, chỉ ló đầu (mắt, má hồng) và hai râu */
+// Chú kiến núp dưới chiếc lá xanh: lá úp lên lưng, chỉ ló đầu (mắt, má hồng) và hai râu
 function HidingAnt() {
   return (
     <svg viewBox="0 0 60 38" className="block h-6 w-[38px] overflow-visible">
@@ -386,12 +409,16 @@ function HidingAnt() {
           <stop offset="100%" stopColor="#5EAE57" />
         </linearGradient>
       </defs>
-      {/* Chân ló dưới mép lá */}
+      {
+        // Chân ló dưới mép lá
+      }
       <g stroke={ANT.line} strokeWidth="1.6" strokeLinecap="round" fill="none">
         <path d="M18 27 Q16 31 14 34 L11.5 34.5" />
         <path d="M27 27 Q28 31 29 34.5 L31.5 35" />
       </g>
-      {/* Râu và đầu ló ra bên phải */}
+      {
+        // Râu và đầu ló ra bên phải
+      }
       <g stroke={ANT.line} strokeWidth="1.4" strokeLinecap="round" fill="none">
         <path d="M44 14 Q44 8 49 7.5" />
         <path d="M48 15 Q51 10 56 11" />
@@ -402,7 +429,9 @@ function HidingAnt() {
       <ellipse cx="48" cy="20" rx="2.3" ry="2.7" fill={ANT.eye} />
       <circle cx="48.9" cy="19" r="0.85" fill="#ffffff" />
       <ellipse cx="48.5" cy="25" rx="1.9" ry="1.1" fill={ANT.cheek} opacity="0.75" />
-      {/* Lá úp lên lưng, có cuống và gân */}
+      {
+        // Lá úp lên lưng, có cuống và gân
+      }
       <path d="M2 26 Q6 4 40 9 Q43 26 24 30 Q10 32 2 26 Z" fill="url(#leaf-fill)" stroke="#3F8C3E" strokeWidth="1.1" />
       <path d="M5 25 Q20 17 38 11" stroke="#3F8C3E" strokeWidth="1.2" fill="none" strokeLinecap="round" />
       <path d="M12 21.5 L13 15.5 M19 18.5 L21.5 12.5 M26 15.5 L29.5 10.5 M14 22 L18 26 M22 19 L26 24.5 M30 15.5 L33 21" stroke="#3F8C3E" strokeWidth="0.8" fill="none" strokeLinecap="round" opacity="0.8" />
@@ -412,6 +441,7 @@ function HidingAnt() {
   );
 }
 
+// Nút chuyển tuần trước / tuần sau
 function WeekButton({ icon, label, onClick }: { icon: string; label: string; onClick: () => void }) {
   return (
     <button

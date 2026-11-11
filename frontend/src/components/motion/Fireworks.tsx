@@ -2,17 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { prefersReducedMotion } from "@/utils/motion";
 import type { FireworkParticle, FireworkRocket, FireworksProps } from "@/interfaces/motion";
 
-/** Bảng màu pháo hoa */
+// Bảng màu pháo hoa
 const COLORS = ["#F5A00F", "#FFD98A", "#0B3A8C", "#2F74E8", "#E5484D", "#12A594", "#8E4EC6"];
-/** Gia tốc rơi của các tia (px / khung hình²) */
+// Gia tốc rơi của các tia (px / khung hình²)
 const GRAVITY = 0.06;
-/** Khoảng cách giữa hai lượt bắn (ms) */
+// Khoảng cách giữa hai lượt bắn (ms)
 const LAUNCH_INTERVAL_MS = 330;
 
-/**
- * Pháo hoa phủ toàn màn hình: từng quả bay lên từ mép dưới rồi nổ thành chùm tia rơi chậm.
- * Không chặn thao tác chuột, tự gỡ khi bắn xong, và không chạy nếu người dùng bật "giảm chuyển động".
- */
+// Pháo hoa phủ toàn màn hình: từng quả bay lên từ mép dưới rồi nổ thành chùm tia rơi chậm.
+// Không chặn thao tác chuột, tự gỡ khi bắn xong, và không chạy nếu người dùng bật "giảm chuyển động".
 export function Fireworks({ durationMs = 5200 }: FireworksProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [finished, setFinished] = useState(() => prefersReducedMotion());
@@ -24,6 +22,7 @@ export function Fireworks({ durationMs = 5200 }: FireworksProps) {
 
     let width = window.innerWidth;
     let height = window.innerHeight;
+    // Đặt lại kích thước canvas theo cửa sổ và mật độ điểm ảnh
     const resize = () => {
       const ratio = window.devicePixelRatio || 1;
       width = window.innerWidth;
@@ -41,7 +40,7 @@ export function Fireworks({ durationMs = 5200 }: FireworksProps) {
     let lastLaunch = 0;
     let frame = 0;
 
-    /** Bắn một quả pháo từ mép dưới, nổ ở khoảng 14% – 48% chiều cao màn hình */
+    // Bắn một quả pháo từ mép dưới, nổ ở khoảng 14% – 48% chiều cao màn hình
     const launch = () => {
       rockets.push({
         x: width * (0.12 + Math.random() * 0.76),
@@ -52,7 +51,7 @@ export function Fireworks({ durationMs = 5200 }: FireworksProps) {
       });
     };
 
-    /** Nổ thành 64 – 91 tia toả đều theo vòng tròn */
+    // Nổ thành 64 – 91 tia toả đều theo vòng tròn
     const explode = (rocket: FireworkRocket) => {
       const count = 64 + Math.floor(Math.random() * 28);
       for (let i = 0; i < count; i++) {
@@ -71,6 +70,7 @@ export function Fireworks({ durationMs = 5200 }: FireworksProps) {
       }
     };
 
+    // Vẽ từng khung hình pháo hoa
     const draw = (now: number) => {
       const elapsed = now - startedAt;
       ctx.clearRect(0, 0, width, height);

@@ -15,14 +15,12 @@ import type { ForgotFormValues } from "@/interfaces/auth";
 import { requestPasswordReset } from "@/services/authService";
 import { authErrorMessage } from "@/utils/errors";
 
-/** Kiểm tra form quên mật khẩu */
+// Kiểm tra form quên mật khẩu
 const forgotSchema = z.object({
   email: z.string().email("Email chưa đúng"),
 });
 
-/**
- * Trang "Quên mật khẩu": nhập email để nhận liên kết đặt lại mật khẩu qua email.
- */
+// Trang "Quên mật khẩu": nhập email để nhận liên kết đặt lại mật khẩu qua email.
 export function ForgotPasswordPage() {
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
   const { mutate, isPending, error, reset } = useMutation({ mutationFn: requestPasswordReset });
@@ -32,6 +30,7 @@ export function ForgotPasswordPage() {
     formState: { errors },
   } = useForm<ForgotFormValues>({ resolver: zodResolver(forgotSchema) });
 
+  // Gửi email đặt lại mật khẩu
   function onSubmit(data: ForgotFormValues) {
     mutate(data, {
       onSuccess: () => {
@@ -40,6 +39,7 @@ export function ForgotPasswordPage() {
     });
   }
 
+  // Quay lại form để nhập email khác
   function handleRetry() {
     setSubmittedEmail(null);
     reset();

@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { prefersReducedMotion } from "@/utils/motion";
 import type { ClickSparkProps } from "@/interfaces/motion";
 
-/** Tia sáng toả ra tại điểm bấm chuột / chạm. */
+// Tia sáng toả ra tại điểm bấm chuột / chạm.
 export function ClickSpark({ color = "#F5A00F" }: ClickSparkProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -26,6 +26,7 @@ export function ClickSpark({ color = "#F5A00F" }: ClickSparkProps) {
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     };
 
+    // Vẽ từng khung hình tia lửa, xóa tia đã hết thời gian
     const draw = (now: number) => {
       frame = 0;
       ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
@@ -50,6 +51,7 @@ export function ClickSpark({ color = "#F5A00F" }: ClickSparkProps) {
       if (sparks.length) frame = requestAnimationFrame(draw);
     };
 
+    // Bấm chuột thì tạo tia lửa tại chỗ bấm
     const onPointerDown = (event: PointerEvent) => {
       sparks.push({ x: event.clientX, y: event.clientY, start: performance.now() });
       if (!frame) frame = requestAnimationFrame(draw);

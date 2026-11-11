@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getSessionMeetingToken, getSessionMeetingLogs } from "../services/meeting";
-import { MeetingTokenResponse, MeetingSessionLogsResponse } from "../interfaces/api";
+import { getSessionMeetingToken, getSessionMeetingLogs } from "@/services/meetingService";
+import { MeetingTokenResponse, MeetingSessionLogsResponse } from "@/interfaces/dto";
 import { useAuthStore } from "../stores/authStore";
 import { portalErrorMessage } from "../utils/errors";
 import { ConfirmDialog } from "@/components/dashboard/ConfirmDialog";
 import { useSessionAttendance } from "@/hooks/usePortalData";
 import { displayCode } from "@/utils/classes";
 
+// Phòng học trực tuyến: camera, micro, chia sẻ màn hình, bảng vẽ và chat
 export default function ClassroomPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
@@ -167,6 +168,7 @@ export default function ClassroomPage() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }, [showWhiteboard]);
 
+  // Bật / tắt micro
   const toggleMic = () => {
     if (localStream) {
       localStream.getAudioTracks().forEach((t) => {
@@ -176,6 +178,7 @@ export default function ClassroomPage() {
     setMicEnabled((prev) => !prev);
   };
 
+  // Bật / tắt camera
   const toggleCamera = () => {
     if (localStream) {
       localStream.getVideoTracks().forEach((t) => {
@@ -185,6 +188,7 @@ export default function ClassroomPage() {
     setCameraEnabled((prev) => !prev);
   };
 
+  // Bật / tắt chia sẻ màn hình
   const toggleScreenShare = async () => {
     if (screenSharing) {
       if (screenStream) {
@@ -212,6 +216,7 @@ export default function ClassroomPage() {
     }
   };
 
+  // Tải nhật ký ra vào phòng học của buổi
   const loadMeetingLogs = async () => {
     if (!sessionId) return;
     setLogsLoading(true);
@@ -226,6 +231,7 @@ export default function ClassroomPage() {
     }
   };
 
+  // Bắt đầu vẽ trên bảng
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -241,6 +247,7 @@ export default function ClassroomPage() {
     setIsDrawing(true);
   };
 
+  // Vẽ theo chuột khi đang giữ chuột
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
     const canvas = canvasRef.current;
@@ -260,10 +267,12 @@ export default function ClassroomPage() {
     ctx.stroke();
   };
 
+  // Thả chuột thì dừng vẽ
   const stopDrawing = () => {
     setIsDrawing(false);
   };
 
+  // Xóa trắng bảng vẽ
   const clearCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -273,6 +282,7 @@ export default function ClassroomPage() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   };
 
+  // Gửi tin nhắn chat
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMsg.trim()) return;
@@ -293,7 +303,9 @@ export default function ClassroomPage() {
   };
 
   const [confirmLeave, setConfirmLeave] = useState(false);
+  // Hỏi lại trước khi rời phòng học
   const handleLeave = () => setConfirmLeave(true);
+  // Tắt camera, chia sẻ màn hình rồi rời phòng học
   const leaveRoom = () => {
     if (localStream) {
       localStream.getTracks().forEach((t) => t.stop());
@@ -348,7 +360,9 @@ export default function ClassroomPage() {
 
   return (
     <div className="flex h-screen flex-col bg-slate-950 text-slate-100 overflow-hidden select-none">
-      {/* ── Top Bar ──────────────────────────────────────────────────────── */}
+      {
+        // ── Top Bar ────────────────────────────────────────────────────────
+      }
       <header className="flex h-14 items-center justify-between border-b border-slate-800 bg-slate-900 px-4">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -367,7 +381,9 @@ export default function ClassroomPage() {
           </div>
         </div>
 
-        {/* View mode toggle & Actions */}
+        {
+          // View mode toggle & Actions
+        }
         <div className="flex items-center gap-2">
           {(isTutor || isAdmin) && (
             <button
@@ -421,7 +437,9 @@ export default function ClassroomPage() {
         </div>
       </header>
 
-      {/* Permission Denied Notice Banner */}
+      {
+        // Permission Denied Notice Banner
+      }
       {mediaPermissionDenied && (
         <div className="bg-amber-900/40 border-b border-amber-800 px-4 py-1.5 text-xs text-amber-300 flex items-center justify-between">
           <span>⚠️ Thiết bị webcam/micro chưa được cấp quyền truy cập. Bạn vẫn có thể xem bảng trắng và trò chuyện.</span>
@@ -434,12 +452,18 @@ export default function ClassroomPage() {
         </div>
       )}
 
-      {/* ── Main Workspace: Whiteboard & Video Conference ──────────────────── */}
+      {
+        // ── Main Workspace: Whiteboard & Video Conference ────────────────────
+      }
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Left: Whiteboard Section */}
+        {
+          // Left: Whiteboard Section
+        }
         {showWhiteboard && (
           <div className="flex flex-1 flex-col border-r border-slate-800 bg-slate-900">
-            {/* Whiteboard Toolbar */}
+            {
+              // Whiteboard Toolbar
+            }
             <div className="flex h-11 items-center justify-between border-b border-slate-800 bg-slate-850 px-3">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium text-slate-300 mr-1">Bảng vẽ:</span>
@@ -460,7 +484,9 @@ export default function ClassroomPage() {
                   Tẩy xóa
                 </button>
 
-                {/* Color pickers */}
+                {
+                  // Color pickers
+                }
                 {!isEraser && (
                   <div className="flex items-center gap-1.5 ml-2 border-l border-slate-750 pl-2">
                     {["#2563eb", "#dc2626", "#16a34a", "#0f172a"].map((c) => (
@@ -487,7 +513,9 @@ export default function ClassroomPage() {
               </div>
             </div>
 
-            {/* Canvas Area */}
+            {
+              // Canvas Area
+            }
             <div className="flex-1 bg-white overflow-hidden flex items-center justify-center p-2">
               <canvas
                 ref={canvasRef}
@@ -503,11 +531,15 @@ export default function ClassroomPage() {
           </div>
         )}
 
-        {/* Video Conference Section */}
+        {
+          // Video Conference Section
+        }
         <div className={`flex flex-col ${showWhiteboard ? "w-96 border-l border-slate-800" : "flex-1"} bg-slate-950`}>
           <div className="flex-1 p-3 overflow-y-auto">
             <div className="grid h-full grid-cols-1 gap-3">
-              {/* Main Tile / Screen Share or Tutor Video */}
+              {
+                // Main Tile / Screen Share or Tutor Video
+              }
               <div className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-800 bg-slate-900 p-3 shadow-lg">
                 <div className="flex items-center justify-between z-10">
                   <span className="rounded-full bg-indigo-600/80 px-2.5 py-0.5 text-xs font-semibold text-white">
@@ -524,7 +556,9 @@ export default function ClassroomPage() {
                   )}
                 </div>
 
-                {/* Video Container */}
+                {
+                  // Video Container
+                }
                 <div className="flex flex-1 items-center justify-center relative overflow-hidden my-2 rounded-lg bg-black">
                   {screenSharing && screenStream ? (
                     <video
@@ -565,7 +599,9 @@ export default function ClassroomPage() {
                 </div>
               </div>
 
-              {/* Secondary Participant Tile */}
+              {
+                // Secondary Participant Tile
+              }
               <div className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 p-3">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-slate-300">
@@ -590,7 +626,9 @@ export default function ClassroomPage() {
           </div>
         </div>
 
-        {/* Right: Participant Roster Sidebar — sĩ số thật của lớp, lấy qua điểm danh buổi này */}
+        {
+          // Right: Participant Roster Sidebar — sĩ số thật của lớp, lấy qua điểm danh buổi này
+        }
         {showRoster && (
           <div className="flex w-80 flex-col border-l border-slate-800 bg-slate-900">
             <div className="flex h-11 items-center justify-between border-b border-slate-800 px-4">
@@ -637,7 +675,9 @@ export default function ClassroomPage() {
           </div>
         )}
 
-        {/* Right: In-Class Chat Sidebar */}
+        {
+          // Right: In-Class Chat Sidebar
+        }
         {showChat && (
           <div className="flex w-80 flex-col border-l border-slate-800 bg-slate-900">
             <div className="flex h-11 items-center justify-between border-b border-slate-800 px-4">
@@ -684,9 +724,13 @@ export default function ClassroomPage() {
         )}
       </div>
 
-      {/* ── Control Footer ─────────────────────────────────────────────────── */}
+      {
+        // ── Control Footer ───────────────────────────────────────────────────
+      }
       <footer className="flex h-16 items-center justify-center gap-3 border-t border-slate-800 bg-slate-900 px-4">
-        {/* Mic Toggle */}
+        {
+          // Mic Toggle
+        }
         <button
           onClick={toggleMic}
           className={`flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-semibold transition ${
@@ -699,7 +743,9 @@ export default function ClassroomPage() {
           <span>{micEnabled ? "🎙️ Mic Bật" : "🔇 Mic Tắt"}</span>
         </button>
 
-        {/* Camera Toggle */}
+        {
+          // Camera Toggle
+        }
         <button
           onClick={toggleCamera}
           className={`flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-semibold transition ${
@@ -712,7 +758,9 @@ export default function ClassroomPage() {
           <span>{cameraEnabled ? "📷 Cam Bật" : "🚫 Cam Tắt"}</span>
         </button>
 
-        {/* Screen Share Toggle */}
+        {
+          // Screen Share Toggle
+        }
         <button
           onClick={toggleScreenShare}
           className={`flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-semibold transition ${
@@ -725,7 +773,9 @@ export default function ClassroomPage() {
           <span>🖥️ {screenSharing ? "Dừng chia sẻ" : "Chia sẻ màn hình"}</span>
         </button>
 
-        {/* Raise Hand Toggle */}
+        {
+          // Raise Hand Toggle
+        }
         <button
           onClick={() => setHandRaised((prev) => !prev)}
           className={`flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-semibold transition ${
@@ -740,7 +790,9 @@ export default function ClassroomPage() {
 
         <div className="h-6 w-px bg-slate-800 mx-2" />
 
-        {/* Leave Classroom */}
+        {
+          // Leave Classroom
+        }
         <button
           onClick={handleLeave}
           className="flex h-10 items-center gap-2 rounded-xl bg-rose-600 px-5 text-xs font-bold text-white hover:bg-rose-500 transition shadow"
@@ -749,7 +801,9 @@ export default function ClassroomPage() {
         </button>
       </footer>
 
-      {/* ── MongoDB Atlas Meeting Logs Modal ──────────────────────────────── */}
+      {
+        // ── MongoDB Atlas Meeting Logs Modal ────────────────────────────────
+      }
       {showLogsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-2xl rounded-xl bg-slate-900 border border-slate-800 p-6 shadow-2xl text-slate-100 flex flex-col max-h-[85vh]">
@@ -774,7 +828,9 @@ export default function ClassroomPage() {
                 </div>
               ) : sessionLogs ? (
                 <>
-                  {/* Session Overview */}
+                  {
+                    // Session Overview
+                  }
                   <div className="rounded-lg bg-slate-800/80 p-4 border border-slate-750 space-y-2">
                     <div className="flex justify-between text-xs">
                       <span className="text-slate-400">Tên phòng LiveKit:</span>
@@ -792,7 +848,9 @@ export default function ClassroomPage() {
                     </div>
                   </div>
 
-                  {/* Participants List */}
+                  {
+                    // Participants List
+                  }
                   <div>
                     <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wide mb-2">
                       Chi tiết người tham gia ({sessionLogs.participantLogs.length})

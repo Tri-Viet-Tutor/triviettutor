@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ROUTES } from "@/constants/routes";
 import { AdminSessionDetail } from "@/components/admin/AdminSessionDetail";
@@ -8,22 +8,22 @@ import { useAdminSession, useAdminSessions, useUserDirectory } from "@/hooks/use
 import { Pager } from "@/components/dashboard/Pager";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
 import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/PortalState";
-import { SessionRow } from "@/components/dashboard/SessionRow";
 import { StatusChip } from "@/components/dashboard/StatusChip";
+import { Icon } from "@/components/ui/Icon";
 import { SESSION_STATUS } from "@/constants/labels";
 import { PORTAL_TEXT_LINK } from "@/constants/classNames";
 import { useNow } from "@/hooks/useNow";
-import type { SessionResponse, SessionStatus } from "@/interfaces/api";
-import { startOfToday, toIsoDate } from "@/utils/date";
+import type { SessionResponse, SessionStatus } from "@/interfaces/dto";
+import { formatDate, parseIsoDate, startOfToday, toIsoDate, weekdayName } from "@/utils/date";
 import { displayCode } from "@/utils/classes";
 
-/** Số buổi mỗi trang */
+// Số buổi mỗi trang
 const PAGE_SIZE = 20;
 
-/** Tên tham số trên thanh địa chỉ — để các trang khác dẫn thẳng tới một bộ lọc hoặc một buổi */
+// Tên tham số trên thanh địa chỉ — để các trang khác dẫn thẳng tới một bộ lọc hoặc một buổi
 const PARAM = { from: "tu", to: "den", status: "trangthai", classId: "lop", tutorId: "giasu", page: "trang", session: "buoi" } as const;
 
-/** Nhãn phụ của một buổi trong khu quản trị: chưa có gia sư, điểm danh cần xem lại */
+// Nhãn phụ của một buổi trong khu quản trị: chưa có gia sư, điểm danh cần xem lại
 function sessionBadge(session: SessionResponse) {
   if (session.scheduledTutorId === null) return <StatusChip tone="amber">Chưa có gia sư</StatusChip>;
   if (session.attendanceNeedsReview) {
@@ -36,15 +36,13 @@ function sessionBadge(session: SessionResponse) {
   return null;
 }
 
-/**
- * Trang Buổi học của quản trị (GET /admin/sessions): lọc theo ngày, trạng thái, gia sư, lớp;
- * bấm một buổi để gắn link lớp, điểm danh, hủy buổi. Bộ lọc nằm trên thanh địa chỉ;
- * mở kèm ?buoi=<mã buổi> thì buổi đó hiện sẵn ở đầu trang (GET /sessions/{id}).
- * Mặc định xem từ hôm nay trở đi.
- */
+// Trang Buổi học của quản trị (GET /admin/sessions): lọc theo ngày, trạng thái, gia sư, lớp;
+// bấm một buổi để gắn link lớp, điểm danh, hủy buổi. Bộ lọc nằm trên thanh địa chỉ;
+// mở kèm ?buoi=<mã buổi> thì buổi đó hiện sẵn ở đầu trang (GET /sessions/{id}).
+// Mặc định xem từ hôm nay trở đi.
 export function AdminSessionsPage() {
   const now = useNow();
-  const { tutors } = useUserDirectory();
+  const { tutors, nameOf } = useUserDirectory();
   const [params, setParams] = useSearchParams();
   // Buổi đang mở chi tiết
   const [openId, setOpenId] = useState<number | null>(null);
@@ -79,13 +77,13 @@ export function AdminSessionsPage() {
     if (linkedId) setOpenId(linkedId);
   }, [linkedId]);
 
-  /** Ghi một tham số; giá trị rỗng thì xóa (trừ khi `keepEmpty`) */
+  // Ghi một tham số; giá trị rỗng thì xóa (trừ khi `keepEmpty`)
   function setParam(next: URLSearchParams, key: string, value: string, keepEmpty = false) {
     if (value || keepEmpty) next.set(key, value);
     else next.delete(key);
   }
 
-  /** Đổi bộ lọc: viết lại thanh địa chỉ, về trang đầu, đóng buổi đang mở */
+  // Đổi bộ lọc: viết lại thanh địa chỉ, về trang đầu, đóng buổi đang mở
   function changeFilters(patch: Partial<SessionFilterValues>) {
     const merged = { ...filters, ...patch };
     const next = new URLSearchParams();
@@ -98,7 +96,7 @@ export function AdminSessionsPage() {
     setOpenId(null);
   }
 
-  /** Sang trang khác: bỏ buổi đang dẫn tới, cuộn lên đầu */
+  // Sang trang khác: bỏ buổi đang dẫn tới, cuộn lên đầu
   function changePage(nextPage: number) {
     const next = new URLSearchParams(params);
     next.delete(PARAM.session);
@@ -108,22 +106,74 @@ export function AdminSessionsPage() {
     window.scrollTo({ top: 0 });
   }
 
-  /** Mở / đóng chi tiết một buổi */
+  // Mở / đóng chi tiết một buổi
   const toggle = (sessionId: number) => setOpenId((current) => (current === sessionId ? null : sessionId));
-  /** Một dòng buổi học kèm phần chi tiết của quản trị */
+  // Một dòng của bảng buổi học, mở ra là hiện phần xử lý của quản trị ngay dưới dòng đó
   const renderRow = (session: SessionResponse) => {
     const open = openId === session.sessionId;
+    const date = parseIsoDate(session.date);
+    const status = SESSION_STATUS[session.status];
     return (
-      <SessionRow
-        key={session.sessionId}
-        session={session}
-        open={open}
-        onToggle={() => toggle(session.sessionId)}
-        hasPendingLeave={false}
-        badge={sessionBadge(session)}
-      >
-        {open && <AdminSessionDetail session={session} now={now} />}
-      </SessionRow>
+      <Fragment key={session.sessionId}>
+        <tr
+          id={`session-${session.sessionId}`}
+          className={`scroll-mt-24 border-t border-brand-sandLine ${open ? "bg-brand-tint/50" : "hover:bg-brand-sand/50"}`}
+        >
+          <td className="h-14 px-4 py-2 align-middle">
+            <span className="text-[14px] font-bold tabular-nums text-brand-navy">{displayCode("session", session.sessionId)}</span>
+          </td>
+          <td className="border-l border-brand-sandLine px-4 py-2 align-middle">
+            <span className="block text-[12.5px] leading-tight text-brand-muted">{weekdayName(date)}</span>
+            <span className="block text-[15px] font-bold leading-tight tabular-nums text-brand-navy">{formatDate(date)}</span>
+          </td>
+          <td className="border-l border-brand-sandLine px-4 py-2 align-middle">
+            <span className={`text-[14.5px] font-semibold tabular-nums text-brand-ink ${session.status === "CANCELLED" ? "line-through" : ""}`}>
+              {session.startTime.slice(0, 5)} - {session.endTime.slice(0, 5)}
+            </span>
+          </td>
+          <td className="border-l border-brand-sandLine px-4 py-2 align-middle">
+            <span className="block text-[14.5px] font-semibold leading-tight text-brand-ink">{displayCode("class", session.classGroupId)}</span>
+            <span className="block text-[13px] leading-tight text-brand-muted">Buổi {session.sessionNumber}</span>
+          </td>
+          <td className="border-l border-brand-sandLine px-4 py-2 align-middle">
+            {session.scheduledTutorId === null ? (
+              <span className="text-[14px] text-brand-muted">Chưa phân công</span>
+            ) : (
+              <span className="block truncate text-[14px] text-brand-ink">
+                {nameOf(session.actualTutorId ?? session.scheduledTutorId) ?? "Gia sư"}
+              </span>
+            )}
+          </td>
+          <td className="border-l border-brand-sandLine px-4 py-2 align-middle">
+            <span className="flex flex-wrap items-center gap-1.5">
+              {status && (
+                <StatusChip tone={status.tone} icon={status.icon}>
+                  {status.label}
+                </StatusChip>
+              )}
+              {sessionBadge(session)}
+            </span>
+          </td>
+          <td className="border-l border-brand-sandLine px-2 py-2 text-center align-middle">
+            <button
+              type="button"
+              onClick={() => toggle(session.sessionId)}
+              aria-expanded={open}
+              aria-label={`${open ? "Đóng" : "Mở"} chi tiết buổi ${displayCode("session", session.sessionId)}`}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-sm text-slate-400 hover:bg-brand-sand hover:text-brand-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-navy"
+            >
+              <Icon name="expand_more" className={`text-[21px] transition-transform ${open ? "rotate-180" : ""}`} />
+            </button>
+          </td>
+        </tr>
+        {open && (
+          <tr className="border-t border-brand-sandLine bg-brand-tint/30">
+            <td colSpan={7} className="px-4 py-3">
+              <AdminSessionDetail session={session} now={now} />
+            </td>
+          </tr>
+        )}
+      </Fragment>
     );
   };
 
@@ -148,7 +198,20 @@ export function AdminSessionsPage() {
           ) : linkedQuery.isError || !linkedQuery.data ? (
             <PortalError message={`Không tìm thấy buổi học ${displayCode("session", linkedId)}.`} onRetry={() => void linkedQuery.refetch()} />
           ) : (
-            <ul>{renderRow(linkedQuery.data)}</ul>
+            <div className="overflow-x-auto rounded-sm border border-brand-sandLine bg-white">
+              <table className="w-full min-w-[920px] table-fixed border-collapse text-left">
+                <colgroup>
+                  <col className="w-[10%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[15%]" />
+                  <col className="w-[19%]" />
+                  <col className="w-[23%]" />
+                  <col className="w-[5%]" />
+                </colgroup>
+                <tbody>{renderRow(linkedQuery.data)}</tbody>
+              </table>
+            </div>
           )}
         </section>
       )}
@@ -176,7 +239,24 @@ export function AdminSessionsPage() {
             <p className="mb-2.5 text-[14px] text-brand-muted">
               <span className="font-semibold tabular-nums text-brand-ink">{list.totalElements}</span> buổi học
             </p>
-            <ul className="space-y-2.5">{list.content.filter((session) => session.sessionId !== linkedId).map(renderRow)}</ul>
+            <div className="overflow-x-auto rounded-sm border border-brand-sandLine bg-white">
+              <table className="w-full min-w-[920px] table-fixed border-collapse text-left">
+                <thead className="bg-brand-sand/70 text-[11.5px] font-bold uppercase tracking-wide text-brand-muted">
+                  <tr>
+                    <th scope="col" className="w-[10%] px-4 py-3">Mã buổi</th>
+                    <th scope="col" className="w-[14%] border-l border-brand-sandLine px-4 py-3">Ngày</th>
+                    <th scope="col" className="w-[14%] border-l border-brand-sandLine px-4 py-3">Giờ học</th>
+                    <th scope="col" className="w-[15%] border-l border-brand-sandLine px-4 py-3">Lớp</th>
+                    <th scope="col" className="w-[19%] border-l border-brand-sandLine px-4 py-3">Gia sư</th>
+                    <th scope="col" className="w-[23%] border-l border-brand-sandLine px-4 py-3">Trạng thái</th>
+                    <th scope="col" className="w-[5%] border-l border-brand-sandLine px-2 py-3">
+                      <span className="sr-only">Chi tiết</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>{list.content.filter((session) => session.sessionId !== linkedId).map(renderRow)}</tbody>
+              </table>
+            </div>
             <Pager page={page} totalPages={list.totalPages} onChange={changePage} label="Phân trang buổi học" />
           </>
         )}

@@ -15,14 +15,14 @@ import { Select } from "@/components/ui/Select";
 
 type Sort = "BEST" | "WORST" | "MOST";
 
+// Số có một chữ số thập phân (ví dụ 4,5)
 const one = (value: number) => value.toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+// Làm tròn điểm về số sao 1 - 5
 const starsOf = (value: number) => Math.min(5, Math.max(1, Math.round(Number(value))));
 
-/**
- * Trang Đánh giá gia sư của quản trị (/admin/reviews): bảng xếp hạng mọi gia sư theo điểm trung bình / số lượt,
- * bấm một gia sư để xem phân bố sao và từng nhận xét (kèm tên học viên). Gia sư đang chọn nằm ở ?gs=<id>.
- * Dữ liệu: GET /admin/users (gia sư), GET /tutors/{id}/ratings/summary và /tutors/{id}/ratings.
- */
+// Trang Đánh giá gia sư của quản trị (/admin/reviews): bảng xếp hạng mọi gia sư theo điểm trung bình / số lượt,
+// bấm một gia sư để xem phân bố sao và từng nhận xét (kèm tên học viên). Gia sư đang chọn nằm ở ?gs=<id>.
+// Dữ liệu: GET /admin/users (gia sư), GET /tutors/{id}/ratings/summary và /tutors/{id}/ratings.
 export function AdminReviewsPage() {
   const [params, setParams] = useSearchParams();
   const { tutors, nameOf } = useUserDirectory();
@@ -63,7 +63,9 @@ export function AdminReviewsPage() {
     <div>
       <PortalPageHeader icon="reviews" title="Đánh giá gia sư" description="Học viên chấm sao cho thầy cô. Theo dõi chất lượng giảng dạy và đọc từng nhận xét." />
 
-      {/* Chỉ số chung */}
+      {
+        // Chỉ số chung
+      }
       <dl className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
           { icon: "star", label: "Điểm trung bình chung", value: overall != null ? one(overall) : "–" },
@@ -87,7 +89,9 @@ export function AdminReviewsPage() {
         <PortalEmpty icon="badge" title="Chưa có gia sư nào." />
       ) : (
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          {/* Bảng xếp hạng gia sư */}
+          {
+            // Bảng xếp hạng gia sư
+          }
           <section className={`overflow-hidden ${PORTAL_CARD}`}>
             <div className="flex flex-wrap items-center gap-2 border-b border-brand-sandLine p-3.5">
               <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-xl bg-brand-sand/70 px-3 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-navy/30">
@@ -154,7 +158,9 @@ export function AdminReviewsPage() {
             )}
           </section>
 
-          {/* Chi tiết một gia sư */}
+          {
+            // Chi tiết một gia sư
+          }
           <section className="lg:sticky lg:top-24">
             {!selected ? (
               <div className="flex flex-col items-center rounded-2xl border border-dashed border-brand-navy/25 bg-white/60 px-6 py-16 text-center">

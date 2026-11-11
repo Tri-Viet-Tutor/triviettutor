@@ -4,11 +4,9 @@ import { ROUTES } from "@/constants/routes";
 import { CheckoutFlow } from "@/components/checkout/CheckoutFlow";
 import { useAuthStore } from "@/stores/authStore";
 
-/**
- * Trang thanh toán công khai (/thanh-toan) — dành cho khách chưa đăng nhập.
- * Học viên đã đăng nhập được chuyển sang trang thanh toán trong khu học viên, giữ nguyên tham số trên
- * đường dẫn (VNPay trả kết quả về địa chỉ này).
- */
+// Trang thanh toán công khai (/thanh-toan) — dành cho khách chưa đăng nhập.
+// Học viên đã đăng nhập được chuyển sang trang thanh toán trong khu học viên, giữ nguyên tham số trên
+// đường dẫn (VNPay trả kết quả về địa chỉ này).
 export function CheckoutPage() {
   const role = useAuthStore((state) => state.user?.role);
   const { search } = useLocation();

@@ -1,11 +1,12 @@
 import { useEffect, useRef } from "react";
 
-/** Thanh tiến độ đọc trang, chạy theo vị trí cuộn. */
+// Thanh tiến độ đọc trang, chạy theo vị trí cuộn.
 export function ReadingProgress() {
   const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let frame = 0;
+    // Tính phần trăm đã cuộn trang để vẽ thanh tiến độ đọc
     const update = () => {
       frame = 0;
       const max = document.documentElement.scrollHeight - window.innerHeight;

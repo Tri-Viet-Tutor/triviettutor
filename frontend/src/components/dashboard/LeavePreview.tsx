@@ -4,10 +4,10 @@ import { Icon } from "@/components/ui/Icon";
 import { PORTAL_CARD, PORTAL_MORE_LINK } from "@/constants/classNames";
 import type { LeavePreviewProps } from "@/interfaces/portal";
 
-/** Số đơn hiện ở trang Tổng quan */
+// Số đơn hiện ở trang Tổng quan
 const PREVIEW_COUNT = 3;
 
-/** Mấy đơn xin nghỉ mới nhất của tôi, ở cột phải trang Tổng quan. */
+// Mấy đơn xin nghỉ mới nhất của tôi, ở cột phải trang Tổng quan.
 export function LeavePreview({ requests, isError, sessions, leaveTo, scheduleTo }: LeavePreviewProps) {
   return (
     <section className={`p-4 ${PORTAL_CARD}`} aria-labelledby="home-leave-title">

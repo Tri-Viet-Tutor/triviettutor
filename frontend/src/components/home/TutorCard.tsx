@@ -1,9 +1,9 @@
 import type { TutorCardProps } from "@/interfaces/home";
 
-/** Mỗi ảnh nghiêng một chút như ảnh dán trên tờ quảng cáo */
+// Mỗi ảnh nghiêng một chút như ảnh dán trên tờ quảng cáo
 const TILTS = ["-rotate-2", "rotate-1", "-rotate-1", "rotate-2", "-rotate-1", "rotate-1"];
 
-/** Ảnh gia sư viền trắng dán trên tấm quảng cáo, tên và môn nằm ở chân ảnh */
+// Ảnh gia sư viền trắng dán trên tấm quảng cáo, tên và môn nằm ở chân ảnh
 export function TutorCard({ tutor, index }: TutorCardProps) {
   return (
     <li className={`group ${index % 3 === 1 ? "sm:translate-y-6" : ""}`}>

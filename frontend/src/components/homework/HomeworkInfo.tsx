@@ -4,10 +4,8 @@ import { attachmentName } from "@/services/fileService";
 import { formatDateTime, formatScore, homeworkPhase } from "@/utils/homework";
 import type { HomeworkInfoProps } from "@/interfaces/homework";
 
-/**
- * Khung thông tin của một bài tập: giờ mở, hạn nộp, mật khẩu, nộp trễ, điểm tối đa và đề bài.
- * Dùng chung cho trang của gia sư và học viên.
- */
+// Khung thông tin của một bài tập: giờ mở, hạn nộp, mật khẩu, nộp trễ, điểm tối đa và đề bài.
+// Dùng chung cho trang của gia sư và học viên.
 export function HomeworkInfo({ homework, now }: HomeworkInfoProps) {
   const phase = homeworkPhase(homework, now);
   const questionCount = homework.questions?.length;
@@ -71,9 +69,9 @@ export function HomeworkInfo({ homework, now }: HomeworkInfoProps) {
           href={homework.resourceUrl}
           target="_blank"
           rel="noreferrer noopener"
-          className={`mt-3 inline-flex items-center gap-1 text-[14.5px] ${PORTAL_TEXT_LINK}`}
+          className={`mt-3 inline-block text-[14.5px] ${PORTAL_TEXT_LINK}`}
         >
-          <Icon name="attach_file" className="text-[18px]" />
+          <Icon name="attach_file" className="mr-1 text-[18px]" />
           {attachmentName(homework.resourceUrl)}
         </a>
       )}

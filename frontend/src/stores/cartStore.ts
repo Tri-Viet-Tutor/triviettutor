@@ -11,12 +11,10 @@ try {
   // Trình duyệt chặn storage (chế độ riêng tư...) thì bỏ qua
 }
 
-/**
- * Giỏ khóa học của trang "Mua khóa học" (Zustand).
- * Lưu trong sessionStorage: tải lại trang vẫn còn, đóng thẻ trình duyệt là hết.
- * Khách chưa đăng nhập rời luồng mua thì giỏ bị xóa (xem GuestCartScope).
- * Chỉ giữ mã môn — tên và học phí luôn đọc lại từ dữ liệu khóa học, không lưu giá cũ.
- */
+// Giỏ khóa học của trang "Mua khóa học" (Zustand).
+// Lưu trong sessionStorage: tải lại trang vẫn còn, đóng thẻ trình duyệt là hết.
+// Khách chưa đăng nhập rời luồng mua thì giỏ bị xóa (xem GuestCartScope).
+// Chỉ giữ mã môn — tên và học phí luôn đọc lại từ dữ liệu khóa học, không lưu giá cũ.
 export const useCartStore = create<CartState>()(
   persist(
     (set) => ({

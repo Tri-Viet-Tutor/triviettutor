@@ -1,9 +1,9 @@
-import type { ErrorCode } from "@/interfaces/api";
-import { apiErrorMessage, getApiError } from "@/services/api";
+import type { ErrorCode } from "@/interfaces/dto";
+import { apiErrorMessage, getApiError } from "@/services/apiClient";
 
-/* Đổi lỗi từ API thành câu báo tiếng Việt cho người dùng. */
+// Đổi lỗi từ API thành câu báo tiếng Việt cho người dùng.
 
-/** Câu báo lỗi tiếng Việt cho các mã lỗi xác thực của backend */
+// Câu báo lỗi tiếng Việt cho các mã lỗi xác thực của backend
 const AUTH_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   INVALID_CREDENTIALS: "Email hoặc mật khẩu không đúng.",
   ACCOUNT_NOT_VERIFIED: "Tài khoản chưa được kích hoạt. Hãy nhập mã xác thực đã gửi tới email của bạn.",
@@ -23,12 +23,12 @@ const AUTH_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   PAYMENT_REQUIRED: "Email này chưa có đơn đã thanh toán. Hãy mua khóa học trước.",
 };
 
-/** Đổi lỗi của một lời gọi API thành câu báo cho người dùng; mất kết nối thì báo riêng. */
+// Đổi lỗi của một lời gọi API thành câu báo cho người dùng; mất kết nối thì báo riêng.
 export function authErrorMessage(error: unknown, fallback = "Có lỗi xảy ra. Vui lòng thử lại."): string {
   return apiErrorMessage(error, AUTH_ERROR_TEXT, fallback);
 }
 
-/** Câu báo cho `?error=` mà backend gắn khi đăng nhập Google không thành công */
+// Câu báo cho `?error=` mà backend gắn khi đăng nhập Google không thành công
 const GOOGLE_LOGIN_ERROR_TEXT: Record<string, string> = {
   GOOGLE_EMAIL_NOT_VERIFIED: "Email Google của bạn chưa được Google xác minh.",
   ACCOUNT_NOT_VERIFIED: "Email này đã đăng ký nhưng chưa kích hoạt. Hãy đăng nhập bằng mật khẩu và nhập mã xác thực trước.",
@@ -37,17 +37,17 @@ const GOOGLE_LOGIN_ERROR_TEXT: Record<string, string> = {
   GOOGLE_LOGIN_FAILED: "Đăng nhập bằng Google chưa thành công. Vui lòng thử lại.",
 };
 
-/** Đổi mã `?error=` của trang đăng nhập thành câu báo; mã lạ dùng câu chung */
+// Đổi mã `?error=` của trang đăng nhập thành câu báo; mã lạ dùng câu chung
 export function googleLoginErrorMessage(code: string): string {
   return GOOGLE_LOGIN_ERROR_TEXT[code] ?? GOOGLE_LOGIN_ERROR_TEXT.GOOGLE_LOGIN_FAILED;
 }
 
-/** Mã lỗi của lời gọi API (nếu backend có trả về) */
+// Mã lỗi của lời gọi API (nếu backend có trả về)
 export function authErrorCode(error: unknown): ErrorCode | undefined {
   return getApiError(error).errorCode;
 }
 
-/** Câu báo lỗi tiếng Việt cho các mã lỗi backend có thể trả về ở ba khu sau đăng nhập */
+// Câu báo lỗi tiếng Việt cho các mã lỗi backend có thể trả về ở ba khu sau đăng nhập
 const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   // Chung
   ACCESS_DENIED: "Bạn không có quyền với buổi học này.",
@@ -159,7 +159,7 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   RATING_NOT_ELIGIBLE: "Bạn chỉ đánh giá được gia sư dạy lớp bạn đang học.",
 };
 
-/** Đổi lỗi của một lời gọi API thành câu báo cho người dùng; mất kết nối thì báo riêng. */
+// Đổi lỗi của một lời gọi API thành câu báo cho người dùng; mất kết nối thì báo riêng.
 export function portalErrorMessage(error: unknown, fallback: string): string {
   return apiErrorMessage(error, PORTAL_ERROR_TEXT, fallback);
 }

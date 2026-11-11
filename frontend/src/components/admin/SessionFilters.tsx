@@ -1,20 +1,20 @@
-import { AUTH_LABEL, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT } from "@/constants/classNames";
+import { AUTH_LABEL, PORTAL_BTN_SECONDARY, PORTAL_INPUT } from "@/constants/classNames";
 import { SESSION_STATUS } from "@/constants/labels";
 import type { SessionFiltersProps } from "@/interfaces/admin";
-import type { SessionStatus } from "@/interfaces/api";
+import type { SessionStatus } from "@/interfaces/dto";
 import { DateField } from "@/components/ui/DateField";
 import { Select } from "@/components/ui/Select";
 
-/** Mọi trạng thái buổi học, theo thứ tự khai báo nhãn */
+// Mọi trạng thái buổi học, theo thứ tự khai báo nhãn
 const STATUS_OPTIONS = Object.keys(SESSION_STATUS) as SessionStatus[];
 
-/** Bộ lọc của trang Buổi học: khoảng ngày, trạng thái, lớp, gia sư (các tham số của GET /admin/sessions). */
+// Bộ lọc của trang Buổi học: khoảng ngày, trạng thái, lớp, gia sư (các tham số của GET /admin/sessions).
 export function SessionFilters({ values, tutors, onChange, onReset }: SessionFiltersProps) {
   return (
     <form
       aria-label="Lọc buổi học"
       onSubmit={(event) => event.preventDefault()}
-      className={`grid grid-cols-2 items-end gap-x-3 gap-y-3 p-4 sm:grid-cols-3 lg:grid-cols-[repeat(5,minmax(0,1fr))_auto] ${PORTAL_CARD}`}
+      className="grid grid-cols-2 items-end gap-x-3 gap-y-3 rounded-sm border border-brand-sandLine bg-white p-4 sm:grid-cols-3 lg:grid-cols-[repeat(5,minmax(0,1fr))_auto]"
     >
       <div>
         <label htmlFor="filter-from" className={`mb-1.5 ${AUTH_LABEL}`}>

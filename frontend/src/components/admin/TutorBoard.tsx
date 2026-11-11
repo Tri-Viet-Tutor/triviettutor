@@ -4,7 +4,7 @@ import { PortalError } from "@/components/dashboard/PortalState";
 import { Icon } from "@/components/ui/Icon";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { adminKeys } from "@/hooks/useAdminData";
-import { fetchTutorBoard } from "@/services/admin";
+import { fetchTutorBoard } from "@/services/adminService";
 import { displayCode } from "@/utils/classes";
 import { addDays, formatDayMonth, startOfToday, startOfWeek, toIsoDate, weekdayName } from "@/utils/date";
 import { normalizeText } from "@/utils/text";
@@ -12,15 +12,14 @@ import { TimeField } from "@/components/ui/TimeField";
 import { Select } from "@/components/ui/Select";
 
 const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+// Giờ dạng "HH:mm" từ "HH:mm:ss"
 const hhmm = (time: string) => time.slice(0, 5);
-/** "18:30" → số phút trong ngày */
+// "18:30" → số phút trong ngày
 const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
 
-/**
- * Bảng lịch gia sư theo tuần cho trang Phân công dạy thay (GET /admin/tutor-board):
- * mỗi dòng một gia sư, mỗi cột một ngày (Thứ 2 → Chủ nhật); ô xanh là khung rảnh gia sư đã khai,
- * ô navy là buổi đang dạy. Tìm theo tên, lọc theo thứ và khung giờ để thấy ngay ai rảnh.
- */
+// Bảng lịch gia sư theo tuần cho trang Phân công dạy thay (GET /admin/tutor-board):
+// mỗi dòng một gia sư, mỗi cột một ngày (Thứ 2 → Chủ nhật); ô xanh là khung rảnh gia sư đã khai,
+// ô navy là buổi đang dạy. Tìm theo tên, lọc theo thứ và khung giờ để thấy ngay ai rảnh.
 export function TutorBoard() {
   const today = startOfToday();
   const [weekOffset, setWeekOffset] = useState(0);
@@ -40,7 +39,7 @@ export function TutorBoard() {
   });
 
   const timeSet = from !== "" && to !== "" && minutes(from) < minutes(to);
-  /** Gia sư rảnh trọn khung [from, to] của ngày `iso` (đã khai rảnh phủ đủ và không có buổi dạy chồng lên) */
+  // Gia sư rảnh trọn khung [from, to] của ngày `iso` (đã khai rảnh phủ đủ và không có buổi dạy chồng lên)
   const freeAt = (row: NonNullable<typeof query.data>[number], iso: string) => {
     const slots = row.availability.filter((slot) => slot.availableDate === iso);
     if (!timeSet) return slots.length > 0;
@@ -69,7 +68,9 @@ export function TutorBoard() {
 
   return (
     <section aria-labelledby="tutor-board-title" className="mt-8 overflow-hidden rounded-2xl border border-brand-sandLine bg-white shadow-[0_14px_34px_-26px_rgba(11,58,140,0.35)]">
-      {/* Tiêu đề + chọn tuần */}
+      {
+        // Tiêu đề + chọn tuần
+      }
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-sandLine px-5 py-4">
         <div>
           <h2 id="tutor-board-title" className="flex items-center gap-2 text-[17px] font-extrabold text-brand-navy">
@@ -108,7 +109,9 @@ export function TutorBoard() {
         </div>
       </div>
 
-      {/* Bộ tìm chi tiết */}
+      {
+        // Bộ tìm chi tiết
+      }
       <div className="flex flex-wrap items-end gap-3 border-b border-brand-sandLine bg-brand-sand/40 px-5 py-3.5">
         <label className="min-w-[200px] flex-1">
           <span className="mb-1 block text-[12px] font-semibold text-brand-muted">Gia sư</span>
@@ -177,7 +180,9 @@ export function TutorBoard() {
         )}
       </div>
 
-      {/* Chú thích */}
+      {
+        // Chú thích
+      }
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 pt-3 text-[12px] text-brand-muted">
         <span className="flex items-center gap-1.5">
           <span className="h-3 w-3 rounded bg-emerald-100 ring-1 ring-emerald-300" /> Đã khai rảnh

@@ -1,8 +1,9 @@
 import { CONTACT_EMAIL } from "@/constants/contact";
 import type { ConsultLetter } from "@/interfaces/contact";
 
-/* Hàm hỗ trợ trang "Liên hệ". */
+// Hàm hỗ trợ trang "Liên hệ".
 
+// Tạo link mailto đăng ký tư vấn với nội dung điền sẵn
 export function buildConsultMailto(letter: ConsultLetter): string {
   const subject = `Đăng ký tư vấn – ${letter.subject} ${letter.grade}`;
   // Mỗi thông tin một dòng; email và ghi chú để trống thì bỏ

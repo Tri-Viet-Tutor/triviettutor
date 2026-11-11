@@ -13,37 +13,36 @@ import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY } from "@/constants/classNames";
 import { GRADE_OPTIONS } from "@/constants/classOptions";
 import { CLASS_STATUS } from "@/constants/labels";
-import { coursePricePerSession, coursePriceTiers, gradeLabel, subjectIcon, subjectLabel, subjectOptionsFrom } from "@/constants/management";
+import { coursePricePerSession, gradeLabel, subjectIcon, subjectLabel, subjectOptionsFrom } from "@/constants/management";
 import { useRefreshAdmin } from "@/hooks/useAdminData";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAdminCourses, useCourseSummary, useSubjects } from "@/hooks/useManagementData";
-import type { AdminClassResponse, CourseResponse, GradeLevel } from "@/interfaces/api";
+import type { AdminClassResponse, CourseResponse, GradeLevel } from "@/interfaces/dto";
 import { deleteCourse, setCourseActive } from "@/services/managementService";
 import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
 import { displayCode } from "@/utils/classes";
+import { formatVnd } from "@/utils/currency";
 import { portalErrorMessage } from "@/utils/errors";
 
-/** Bộ lọc trạng thái bán */
+// Bộ lọc trạng thái bán
 type ActiveFilter = "all" | "active" | "inactive";
 
 const PAGE_SIZE = 12;
 
-/** Khung chung của mọi điều khiển trên thanh công cụ: cùng chiều cao 48px, cùng bo góc, cùng viền và bóng */
+// Khung chung của mọi điều khiển trên thanh công cụ: cùng chiều cao 48px, cùng bo góc, cùng viền và bóng
 const CONTROL = "h-12 rounded-xl border border-brand-sandLine bg-white shadow-[0_1px_2px_rgba(20,33,61,0.05)]";
 
-/** Thông báo nổi tự tắt sau (ms) */
+// Thông báo nổi tự tắt sau (ms)
 const TOAST_MS = 4000;
 
-/** Ô chọn nằm trong dải công cụ (không viền riêng) */
+// Ô chọn nằm trong dải công cụ (không viền riêng)
 const STRIP_SELECT = `h-full min-w-0 cursor-pointer appearance-none bg-transparent pl-3 pr-8 text-[14px] font-medium text-brand-ink outline-none ${FOCUS_RING}`;
 
-/**
- * Quản lý khóa học:
- * - Dải công cụ: ô tìm theo tên, lọc khối, lọc môn; nút trượt Tất cả / Đang bán / Ngừng bán.
- * - Mỗi khóa là một dòng gọn: tên, môn - khối, số buổi, học phí 1 kèm 1, trạng thái.
- * - Bấm một khóa mở ngăn chi tiết bên phải (học phí theo sĩ số, các lớp, sửa, mở / ngừng bán, tạo lớp).
- * API: GET/POST /admin/courses, PUT /admin/courses/{id}, PATCH /admin/courses/{id}/toggle.
- */
+// Quản lý khóa học:
+// - Dải công cụ: ô tìm theo tên, lọc khối, lọc môn; nút trượt Tất cả / Đang bán / Ngừng bán.
+// - Mỗi khóa là một dòng gọn: tên, môn - khối, học phí 1 buổi học, trạng thái.
+// - Bấm một khóa mở ngăn chi tiết bên phải (học phí theo sĩ số, các lớp, sửa, mở / ngừng bán, tạo lớp).
+// API: GET/POST /admin/courses, PUT /admin/courses/{id}, PATCH /admin/courses/{id}/toggle.
 export function AdminCoursesPage() {
   const [subject, setSubject] = useState("");
   const [grade, setGrade] = useState<GradeLevel | "">("");
@@ -102,16 +101,19 @@ export function AdminCoursesPage() {
 
   const [removing, setRemoving] = useState<CourseResponse | null>(null);
 
+  // Mở hộp thêm khóa (null) hoặc sửa khóa
   function openForm(course: CourseResponse | null) {
     setEditing(course);
     setDialogOpen(true);
   }
 
+  // Đổi bộ lọc và quay về trang 1
   function changeFilter(apply: () => void) {
     apply();
     setPage(0);
   }
 
+  // Xóa hết bộ lọc
   function clearFilters() {
     changeFilter(() => {
       setSubject("");
@@ -137,7 +139,9 @@ export function AdminCoursesPage() {
         description="Khung chương trình theo môn và khối. Mỗi lớp học được mở từ một khóa đang bán."
       />
 
-      {/* Dải công cụ */}
+      {
+        // Dải công cụ
+      }
       <div className="mb-8 flex flex-col gap-4 xl:flex-row xl:items-center">
         <div className={`flex min-w-0 flex-1 items-stretch focus-within:border-brand-navy/40 ${CONTROL}`}>
           <label className="relative flex min-w-0 flex-1 items-center">
@@ -188,7 +192,9 @@ export function AdminCoursesPage() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4 xl:justify-start">
-          {/* Nút trượt trạng thái bán */}
+          {
+            // Nút trượt trạng thái bán
+          }
           <div role="tablist" aria-label="Trạng thái bán" className={`relative grid shrink-0 grid-cols-3 p-1 ${CONTROL}`}>
             <span
               aria-hidden="true"
@@ -251,21 +257,20 @@ export function AdminCoursesPage() {
         />
       ) : (
         <>
-          <div className="overflow-x-auto rounded-2xl border border-brand-sandLine bg-white shadow-[0_1px_2px_rgba(20,33,61,0.05)]">
-            <table className="w-full min-w-[860px] border-collapse text-left">
-              <thead>
-                <tr className="border-b border-brand-sandLine bg-brand-sand/60 text-[12px] font-bold uppercase tracking-wide text-brand-muted">
-                  <th scope="col" className="w-[88px] px-5 py-3">Mã</th>
-                  <th scope="col" className="px-4 py-3">Khóa học</th>
-                  <th scope="col" className="w-[170px] px-4 py-3 text-right">1 kèm 1 / buổi (VNĐ)</th>
-                  <th scope="col" className="w-[190px] px-4 py-3 text-right">Lớp nhóm / buổi (VNĐ)</th>
-                  <th scope="col" className="w-[140px] px-4 py-3">Trạng thái</th>
-                  <th scope="col" className="w-[64px] px-4 py-3 text-right">
+          <div className="overflow-x-auto rounded-sm border border-brand-sandLine bg-white">
+            <table className="w-full min-w-[820px] table-fixed border-collapse text-left">
+              <thead className="bg-brand-sand/70 text-[11.5px] font-bold uppercase tracking-wide text-brand-muted">
+                <tr>
+                  <th scope="col" className="w-[11%] px-4 py-3">Mã</th>
+                  <th scope="col" className="w-[45%] border-l border-brand-sandLine px-4 py-3">Khóa học</th>
+                  <th scope="col" className="w-[21%] border-l border-brand-sandLine px-4 py-3 text-right">Giá 1 buổi học</th>
+                  <th scope="col" className="w-[17%] border-l border-brand-sandLine px-4 py-3">Trạng thái</th>
+                  <th scope="col" className="w-[6%] border-l border-brand-sandLine px-2 py-3">
                     <span className="sr-only">Thao tác</span>
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-brand-sandLine">
+              <tbody>
                 {rows.map((course) => (
                   <CourseRow
                     key={course.id}
@@ -359,10 +364,8 @@ export function AdminCoursesPage() {
   );
 }
 
-/**
- * Một khóa ở dạng dòng gọn: ảnh bìa, tên, môn - khối, số buổi, học phí 1 kèm 1, trạng thái, menu ⋮.
- * Bấm vào thẻ mở ngăn chi tiết. Màn hình hẹp: các cột gộp thành hai dòng dưới tên khóa.
- */
+// Một khóa ở dạng dòng gọn: ảnh bìa, tên, môn - khối, học phí 1 buổi học, trạng thái, menu ⋮.
+// Bấm vào thẻ mở ngăn chi tiết. Màn hình hẹp: các cột gộp thành hai dòng dưới tên khóa.
 function CourseRow({
   course,
   selected,
@@ -383,14 +386,13 @@ function CourseRow({
   onToggle: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const number = (amount: number) => new Intl.NumberFormat("vi-VN").format(amount);
 
   return (
-    <tr className={`transition-colors ${selected ? "bg-brand-tint/60" : "hover:bg-brand-sand/30"} ${menuOpen ? "relative z-20" : ""}`}>
-      <td className="px-5 py-3.5">
-        <span className={`font-mono text-[13px] font-bold ${course.active ? "text-brand-navy" : "text-brand-muted"}`}>{displayCode("course", course.id)}</span>
+    <tr className={`border-t border-brand-sandLine ${selected ? "bg-brand-tint/50" : "hover:bg-brand-sand/50"} ${menuOpen ? "relative z-20" : ""}`}>
+      <td className="h-14 px-4 py-2 align-middle">
+        <span className={`text-[14px] font-bold tabular-nums ${course.active ? "text-brand-navy" : "text-brand-muted"}`}>{displayCode("course", course.id)}</span>
       </td>
-      <td className="px-4 py-3.5">
+      <td className="border-l border-brand-sandLine px-4 py-2 align-middle">
         <span className="flex min-w-0 items-center gap-3">
           <span
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${course.active ? "bg-brand-tint text-brand-navy" : "bg-slate-100 text-slate-500"}`}
@@ -411,15 +413,11 @@ function CourseRow({
           </span>
         </span>
       </td>
-      <td className="px-4 py-3.5 text-right text-[15px] font-bold tabular-nums text-brand-ink">{number(coursePricePerSession(course))}</td>
-      <td className="px-4 py-3.5 text-right">
-        <span className="text-[12px] text-brand-muted">từ </span>
-        <span className="text-[15px] font-bold tabular-nums text-brand-navy">{number(groupFrom(course))}</span>
-      </td>
-      <td className="px-4 py-3.5">
+      <td className="border-l border-brand-sandLine px-4 py-2 align-middle text-right text-[15px] font-bold tabular-nums text-brand-ink">{formatVnd(coursePricePerSession(course))}</td>
+      <td className="border-l border-brand-sandLine px-4 py-2 align-middle">
         <SaleBadge active={course.active} />
       </td>
-      <td className="relative px-4 py-3.5 text-right">
+      <td className="relative border-l border-brand-sandLine px-2 py-2 text-center align-middle">
         <RowMenu
           label={`khóa ${course.name}`}
           open={menuOpen}
@@ -448,10 +446,8 @@ function CourseRow({
   );
 }
 
-/**
- * Nhãn trạng thái bán màu pastel.
- * Ngừng bán: nền xám có viền và chấm rỗng để đọc ra ngay là đang tắt.
- */
+// Nhãn trạng thái bán màu pastel.
+// Ngừng bán: nền xám có viền và chấm rỗng để đọc ra ngay là đang tắt.
 function SaleBadge({ active }: { active: boolean }) {
   return active ? (
     <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-emerald-50 px-3 py-1 text-[12.5px] font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-600/15">
@@ -466,8 +462,3 @@ function SaleBadge({ active }: { active: boolean }) {
   );
 }
 
-/** Học phí mỗi buổi thấp nhất của lớp nhóm (bậc sĩ số đông nhất) */
-function groupFrom(course: CourseResponse): number {
-  const group = coursePriceTiers(course).filter((tier) => tier.discountRate > 0).map((tier) => tier.price);
-  return group.length > 0 ? Math.min(...group) : coursePricePerSession(course);
-}

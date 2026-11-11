@@ -4,7 +4,7 @@ import { AUTH_INPUT, AUTH_LABEL, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY } from
 import { portalErrorMessage } from "@/utils/errors";
 import type { ReasonFormProps } from "@/interfaces/admin";
 
-/** Form nhỏ hỏi lý do trước một thao tác của quản trị (backend lưu lý do vào nhật ký thay đổi, tối đa 1000 ký tự). */
+// Form nhỏ hỏi lý do trước một thao tác của quản trị (backend lưu lý do vào nhật ký thay đổi, tối đa 1000 ký tự).
 export function ReasonForm({
   id,
   label,
@@ -20,7 +20,7 @@ export function ReasonForm({
 }: ReasonFormProps) {
   const [reason, setReason] = useState("");
 
-  /** Chỉ gửi khi lý do không trống và các ô phía trên đã hợp lệ */
+  // Chỉ gửi khi lý do không trống và các ô phía trên đã hợp lệ
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (reason.trim() && canSubmit) onSubmit(reason.trim());

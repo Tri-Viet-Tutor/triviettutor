@@ -4,15 +4,13 @@ import { classProgress } from "@/utils/sessions";
 import type { ClassProgressListProps } from "@/interfaces/portal";
 import { displayCode } from "@/utils/classes";
 
-/** Vòng tròn tiến độ: bán kính và chu vi (đơn vị của viewBox) */
+// Vòng tròn tiến độ: bán kính và chu vi (đơn vị của viewBox)
 const RING_RADIUS = 52;
 
 const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
 
-/**
- * Thẻ "Tiến độ": vòng tròn phần trăm số buổi đã học trên tổng số buổi của mọi lớp,
- * và một thanh cho từng lớp (không tính buổi đã hủy).
- */
+// Thẻ "Tiến độ": vòng tròn phần trăm số buổi đã học trên tổng số buổi của mọi lớp,
+// và một thanh cho từng lớp (không tính buổi đã hủy).
 export function ClassProgressList({ sessions }: ClassProgressListProps) {
   const classes = classProgress(sessions);
   // Gộp tất cả các lớp để tính phần trăm chung; chưa có lớp thì vòng tròn 0% kèm lời nhắc

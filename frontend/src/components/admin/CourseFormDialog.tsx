@@ -11,7 +11,6 @@ import {
   DURATION_MAX,
   DURATION_MIN,
   DURATION_STEP,
-  MIN_COURSE_PRICE,
   SUBJECT_OPTIONS,
   coursePricePerSession,
   subjectOptionsFrom,
@@ -19,16 +18,17 @@ import {
 import { useSubjects } from "@/hooks/useManagementData";
 import { createCourse, updateCourse } from "@/services/managementService";
 import { formatVnd } from "@/utils/currency";
+import { requireText, validateCoursePrice, validateDuration } from "@/utils/validation";
 import { portalErrorMessage } from "@/utils/errors";
-import type { CourseRequest, GradeLevel } from "@/interfaces/api";
+import type { CourseRequest, GradeLevel } from "@/interfaces/dto";
 import type { CourseFormDialogProps } from "@/interfaces/admin";
 
-/** Giá trị trống của form */
+// Giá trị trống của form
 const EMPTY = {
   name: "",
   subject: SUBJECT_OPTIONS[0]?.value ?? "MATH",
   gradeLevel: "GRADE_10" as GradeLevel,
-  /** Chỉ chứa chữ số, hiển thị có dấu chấm ngăn hàng nghìn */
+  // Chỉ chứa chữ số, hiển thị có dấu chấm ngăn hàng nghìn
   basePrice1on1: "",
   durationMinutes: DEFAULT_DURATION_MINUTES,
   description: "",
@@ -42,28 +42,35 @@ const TABS: { value: Tab; label: string; icon: string }[] = [
   { value: "pricing", label: "Cấu hình học phí", icon: "payments" },
 ];
 
-/** "6000000" → "6.000.000" */
+// "6000000" → "6.000.000"
 const groupDigits = (digits: string) => (digits ? new Intl.NumberFormat("vi-VN").format(Number(digits)) : "");
 
-/** Kiểm tra toàn form; trả về tab có lỗi và câu báo lỗi */
+// Kiểm tra toàn form; trả về tab có lỗi và câu báo lỗi
 function validate(values: Values): { tab: Tab; message: string } | null {
-  if (!values.name.trim()) return { tab: "general", message: "Nhập tên khóa học." };
-  if (values.name.trim().length > 200) return { tab: "general", message: "Tên khóa học tối đa 200 ký tự." };
-  if (!values.subject.trim()) return { tab: "general", message: "Chọn hoặc nhập môn học." };
-  if (values.subject.trim().length > 100) return { tab: "general", message: "Tên môn học tối đa 100 ký tự." };
-  if (!values.basePrice1on1 || Number(values.basePrice1on1) < MIN_COURSE_PRICE)
-    return { tab: "pricing", message: `Học phí 1 kèm 1 mỗi buổi tối thiểu ${formatVnd(MIN_COURSE_PRICE)}.` };
-  if (values.durationMinutes < DURATION_MIN || values.durationMinutes > DURATION_MAX)
-    return { tab: "general", message: `Thời lượng mỗi buổi phải từ ${DURATION_MIN} đến ${DURATION_MAX} phút.` };
+  const name = requireText(values.name, "Tên khóa học", 200);
+  if (name) return { tab: "general", message: name };
+  const subject = requireText(values.subject, "Môn học", 100);
+  if (subject) return { tab: "general", message: subject };
+  const price = validateCoursePrice(Number(values.basePrice1on1));
+  if (price) return { tab: "pricing", message: price };
+  const duration = validateDuration(values.durationMinutes);
+  if (duration) return { tab: "general", message: duration };
   return null;
 }
 
-/**
- * Hộp thoại tạo / sửa khóa học hai tab (POST /admin/courses, PUT /admin/courses/{id}):
- * Thông tin chung (tên, môn, khối, số buổi, phút / buổi, mô tả) và Cấu hình học phí
- * (học phí gốc 1 kèm 1 + xem trước giá lớp nhóm theo sĩ số). Chuyển tab tự do, lưu ở tab nào cũng được;
- * thiếu thông tin thì tự mở tab chứa lỗi.
- */
+// Hộp thoại tạo / sửa khóa học hai tab (POST /admin/courses, PUT /admin/courses/{id}):
+// Thông tin chung (tên, môn, khối, số buổi, phút / buổi, mô tả) và Cấu hình học phí
+// (học phí gốc 1 kèm 1 + xem trước giá lớp nhóm theo sĩ số). Chuyển tab tự do, lưu ở tab nào cũng được;
+// thiếu thông tin thì tự mở tab chứa lỗi.
+// Nút cộng trừ nhảy về bội số gần nhất của bước, nên khóa cũ để 110 phút bấm một cái là về 105 hoặc 120
+function stepDuration(current: number, direction: 1 | -1): number {
+  const base = current || DURATION_MIN;
+  const snapped = direction > 0 ? Math.floor(base / DURATION_STEP) : Math.ceil(base / DURATION_STEP);
+  const next = (snapped + direction) * DURATION_STEP;
+  return Math.min(DURATION_MAX, Math.max(DURATION_MIN, next));
+}
+
+// Hộp thêm / sửa khóa học, chia tab thông tin chung và học phí, có thể mở lớp đầu tiên ngay
 export function CourseFormDialog({ open, course, onClose, onSaved }: CourseFormDialogProps) {
   const [values, setValues] = useState<Values>(EMPTY);
   const [tab, setTab] = useState<Tab>("general");
@@ -99,11 +106,13 @@ export function CourseFormDialog({ open, course, onClose, onSaved }: CourseFormD
     onError: (error) => setFormError(portalErrorMessage(error, "Chưa lưu được khóa học. Kiểm tra lại thông tin rồi thử lại.")),
   });
 
+  // Sửa một ô trong form và xóa lỗi đang hiện
   function set<K extends keyof Values>(key: K, value: Values[K]) {
     setValues((current) => ({ ...current, [key]: value }));
     setFormError(null);
   }
 
+  // Kiểm tra form, báo lỗi đúng tab, hợp lệ thì lưu khóa học
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const problem = validate(values);
@@ -133,7 +142,9 @@ export function CourseFormDialog({ open, course, onClose, onSaved }: CourseFormD
       widthClassName="max-w-[760px]"
     >
       <form onSubmit={handleSubmit} noValidate>
-        {/* Thanh tab */}
+        {
+          // Thanh tab
+        }
         <div role="tablist" aria-label="Phần thông tin" className="-mt-2 mb-6 flex gap-1 rounded-xl bg-brand-sand/70 p-1">
           {TABS.map((item) => {
             const selected = tab === item.value;
@@ -177,7 +188,9 @@ export function CourseFormDialog({ open, course, onClose, onSaved }: CourseFormD
               <label htmlFor="course-subject" className={PORTAL_LABEL}>
                 Môn học
               </label>
-              {/* Chọn môn có sẵn trong danh sách gợi ý hoặc gõ tên môn mới (backend tự tạo môn) */}
+              {
+                // Chọn môn có sẵn trong danh sách gợi ý hoặc gõ tên môn mới (backend tự tạo môn)
+              }
               <Combobox
                 id="course-subject"
                 value={values.subject}
@@ -227,9 +240,9 @@ export function CourseFormDialog({ open, course, onClose, onSaved }: CourseFormD
                 <div className="flex max-w-[220px] items-stretch overflow-hidden rounded-xl border border-brand-sandLine bg-white shadow-sm">
                   <button
                     type="button"
-                    aria-label="Giảm 5 phút"
+                    aria-label={`Giảm ${DURATION_STEP} phút`}
                     disabled={values.durationMinutes <= DURATION_MIN}
-                    onClick={() => set("durationMinutes", Math.max(DURATION_MIN, (values.durationMinutes || DURATION_MIN) - DURATION_STEP))}
+                    onClick={() => set("durationMinutes", stepDuration(values.durationMinutes, -1))}
                     className="flex w-11 shrink-0 items-center justify-center text-brand-muted transition hover:bg-brand-sand/60 hover:text-brand-ink disabled:cursor-not-allowed disabled:opacity-30"
                   >
                     <Icon name="remove" className="text-[19px]" />
@@ -241,7 +254,7 @@ export function CourseFormDialog({ open, course, onClose, onSaved }: CourseFormD
                       inputMode="numeric"
                       min={DURATION_MIN}
                       max={DURATION_MAX}
-                      step={DURATION_STEP}
+                      step={1}
                       value={values.durationMinutes || ""}
                       onChange={(event) => {
                         const digits = event.target.value.replace(/\D/g, "").slice(0, 3);
@@ -257,16 +270,16 @@ export function CourseFormDialog({ open, course, onClose, onSaved }: CourseFormD
                   </div>
                   <button
                     type="button"
-                    aria-label="Tăng 5 phút"
+                    aria-label={`Tăng ${DURATION_STEP} phút`}
                     disabled={values.durationMinutes >= DURATION_MAX}
-                    onClick={() => set("durationMinutes", Math.min(DURATION_MAX, (values.durationMinutes || DURATION_MIN) + DURATION_STEP))}
+                    onClick={() => set("durationMinutes", stepDuration(values.durationMinutes, 1))}
                     className="flex w-11 shrink-0 items-center justify-center text-brand-muted transition hover:bg-brand-sand/60 hover:text-brand-ink disabled:cursor-not-allowed disabled:opacity-30"
                   >
                     <Icon name="add" className="text-[19px]" />
                   </button>
                 </div>
                 <p className="mt-2 text-[13px] text-brand-muted">
-                  Từ {DURATION_MIN} đến {DURATION_MAX} phút mỗi buổi. Số buổi đặt khi mở từng lớp.
+                  Từ {DURATION_MIN} đến {DURATION_MAX} phút, bước {DURATION_STEP} phút. Số buổi đặt khi mở từng lớp.
                 </p>
               </div>
             </div>
@@ -291,7 +304,7 @@ export function CourseFormDialog({ open, course, onClose, onSaved }: CourseFormD
           <div id="course-panel-pricing" role="tabpanel" aria-labelledby="course-tab-pricing" className="space-y-6">
             <div>
               <label htmlFor="course-price" className={PORTAL_LABEL}>
-                Học phí 1 kèm 1 cho mỗi buổi
+                Học phí 1 buổi học
               </label>
               <div className="relative">
                 <input
@@ -396,7 +409,7 @@ export function CourseFormDialog({ open, course, onClose, onSaved }: CourseFormD
   );
 }
 
-/** Chip chọn một trong nhiều (môn, khối) */
+// Chip chọn một trong nhiều (môn, khối)
 function ChoiceButton({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button

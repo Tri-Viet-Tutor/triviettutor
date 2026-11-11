@@ -3,7 +3,7 @@ import { Icon } from "@/components/ui/Icon";
 import { PORTAL_CARD } from "@/constants/classNames";
 import type { SummaryCardProps } from "@/interfaces/portal";
 
-/** Thẻ tổng kết ở cột phải trang Tổng quan: tiêu đề, một khối tuỳ ý và các dòng "nhãn — con số". */
+// Thẻ tổng kết ở cột phải trang Tổng quan: tiêu đề, một khối tuỳ ý và các dòng "nhãn — con số".
 export function SummaryCard({ id, title, linkLabel, linkTo, children, rowsTitle, rows }: SummaryCardProps) {
   return (
     <section aria-labelledby={id}>

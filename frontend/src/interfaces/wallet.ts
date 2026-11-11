@@ -1,4 +1,4 @@
-import type { IntentDetail } from "@/interfaces/api";
+import type { IntentDetail } from "@/interfaces/dto";
 
 export interface StudentWallet {
   walletId: number;
@@ -29,4 +29,10 @@ export interface WalletPaymentConfirmation {
   status: "COMPLETED";
   payment: NonNullable<IntentDetail["payment"]>;
   enrollment: NonNullable<IntentDetail["enrollment"]>;
+}
+
+export interface TopupAttempt {
+  amount: number;
+  key: string;
+  id?: number;
 }

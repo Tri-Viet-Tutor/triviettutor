@@ -10,12 +10,12 @@ import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/
 import { ROLE_NAME } from "@/constants/labels";
 import { PORTAL_BTN_PRIMARY, PORTAL_INPUT } from "@/constants/classNames";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import type { Role } from "@/interfaces/api";
+import type { Role } from "@/interfaces/dto";
 
-/** Số người dùng mỗi trang */
+// Số người dùng mỗi trang
 const PAGE_SIZE = 20;
 
-/** Thẻ lọc theo vai trò; chuỗi rỗng là tất cả */
+// Thẻ lọc theo vai trò; chuỗi rỗng là tất cả
 const ROLE_TABS: { value: Role | ""; label: string }[] = [
   { value: "", label: "Tất cả" },
   { value: "ROLE_STUDENT", label: ROLE_NAME.ROLE_STUDENT },
@@ -23,12 +23,10 @@ const ROLE_TABS: { value: Role | ""; label: string }[] = [
   { value: "ROLE_ADMIN", label: ROLE_NAME.ROLE_ADMIN },
 ];
 
-/**
- * Trang Người dùng của quản trị (GET /admin/users): tìm theo họ tên / email, lọc theo vai trò,
- * thêm tài khoản gia sư (POST /admin/users/tutors), sửa hồ sơ gia sư (PUT /admin/users/{id}/tutor-profile)
- * và khóa / mở khóa tài khoản (PATCH /admin/users/{id}/status) ngay trên từng dòng.
- * Học viên tự đăng ký khi mua khóa học nên không có nút thêm học viên.
- */
+// Trang Người dùng của quản trị (GET /admin/users): tìm theo họ tên / email, lọc theo vai trò,
+// thêm tài khoản gia sư (POST /admin/users/tutors), sửa hồ sơ gia sư (PUT /admin/users/{id}/tutor-profile)
+// và khóa / mở khóa tài khoản (PATCH /admin/users/{id}/status) ngay trên từng dòng.
+// Học viên tự đăng ký khi mua khóa học nên không có nút thêm học viên.
 export function AdminUsersPage() {
   const [role, setRole] = useState<Role | "">("");
   const [search, setSearch] = useState("");

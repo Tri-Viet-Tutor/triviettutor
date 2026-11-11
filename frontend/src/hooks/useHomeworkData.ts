@@ -9,6 +9,7 @@ import {
   fetchSubmissions,
   fetchAllTutorHomeworks,
   fetchUnreadCount,
+  listSessionHomeworks,
 } from "@/services/homeworkService";
 
 /** Khóa cache của bài tập và thông báo, gắn với mã người dùng như portalKeys */
@@ -19,6 +20,7 @@ export const homeworkKeys = {
   detail: (userId: number | undefined, homeworkId: number) => ["homework", userId, "detail", homeworkId] as const,
   mine: (userId: number | undefined, homeworkId: number) => ["homework", userId, "mine", homeworkId] as const,
   submissions: (userId: number | undefined, homeworkId: number) => ["homework", userId, "submissions", homeworkId] as const,
+  session: (userId: number | undefined, sessionId: number) => ["homework", userId, "session", sessionId] as const,
   notifications: (userId: number | undefined) => ["notifications", userId] as const,
 };
 
@@ -32,6 +34,12 @@ export function useTutorHomeworks() {
 export function useStudentHomeworks(query: StudentHomeworksQuery) {
   const userId = useUserId();
   return useQuery({ queryKey: homeworkKeys.studentList(userId, query), queryFn: () => fetchStudentHomeworks(query) });
+}
+
+// Bài tập đã công bố của một buổi học
+export function useSessionHomeworks(sessionId: number) {
+  const userId = useUserId();
+  return useQuery({ queryKey: homeworkKeys.session(userId, sessionId), queryFn: () => listSessionHomeworks(sessionId) });
 }
 
 /** Một bài tập */

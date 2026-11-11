@@ -1,12 +1,13 @@
 import { type ClipboardEvent, type KeyboardEvent, useRef } from "react";
 import type { OtpInputProps } from "@/interfaces/auth";
 
+// Dãy ô nhập mã OTP, mỗi ô một số, tự chuyển ô và cho dán cả mã
 export function OtpInput({ value, onChange, length, invalid = false, disabled = false }: OtpInputProps) {
   // Tham chiếu tới từng ô để chuyển focus
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
   const digits = Array.from({ length }, (_, index) => (/\d/.test(value[index] ?? "") ? value[index] : ""));
 
-  /** Ghép các ô thành chuỗi (ô trống giữ chỗ bằng dấu cách) rồi báo lên trên */
+  // Ghép các ô thành chuỗi (ô trống giữ chỗ bằng dấu cách) rồi báo lên trên
   function commit(next: string[]) {
     onChange(
       next
@@ -16,12 +17,12 @@ export function OtpInput({ value, onChange, length, invalid = false, disabled = 
     );
   }
 
-  /** Chuyển focus sang ô `index` (giới hạn trong khoảng hợp lệ) */
+  // Chuyển focus sang ô `index` (giới hạn trong khoảng hợp lệ)
   function focusBox(index: number) {
     inputs.current[Math.min(Math.max(index, 0), length - 1)]?.focus();
   }
 
-  /** Điền một chuỗi chữ số bắt đầu từ ô `start` (gõ, dán hoặc tự điền) */
+  // Điền một chuỗi chữ số bắt đầu từ ô `start` (gõ, dán hoặc tự điền)
   function fillFrom(start: number, text: string) {
     const next = digits.slice();
     const incoming = text.replace(/\D/g, "").slice(0, length - start);
@@ -32,7 +33,7 @@ export function OtpInput({ value, onChange, length, invalid = false, disabled = 
     focusBox(start + incoming.length);
   }
 
-  /** Nội dung ô thay đổi (gõ trên điện thoại, tự điền, xóa) */
+  // Nội dung ô thay đổi (gõ trên điện thoại, tự điền, xóa)
   function handleChange(index: number, raw: string) {
     const typed = raw.replace(/\D/g, "");
     if (!typed) {
@@ -47,7 +48,7 @@ export function OtpInput({ value, onChange, length, invalid = false, disabled = 
     fillFrom(index, fresh);
   }
 
-  /** Xử lý phím: chữ số, Backspace ở ô trống, mũi tên trái / phải */
+  // Xử lý phím: chữ số, Backspace ở ô trống, mũi tên trái / phải
   function handleKeyDown(index: number, event: KeyboardEvent<HTMLInputElement>) {
     // Gõ một chữ số: ghi thẳng vào ô rồi sang ô kế — kể cả khi trùng với số đang có trong ô
     if (/^\d$/.test(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
@@ -70,7 +71,7 @@ export function OtpInput({ value, onChange, length, invalid = false, disabled = 
     }
   }
 
-  /** Dán cả mã: luôn điền từ ô đầu tiên */
+  // Dán cả mã: luôn điền từ ô đầu tiên
   function handlePaste(event: ClipboardEvent<HTMLInputElement>) {
     event.preventDefault();
     fillFrom(0, event.clipboardData.getData("text"));

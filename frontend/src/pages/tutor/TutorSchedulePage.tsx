@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
 import { SessionSchedule } from "@/components/dashboard/SessionSchedule";
 import { StatusChip } from "@/components/dashboard/StatusChip";
@@ -8,6 +9,7 @@ import { TutorSessionDetail } from "@/components/tutor/TutorSessionDetail";
 import { TutorTimetable } from "@/components/tutor/TutorTimetable";
 import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING, PORTAL_BTN_GHOST } from "@/constants/classNames";
+import { ROUTES } from "@/constants/routes";
 import { useUserId } from "@/hooks/usePortalData";
 import { useNow } from "@/hooks/useNow";
 import { displayCode } from "@/utils/classes";
@@ -22,14 +24,13 @@ const VIEWS: { value: View; label: string; icon: string }[] = [
   { value: "list", label: "Danh sách", icon: "view_agenda" },
 ];
 
-/**
- * Trang Lịch dạy của gia sư: mặc định là thời khóa biểu theo tuần (mọi lớp đang dạy, tô màu theo lớp);
- * chế độ Danh sách giữ các buổi sắp tới / đã qua gom theo tháng. Bấm một buổi để xem chi tiết, điểm danh và xin nghỉ.
- */
-export function TutorSchedulePage() {
+// Trang Lịch dạy của gia sư: mặc định là thời khóa biểu theo tuần (mọi lớp đang dạy, tô màu theo lớp);
+// chế độ Danh sách giữ các buổi sắp tới / đã qua gom theo tháng. Bấm một buổi để xem chi tiết, điểm danh và xin nghỉ.
+export function TutorSchedulePage({ initialView = "timetable" }: { initialView?: View }) {
   const now = useNow();
   const tutorId = useUserId();
-  const [view, setView] = useState<View>("timetable");
+  const navigate = useNavigate();
+  const [view, setView] = useState<View>(initialView);
   // Tầng "Lớp học" trong chế độ Danh sách: chưa chọn lớp (null) thì hiện danh sách lớp trước
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
   const [classSubView, setClassSubView] = useState<ClassSubView>("sessions");
@@ -42,7 +43,10 @@ export function TutorSchedulePage() {
           type="button"
           role="tab"
           aria-selected={view === option.value}
-          onClick={() => setView(option.value)}
+          onClick={() => {
+            setView(option.value);
+            navigate(option.value === "list" ? ROUTES.tutorClasses : ROUTES.tutorSessions, { replace: true });
+          }}
           className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-[13.5px] font-semibold transition-colors ${FOCUS_RING} ${
             view === option.value ? "bg-white text-brand-navy shadow-sm" : "text-brand-muted hover:text-brand-navy"
           }`}
@@ -111,7 +115,7 @@ export function TutorSchedulePage() {
         <div>
           <PortalPageHeader
             icon="groups"
-            title={`Danh sách học viên — ${displayCode("class", selectedClass)}`}
+            title={`Danh sách học viên lớp ${displayCode("class", selectedClass)}`}
             action={
               <div className="flex flex-wrap items-center gap-2">
                 {classBack}
@@ -127,7 +131,7 @@ export function TutorSchedulePage() {
     return (
       <div>
         <SessionSchedule
-          title={`Danh sách buổi học — ${displayCode("class", selectedClass)}`}
+          title={`Danh sách buổi học lớp ${displayCode("class", selectedClass)}`}
           now={now}
           classGroupId={selectedClass}
           emptyTitle="Lớp này chưa có buổi dạy nào."

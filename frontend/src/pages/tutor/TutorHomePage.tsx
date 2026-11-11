@@ -28,14 +28,12 @@ import { useAuthStore } from "@/stores/authStore";
 import { formatDayMonth, parseIsoDate, startOfToday, weekdayName } from "@/utils/date";
 import { displayCode } from "@/utils/classes";
 
-/** Số buổi sắp tới hiện ở trang Tổng quan (không tính buổi trên bảng "hôm nay") */
+// Số buổi sắp tới hiện ở trang Tổng quan (không tính buổi trên bảng "hôm nay")
 const UPCOMING_PREVIEW = 4;
 
-/**
- * Trang Tổng quan của gia sư: buổi dạy hôm nay, các buổi cần điểm danh, lịch tuần này, các buổi sắp tới;
- * cột phải là tổng kết giảng dạy và đơn xin nghỉ. Chỉ tính những buổi mình thật sự là người dạy
- * (buổi đã có người dạy thay thì không tính). Dữ liệu từ GET /me/sessions và /me/leave-requests.
- */
+// Trang Tổng quan của gia sư: buổi dạy hôm nay, các buổi cần điểm danh, lịch tuần này, các buổi sắp tới;
+// cột phải là tổng kết giảng dạy và đơn xin nghỉ. Chỉ tính những buổi mình thật sự là người dạy
+// (buổi đã có người dạy thay thì không tính). Dữ liệu từ GET /me/sessions và /me/leave-requests.
 export function TutorHomePage() {
   const user = useAuthStore((state) => state.user);
   const now = useNow();

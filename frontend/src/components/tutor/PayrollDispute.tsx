@@ -10,15 +10,13 @@ import { disputePayroll } from "@/services/managementService";
 import { formatVnd } from "@/utils/currency";
 import { portalErrorMessage } from "@/utils/errors";
 
-/** Giới hạn lý do khiếu nại của backend */
+// Giới hạn lý do khiếu nại của backend
 const REASON_MIN = 10;
 const REASON_MAX = 1000;
 
-/**
- * Khiếu nại một phiếu lương đã chốt (PAYR-02): gia sư điền lý do, phiếu chuyển sang "Đang khiếu nại"
- * và trung tâm nhận email. Phiếu đã khiếu nại thì hiện lại lý do đã gửi.
- * API: POST /tutor/payroll/{year}/{month}/dispute.
- */
+// Khiếu nại một phiếu lương đã chốt (PAYR-02): gia sư điền lý do, phiếu chuyển sang "Đang khiếu nại"
+// và trung tâm nhận email. Phiếu đã khiếu nại thì hiện lại lý do đã gửi.
+// API: POST /tutor/payroll/{year}/{month}/dispute.
 export function PayrollDispute({ line }: PayrollDisputeProps) {
   const userId = useUserId();
   const cache = useQueryClient();
@@ -80,7 +78,7 @@ export function PayrollDispute({ line }: PayrollDisputeProps) {
               className={`${PORTAL_INPUT} h-auto resize-y py-2 leading-relaxed`}
             />
             <p className="mt-1 text-right text-[12.5px] text-brand-muted">
-              {length}/{REASON_MAX} ký tự{length < REASON_MIN && ` · tối thiểu ${REASON_MIN}`}
+              {length}/{REASON_MAX} ký tự{length < REASON_MIN && ` - tối thiểu ${REASON_MIN}`}
             </p>
           </div>
           {send.error && (

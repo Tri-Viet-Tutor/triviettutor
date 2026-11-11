@@ -5,7 +5,7 @@ import { useUserId } from "@/hooks/usePortalData";
 import { fetchAvailability } from "@/services/tutorService";
 import { AvailabilityEditor } from "@/components/tutor/AvailabilityEditor";
 
-/** Trang Lịch rảnh của gia sư: khai các khung giờ dạy được (GET / PUT /tutor/availability). */
+// Trang Lịch rảnh của gia sư: khai các khung giờ dạy được (GET / PUT /tutor/availability).
 export function TutorAvailabilityPage() {
   const userId = useUserId();
   // Khóa cache gắn với mã gia sư để đổi tài khoản không thấy lịch của người trước

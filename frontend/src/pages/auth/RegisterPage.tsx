@@ -15,7 +15,7 @@ import { savePendingEmail, savePendingPhone } from "@/utils/pendingEmail";
 import type { AuthLocationState, RegisterFormValues } from "@/interfaces/auth";
 import { registerStudent } from "@/services/authService";
 
-/** Kiểm tra form đăng ký */
+// Kiểm tra form đăng ký
 const registerSchema = z
   .object({
     // Giới hạn giống RegisterRequest của backend: họ tên 2 – 100, mật khẩu 6 – 128 ký tự
@@ -39,16 +39,13 @@ const registerSchema = z
     path: ["confirmPassword"],
   });
 
-/**
- * Trang tự đăng ký tài khoản cho học viên / phụ huynh (BR-01.04).
- * Tài khoản quản trị và gia sư do quản trị viên tạo.
- *
- * Backend không đăng nhập ngay sau khi đăng ký nữa: POST /auth/register tạo tài khoản chưa kích hoạt
- * và gửi mã OTP qua email (trả về { email, message }). Vì vậy đăng ký xong thì chuyển sang
- * trang nhập mã OTP; phiên đăng nhập chỉ có sau khi xác thực (xem VerifyEmailPage).
- * Backend /auth/register chưa nhận số điện thoại, nên số được giữ tạm và lưu vào hồ sơ (PUT /me)
- * ngay sau khi xác thực xong (xem EmailOtpForm).
- */
+// Trang tự đăng ký tài khoản cho học viên / phụ huynh (BR-01.04).
+// Tài khoản quản trị và gia sư do quản trị viên tạo.
+// Backend không đăng nhập ngay sau khi đăng ký nữa: POST /auth/register tạo tài khoản chưa kích hoạt
+// và gửi mã OTP qua email (trả về { email, message }). Vì vậy đăng ký xong thì chuyển sang
+// trang nhập mã OTP; phiên đăng nhập chỉ có sau khi xác thực (xem VerifyEmailPage).
+// Backend /auth/register chưa nhận số điện thoại, nên số được giữ tạm và lưu vào hồ sơ (PUT /me)
+// ngay sau khi xác thực xong (xem EmailOtpForm).
 export function RegisterPage() {
   const navigate = useNavigate();
 
@@ -68,7 +65,7 @@ export function RegisterPage() {
     resolver: zodResolver(registerSchema),
   });
 
-  /** Gửi đăng ký; thành công thì ghi nhớ email đang chờ mã và sang trang nhập OTP */
+  // Gửi đăng ký; thành công thì ghi nhớ email đang chờ mã và sang trang nhập OTP
   function onSubmit(data: RegisterFormValues) {
     register(
       { email: data.email, password: data.password, fullName: data.fullName },

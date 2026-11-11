@@ -4,7 +4,7 @@ import { ASSETS } from "@/constants/assets";
 import { FOCUS_RING as FOCUS } from "@/constants/classNames";
 import type { PortalNavProps } from "@/interfaces/portal";
 
-/** Đai nổi ngang trên gáy sách: gờ vải nổi kẹp giữa hai đường chỉ vàng */
+// Đai nổi ngang trên gáy sách: gờ vải nổi kẹp giữa hai đường chỉ vàng
 function SpineBand() {
   return (
     <div aria-hidden="true" className="relative mx-0 h-3.5 shrink-0">
@@ -15,22 +15,22 @@ function SpineBand() {
   );
 }
 
-/** Viền bàn phím trên nền navy */
+// Viền bàn phím trên nền navy
 const FOCUS_ON_DARK = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-orange";
 
-/**
- * Điều hướng của một khu sau đăng nhập (học viên, gia sư, quản trị).
- * Máy tính: thanh bên là gáy sách bìa cứng bọc vải navy — tên trường và mục lục ép nhũ vàng, các đai nổi ngang;
- * mục đang mở là nhãn giấy dán trên gáy kèm dải ruy băng cam đánh dấu trang.
- * Tài khoản và đăng xuất nằm ở menu avatar góc phải thanh trên (PortalLayout).
- * Điện thoại: thanh dưới đáy màn hình, cao 64px.
- */
+// Điều hướng của một khu sau đăng nhập (học viên, gia sư, quản trị).
+// Máy tính: thanh bên là gáy sách bìa cứng bọc vải navy — tên trường và mục lục ép nhũ vàng, các đai nổi ngang;
+// mục đang mở là nhãn giấy dán trên gáy kèm dải ruy băng cam đánh dấu trang.
+// Tài khoản và đăng xuất nằm ở menu avatar góc phải thanh trên (PortalLayout).
+// Điện thoại: thanh dưới đáy màn hình, cao 64px.
 export function PortalNav({ items, label, homeTo }: PortalNavProps) {
   // Thanh dưới của điện thoại bỏ các mục chỉ dành cho máy tính
   const mobileItems = items.filter((item) => !item.desktopOnly);
   return (
     <>
-      {/* Máy tính: thanh bên trái thiết kế như gáy một cuốn sách bìa cứng bọc vải navy, chữ ép nhũ vàng */}
+      {
+        // Máy tính: thanh bên trái thiết kế như gáy một cuốn sách bìa cứng bọc vải navy, chữ ép nhũ vàng
+      }
       <aside
         className="fixed inset-y-0 left-0 z-40 hidden w-[228px] flex-col overflow-hidden text-[#F3E3B5] lg:flex"
         style={{
@@ -40,7 +40,9 @@ export function PortalNav({ items, label, homeTo }: PortalNavProps) {
             "repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 3px), repeating-linear-gradient(0deg, rgba(0,0,0,0.05) 0 1px, transparent 1px 4px)",
         }}
       >
-        {/* Độ cong của gáy: tối ở hai mép, sáng ở giữa */}
+        {
+          // Độ cong của gáy: tối ở hai mép, sáng ở giữa
+        }
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
@@ -49,14 +51,20 @@ export function PortalNav({ items, label, homeTo }: PortalNavProps) {
               "linear-gradient(90deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.12) 9%, rgba(255,255,255,0.07) 38%, rgba(255,255,255,0.03) 62%, rgba(0,0,0,0.18) 88%, rgba(0,0,0,0.5) 100%)",
           }}
         />
-        {/* Rãnh bản lề sát mép phải, nơi gáy gặp bìa */}
+        {
+          // Rãnh bản lề sát mép phải, nơi gáy gặp bìa
+        }
         <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-[7px] w-px bg-black/35" />
         <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-[6px] w-px bg-white/10" />
 
-        {/* Đai nổi trên cùng (gân gáy) với hai đường chỉ vàng */}
+        {
+          // Đai nổi trên cùng (gân gáy) với hai đường chỉ vàng
+        }
         <SpineBand />
 
-        {/* Nhãn gáy: tên trường ép nhũ trong khung viền vàng đôi */}
+        {
+          // Nhãn gáy: tên trường ép nhũ trong khung viền vàng đôi
+        }
         <div className="relative px-4 pb-4 pt-4">
           <Link
             to={homeTo}
@@ -81,7 +89,9 @@ export function PortalNav({ items, label, homeTo }: PortalNavProps) {
 
         <SpineBand />
 
-        {/* Mục lục: mỗi mục là một dòng ép nhũ; mục đang mở là nhãn giấy dán trên gáy, có dải ruy băng cam */}
+        {
+          // Mục lục: mỗi mục là một dòng ép nhũ; mục đang mở là nhãn giấy dán trên gáy, có dải ruy băng cam
+        }
         <nav aria-label={label} className="relative flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
           {items.map((item) => (
             <NavLink
@@ -98,7 +108,9 @@ export function PortalNav({ items, label, homeTo }: PortalNavProps) {
             >
               {({ isActive }) => (
                 <>
-                  {/* Dải ruy băng đánh dấu trang, thò ra từ mép trên nhãn */}
+                  {
+                    // Dải ruy băng đánh dấu trang, thò ra từ mép trên nhãn
+                  }
                   {isActive && (
                     <span
                       aria-hidden="true"
@@ -116,7 +128,9 @@ export function PortalNav({ items, label, homeTo }: PortalNavProps) {
           ))}
         </nav>
 
-        {/* Đai nổi dưới cùng và dấu nhà xuất bản */}
+        {
+          // Đai nổi dưới cùng và dấu nhà xuất bản
+        }
         <SpineBand />
         <div className="relative flex justify-center pb-5 pt-3" aria-hidden="true">
           <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#D9B45A]/60 text-[#D9B45A]">
@@ -125,7 +139,9 @@ export function PortalNav({ items, label, homeTo }: PortalNavProps) {
         </div>
       </aside>
 
-      {/* Điện thoại: thanh dưới đáy, chia đều số cột theo số mục */}
+      {
+        // Điện thoại: thanh dưới đáy, chia đều số cột theo số mục
+      }
       <nav
         aria-label={label}
         style={{ gridTemplateColumns: `repeat(${mobileItems.length}, minmax(0, 1fr))` }}

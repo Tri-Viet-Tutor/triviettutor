@@ -6,8 +6,8 @@ import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/
 import { Icon } from "@/components/ui/Icon";
 import { PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY } from "@/constants/classNames";
 import { adminKeys, useRefreshAdmin } from "@/hooks/useAdminData";
-import { assignTutor, fetchAvailableTutors, reassignTutor } from "@/services/admin";
-import { getApiError } from "@/services/api";
+import { assignTutor, fetchAvailableTutors, reassignTutor } from "@/services/adminService";
+import { getApiError } from "@/services/apiClient";
 import { formatDate, parseIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 import type { AssignmentPanelProps } from "@/interfaces/admin";
@@ -17,11 +17,9 @@ import { CLASS_STATUS } from "@/constants/labels";
 import { SCHEDULE_PATTERN_OPTIONS } from "@/constants/classOptions";
 import { subjectIcon } from "@/constants/management";
 
-/**
- * Gia sư gợi ý cho một lớp (GET /admin/classes/{id}/available-tutors) và nút phân công:
- * lớp chưa có gia sư thì "Phân công" (POST …/assign), đã có thì "Đổi sang gia sư này" kèm lý do (PUT …/reassign).
- * Backend xếp người không trùng lịch lên trước; lịch rảnh gia sư tự khai chỉ để tham khảo.
- */
+// Gia sư gợi ý cho một lớp (GET /admin/classes/{id}/available-tutors) và nút phân công:
+// lớp chưa có gia sư thì "Phân công" (POST …/assign), đã có thì "Đổi sang gia sư này" kèm lý do (PUT …/reassign).
+// Backend xếp người không trùng lịch lên trước; lịch rảnh gia sư tự khai chỉ để tham khảo.
 export function AssignmentPanel({ classId, currentTutorId, info }: AssignmentPanelProps) {
   const refresh = useRefreshAdmin();
   const query = useQuery({ queryKey: adminKeys.availableTutors(classId), queryFn: () => fetchAvailableTutors(classId), retry: false });
@@ -32,13 +30,13 @@ export function AssignmentPanel({ classId, currentTutorId, info }: AssignmentPan
   // Mở danh sách gia sư trùng lịch
   const [showClashing, setShowClashing] = useState(false);
 
-  /** Phân công xong: báo thành công, đóng form, tải lại dữ liệu */
+  // Phân công xong: báo thành công, đóng form, tải lại dữ liệu
   const finish = (name: string) => {
     setDoneName(name);
     setReassigning(null);
     void refresh();
   };
-  /** Backend chặn vì trùng lịch: đóng form đổi gia sư (lỗi hiện ở đầu danh sách) và tải lại để thấy các buổi trùng mới nhất */
+  // Backend chặn vì trùng lịch: đóng form đổi gia sư (lỗi hiện ở đầu danh sách) và tải lại để thấy các buổi trùng mới nhất
   const reloadOnConflict = (error: Error) => {
     if (getApiError(error).errorCode !== "SCHEDULE_CONFLICT") return;
     setReassigning(null);
@@ -62,7 +60,7 @@ export function AssignmentPanel({ classId, currentTutorId, info }: AssignmentPan
   const clashing = others.filter((tutor) => !tutor.available);
   const statusStyle = info ? CLASS_STATUS[info.status] : null;
 
-  /** Một thẻ gia sư: ảnh, tên, nhãn lịch, nút phân công / đổi và các buổi trùng */
+  // Một thẻ gia sư: ảnh, tên, nhãn lịch, nút phân công / đổi và các buổi trùng
   const tutorCard = (tutor: (typeof tutors)[number]) => {
     const canPick = tutor.available && tutor.tutorId !== currentTutorId;
     const busy = assign.isPending && assign.variables === tutor.tutorId;
@@ -94,7 +92,9 @@ export function AssignmentPanel({ classId, currentTutorId, info }: AssignmentPan
           </li>
         </ul>
 
-        {/* Tối đa 3 buổi trùng lịch */}
+        {
+          // Tối đa 3 buổi trùng lịch
+        }
         {tutor.conflicts.length > 0 && (
           <ul className="mt-3 space-y-1 rounded-xl bg-red-50 px-3 py-2 text-[12.5px] text-red-900">
             {tutor.conflicts.slice(0, 3).map((conflict) => (
@@ -158,7 +158,9 @@ export function AssignmentPanel({ classId, currentTutorId, info }: AssignmentPan
 
   return (
     <div className="space-y-5">
-      {/* Băng đầu: lớp đang phân công + gia sư phụ trách */}
+      {
+        // Băng đầu: lớp đang phân công + gia sư phụ trách
+      }
       <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-navyDeep via-brand-navy to-[#1F56B8] text-white shadow-[0_24px_48px_-30px_rgba(8,42,102,0.8)]">
         <div
           aria-hidden="true"
@@ -223,7 +225,9 @@ export function AssignmentPanel({ classId, currentTutorId, info }: AssignmentPan
         </AuthNotice>
       )}
       {assign.error && <AuthNotice tone="error">{portalErrorMessage(assign.error, "Chưa phân công được. Vui lòng thử lại.")}</AuthNotice>}
-      {/* Lỗi đổi gia sư khi form đã đóng (bị chặn vì trùng lịch) */}
+      {
+        // Lỗi đổi gia sư khi form đã đóng (bị chặn vì trùng lịch)
+      }
       {reassign.error && reassigning === null && (
         <AuthNotice tone="error">{portalErrorMessage(reassign.error, "Chưa đổi được gia sư. Vui lòng thử lại.")}</AuthNotice>
       )}

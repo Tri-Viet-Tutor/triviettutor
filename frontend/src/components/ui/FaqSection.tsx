@@ -3,7 +3,7 @@ import { Icon } from "@/components/ui/Icon";
 import { CONTAINER } from "@/constants/classNames";
 import type { FaqSectionProps } from "@/interfaces/ui";
 
-/** Câu hỏi thường gặp: tiêu đề bên trái, các câu hỏi bấm để mở bên phải (câu đầu mở sẵn). */
+// Câu hỏi thường gặp: tiêu đề bên trái, các câu hỏi bấm để mở bên phải (câu đầu mở sẵn).
 export function FaqSection({ title, description, faqs }: FaqSectionProps) {
   return (
     <section id="faq" className="scroll-mt-[120px] bg-[#F5F1E9] pb-16 pt-4 lg:pb-24 lg:pt-6">

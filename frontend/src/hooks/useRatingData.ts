@@ -1,16 +1,11 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useMyEnrollments } from "@/hooks/useManagementData";
-import type { TuitionClass } from "@/interfaces/api";
+
 import { fetchMyRating } from "@/services/ratingService";
 import { getTuitionClass } from "@/services/tuitionPaymentService";
+import type { StudentTutor } from "@/interfaces/dto";
 
-export interface StudentTutor {
-  id: number;
-  name: string;
-  classes: TuitionClass[];
-}
-
-/** Gia sư của các lớp học viên đang học (GET /enrollments/my → GET /catalog/classes/{id}), gom theo gia sư */
+// Gia sư của các lớp học viên đang học (GET /enrollments/my → GET /catalog/classes/{id}), gom theo gia sư
 export function useStudentTutors() {
   const enrollments = useMyEnrollments();
   const classIds = [...new Set((enrollments.data?.content ?? []).filter((item) => item.status === "ACTIVE").map((item) => item.classGroupId))];
@@ -33,7 +28,7 @@ export function useStudentTutors() {
   };
 }
 
-/** Đánh giá của tôi cho một gia sư (null: chưa đánh giá) */
+// Đánh giá của tôi cho một gia sư (null: chưa đánh giá)
 export function useMyRating(tutorId: number) {
   return useQuery({ queryKey: ["my-rating", tutorId], queryFn: () => fetchMyRating(tutorId), retry: false });
 }

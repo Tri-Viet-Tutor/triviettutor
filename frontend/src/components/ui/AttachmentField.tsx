@@ -5,11 +5,10 @@ import { AUTH_ERROR, FOCUS_RING, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENT_BYTES, attachmentName, isUploadedFile, uploadAttachment } from "@/services/fileService";
 import { portalErrorMessage } from "@/utils/errors";
 import { attachmentKind } from "@/utils/attachments";
+import { validateFile } from "@/utils/validation";
 
-/**
- * Đính kèm cho bài tập / bài nộp: tải tệp từ máy lên (PDF, Word, ảnh… tối đa 10 MB) hoặc dán link https.
- * Giá trị là một đường dẫn duy nhất (resourceUrl).
- */
+// Đính kèm cho bài tập / bài nộp: tải tệp từ máy lên (PDF, Word, ảnh… tối đa 10 MB) hoặc dán link https.
+// Giá trị là một đường dẫn duy nhất (resourceUrl).
 export function AttachmentField({
   id,
   label,
@@ -27,9 +26,11 @@ export function AttachmentField({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Kiểm tra file vừa chọn rồi tải lên làm tài liệu đính kèm
   async function pick(file: File | undefined) {
     if (!file) return;
-    if (file.size > MAX_ATTACHMENT_BYTES) return setError("Tệp tối đa 10 MB.");
+    const fileError = validateFile(file, { maxBytes: MAX_ATTACHMENT_BYTES, sizeLabel: "10 MB" });
+    if (fileError) return setError(fileError);
     setError(null);
     setUploading(true);
     try {

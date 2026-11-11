@@ -93,6 +93,84 @@
   }
 }
 
+/* Tờ giấy ngả màu theo thời gian: nền ngà, vài vệt ố nâu rất nhạt, mép tối dần vào trong
+ * như giấy cũ bị ánh sáng ăn mòn. Không dùng ảnh, toàn bộ bằng gradient nên nhẹ. */
+.aged-paper {
+  background-color: #faf4e4;
+  background-image:
+    radial-gradient(ellipse 60% 45% at 12% 16%, rgba(146, 106, 52, 0.1), transparent 70%),
+    radial-gradient(ellipse 55% 40% at 88% 74%, rgba(146, 106, 52, 0.09), transparent 70%),
+    radial-gradient(circle at 72% 10%, rgba(118, 84, 40, 0.07), transparent 26%),
+    linear-gradient(#fcf7ea, #f2e7cf);
+  box-shadow:
+    inset 0 0 40px rgba(118, 84, 40, 0.16),
+    inset 0 0 0 1px rgba(118, 84, 40, 0.14),
+    0 10px 24px -18px rgba(20, 33, 61, 0.55);
+}
+
+/* Khung kẻ kép thụt vào trong, kiểu tờ đơn in sẵn ngày xưa */
+.aged-paper-frame {
+  outline: 1px solid rgba(118, 84, 40, 0.3);
+  outline-offset: -11px;
+}
+
+/* Ô nhập trên tờ giấy cũ: bỏ hộp bo tròn, chỉ còn dòng kẻ để điền vào */
+.aged-paper input:not([type="checkbox"]):not([type="radio"]),
+.aged-paper textarea,
+.aged-paper select {
+  background-color: rgba(255, 253, 246, 0.72);
+  border-color: rgba(118, 84, 40, 0.28);
+  border-radius: 1px;
+}
+.aged-paper input:focus,
+.aged-paper textarea:focus,
+.aged-paper select:focus {
+  border-color: rgba(118, 84, 40, 0.65);
+}
+
+/* Tờ giấy note dán lên bảng: giấy ấm, kẻ ngang mờ, bóng đổ lệch như tờ giấy cong mép.
+ * Góc nghiêng do --tilt quyết định, đặt theo ngày nên không nhảy mỗi lần vẽ lại. */
+.note-paper {
+  --tilt: 0deg;
+  background-color: #fffdf7;
+  background-image: linear-gradient(rgba(11, 58, 140, 0.06) 1px, transparent 1px);
+  background-size: 100% 26px;
+  background-position: 0 30px;
+  box-shadow:
+    0 1px 1px rgba(20, 33, 61, 0.07),
+    0 10px 18px -12px rgba(20, 33, 61, 0.45);
+  transform: rotate(var(--tilt));
+}
+
+/* Tờ xen kẽ ngả xanh để bảng không đều tăm tắp như bảng tính */
+.note-paper-cool {
+  background-color: #f7faff;
+  background-image: linear-gradient(rgba(11, 58, 140, 0.07) 1px, transparent 1px);
+}
+
+/* Băng dán washi vắt qua mép trên tờ giấy */
+.note-tape {
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(245, 160, 15, 0.55) 0 6px,
+    rgba(245, 160, 15, 0.32) 6px 12px
+  );
+  box-shadow: 0 1px 2px rgba(20, 33, 61, 0.12);
+}
+
+/* Mép trên của tập giấy: răng cưa như vừa xé khỏi tập lò xo */
+.notepad-edge {
+  background-image: radial-gradient(circle at 7px 0, transparent 0 6px, #e4dccb 6px 7px, transparent 7.5px);
+  background-size: 18px 10px;
+  background-repeat: repeat-x;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note-paper {
+    transform: none;
+  }
+}
+
 /*3. Hiệu ứng xuất hiện (chạy một lần)*/
 
 /* Hiện dần khi cuộn tới — component <Reveal> thêm .is-visible */

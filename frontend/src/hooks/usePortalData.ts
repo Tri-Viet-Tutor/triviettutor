@@ -3,7 +3,7 @@ import {useMutation,
     useQuery,
     useQueryClient,
 } from "@tanstack/react-query";
-import type { MyLeaveRequestsQuery, SessionResponse } from "@/interfaces/api";
+import type { MyLeaveRequestsQuery, SessionResponse } from "@/interfaces/dto";
 import type { RecentAttendanceItem } from "@/interfaces/portal";
 import {
     fetchMe,
@@ -14,7 +14,7 @@ import {
 } from "@/services/portalService";
 import { useAuthStore } from "@/stores/authStore";
 
-/** Khóa cache của dữ liệu "của tôi", gắn với mã người dùng để đổi tài khoản không thấy dữ liệu của người trước */
+// Khóa cache của dữ liệu "của tôi", gắn với mã người dùng để đổi tài khoản không thấy dữ liệu của người trước
 export const portalKeys = {
   all: (userId: number | undefined) => ["me", userId] as const,
   me: (userId: number | undefined) => ["me", userId, "me"] as const,
@@ -24,24 +24,24 @@ export const portalKeys = {
     query ? (["me", userId, "leave-requests", query] as const) : (["me", userId, "leave-requests"] as const),
 };
 
-/** Mã người dùng đang đăng nhập */
+// Mã người dùng đang đăng nhập
 export function useUserId(): number | undefined {
   return useAuthStore((state) => state.user?.id);
 }
 
-/** Hồ sơ của tôi */
+// Hồ sơ của tôi
 export function useMe() {
   const userId = useUserId();
   return useQuery({ queryKey: portalKeys.me(userId), queryFn: fetchMe });
 }
 
-/** Mọi buổi học của tôi — buổi học (học viên) hoặc buổi dạy (gia sư); các trang tự lọc sắp tới / đã qua */
+// Mọi buổi học của tôi — buổi học (học viên) hoặc buổi dạy (gia sư); các trang tự lọc sắp tới / đã qua
 export function useMySessions() {
   const userId = useUserId();
   return useQuery({ queryKey: portalKeys.sessions(userId), queryFn: () => fetchMySessions() });
 }
 
-/** Điểm danh của tôi ở một buổi; chỉ tải khi `enabled` */
+// Điểm danh của tôi ở một buổi; chỉ tải khi `enabled`
 export function useSessionAttendance(sessionId: number, enabled = true) {
   const userId = useUserId();
   return useQuery({
@@ -51,7 +51,7 @@ export function useSessionAttendance(sessionId: number, enabled = true) {
   });
 }
 
-/** Các đơn xin nghỉ của tôi */
+// Các đơn xin nghỉ của tôi
 export function useMyLeaveRequests(query: MyLeaveRequestsQuery = {}) {
   const userId = useUserId();
   return useQuery({
@@ -60,10 +60,8 @@ export function useMyLeaveRequests(query: MyLeaveRequestsQuery = {}) {
   });
 }
 
-/**
- * Điểm danh của tôi ở `limit` buổi đã học gần nhất (mỗi buổi một lời gọi API, React Query gộp các lời gọi trùng).
- * @param pastSessions các buổi đã qua, mới nhất trước
- */
+// Điểm danh của tôi ở `limit` buổi đã học gần nhất (mỗi buổi một lời gọi API, React Query gộp các lời gọi trùng).
+// @param pastSessions các buổi đã qua, mới nhất trước
 export function useRecentAttendance(pastSessions: SessionResponse[], limit: number): RecentAttendanceItem[] {
   const userId = useUserId();
   const recent = pastSessions.filter((session) => session.status === "COMPLETED").slice(0, limit);
@@ -80,6 +78,7 @@ export function useRecentAttendance(pastSessions: SessionResponse[], limit: numb
   }));
 }
 
+// Hủy liên kết tài khoản Google (cần mật khẩu hiện tại)
 export function useUnlinkGoogle() {
     const userId = useUserId();
     const queryClient = useQueryClient();

@@ -8,22 +8,20 @@ import { subjectLabel } from "@/constants/management";
 import { ROUTES } from "@/constants/routes";
 import { adminKeys, useAdminSessions, useUserCounts } from "@/hooks/useAdminData";
 import { useAdminClasses } from "@/hooks/useManagementData";
-import type { ClassStatus, Role } from "@/interfaces/api";
-import { fetchPaymentsSince } from "@/services/admin";
+import type { ClassStatus, Role } from "@/interfaces/dto";
+import { fetchPaymentsSince } from "@/services/adminService";
 import { displayCode } from "@/utils/classes";
 import { formatVnd } from "@/utils/currency";
 import { addDays, startOfToday, toIsoDate, weekdayName } from "@/utils/date";
 
-/*
- * Báo cáo tổng quan của khu quản trị, vẽ bằng SVG / CSS (không thêm thư viện biểu đồ).
- * Một chuỗi số liệu dùng một màu navy; biểu đồ nhiều nhóm dùng bảng màu phân loại cố định
- * (thứ tự xanh dương, cam, xanh ngọc, vàng, hồng, xanh lá) và luôn có chú thích kèm con số.
- */
+// Báo cáo tổng quan của khu quản trị, vẽ bằng SVG / CSS (không thêm thư viện biểu đồ).
+// Một chuỗi số liệu dùng một màu navy; biểu đồ nhiều nhóm dùng bảng màu phân loại cố định
+// (thứ tự xanh dương, cam, xanh ngọc, vàng, hồng, xanh lá) và luôn có chú thích kèm con số.
 const SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"];
 const ROLE_COLOR: Record<Role, string> = { ROLE_STUDENT: SERIES[0], ROLE_TUTOR: SERIES[1], ROLE_ADMIN: SERIES[2] };
 const NAVY = "#0B3A8C";
 
-/** Giai đoạn lớp học gộp từ trạng thái (để biểu đồ gọn) */
+// Giai đoạn lớp học gộp từ trạng thái (để biểu đồ gọn)
 const STAGES: { label: string; statuses: ClassStatus[] }[] = [
   { label: "Chuẩn bị", statuses: ["DRAFT", "PUBLISHED"] },
   { label: "Đang tuyển sinh", statuses: ["ENROLLING"] },
@@ -34,10 +32,12 @@ const STAGES: { label: string; statuses: ClassStatus[] }[] = [
 ];
 const ACTIVE: ClassStatus[] = ["ENROLLING", "ASSIGNED", "IN_PROGRESS"];
 
-/** Số tiền đầy đủ không kèm đơn vị cho trục biểu đồ: 5400000 → "5.400.000" (đơn vị VNĐ ghi ở tiêu đề trục) */
+// Số tiền đầy đủ không kèm đơn vị cho trục biểu đồ: 5400000 → "5.400.000" (đơn vị VNĐ ghi ở tiêu đề trục)
 const plainVnd = (value: number) => new Intl.NumberFormat("vi-VN").format(value);
+// Ngày dạng "ngày/tháng" cho nhãn biểu đồ
 const dm = (date: Date) => `${date.getDate()}/${date.getMonth() + 1}`;
 
+// Khung một ô báo cáo: tiêu đề, phụ đề, nút bên phải và nội dung
 function Card({ title, subtitle, action, children, className = "" }: { title: string; subtitle?: string; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <section className={`flex flex-col p-5 ${PORTAL_CARD} ${className}`}>
@@ -53,6 +53,7 @@ function Card({ title, subtitle, action, children, className = "" }: { title: st
   );
 }
 
+// Link "xem thêm" ở góc ô báo cáo
 function More({ to, label }: { to: string; label: string }) {
   return (
     <Link to={to} className={`shrink-0 text-[13px] ${PORTAL_MORE_LINK}`}>
@@ -62,7 +63,7 @@ function More({ to, label }: { to: string; label: string }) {
   );
 }
 
-/** Biểu đồ cột dọc một chuỗi, rê chuột xem giá trị; `highlight` tô cột đặc biệt (hôm nay) */
+// Biểu đồ cột dọc một chuỗi, rê chuột xem giá trị; `highlight` tô cột đặc biệt (hôm nay)
 function Columns({
   values,
   labels,
@@ -78,7 +79,7 @@ function Columns({
   tooltip: (index: number) => string;
   highlight?: number;
   height?: number;
-  /** Đơn vị của trục dọc, ghi trên đầu trục */
+  // Đơn vị của trục dọc, ghi trên đầu trục
   unit?: string;
 }) {
   const [hover, setHover] = useState<number | null>(null);
@@ -145,7 +146,7 @@ function Columns({
   );
 }
 
-/** Biểu đồ vành khuyên nhiều nhóm, giữa ghi tổng; khe trắng 2px giữa các phần */
+// Biểu đồ vành khuyên nhiều nhóm, giữa ghi tổng; khe trắng 2px giữa các phần
 function Donut({ parts, total, center }: { parts: { label: string; value: number; color: string }[]; total: number; center: string }) {
   const [hover, setHover] = useState<number | null>(null);
   const radius = 54;
@@ -204,6 +205,7 @@ function Donut({ parts, total, center }: { parts: { label: string; value: number
   );
 }
 
+// Ô số liệu chính (KPI): biểu tượng, nhãn, giá trị, có thể bấm sang trang chi tiết
 function Kpi({ icon, label, value, sub, to, wide = false }: { icon: string; label: string; value: string; sub?: string; to?: string; wide?: boolean }) {
   const body = (
     <>
@@ -227,11 +229,9 @@ function Kpi({ icon, label, value, sub, to, wide = false }: { icon: string; labe
   );
 }
 
-/**
- * Báo cáo tổng quan: hàng chỉ số chính, doanh thu học phí 30 ngày, buổi học 14 ngày tới,
- * lớp theo giai đoạn, học viên theo môn, sĩ số lớp đang tuyển sinh và người dùng theo vai trò.
- * Dữ liệu: GET /admin/payments, /admin/sessions, /admin/classes, /admin/users.
- */
+// Báo cáo tổng quan: hàng chỉ số chính, doanh thu học phí 30 ngày, buổi học 14 ngày tới,
+// lớp theo giai đoạn, học viên theo môn, sĩ số lớp đang tuyển sinh và người dùng theo vai trò.
+// Dữ liệu: GET /admin/payments, /admin/sessions, /admin/classes, /admin/users.
 export function AdminReport() {
   const today = startOfToday();
   const todayIso = toIsoDate(today);
@@ -287,13 +287,20 @@ export function AdminReport() {
   const enrolling = classes.filter((item) => item.status === "ENROLLING").sort((a, b) => b.currentStudents / b.maxStudents - a.currentStudents / a.maxStudents);
   const seats = enrolling.reduce((s, i) => s + i.maxStudents, 0);
   const taken = enrolling.reduce((s, i) => s + i.currentStudents, 0);
+  // Danh sách chỉ hiện 6 lớp cần chú ý nhất, trong khi phụ đề cộng toàn bộ lớp đang tuyển,
+  // nên phải nói rõ kẻo người đọc cộng tay 6 dòng rồi thấy lệch với phụ đề
+  const shownEnrolling = enrolling.slice(0, 6);
+  // Truy vấn lấy tối đa 100 lớp: quá ngưỡng này thì phụ đề cũng chưa cộng đủ
+  const classesCapped = classesQuery.data ? classesQuery.data.totalElements > classes.length : false;
 
   const roles: Role[] = ["ROLE_STUDENT", "ROLE_TUTOR", "ROLE_ADMIN"];
   const userTotal = roles.reduce((s, role) => s + (users[role] ?? 0), 0);
 
   return (
     <div className="space-y-5">
-      {/* Chỉ số chính */}
+      {
+        // Chỉ số chính
+      }
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         <Kpi icon="payments" label="Doanh thu 30 ngày" value={payments.data ? formatVnd(revenue) : "…"} sub={`${paid.length} giao dịch thành công`} to={ROUTES.adminPayments} wide />
         <Kpi icon="school" label="Lớp hoạt động" value={classesQuery.data ? String(active.length) : "…"} sub={`${classesQuery.data?.totalElements ?? classes.length} lớp tất cả`} to={ROUTES.adminClasses} />
@@ -401,22 +408,29 @@ export function AdminReport() {
             <p className="text-[13.5px] text-brand-muted">Không có lớp nào đang tuyển sinh.</p>
           ) : (
             <ul className="space-y-3">
-              {enrolling.slice(0, 6).map((item) => {
+              {shownEnrolling.map((item) => {
+                // Lớp vượt sĩ số (dữ liệu lệch) vẫn phải vẽ gọn trong khung, nếu không thanh tràn ra ngoài thẻ
                 const ratio = item.currentStudents / item.maxStudents;
+                const over = item.currentStudents > item.maxStudents;
                 return (
                   <li key={item.id}>
                     <div className="mb-1 flex items-center justify-between gap-2 text-[13px]">
                       <span className="min-w-0 truncate font-semibold text-brand-ink">
                         {item.courseName} <span className="font-normal text-brand-muted">{displayCode("class", item.id)}</span>
                       </span>
-                      <span className="shrink-0 font-bold tabular-nums text-brand-ink">
+                      <span className={`shrink-0 font-bold tabular-nums ${over ? "text-red-700" : "text-brand-ink"}`}>
                         {item.currentStudents}/{item.maxStudents}
+                        {over && <Icon name="warning" className="ml-1 align-[-3px] text-[15px]" />}
                       </span>
                     </div>
                     <div className="h-2.5 rounded-full bg-brand-sand">
                       <div
                         className="h-full rounded-full"
-                        style={{ width: `${ratio * 100}%`, minWidth: item.currentStudents ? 6 : 0, background: ratio >= 1 ? SERIES[2] : NAVY }}
+                        style={{
+                          width: `${Math.min(1, ratio) * 100}%`,
+                          minWidth: item.currentStudents ? 6 : 0,
+                          background: over ? "#B91C1C" : ratio >= 1 ? SERIES[2] : NAVY,
+                        }}
                       />
                     </div>
                   </li>
@@ -424,6 +438,12 @@ export function AdminReport() {
               })}
             </ul>
           )}
+          {enrolling.length > shownEnrolling.length && (
+            <p className="mt-3 text-[12px] text-brand-muted">
+              Đang hiện {shownEnrolling.length} lớp đầy nhất trong {enrolling.length} lớp đang tuyển; phụ đề phía trên cộng cả {enrolling.length} lớp.
+            </p>
+          )}
+          {classesCapped && <p className="mt-1 text-[12px] text-brand-muted">Chỉ cộng {classes.length} lớp đầu tiên.</p>}
         </Card>
 
         <Card title="Người dùng" subtitle={userTotal ? `${userTotal} tài khoản` : undefined} action={<More to={ROUTES.adminUsers} label="Người dùng" />}>

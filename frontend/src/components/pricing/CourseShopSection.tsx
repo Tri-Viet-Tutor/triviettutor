@@ -10,16 +10,16 @@ import { PURCHASE_STEPS } from "@/constants/pricing";
 import { ROUTES } from "@/constants/routes";
 import { useCart, useCartMutations } from "@/hooks/useCart";
 import { cartCourseKey, preferredCartClass, preferredCartCourse, rememberCartCourse } from "@/utils/cartPreference";
-import type { CourseResponse, DeliveryMode, GradeLevel, SchedulePattern, TuitionClass } from "@/interfaces/api";
+import type { CourseResponse, DeliveryMode, GradeLevel, SchedulePattern, TuitionClass } from "@/interfaces/dto";
 import type { ClassShopFilters, ClassShopSort, CourseShopSectionProps } from "@/interfaces/pricing";
 import { listCatalogCourses, listTuitionClasses } from "@/services/tuitionPaymentService";
 import { useAuthStore } from "@/stores/authStore";
 import { normalizeText } from "@/utils/text";
 import { Select } from "@/components/ui/Select";
 
-/** Số lớp hiện mỗi lần; còn nữa thì có nút "Xem thêm" */
+// Số lớp hiện mỗi lần; còn nữa thì có nút "Xem thêm"
 const PAGE_SIZE = 6;
-/** Backend cho tối đa 100 lớp mỗi trang */
+// Backend cho tối đa 100 lớp mỗi trang
 const CATALOG_LIMIT = 100;
 
 const DEFAULT_FILTERS: ClassShopFilters = { query: "", subject: "", grade: "", mode: "", schedule: "", tutor: "" };
@@ -34,6 +34,7 @@ const SORT_OPTIONS: { value: ClassShopSort; label: string }[] = [
 const SELECT =
   "mt-2 h-10 w-full rounded-md border border-slate-300 bg-white pl-3 pr-9 text-[14.5px] font-semibold text-brand-ink outline-none focus:border-brand-navy focus:ring-1 focus:ring-brand-navy";
 
+// Lọc lớp theo từ khóa, môn, khối, hình thức và lịch học
 function filterClasses(items: TuitionClass[], filters: ClassShopFilters): TuitionClass[] {
   const keyword = normalizeText(filters.query);
   return items.filter(
@@ -47,6 +48,7 @@ function filterClasses(items: TuitionClass[], filters: ClassShopFilters): Tuitio
   );
 }
 
+// Sắp xếp lớp theo ngày khai giảng hoặc học phí
 function sortClasses(items: TuitionClass[], sort: ClassShopSort): TuitionClass[] {
   if (sort === "DEFAULT") return items;
   return [...items].sort((first, second) => {
@@ -55,13 +57,11 @@ function sortClasses(items: TuitionClass[], sort: ClassShopSort): TuitionClass[]
   });
 }
 
-/**
- * Danh sách lớp đang mở bán để mua: lấy trực tiếp các lớp admin mở đăng ký (GET /catalog/classes),
- * có ô tìm, bộ lọc (môn, khối, hình thức, thứ học) và sắp xếp. Bấm "Đăng ký ngay" sang trang thanh toán
- * với lớp đã chọn sẵn (?lop=<id>).
- * API danh mục yêu cầu đăng nhập, nên khách chưa đăng nhập được mời đăng nhập để xem lớp.
- * `variant="student"`: nhúng trong khu học viên — bỏ tiêu đề và các bước mua, dùng nền của khu học viên.
- */
+// Danh sách lớp đang mở bán để mua: lấy trực tiếp các lớp admin mở đăng ký (GET /catalog/classes),
+// có ô tìm, bộ lọc (môn, khối, hình thức, thứ học) và sắp xếp. Bấm "Đăng ký ngay" sang trang thanh toán
+// với lớp đã chọn sẵn (?lop=<id>).
+// API danh mục yêu cầu đăng nhập, nên khách chưa đăng nhập được mời đăng nhập để xem lớp.
+// `variant="student"`: nhúng trong khu học viên — bỏ tiêu đề và các bước mua, dùng nền của khu học viên.
 export function CourseShopSection({ variant = "public" }: CourseShopSectionProps) {
   const inStudentArea = variant === "student";
   const navigate = useNavigate();
@@ -74,12 +74,10 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
   // Đổi khi học viên chọn khóa / lớp khác cho môn đã có trong giỏ (lựa chọn nằm trong bộ nhớ trình duyệt)
   const [, setCartPick] = useState(0);
 
-  /**
-   * Giỏ hàng của backend giữ theo môn, nên thêm khóa Toán 10 thì môn Toán vào giỏ — không được đánh dấu
-   * mọi khóa Toán khác là "Đã trong giỏ". Nhớ đúng khóa (và lớp, nếu thêm từ một lớp) học viên đã chọn;
-   * chọn khóa khác cùng môn thì chỉ đổi lựa chọn, không thêm dòng giỏ mới.
-   * Khách chưa đăng nhập thì đăng nhập rồi quay lại danh mục.
-   */
+  // Giỏ hàng của backend giữ theo môn, nên thêm khóa Toán 10 thì môn Toán vào giỏ — không được đánh dấu
+  // mọi khóa Toán khác là "Đã trong giỏ". Nhớ đúng khóa (và lớp, nếu thêm từ một lớp) học viên đã chọn;
+  // chọn khóa khác cùng môn thì chỉ đổi lựa chọn, không thêm dòng giỏ mới.
+  // Khách chưa đăng nhập thì đăng nhập rồi quay lại danh mục.
   function addToCart(subjectId: number | undefined, item?: TuitionClass, course?: CourseResponse) {
     if (!user) return navigate(ROUTES.login, { state: { returnTo: ROUTES.studentCatalog } });
     if (item) rememberCartCourse(user.id, item.subject, cartCourseKey(item.courseName, item.subject, item.gradeLevel), item.id);
@@ -89,7 +87,7 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
     if (subjectId !== undefined && !(subject && cartSubjects.has(subject))) add.mutate(subjectId);
   }
 
-  /** Khóa trong giỏ = khóa đã nhớ cho môn; giỏ cũ chưa nhớ khóa thì suy từ lớp đã nhớ */
+  // Khóa trong giỏ = khóa đã nhớ cho môn; giỏ cũ chưa nhớ khóa thì suy từ lớp đã nhớ
   function pickedCourse(subject: string): string | undefined {
     const remembered = preferredCartCourse(user?.id, subject);
     if (remembered) return remembered;
@@ -97,10 +95,12 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
     const group = classes.find((item) => item.id === classId);
     return group ? cartCourseKey(group.courseName, group.subject, group.gradeLevel) : undefined;
   }
+  // Khóa này đúng là khóa học viên đã thêm vào giỏ
   const isCourseInCart = (key: string) => {
     const subject = key.split("|")[0];
     return cartSubjects.has(subject) && pickedCourse(subject) === key;
   };
+  // Lớp này đúng là lớp học viên đã thêm vào giỏ
   const isClassInCart = (item: TuitionClass) =>
     cartSubjects.has(item.subject) && preferredCartClass(user?.id, item.subject) === item.id;
   const addingSubjectId = add.isPending ? add.variables : undefined;
@@ -125,7 +125,7 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
     () => [...new Set([...classes.map((item) => item.subject), ...(courses.data?.content ?? []).map((course) => course.subject)])].sort(),
     [classes, courses.data],
   );
-  /** Thầy cô đang phụ trách các lớp đang mở, để học viên lọc theo gia sư mình muốn */
+  // Thầy cô đang phụ trách các lớp đang mở, để học viên lọc theo gia sư mình muốn
   const tutors = useMemo(() => {
     const byId = new Map<number, string>();
     for (const item of classes) if (item.tutorId && item.tutorName) byId.set(item.tutorId, item.tutorName);
@@ -134,12 +134,13 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
   const results = useMemo(() => sortClasses(filterClasses(classes, filters), sort), [classes, filters, sort]);
   const hasFilters = JSON.stringify(filters) !== JSON.stringify(DEFAULT_FILTERS);
 
+  // Đổi bộ lọc và hiện lại từ trang đầu
   function updateFilters(patch: Partial<ClassShopFilters>) {
     setFilters((current) => ({ ...current, ...patch }));
     setVisibleCount(PAGE_SIZE);
   }
 
-  /** Mua đúng một lớp; khách chưa đăng nhập thì đăng nhập xong quay lại trang thanh toán của lớp đó */
+  // Mua đúng một lớp; khách chưa đăng nhập thì đăng nhập xong quay lại trang thanh toán của lớp đó
   function buy(item: TuitionClass) {
     const checkout = `${ROUTES.studentCheckout}?lop=${item.id}`;
     if (!user) navigate(ROUTES.login, { state: { returnTo: checkout } });

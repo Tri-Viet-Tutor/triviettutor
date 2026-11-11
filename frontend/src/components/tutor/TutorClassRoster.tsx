@@ -3,11 +3,11 @@ import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/
 import { StatusChip } from "@/components/dashboard/StatusChip";
 import { Icon } from "@/components/ui/Icon";
 import { useMySessions, useSessionAttendance } from "@/hooks/usePortalData";
-import type { SessionResponse } from "@/interfaces/api";
+import type { SessionResponse } from "@/interfaces/dto";
 import { displayCode } from "@/utils/classes";
 import { isUpcoming, sessionStart } from "@/utils/sessions";
 
-/** Buổi đại diện của lớp để lấy sĩ số: buổi sắp tới gần nhất, nếu hết thì buổi gần nhất đã qua */
+// Buổi đại diện của lớp để lấy sĩ số: buổi sắp tới gần nhất, nếu hết thì buổi gần nhất đã qua
 function representativeSession(sessions: SessionResponse[], classGroupId: number, now: Date): SessionResponse | null {
   const inClass = sessions.filter((session) => session.classGroupId === classGroupId && session.status !== "CANCELLED");
   if (inClass.length === 0) return null;
@@ -16,14 +16,14 @@ function representativeSession(sessions: SessionResponse[], classGroupId: number
   return inClass.slice().sort((a, b) => sessionStart(b).getTime() - sessionStart(a).getTime())[0];
 }
 
-/**
- * Tab "Danh sách học viên" của một lớp (khu gia sư): lấy sĩ số qua điểm danh của một buổi đại diện trong lớp
- * (GET /sessions/{id}/attendance trả về studentIds + tên), vì khu gia sư chưa có API danh sách ghi danh riêng.
- */
+// Tab "Danh sách học viên" của một lớp (khu gia sư): lấy sĩ số qua điểm danh của một buổi đại diện trong lớp
+// (GET /sessions/{id}/attendance trả về studentIds + tên), vì khu gia sư chưa có API danh sách ghi danh riêng.
 export function TutorClassRoster({ classGroupId, now }: { classGroupId: number; now: Date }) {
   const sessionsQuery = useMySessions();
-  const sessions = sessionsQuery.data ?? [];
-  const sample = useMemo(() => representativeSession(sessions, classGroupId, now), [sessions, classGroupId, now]);
+  const sample = useMemo(
+    () => representativeSession(sessionsQuery.data ?? [], classGroupId, now),
+    [sessionsQuery.data, classGroupId, now],
+  );
   const attendanceQuery = useSessionAttendance(sample?.sessionId ?? 0, sample !== null);
 
   if (sessionsQuery.isPending || (sample !== null && attendanceQuery.isPending)) return <PortalLoading label="Đang tải danh sách học viên" rows={4} />;

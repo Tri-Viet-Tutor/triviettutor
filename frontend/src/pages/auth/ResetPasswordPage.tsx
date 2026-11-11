@@ -15,7 +15,7 @@ import type { AuthLocationState, ResetFormValues } from "@/interfaces/auth";
 import { resetPassword } from "@/services/authService";
 import { authErrorMessage } from "@/utils/errors";
 
-/** Kiểm tra form đặt lại mật khẩu */
+// Kiểm tra form đặt lại mật khẩu
 const resetSchema = z
   .object({
     newPassword: z
@@ -29,10 +29,8 @@ const resetSchema = z
     path: ["confirmPassword"],
   });
 
-/**
- * Trang đặt lại mật khẩu: nhận token từ query param ?token=... trong liên kết email,
- * cho phép người dùng nhập mật khẩu mới và xác nhận để đổi mật khẩu.
- */
+// Trang đặt lại mật khẩu: nhận token từ query param ?token=... trong liên kết email,
+// cho phép người dùng nhập mật khẩu mới và xác nhận để đổi mật khẩu.
 export function ResetPasswordPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -49,6 +47,7 @@ export function ResetPasswordPage() {
     defaultValues: { newPassword: "", confirmPassword: "" },
   });
 
+  // Gửi mật khẩu mới kèm mã đặt lại trong link
   function onSubmit(data: ResetFormValues) {
     if (!token) return;
 

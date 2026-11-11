@@ -1,18 +1,19 @@
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState } from "react";
+import { Icon } from "@/components/ui/Icon";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AuthNotice } from "@/components/auth/AuthNotice";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
-import { PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT } from "@/constants/classNames";
+import { PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT } from "@/constants/classNames";
 import { TRANSACTION_STATUS, transactionStatus } from "@/constants/labels";
 import type { PaymentCardProps } from "@/interfaces/admin";
-import type { PaymentStatus } from "@/interfaces/api";
-import { getApiError } from "@/services/api";
+import type { PaymentStatus } from "@/interfaces/dto";
+import { getApiError } from "@/services/apiClient";
 import { listPayments, refundPayment, updateRefund } from "@/services/tuitionPaymentService";
 import { formatVnd } from "@/utils/currency";
 import { displayCode } from "@/utils/classes";
 import { Select } from "@/components/ui/Select";
 
-/** Tên trạng thái giao dịch, theo nhãn chuẩn TRANSACTION_STATUS */
+// Tên trạng thái giao dịch, theo nhãn chuẩn TRANSACTION_STATUS
 const STATUSES: Record<PaymentStatus, string> = {
   COMPLETED: transactionStatus("COMPLETED").label,
   FAILED: transactionStatus("FAILED").label,
@@ -21,11 +22,12 @@ const STATUSES: Record<PaymentStatus, string> = {
   REFUNDED: transactionStatus("REFUNDED").label,
 };
 
-/** Trang Thanh toán của quản trị: xem giao dịch học phí theo trạng thái và hoàn tiền (GET /admin/payments). */
+// Trang Thanh toán của quản trị: xem giao dịch học phí theo trạng thái và hoàn tiền (GET /admin/payments).
 export function AdminPaymentsPage() {
   const cache = useQueryClient();
   const [status, setStatus] = useState<PaymentStatus | "">("");
   const [page, setPage] = useState(0);
+  const [openId, setOpenId] = useState<number | null>(null);
   const payments = useQuery({ queryKey: ["admin-payments", status, page], queryFn: () => listPayments(status, page) });
   return (
     <div className="space-y-5">
@@ -59,19 +61,41 @@ export function AdminPaymentsPage() {
         </AuthNotice>
       )}
       {payments.data?.content.length === 0 && <p>Chưa có giao dịch phù hợp.</p>}
-      <div className="space-y-4">
-        {payments.data?.content.map((payment) => (
-          <PaymentCard
-            key={payment.paymentId}
-            payment={payment}
-            onUpdated={() => {
-              void cache.invalidateQueries({ queryKey: ["admin-payments"] });
-              void cache.invalidateQueries({ queryKey: ["wallet"] });
-              void cache.invalidateQueries({ queryKey: ["wallet-history"] });
-            }}
-          />
-        ))}
-      </div>
+      {payments.data && payments.data.content.length > 0 && (
+        <div className="overflow-x-auto rounded-sm border border-brand-sandLine bg-white">
+          <table className="w-full min-w-[920px] table-fixed border-collapse text-left">
+            <thead className="bg-brand-sand/70 text-[11.5px] font-bold uppercase tracking-wide text-brand-muted">
+              <tr>
+                <th scope="col" className="w-[13%] px-4 py-3">Mã giao dịch</th>
+                <th scope="col" className="w-[13%] border-l border-brand-sandLine px-4 py-3">Học viên</th>
+                <th scope="col" className="w-[12%] border-l border-brand-sandLine px-4 py-3">Lớp</th>
+                <th scope="col" className="w-[11%] border-l border-brand-sandLine px-4 py-3">Hình thức</th>
+                <th scope="col" className="w-[16%] border-l border-brand-sandLine px-4 py-3 text-right">Số tiền</th>
+                <th scope="col" className="w-[15%] border-l border-brand-sandLine px-4 py-3 text-right">Đã hoàn</th>
+                <th scope="col" className="w-[15%] border-l border-brand-sandLine px-4 py-3">Trạng thái</th>
+                <th scope="col" className="w-[5%] border-l border-brand-sandLine px-2 py-3">
+                  <span className="sr-only">Chi tiết</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {payments.data.content.map((payment) => (
+                <PaymentRow
+                  key={payment.paymentId}
+                  payment={payment}
+                  open={openId === payment.paymentId}
+                  onToggle={() => setOpenId((current) => (current === payment.paymentId ? null : payment.paymentId))}
+                  onUpdated={() => {
+                    void cache.invalidateQueries({ queryKey: ["admin-payments"] });
+                    void cache.invalidateQueries({ queryKey: ["wallet"] });
+                    void cache.invalidateQueries({ queryKey: ["wallet-history"] });
+                  }}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       {payments.data && payments.data.totalPages > 1 && (
         <div className="flex items-center gap-3">
           <button className={PORTAL_BTN_SECONDARY} disabled={page === 0} onClick={() => setPage(page - 1)}>
@@ -89,8 +113,8 @@ export function AdminPaymentsPage() {
   );
 }
 
-/** Một giao dịch: thông tin, yêu cầu hoàn tiền, đối soát / gửi lại với VNPay */
-function PaymentCard({ payment, onUpdated }: PaymentCardProps) {
+// Một giao dịch: dòng tóm tắt, mở ra là phần hoàn tiền và đối soát với VNPay
+function PaymentRow({ payment, open, onToggle, onUpdated }: PaymentCardProps & { open: boolean; onToggle: () => void }) {
   const [reason, setReason] = useState("");
   const [percentage, setPercentage] = useState(100);
   const [message, setMessage] = useState("");
@@ -124,16 +148,46 @@ function PaymentCard({ payment, onUpdated }: PaymentCardProps) {
           ? "Yêu cầu hoàn tiền đã tồn tại hoặc chưa được phép thử lại."
           : "Không xử lý được yêu cầu hoàn tiền. Vui lòng kiểm tra và thử lại.";
   return (
-    <section className={`${PORTAL_CARD} space-y-3 p-5`}>
-      <h2 className="font-bold text-brand-navy">
-        Giao dịch {displayCode("payment", payment.paymentId)} - {STATUSES[payment.status]}
-      </h2>
-      <p className="text-sm">
-        Học viên {displayCode("student", payment.studentId)} - Lớp {displayCode("class", payment.classGroupId)} - {payment.method}
-      </p>
-      <p>
-        {formatVnd(payment.amount)} - Đã hoàn {formatVnd(payment.refundedAmount)}
-      </p>
+    <Fragment>
+      <tr className={`border-t border-brand-sandLine ${open ? "bg-brand-tint/50" : "hover:bg-brand-sand/50"}`}>
+        <td className="h-14 px-4 py-2 align-middle">
+          <span className="text-[14px] font-bold tabular-nums text-brand-navy">{displayCode("payment", payment.paymentId)}</span>
+        </td>
+        <td className="border-l border-brand-sandLine px-4 py-2 align-middle">
+          <span className="text-[14px] tabular-nums text-brand-ink">{displayCode("student", payment.studentId)}</span>
+        </td>
+        <td className="border-l border-brand-sandLine px-4 py-2 align-middle">
+          <span className="text-[14px] tabular-nums text-brand-ink">{displayCode("class", payment.classGroupId)}</span>
+        </td>
+        <td className="border-l border-brand-sandLine px-4 py-2 align-middle">
+          <span className="text-[14px] text-brand-ink">{payment.method}</span>
+        </td>
+        <td className="border-l border-brand-sandLine px-4 py-2 text-right align-middle">
+          <span className="text-[14px] font-bold tabular-nums text-brand-ink">{formatVnd(payment.amount)}</span>
+        </td>
+        <td className="border-l border-brand-sandLine px-4 py-2 text-right align-middle">
+          <span className={`text-[14px] tabular-nums ${payment.refundedAmount > 0 ? "font-semibold text-red-700" : "text-brand-muted"}`}>
+            {formatVnd(payment.refundedAmount)}
+          </span>
+        </td>
+        <td className="border-l border-brand-sandLine px-4 py-2 align-middle">
+          <span className="text-[13.5px] font-semibold text-brand-ink">{STATUSES[payment.status]}</span>
+        </td>
+        <td className="border-l border-brand-sandLine px-2 py-2 text-center align-middle">
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={open}
+            aria-label={`${open ? "Đóng" : "Mở"} chi tiết giao dịch ${displayCode("payment", payment.paymentId)}`}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-sm text-slate-400 hover:bg-brand-sand hover:text-brand-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-navy"
+          >
+            <Icon name="expand_more" className={`text-[21px] transition-transform ${open ? "rotate-180" : ""}`} />
+          </button>
+        </td>
+      </tr>
+      {open && (
+        <tr className="border-t border-brand-sandLine bg-brand-tint/30">
+          <td colSpan={8} className="space-y-3 px-4 py-3">
       <p className="break-all text-xs text-brand-muted">Mã giao dịch: {payment.transactionRef}</p>
       {payment.status === "REQUIRES_REFUND" && (
         <AuthNotice tone="info">Đã nhận tiền nhưng chưa ghi danh. Cần hoàn toàn bộ học phí.</AuthNotice>
@@ -194,6 +248,9 @@ function PaymentCard({ payment, onUpdated }: PaymentCardProps) {
           )}
         </div>
       )}
-    </section>
+          </td>
+        </tr>
+      )}
+    </Fragment>
   );
 }

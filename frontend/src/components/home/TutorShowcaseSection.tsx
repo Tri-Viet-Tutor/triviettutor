@@ -6,7 +6,7 @@ import { CONTAINER, FOCUS_RING } from "@/constants/classNames";
 import { TUTOR_PROMO_POINTS, TUTORS } from "@/constants/home";
 import { ROUTES } from "@/constants/routes";
 
-/** Toạ độ các đỉnh của hình ngôi sao nhiều cánh (nhãn dán nổi bật) */
+// Toạ độ các đỉnh của hình ngôi sao nhiều cánh (nhãn dán nổi bật)
 function starburstPoints(spikes: number, outer: number, inner: number) {
   return Array.from({ length: spikes * 2 }, (_, i) => {
     const radius = i % 2 === 0 ? outer : inner;
@@ -15,19 +15,23 @@ function starburstPoints(spikes: number, outer: number, inner: number) {
   }).join(" ");
 }
 
-/** Ngôi sao 16 cánh tính sẵn cho nhãn "Lớp tối đa 8 học sinh" */
+// Ngôi sao 16 cánh tính sẵn cho nhãn "Lớp tối đa 8 học sinh"
 const STARBURST = starburstPoints(16, 50, 42);
 
-/** Đội ngũ gia sư: mục quảng cáo khóa học trải hết chiều ngang, nền là quầng sáng cam trong suốt hoà vào nền giấy. */
+// Đội ngũ gia sư: mục quảng cáo khóa học trải hết chiều ngang, nền là quầng sáng cam trong suốt hoà vào nền giấy.
 export function TutorShowcaseSection() {
   return (
     <section id="tutors-showcase" className="relative overflow-hidden bg-[#E8E2D5] py-16 lg:py-24">
-      {/* Quầng sáng cam – vàng trong suốt, đậm sau cụm ảnh và nhạt dần ra mép */}
+      {
+        // Quầng sáng cam – vàng trong suốt, đậm sau cụm ảnh và nhạt dần ra mép
+      }
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_64%_82%_at_74%_46%,rgba(245,160,15,0.5),transparent_72%),radial-gradient(ellipse_42%_55%_at_6%_92%,rgba(255,194,77,0.38),transparent_70%)]"
       />
-      {/* Tia nắng rất nhạt toả sau cụm ảnh */}
+      {
+        // Tia nắng rất nhạt toả sau cụm ảnh
+      }
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[repeating-conic-gradient(from_0deg_at_74%_46%,rgba(255,255,255,0.3)_0deg_6deg,transparent_6deg_12deg)] [mask-image:radial-gradient(ellipse_56%_74%_at_74%_46%,black,transparent_72%)]"
@@ -87,7 +91,9 @@ export function TutorShowcaseSection() {
                 <TutorCard key={tutor.name} tutor={tutor} index={index} />
               ))}
             </ul>
-            {/* Nhãn dán hình ngôi sao ở góc cụm ảnh */}
+            {
+              // Nhãn dán hình ngôi sao ở góc cụm ảnh
+            }
             <div className="absolute -right-2 -top-9 h-[96px] w-[96px] rotate-12 drop-shadow-[0_6px_8px_rgba(8,42,102,0.3)] sm:-right-5 sm:-top-11 sm:h-[116px] sm:w-[116px]">
               <svg aria-hidden="true" viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
                 <polygon points={STARBURST} className="fill-brand-navyDeep" />

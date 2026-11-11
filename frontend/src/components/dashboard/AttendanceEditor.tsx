@@ -7,14 +7,14 @@ import { displayCode } from "@/utils/classes";
 import { AUTH_LABEL, PORTAL_BTN_PRIMARY, PORTAL_INPUT } from "@/constants/classNames";
 import { ATTENDANCE_STATUS, ATTENDANCE_STATUS_ORDER } from "@/constants/labels";
 import { portalKeys, useSessionAttendance, useUserId } from "@/hooks/usePortalData";
-import type { AttendanceRecordInput, AttendanceResponse, AttendanceStatus } from "@/interfaces/api";
+import type { AttendanceRecordInput, AttendanceResponse, AttendanceStatus } from "@/interfaces/dto";
 import { submitAttendance } from "@/services/portalService";
 import { formatClockTime, formatDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 import { studentLabel as formatStudent } from "@/utils/sessions";
 import type { AttendanceDraft, AttendanceEditorProps } from "@/interfaces/portal";
 
-/** Dựng bản nháp từ dữ liệu máy chủ: mọi học viên đều có dòng, dòng đã điểm danh điền sẵn */
+// Dựng bản nháp từ dữ liệu máy chủ: mọi học viên đều có dòng, dòng đã điểm danh điền sẵn
 function toDrafts(data: AttendanceResponse): Record<number, AttendanceDraft> {
   const drafts: Record<number, AttendanceDraft> = {};
   for (const studentId of data.studentIds) drafts[studentId] = { status: "", note: "" };
@@ -22,14 +22,12 @@ function toDrafts(data: AttendanceResponse): Record<number, AttendanceDraft> {
   return drafts;
 }
 
-/**
- * Điểm danh cả lớp của một buổi (GET + PUT /sessions/{id}/attendance) — gia sư dạy buổi đó và quản trị dùng chung.
- * Backend chỉ trả mã học viên nên mỗi dòng ghi "Học viên #mã". Gửi một phần cũng được: dòng chưa chọn thì bỏ qua.
- */
-/** Nhãn ngắn trên nút chọn (nhãn đầy đủ ở title) */
+// Điểm danh cả lớp của một buổi (GET + PUT /sessions/{id}/attendance) — gia sư dạy buổi đó và quản trị dùng chung.
+// Backend chỉ trả mã học viên nên mỗi dòng ghi "Học viên #mã". Gửi một phần cũng được: dòng chưa chọn thì bỏ qua.
+// Nhãn ngắn trên nút chọn (nhãn đầy đủ ở title)
 const SHORT_LABEL: Record<AttendanceStatus, string> = { PRESENT: "Có mặt", LATE: "Đi trễ", ABSENT: "Vắng mặt", EXCUSED: "Có phép" };
 
-/** Màu từng trạng thái điểm danh (nút chọn và ô xem) */
+// Màu từng trạng thái điểm danh (nút chọn và ô xem)
 const STATUS_STYLE: Record<AttendanceStatus, { on: string; off: string; soft: string }> = {
   PRESENT: { on: "bg-emerald-600 text-white border-emerald-600", off: "hover:border-emerald-400 hover:text-emerald-700", soft: "bg-emerald-50 text-emerald-800 ring-emerald-200" },
   LATE: { on: "bg-amber-500 text-white border-amber-500", off: "hover:border-amber-400 hover:text-amber-700", soft: "bg-amber-50 text-amber-800 ring-amber-200" },
@@ -37,11 +35,9 @@ const STATUS_STYLE: Record<AttendanceStatus, { on: string; off: string; soft: st
   EXCUSED: { on: "bg-brand-navy text-white border-brand-navy", off: "hover:border-brand-navy/50 hover:text-brand-navy", soft: "bg-brand-tint text-brand-navy ring-brand-navy/20" },
 };
 
-/**
- * Điểm danh cả lớp của một buổi (GET + PUT /sessions/{id}/attendance) — gia sư dạy buổi đó và quản trị dùng chung.
- * Danh sách học viên có ảnh, tên (backend trả kèm họ tên), thanh tổng hợp có mặt / trễ / vắng / có phép,
- * nút "Tất cả có mặt" và bốn nút trạng thái tô màu cho từng em. Gửi một phần cũng được: dòng chưa chọn thì bỏ qua.
- */
+// Điểm danh cả lớp của một buổi (GET + PUT /sessions/{id}/attendance) — gia sư dạy buổi đó và quản trị dùng chung.
+// Danh sách học viên có ảnh, tên (backend trả kèm họ tên), thanh tổng hợp có mặt / trễ / vắng / có phép,
+// nút "Tất cả có mặt" và bốn nút trạng thái tô màu cho từng em. Gửi một phần cũng được: dòng chưa chọn thì bỏ qua.
 export function AttendanceEditor({ sessionId, editable, readOnlyNote, asAdmin = false, nameOf }: AttendanceEditorProps) {
   const userId = useUserId();
   const queryClient = useQueryClient();
@@ -53,7 +49,9 @@ export function AttendanceEditor({ sessionId, editable, readOnlyNote, asAdmin = 
   const [saved, setSaved] = useState(false);
 
   const data = attendance.data;
+  // Tên học viên theo id (từ danh bạ hoặc từ dữ liệu điểm danh)
   const studentName = (studentId: number) => nameOf?.(studentId) ?? data?.studentNames?.[String(studentId)];
+  // Tên hiển thị của học viên, chưa có tên thì hiện mã
   const studentLabel = (studentId: number) => studentName(studentId) ?? formatStudent(studentId, nameOf);
   // Có dữ liệu mới từ máy chủ thì dựng lại bản nháp
   useEffect(() => {
@@ -101,7 +99,9 @@ export function AttendanceEditor({ sessionId, editable, readOnlyNote, asAdmin = 
   const total = data.studentIds.length;
   // Học viên trung tâm đã duyệt nghỉ có phép: miễn điểm danh (backend tự ghi "Nghỉ có phép" khi lưu)
   const excused = new Set(data.excusedStudentIds ?? []);
+  // Học viên được trung tâm duyệt nghỉ có phép, miễn điểm danh
   const isExcused = (studentId: number) => excused.has(studentId) && !data.records.some((item) => item.studentId === studentId && item.status !== "EXCUSED");
+  // Trạng thái điểm danh đang hiện của một học viên
   const statusOf = (studentId: number): AttendanceStatus | "" =>
     isExcused(studentId)
       ? "EXCUSED"
@@ -114,13 +114,13 @@ export function AttendanceEditor({ sessionId, editable, readOnlyNote, asAdmin = 
     .filter(({ status, count }) => ATTENDANCE_STATUS_ORDER.includes(status) || count > 0);
   const marked = counts.reduce((sum, item) => sum + item.count, 0);
 
-  /** Sửa bản nháp của một học viên */
+  // Sửa bản nháp của một học viên
   function setDraft(studentId: number, patch: Partial<AttendanceDraft>) {
     setDrafts((current) => ({ ...current, [studentId]: { ...current[studentId], ...patch } }));
     setSaved(false);
   }
 
-  /** Đánh dấu có mặt cho những em chưa chọn */
+  // Đánh dấu có mặt cho những em chưa chọn
   function markRestPresent() {
     setDrafts((current) => {
       const next = { ...current };
@@ -131,7 +131,7 @@ export function AttendanceEditor({ sessionId, editable, readOnlyNote, asAdmin = 
     setSaved(false);
   }
 
-  /** Gửi các dòng đã chọn; ghi chú để trống thì không gửi */
+  // Gửi các dòng đã chọn; ghi chú để trống thì không gửi
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (chosen.length === 0 || needsReason) return;
@@ -144,7 +144,7 @@ export function AttendanceEditor({ sessionId, editable, readOnlyNote, asAdmin = 
     );
   }
 
-  /** Thanh tổng hợp: số đã điểm danh + từng trạng thái, kèm thanh màu theo tỉ lệ */
+  // Thanh tổng hợp: số đã điểm danh + từng trạng thái, kèm thanh màu theo tỉ lệ
   const summary = (
     <div className="rounded-2xl border border-brand-sandLine bg-white p-3.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -173,7 +173,7 @@ export function AttendanceEditor({ sessionId, editable, readOnlyNote, asAdmin = 
     </div>
   );
 
-  /** Ảnh + tên + mã học viên */
+  // Ảnh + tên + mã học viên
   const person = (studentId: number) => (
     <span className="flex min-w-0 items-center gap-2.5">
       <UserAvatar userId={studentId} name={studentName(studentId) ?? "Học viên"} size={36} />
@@ -280,7 +280,9 @@ export function AttendanceEditor({ sessionId, editable, readOnlyNote, asAdmin = 
                   })}
                 </div>
               </div>
-              {/* Chỉ hỏi ghi chú khi vắng */}
+              {
+                // Chỉ hỏi ghi chú khi vắng
+              }
               {draft.status !== "" && draft.status !== "PRESENT" && (
                 <input
                   type="text"

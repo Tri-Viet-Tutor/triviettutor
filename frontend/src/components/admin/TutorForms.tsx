@@ -7,7 +7,7 @@ import { AuthNotice } from "@/components/auth/AuthNotice";
 import { PASSWORD_MAX, PASSWORD_MIN } from "@/constants/auth";
 import { AUTH_ERROR, AUTH_INPUT, AUTH_LABEL, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD } from "@/constants/classNames";
 import { useRefreshAdmin } from "@/hooks/useAdminData";
-import { createTutor, updateTutorProfile } from "@/services/admin";
+import { createTutor, updateTutorProfile } from "@/services/adminService";
 import { portalErrorMessage } from "@/utils/errors";
 import type {
   CompensationFieldsProps,
@@ -17,7 +17,7 @@ import type {
   TutorProfileFormValues,
 } from "@/interfaces/admin";
 
-/** Ô tiền: số nguyên không âm (theo CreateTutorRequest / UpdateTutorProfileRequest của backend) */
+// Ô tiền: số nguyên không âm (theo CreateTutorRequest / UpdateTutorProfileRequest của backend)
 const money = (label: string) =>
   z
     .string()
@@ -25,14 +25,14 @@ const money = (label: string) =>
     .min(1, `Hãy nhập ${label}`)
     .regex(/^\d{1,15}$/, `${label[0].toUpperCase()}${label.slice(1)} là số nguyên không âm`);
 
-/** Các trường hồ sơ dùng chung cho form tạo gia sư và form sửa hồ sơ */
+// Các trường hồ sơ dùng chung cho form tạo gia sư và form sửa hồ sơ
 const profileFields = {
   baseSalary: money("lương cơ bản"),
   sessionRate: money("thù lao mỗi buổi"),
   bio: z.string().trim().max(2000, "Phần giới thiệu tối đa 2000 ký tự"),
 };
 
-/** Kiểm tra form tạo gia sư (giới hạn giống backend) */
+// Kiểm tra form tạo gia sư (giới hạn giống backend)
 const createSchema = z.object({
   fullName: z.string().trim().min(2, "Họ tên có ít nhất 2 ký tự").max(100, "Họ tên tối đa 100 ký tự"),
   email: z.string().trim().email("Email chưa đúng"),
@@ -45,7 +45,7 @@ const createSchema = z.object({
 
 const profileSchema = z.object(profileFields);
 
-/** Ba ô chung của hai form: lương cơ bản, thù lao mỗi buổi, giới thiệu. */
+// Ba ô chung của hai form: lương cơ bản, thù lao mỗi buổi, giới thiệu.
 function CompensationFields({ idPrefix, register, errors }: CompensationFieldsProps) {
   return (
     <>
@@ -78,7 +78,7 @@ function CompensationFields({ idPrefix, register, errors }: CompensationFieldsPr
   );
 }
 
-/** Form tạo tài khoản gia sư (POST /admin/users/tutors): tài khoản dùng được ngay, không cần mã OTP. */
+// Form tạo tài khoản gia sư (POST /admin/users/tutors): tài khoản dùng được ngay, không cần mã OTP.
 export function CreateTutorForm({ onClose }: CreateTutorFormProps) {
   const refresh = useRefreshAdmin();
   const {
@@ -95,7 +95,7 @@ export function CreateTutorForm({ onClose }: CreateTutorFormProps) {
     },
   });
 
-  /** Đổi chuỗi tiền sang số; giới thiệu để trống thì không gửi */
+  // Đổi chuỗi tiền sang số; giới thiệu để trống thì không gửi
   function onSubmit(values: CreateTutorFormValues) {
     create.mutate({
       fullName: values.fullName,
@@ -130,7 +130,9 @@ export function CreateTutorForm({ onClose }: CreateTutorFormProps) {
         error={errors.password?.message}
         {...register("password")}
       />
-      {/* Ba ô chung dùng lại kiểu của form hồ sơ — hai form cùng tên trường nên ép kiểu an toàn */}
+      {
+        // Ba ô chung dùng lại kiểu của form hồ sơ — hai form cùng tên trường nên ép kiểu an toàn
+      }
       <CompensationFields idPrefix="tutor-new" register={register as unknown as CompensationFieldsProps["register"]} errors={errors} />
 
       {create.isSuccess && <AuthNotice tone="success">Đã tạo tài khoản gia sư {create.data.fullName}.</AuthNotice>}
@@ -150,10 +152,8 @@ export function CreateTutorForm({ onClose }: CreateTutorFormProps) {
   );
 }
 
-/**
- * Form sửa hồ sơ một gia sư (PUT /admin/users/{id}/tutor-profile).
- * Backend chưa có API đọc hồ sơ của người khác nên form không điền sẵn được số cũ: phải nhập lại cả hai số tiền.
- */
+// Form sửa hồ sơ một gia sư (PUT /admin/users/{id}/tutor-profile).
+// Backend chưa có API đọc hồ sơ của người khác nên form không điền sẵn được số cũ: phải nhập lại cả hai số tiền.
 export function TutorProfileForm({ tutor, onClose }: TutorProfileFormProps) {
   const {
     register,

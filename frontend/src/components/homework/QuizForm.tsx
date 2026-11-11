@@ -18,10 +18,8 @@ import type { AnswerInput, AttachmentResponse, QuizFormProps, SubmissionInput, S
 const OPTION_LETTERS = "ABCDEFGHIJ";
 const MAX_ATTACHMENTS = 10;
 
-/**
- * Bài làm đang làm dở của học viên: chọn đáp án trắc nghiệm, viết tự luận, chụp ảnh bài làm trên giấy
- * (mở thẳng camera trên điện thoại) hoặc chọn ảnh / PDF, lưu tạm và nộp bài.
- */
+// Bài làm đang làm dở của học viên: chọn đáp án trắc nghiệm, viết tự luận, chụp ảnh bài làm trên giấy
+// (mở thẳng camera trên điện thoại) hoặc chọn ảnh / PDF, lưu tạm và nộp bài.
 export function QuizForm({ homework, submission, onDone }: QuizFormProps) {
   const userId = useUserId();
   const queryClient = useQueryClient();
@@ -51,7 +49,7 @@ export function QuizForm({ homework, submission, onDone }: QuizFormProps) {
     return question.type === "MULTIPLE_CHOICE" ? pickedOptions(answer).length === 0 : !answer?.textAnswer?.trim();
   }).length;
 
-  /** Dữ liệu gửi backend cho cả lưu tạm lẫn nộp */
+  // Dữ liệu gửi backend cho cả lưu tạm lẫn nộp
   function payload(): SubmissionInput {
     return {
       version,
@@ -71,6 +69,7 @@ export function QuizForm({ homework, submission, onDone }: QuizFormProps) {
     };
   }
 
+  // Cập nhật bài làm mới vào bộ nhớ đệm và tải lại danh sách bài tập
   function refresh(next: SubmissionResponse) {
     queryClient.setQueryData(homeworkKeys.mine(userId, homework.id), next);
     void queryClient.invalidateQueries({ queryKey: homeworkKeys.all(userId) });
@@ -105,12 +104,14 @@ export function QuizForm({ homework, submission, onDone }: QuizFormProps) {
     onSuccess: (_, attachment) => setAttachments((current) => current.filter((item) => item.id !== attachment.id)),
   });
 
+  // Tải lên các ảnh / PDF vừa chọn, không vượt số tệp tối đa
   function handleFiles(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []).slice(0, MAX_ATTACHMENTS - attachments.length);
     event.target.value = "";
     if (files.length) upload.mutate(files);
   }
 
+  // Ghi câu trả lời của một câu hỏi
   function setAnswer(questionId: number, change: Partial<AnswerInput>) {
     setAnswers((current) => ({ ...current, [questionId]: { ...current[questionId], questionId, ...change } }));
   }
@@ -140,7 +141,7 @@ export function QuizForm({ homework, submission, onDone }: QuizFormProps) {
                           {selectCount > 1 ? (
                             <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[13px] font-semibold text-amber-800 ring-1 ring-amber-200">
                               <Icon name="checklist" className="text-[16px]" />
-                              Chọn {selectCount} đáp án · đã chọn {picks.length}/{selectCount}
+                              Chọn {selectCount} đáp án - đã chọn {picks.length}/{selectCount}
                             </span>
                           ) : (
                             `Chọn một đáp án cho câu ${index + 1}`

@@ -3,15 +3,13 @@ import { Icon } from "@/components/ui/Icon";
 import { ASSETS } from "@/constants/assets";
 import { CLASS_PERKS } from "@/constants/classOptions";
 
-/** Hai dòng chữ lớn ở tấm bên trái */
+// Hai dòng chữ lớn ở tấm bên trái
 const BRAND_LINES = ["Học Cùng", "Trí Việt Tutor"];
 
-/**
- * Tấm ảnh bên trái các trang xác thực (chỉ hiện từ màn hình lớn): ảnh học sinh phủ lớp xanh navy,
- * đậm dần xuống dưới. Góc trên trái là nút về trang chủ; phần chữ dồn xuống đáy —
- * dòng chữ lớn và ba việc làm được sau khi đăng nhập xếp thành một hàng. Logo nằm ở đầu khung form bên phải.
- * Tấm cao đúng một màn hình và đứng yên (sticky) khi cuộn form dài, nên chữ ở đáy luôn nhìn thấy.
- */
+// Tấm ảnh bên trái các trang xác thực (chỉ hiện từ màn hình lớn): ảnh học sinh phủ lớp xanh navy,
+// đậm dần xuống dưới. Góc trên trái là nút về trang chủ; phần chữ dồn xuống đáy —
+// dòng chữ lớn và ba việc làm được sau khi đăng nhập xếp thành một hàng. Logo nằm ở đầu khung form bên phải.
+// Tấm cao đúng một màn hình và đứng yên (sticky) khi cuộn form dài, nên chữ ở đáy luôn nhìn thấy.
 export function AuthBrandPanel() {
   return (
     <aside className="relative isolate hidden overflow-hidden bg-brand-navyDeep lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:justify-between lg:self-start lg:p-10 xl:p-14">

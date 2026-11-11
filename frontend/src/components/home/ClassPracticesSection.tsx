@@ -5,10 +5,8 @@ import { CONTAINER } from "@/constants/classNames";
 import { CLASS_PRACTICES } from "@/constants/home";
 import { useWhirlwindReveal } from "@/hooks/useWhirlwindReveal";
 
-/**
- * Cách Trí Việt tổ chức lớp học: bảng phấn — khối tối duy nhất của trang.
- * Cứ 5 giây một lốc xoáy bay vào bảng xoáy một lần, mỗi lần làm hiện một mục.
- */
+// Cách Trí Việt tổ chức lớp học: bảng phấn — khối tối duy nhất của trang.
+// Cứ 5 giây một lốc xoáy bay vào bảng xoáy một lần, mỗi lần làm hiện một mục.
 export function ClassPracticesSection() {
   // Lốc xoáy lần lượt làm hiện từng mục trên bảng
   const { listRef, whirlwindRef, revealedCount, showWhirlwind } = useWhirlwindReveal<HTMLUListElement>(CLASS_PRACTICES.length);
@@ -16,11 +14,17 @@ export function ClassPracticesSection() {
   return (
     <section id="why-choose-us" className="bg-[#F5F1E9] py-16 lg:py-24">
       <div className={CONTAINER}>
-        {/* Khung gỗ */}
+        {
+          // Khung gỗ
+        }
         <Reveal className="rounded-[26px] bg-[linear-gradient(135deg,#E3B467,#B9782A)] p-3 shadow-soft sm:p-4">
-          {/* Mặt bảng */}
+          {
+            // Mặt bảng
+          }
           <div className="relative overflow-hidden rounded-[14px] bg-brand-navyDeep px-6 py-10 text-white shadow-[inset_0_0_0_2px_rgba(0,0,0,0.25),inset_0_10px_30px_rgba(0,0,0,0.25)] sm:px-10 lg:px-14 lg:py-14">
-            {/* Vệt bụi phấn */}
+            {
+              // Vệt bụi phấn
+            }
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_18%_25%,rgba(255,255,255,0.07),transparent_45%),radial-gradient(ellipse_at_82%_78%,rgba(255,255,255,0.06),transparent_42%)]"
@@ -48,7 +52,9 @@ export function ClassPracticesSection() {
               {showWhirlwind && <Whirlwind ref={whirlwindRef} />}
             </div>
           </div>
-          {/* Máng phấn: hai viên phấn và giẻ lau bảng */}
+          {
+            // Máng phấn: hai viên phấn và giẻ lau bảng
+          }
           <div aria-hidden="true" className="mt-3 flex h-4 items-end justify-end gap-2 px-6 sm:mt-4 sm:px-10">
             <span className="h-[7px] w-9 rounded-[2px] bg-white shadow-[0_1px_1px_rgba(0,0,0,0.25)]" />
             <span className="h-[7px] w-6 rounded-[2px] bg-brand-marker shadow-[0_1px_1px_rgba(0,0,0,0.25)]" />

@@ -5,7 +5,7 @@ import { formatDayMonth, toIsoDate, weekdayName } from "@/utils/date";
 import { weekDays } from "@/utils/sessions";
 import type { WeekStripProps } from "@/interfaces/portal";
 
-/** Bảy ngày của tuần này, mỗi ngày ghi giờ bắt đầu các buổi; bấm vào giờ để mở buổi đó ở trang lịch của khu. */
+// Bảy ngày của tuần này, mỗi ngày ghi giờ bắt đầu các buổi; bấm vào giờ để mở buổi đó ở trang lịch của khu.
 export function WeekStrip({ sessions, today, scheduleTo }: WeekStripProps) {
   const days = weekDays(today);
   const todayIso = toIsoDate(today);

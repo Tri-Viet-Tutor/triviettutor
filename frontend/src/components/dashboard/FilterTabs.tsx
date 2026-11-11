@@ -1,6 +1,6 @@
 import type { FilterTabsProps } from "@/interfaces/portal";
 
-/** Dãy thẻ lọc nhỏ: sắp tới / đã qua, trạng thái đơn, vai trò người dùng… */
+// Dãy thẻ lọc nhỏ: sắp tới / đã qua, trạng thái đơn, vai trò người dùng…
 export function FilterTabs<T extends string>({ label, tabs, value, onChange }: FilterTabsProps<T>) {
   return (
     <div
@@ -26,7 +26,7 @@ export function FilterTabs<T extends string>({ label, tabs, value, onChange }: F
             {tab.label}
             {tab.count !== undefined && (
               <span
-                className={`rounded-full px-1.5 text-[12px] tabular-nums ${active ? "bg-white/20 text-white" : "bg-brand-sand text-brand-muted"}`}
+                className={`rounded-sm px-1.5 text-[12px] tabular-nums ${active ? "bg-white/20 text-white" : "bg-brand-sand text-brand-muted"}`}
               >
                 {tab.count}
               </span>

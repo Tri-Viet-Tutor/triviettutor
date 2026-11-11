@@ -10,17 +10,19 @@ import { Icon } from "@/components/ui/Icon";
 import { AUTH_LABEL, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_TEXT_LINK } from "@/constants/classNames";
 import { ROUTES } from "@/constants/routes";
 import { useCanOfferMakeup, useRefreshAdmin, useUserDirectory } from "@/hooks/useAdminData";
-import { cancelSession, setMeetingUrl } from "@/services/admin";
+import { cancelSession, setMeetingUrl } from "@/services/adminService";
 import { parseIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 import { formatLongDate, formatTimeRange, hasSubstituteTutor, sessionStart } from "@/utils/sessions";
 import type { AdminSessionDetailProps } from "@/interfaces/admin";
 import { displayCode } from "@/utils/classes";
 
+// Chi tiết một buổi học cho admin: link phòng học, đổi gia sư dạy, hủy buổi, xếp học bù và điểm danh
 export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
   const refresh = useRefreshAdmin();
   const { nameOf, tutors } = useUserDirectory();
 
+  // Tên gia sư theo id, chưa có tên thì hiện mã gia sư
   const tutorLabel = (tutorId: number) => nameOf(tutorId) ?? `Gia sư ${displayCode("tutor", tutorId)}`;
   const [makeupOpen, setMakeupOpen] = useState(false);
   const [url, setUrl] = useState(session.meetingUrl ?? "");
@@ -45,6 +47,7 @@ export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
   // Chỉ cho lưu khi link đã đổi và không để trống
   const urlChanged = url.trim() !== (session.meetingUrl ?? "") && url.trim() !== "";
 
+  // Lưu link phòng học khi link có thay đổi
   function handleUrlSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (urlChanged) saveUrl.mutate();
@@ -113,7 +116,9 @@ export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
         </form>
       )}
 
-      {/* Điểm danh chỉ có ở buổi chưa hủy, không chờ xếp lại lịch và đã có gia sư */}
+      {
+        // Điểm danh chỉ có ở buổi chưa hủy, không chờ xếp lại lịch và đã có gia sư
+      }
       {!cancelled && session.status !== "PENDING_RESCHEDULE" && session.scheduledTutorId !== null && (
         <section aria-label="Điểm danh">
           <h3 className="mb-2.5 text-[15.5px] font-bold text-brand-navy">Điểm danh</h3>
@@ -126,7 +131,7 @@ export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
                 <button
                   type="button"
                   onClick={() => setTutorOpen(true)}
-                  className={`inline-flex items-center gap-1 text-[14px] ${PORTAL_TEXT_LINK}`}
+                  className={`inline-block text-[14px] ${PORTAL_TEXT_LINK}`}
                 >
                   <Icon name="swap_horiz" className="text-[18px]" />
                   Đổi gia sư thực dạy
@@ -144,7 +149,7 @@ export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
           to={`${ROUTES.adminReschedules}?buoi=${session.sessionId}`}
           className={`inline-flex items-center gap-1 text-[14px] ${PORTAL_TEXT_LINK}`}
         >
-          <Icon name="event_busy" className="text-[18px]" />
+          <Icon name="event_busy" className="mr-1 text-[18px]" />
           Đơn xin nghỉ của buổi này
         </Link>
         {!cancelled && session.status !== "COMPLETED" && !cancelOpen && (

@@ -2,14 +2,15 @@ import { useEffect, useState } from "react";
 import { prefersReducedMotion } from "@/utils/motion";
 import type { ScrollToTopProps } from "@/interfaces/motion";
 
-/** Cuộn quá bao nhiêu px thì hiện nút */
+// Cuộn quá bao nhiêu px thì hiện nút
 const SHOW_AFTER_PX = 600;
 
-/** Nút về đầu trang, hiện sau khi cuộn xuống một đoạn. */
+// Nút về đầu trang, hiện sau khi cuộn xuống một đoạn.
 export function ScrollToTop({ raised = false }: ScrollToTopProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    // Cuộn quá một đoạn thì hiện nút lên đầu trang
     const onScroll = () => setVisible(window.scrollY > SHOW_AFTER_PX);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });

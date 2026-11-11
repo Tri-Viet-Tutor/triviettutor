@@ -7,7 +7,7 @@ import { UserAvatar } from "@/components/ui/UserAvatar";
 import { AUTH_ERROR, FOCUS_RING, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY } from "@/constants/classNames";
 import { patternLabel } from "@/constants/management";
 import { ROUTES } from "@/constants/routes";
-import type { EnrollmentResponse, TuitionClass } from "@/interfaces/api";
+import type { EnrollmentResponse, TuitionClass } from "@/interfaces/dto";
 import { transferEnrollment } from "@/services/managementService";
 import { listTuitionClasses } from "@/services/tuitionPaymentService";
 import { walletService } from "@/services/walletService";
@@ -16,9 +16,10 @@ import { formatVnd } from "@/utils/currency";
 import { formatDate, parseIsoDate, startOfToday, toIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 
+// Ngày dạng dd/mm/yyyy từ chuỗi ISO
 const dateText = (iso: string) => formatDate(parseIsoDate(iso));
 
-/** Lớp nhận đổi: cùng khóa, khác lớp hiện tại, đang tuyển sinh, còn chỗ và chưa qua hạn chốt */
+// Lớp nhận đổi: cùng khóa, khác lớp hiện tại, đang tuyển sinh, còn chỗ và chưa qua hạn chốt
 function isTarget(item: TuitionClass, current: TuitionClass, todayIso: string) {
   const sameCourse = current.courseId != null ? item.courseId === current.courseId : item.courseName === current.courseName;
   return (
@@ -31,11 +32,9 @@ function isTarget(item: TuitionClass, current: TuitionClass, todayIso: string) {
   );
 }
 
-/**
- * Khung đổi lớp: chọn một lớp khác cùng khóa (thường do thầy cô khác dạy) còn trước hạn chốt.
- * Học phí lớp cũ hoàn vào ví rồi trừ học phí lớp mới, nên phần chênh lệch hiện ngay trên từng lớp.
- * Mỗi lớp đã đăng ký chỉ đổi được một lần. API: POST /enrollments/{id}/transfer.
- */
+// Khung đổi lớp: chọn một lớp khác cùng khóa (thường do thầy cô khác dạy) còn trước hạn chốt.
+// Học phí lớp cũ hoàn vào ví rồi trừ học phí lớp mới, nên phần chênh lệch hiện ngay trên từng lớp.
+// Mỗi lớp đã đăng ký chỉ đổi được một lần. API: POST /enrollments/{id}/transfer.
 export function TransferClassDialog({
   enrollment,
   current,
@@ -71,6 +70,7 @@ export function TransferClassDialog({
     },
   });
 
+  // Đóng khung đổi lớp và xóa lỗi đang hiện
   function close() {
     move.reset();
     onClose();
@@ -94,7 +94,9 @@ export function TransferClassDialog({
     >
       {current && enrollment && (
         <div className="space-y-5">
-          {/* Lớp đang học */}
+          {
+            // Lớp đang học
+          }
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-sandLine bg-brand-sand/50 px-4 py-3">
             <div className="flex min-w-0 items-center gap-3">
               <UserAvatar userId={current.tutorId ?? undefined} name={current.tutorName ?? "Gia sư"} size={40} />
@@ -114,7 +116,9 @@ export function TransferClassDialog({
             </div>
           </div>
 
-          {/* Các lớp có thể đổi sang */}
+          {
+            // Các lớp có thể đổi sang
+          }
           <fieldset className="min-w-0">
             <legend className="mb-2 text-[14px] font-bold text-brand-ink">Chọn lớp muốn chuyển sang</legend>
             {options.isPending ? (
@@ -183,7 +187,9 @@ export function TransferClassDialog({
             )}
           </fieldset>
 
-          {/* Tóm tắt bù trừ qua ví */}
+          {
+            // Tóm tắt bù trừ qua ví
+          }
           {target && (
             <div className="rounded-2xl bg-brand-tint/60 px-4 py-3 text-[14px]">
               <dl className="space-y-1.5">

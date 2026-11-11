@@ -4,7 +4,7 @@ import { FOCUS_RING, TAPE } from "@/constants/classNames";
 import { COURSES } from "@/constants/courses";
 import { ROUTES } from "@/constants/routes";
 
-/** Trang nhật ký lộ trình: bấm nhãn mục lục (môn học) để lật sang khóa học tương ứng */
+// Trang nhật ký lộ trình: bấm nhãn mục lục (môn học) để lật sang khóa học tương ứng
 export function CourseDiary() {
   // Khóa đang mở (theo nhãn mục lục)
   const [activeId, setActiveId] = useState(COURSES[0].id);
@@ -14,7 +14,9 @@ export function CourseDiary() {
 
   return (
     <div className="diary-page relative rounded-[20px] border border-brand-navy/10 py-7 pl-[60px] pr-5 shadow-soft sm:py-9 sm:pl-[92px] sm:pr-10">
-      {/* Nhãn mục lục theo môn: hàng ngang trên màn hình nhỏ, thò ra mép phải trên màn hình rộng */}
+      {
+        // Nhãn mục lục theo môn: hàng ngang trên màn hình nhỏ, thò ra mép phải trên màn hình rộng
+      }
       <div
         role="tablist"
         aria-label="Chọn khóa học theo môn"
@@ -43,7 +45,9 @@ export function CourseDiary() {
         })}
       </div>
 
-      {/* key đổi theo khóa học để nội dung "lật trang" mỗi lần chọn môn khác */}
+      {
+        // key đổi theo khóa học để nội dung "lật trang" mỗi lần chọn môn khác
+      }
       <div
         key={course.id}
         id="course-diary-panel"
@@ -53,7 +57,9 @@ export function CourseDiary() {
       >
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
           <p className="text-[13px] font-semibold italic text-brand-muted">Nhật ký lộ trình - Khóa {course.name}</p>
-          {/* Hai con dấu hình thức học */}
+          {
+            // Hai con dấu hình thức học
+          }
           <p className="flex flex-wrap gap-2 text-[12px] font-bold uppercase tracking-[0.04em]">
             <span className="-rotate-2 rounded-md border-2 border-brand-navy/70 px-2 py-0.5 text-brand-navy">Tại trung tâm</span>
             <span className="rotate-1 rounded-md border-2 border-brand-orangeHover px-2 py-0.5 text-[#9A5F00]">Trực tuyến</span>
@@ -61,7 +67,9 @@ export function CourseDiary() {
         </div>
 
         <div className="mt-7 grid grid-cols-1 gap-8 sm:grid-cols-[210px,1fr] sm:gap-9 lg:grid-cols-[176px,1fr] lg:gap-6 xl:grid-cols-[210px,1fr] xl:gap-9">
-          {/* Ảnh giáo viên kiểu polaroid dán băng dính (khóa có hai giáo viên thì hai ảnh nhỏ xếp so le) */}
+          {
+            // Ảnh giáo viên kiểu polaroid dán băng dính (khóa có hai giáo viên thì hai ảnh nhỏ xếp so le)
+          }
           <div className="flex items-start justify-center sm:justify-start">
             {course.tutors.map((tutor, index) => (
               <figure
@@ -79,7 +87,9 @@ export function CourseDiary() {
             ))}
           </div>
 
-          {/* Nội dung khóa học */}
+          {
+            // Nội dung khóa học
+          }
           <div>
             <h3 className="text-[23px] font-bold leading-snug text-brand-navy">Khóa {course.name}</h3>
             <p className="mt-2 text-[16px] leading-relaxed text-brand-muted">{course.summary}</p>

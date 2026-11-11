@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AdminClassesQuery, AdminCoursesQuery, EnrollmentsQuery, TutorPayrollQuery } from "@/interfaces/api";
+import type { AdminClassesQuery, AdminCoursesQuery, EnrollmentsQuery, TutorPayrollQuery } from "@/interfaces/dto";
 import {
   fetchAdminClasses,
   fetchAdminCourses,
@@ -14,7 +14,7 @@ import {
 } from "@/services/managementService";
 import { useUserId } from "@/hooks/usePortalData";
 
-/** Khóa cache: phần quản trị nằm dưới "admin" để useRefreshAdmin làm mới được cả nhóm */
+// Khóa cache: phần quản trị nằm dưới "admin" để useRefreshAdmin làm mới được cả nhóm
 export const managementKeys = {
   courses: (query: AdminCoursesQuery) => ["admin", "courses", query] as const,
   courseSummary: ["admin", "course-summary"] as const,
@@ -28,7 +28,7 @@ export const managementKeys = {
   myEnrollments: (userId: number | undefined, query: EnrollmentsQuery) => ["me", userId, "enrollments", query] as const,
 };
 
-/** Danh sách khóa học (giữ trang cũ trong lúc tải trang mới) */
+// Danh sách khóa học (giữ trang cũ trong lúc tải trang mới)
 export function useAdminCourses(query: AdminCoursesQuery) {
   return useQuery({
     queryKey: managementKeys.courses(query),
@@ -37,22 +37,22 @@ export function useAdminCourses(query: AdminCoursesQuery) {
   });
 }
 
-/** Số khóa tổng / đang bán / ngừng bán */
+// Số khóa tổng / đang bán / ngừng bán
 export function useCourseSummary() {
   return useQuery({ queryKey: managementKeys.courseSummary, queryFn: fetchCourseSummary });
 }
 
-/** Số lớp theo từng trạng thái */
+// Số lớp theo từng trạng thái
 export function useClassSummary() {
   return useQuery({ queryKey: managementKeys.classSummary, queryFn: fetchClassSummary });
 }
 
-/** Môn học có trong hệ thống (ít thay đổi nên giữ cache 10 phút) */
+// Môn học có trong hệ thống (ít thay đổi nên giữ cache 10 phút)
 export function useSubjects() {
   return useQuery({ queryKey: managementKeys.subjects, queryFn: fetchSubjects, staleTime: 10 * 60 * 1000 });
 }
 
-/** Danh sách lớp học; `enabled = false` để tạm chưa tải */
+// Danh sách lớp học; `enabled = false` để tạm chưa tải
 export function useAdminClasses(query: AdminClassesQuery, enabled = true) {
   return useQuery({
     queryKey: managementKeys.classes(query),
@@ -62,7 +62,7 @@ export function useAdminClasses(query: AdminClassesQuery, enabled = true) {
   });
 }
 
-/** Học viên đã ghi danh của một lớp; `null` thì không tải */
+// Học viên đã ghi danh của một lớp; `null` thì không tải
 export function useClassEnrollments(classId: number | null) {
   return useQuery({
     queryKey: managementKeys.classEnrollments(classId ?? 0),
@@ -71,30 +71,32 @@ export function useClassEnrollments(classId: number | null) {
   });
 }
 
-/** Bảng lương một tháng */
+// Bảng lương một tháng
 export function usePayroll(year: number, month: number) {
   return useQuery({ queryKey: managementKeys.payroll(year, month), queryFn: () => fetchPayroll(year, month) });
 }
 
-/** Lương của tôi (gia sư) theo từng tháng */
-export function useMyPayroll(query: TutorPayrollQuery = { size: 24 }) {
+// Lương của tôi (gia sư) theo từng tháng
+// size 100 là trần backend cho phép: ô "Đã nhận" cộng mọi tháng đã chốt nên phải lấy đủ,
+// 24 tháng sẽ cộng thiếu âm thầm với gia sư dạy quá hai năm
+export function useMyPayroll(query: TutorPayrollQuery = { size: 100 }) {
   const userId = useUserId();
   return useQuery({ queryKey: managementKeys.myPayroll(userId, query), queryFn: () => fetchMyPayroll(query) });
 }
 
-/** Tạm tính lương các tháng trung tâm chưa chốt (gia sư) */
+// Tạm tính lương các tháng trung tâm chưa chốt (gia sư)
 export function useMyPayrollEstimate() {
   const userId = useUserId();
   return useQuery({ queryKey: managementKeys.myPayrollEstimate(userId), queryFn: fetchMyPayrollEstimate });
 }
 
-/** Các lớp tôi đã ghi danh (học viên) */
+// Các lớp tôi đã ghi danh (học viên)
 export function useMyEnrollments(query: EnrollmentsQuery = { size: 100 }) {
   const userId = useUserId();
   return useQuery({ queryKey: managementKeys.myEnrollments(userId, query), queryFn: () => fetchMyEnrollments(query) });
 }
 
-/** Làm mới dữ liệu "của tôi" sau một thao tác */
+// Làm mới dữ liệu "của tôi" sau một thao tác
 export function useRefreshMine() {
   const queryClient = useQueryClient();
   const userId = useUserId();

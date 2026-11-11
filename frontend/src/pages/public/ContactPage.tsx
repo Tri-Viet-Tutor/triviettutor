@@ -4,10 +4,8 @@ import { ClickSpark, ReadingProgress, ScrollToTop } from "@/components/motion";
 import { ContactSection } from "@/components/contact/ContactSection";
 import { prefersReducedMotion } from "@/utils/motion";
 
-/**
- * Trang "Liên hệ": các cách liên hệ trung tâm và lá thư đăng ký tư vấn.
- * Đường dẫn /lien-he#form-lien-he (nút "Đăng ký tư vấn" ở các trang khác) cuộn thẳng tới lá thư.
- */
+// Trang "Liên hệ": các cách liên hệ trung tâm và lá thư đăng ký tư vấn.
+// Đường dẫn /lien-he#form-lien-he (nút "Đăng ký tư vấn" ở các trang khác) cuộn thẳng tới lá thư.
 export function ContactPage() {
   const { hash, key } = useLocation();
 

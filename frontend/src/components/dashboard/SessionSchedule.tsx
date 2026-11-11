@@ -5,21 +5,21 @@ import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
 import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/PortalState";
 import { SessionRow } from "@/components/dashboard/SessionRow";
 import { useMyLeaveRequests, useMySessions } from "@/hooks/usePortalData";
-import type { SessionResponse } from "@/interfaces/api";
+import type { SessionResponse } from "@/interfaces/dto";
 import { parseIsoDate } from "@/utils/date";
 import { isUpcoming, pendingLeaveOf, splitSessions } from "@/utils/sessions";
 import type { ScheduleTab, SessionScheduleProps } from "@/interfaces/portal";
 
-/** Mỗi lần hiện thêm bấy nhiêu buổi */
+// Mỗi lần hiện thêm bấy nhiêu buổi
 const PAGE_SIZE = 12;
 
-/** "Tháng 10, 2026" */
+// "Tháng 10, 2026"
 function monthLabel(session: SessionResponse): string {
   const date = parseIsoDate(session.date);
   return `Tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
 }
 
-/** Gom các buổi (đã xếp thứ tự) theo tháng, giữ nguyên thứ tự */
+// Gom các buổi (đã xếp thứ tự) theo tháng, giữ nguyên thứ tự
 function groupByMonth(sessions: SessionResponse[]): { month: string; sessions: SessionResponse[] }[] {
   const groups: { month: string; sessions: SessionResponse[] }[] = [];
   for (const session of sessions) {
@@ -31,11 +31,9 @@ function groupByMonth(sessions: SessionResponse[]): { month: string; sessions: S
   return groups;
 }
 
-/**
- * Lịch các buổi của tôi (GET /me/sessions), dùng cho Lịch học của học viên và Lịch dạy của gia sư:
- * hai thẻ sắp tới / đã qua, gom theo tháng, bấm một buổi để mở chi tiết.
- * Mở trang kèm ?buoi=<mã buổi> thì buổi đó được mở sẵn.
- */
+// Lịch các buổi của tôi (GET /me/sessions), dùng cho Lịch học của học viên và Lịch dạy của gia sư:
+// hai thẻ sắp tới / đã qua, gom theo tháng, bấm một buổi để mở chi tiết.
+// Mở trang kèm ?buoi=<mã buổi> thì buổi đó được mở sẵn.
 export function SessionSchedule({
   title,
   now,
@@ -85,7 +83,7 @@ export function SessionSchedule({
     return () => window.cancelAnimationFrame(frame);
   }, [linkedId, sessions]);
 
-  /** Đổi thẻ: đóng buổi đang mở và hiện lại từ đầu */
+  // Đổi thẻ: đóng buổi đang mở và hiện lại từ đầu
   function changeTab(next: ScheduleTab) {
     setTab(next);
     setOpenId(null);
@@ -126,7 +124,7 @@ export function SessionSchedule({
           {groupByMonth(list.slice(0, visible)).map((group) => (
             <section key={group.month} aria-label={group.month}>
               <h2 className="mb-2.5 text-[15px] font-semibold text-brand-muted">{group.month}</h2>
-              <ul className="space-y-2.5">
+              <ul className="divide-y divide-brand-sandLine overflow-hidden rounded-sm border border-brand-sandLine">
                 {group.sessions.map((session) => {
                   const hasPendingLeave = Boolean(pendingLeaveOf(session.sessionId, leaveRequests));
                   const open = openId === session.sessionId;

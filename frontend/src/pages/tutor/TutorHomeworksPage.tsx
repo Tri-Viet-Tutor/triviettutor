@@ -12,38 +12,26 @@ import type { TutorHomeworkResponse } from "@/interfaces/homework";
 import { displayCode } from "@/utils/classes";
 import { formatClockTime, formatDate, formatDayMonth, parseIsoDate } from "@/utils/date";
 import { formatDateTime } from "@/utils/homework";
-import {
-  FILTER_OPTIONS,
-  GROUP_BY_OPTIONS,
-  SORT_OPTIONS,
-  groupHomeworks,
-  sessionOpenByDefault,
-  sortHomeworks,
-  type ClassGroup,
-  type HomeworkFilter,
-  type HomeworkGroupBy,
-  type HomeworkSort,
-  type SessionGroup,
-} from "@/utils/tutorHomeworks";
+import { FILTER_OPTIONS, GROUP_BY_OPTIONS, SORT_OPTIONS, groupHomeworks, sessionOpenByDefault, sortHomeworks } from "@/utils/tutorHomeworks";
+import type { ClassGroup, HomeworkFilter, HomeworkGroupBy, HomeworkSort, SessionGroup } from "@/interfaces/homework";
 
-/** Đọc một giá trị hợp lệ từ thanh địa chỉ, không có thì dùng mặc định */
+// Đọc một giá trị hợp lệ từ thanh địa chỉ, không có thì dùng mặc định
 function pick<T extends string>(raw: string | null, options: { value: T }[], fallback: T): T {
   return options.some((option) => option.value === raw) ? (raw as T) : fallback;
 }
 
-/**
- * Trang Bài tập của gia sư: nhóm theo lớp → buổi → bài, sắp xếp và lọc theo trạng thái
- * (lưu trên thanh địa chỉ). Bấm một bài để sửa, công bố, đóng hoặc chấm.
- */
+// Trang Bài tập của gia sư: nhóm theo lớp → buổi → bài, sắp xếp và lọc theo trạng thái
+// (lưu trên thanh địa chỉ). Bấm một bài để sửa, công bố, đóng hoặc chấm.
 export function TutorHomeworksPage() {
   const homeworks = useTutorHomeworks();
   const [params, setParams] = useSearchParams();
   const groupBy = pick<HomeworkGroupBy>(params.get("group"), GROUP_BY_OPTIONS, "class");
   const sort = pick<HomeworkSort>(params.get("sort"), SORT_OPTIONS, "due-nearest");
   const filter = pick<HomeworkFilter>(params.get("status"), FILTER_OPTIONS, "all");
-  /** Các nhóm người dùng đã tự mở / thu gọn (ghi đè mặc định) */
+  // Các nhóm người dùng đã tự mở / thu gọn (ghi đè mặc định)
   const [openOverrides, setOpenOverrides] = useState<Record<string, boolean>>({});
 
+  // Ghi bộ lọc lên URL, giá trị mặc định thì bỏ khỏi URL
   const setParam = (key: string, value: string, fallback: string) => {
     const next = new URLSearchParams(params);
     if (value === fallback) next.delete(key);
@@ -54,9 +42,13 @@ export function TutorHomeworksPage() {
   const sorted = useMemo(() => sortHomeworks(homeworks.data ?? [], sort, filter, new Date()), [homeworks.data, sort, filter]);
   const groups = useMemo(() => groupHomeworks(sorted), [sorted]);
 
+  // Nhóm lớp đang mở hay thu gọn
   const isClassOpen = (group: ClassGroup) => openOverrides[group.key] ?? true;
+  // Nhóm buổi đang mở hay thu gọn
   const isSessionOpen = (group: ClassGroup, session: SessionGroup) => openOverrides[session.key] ?? sessionOpenByDefault(group, session);
+  // Mở / thu gọn một nhóm
   const toggle = (key: string, current: boolean) => setOpenOverrides((prev) => ({ ...prev, [key]: !current }));
+  // Mở hoặc thu gọn tất cả nhóm
   const setAll = (open: boolean) => {
     const next: Record<string, boolean> = {};
     for (const group of groups) {
@@ -97,7 +89,9 @@ export function TutorHomeworksPage() {
 
       {homeworks.data && total > 0 && (
         <>
-          {/* Thanh công cụ */}
+          {
+            // Thanh công cụ
+          }
           <div className={`mb-4 flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-end ${PORTAL_CARD}`}>
             <ToolbarSelect
               id="hw-group"
@@ -166,7 +160,7 @@ export function TutorHomeworksPage() {
                       />
                       <span className="text-[17px] font-bold text-brand-navy">Lớp {displayCode("class", group.classGroupId)}</span>
                       <span className="text-[14px] text-brand-muted">
-                        {group.total} bài tập · {group.sessions.length} buổi
+                        {group.total} bài tập - {group.sessions.length} buổi
                       </span>
                       <span className="ml-auto flex flex-wrap gap-2">
                         {group.pendingCount > 0 && (
@@ -235,6 +229,7 @@ export function TutorHomeworksPage() {
   );
 }
 
+// Ô chọn trên thanh công cụ (lọc, sắp xếp)
 function ToolbarSelect<T extends string>({
   id,
   label,
@@ -264,7 +259,7 @@ function ToolbarSelect<T extends string>({
   );
 }
 
-/** Các nhãn trạng thái của một bài */
+// Các nhãn trạng thái của một bài
 function HomeworkChips({ item }: { item: TutorHomeworkResponse }) {
   const status = HOMEWORK_STATUS[item.homework.status];
   return (
@@ -287,7 +282,7 @@ function HomeworkChips({ item }: { item: TutorHomeworkResponse }) {
   );
 }
 
-/** Một bài trong nhóm buổi: gọn, chỉ tên và hạn nộp */
+// Một bài trong nhóm buổi: gọn, chỉ tên và hạn nộp
 function HomeworkRow({ item }: { item: TutorHomeworkResponse }) {
   const due = new Date(item.homework.dueAt);
   return (
@@ -306,7 +301,7 @@ function HomeworkRow({ item }: { item: TutorHomeworkResponse }) {
   );
 }
 
-/** Thẻ đầy đủ khi không nhóm */
+// Thẻ đầy đủ khi không nhóm
 function HomeworkCard({ item }: { item: TutorHomeworkResponse }) {
   return (
     <Link
@@ -316,7 +311,7 @@ function HomeworkCard({ item }: { item: TutorHomeworkResponse }) {
       <div className="min-w-0">
         <p className="truncate text-[16px] font-bold text-brand-navy">{item.homework.title}</p>
         <p className="mt-0.5 text-[14px] text-brand-muted">
-          Lớp {displayCode("class", item.classGroupId)}, buổi {item.sessionNumber} ({formatDate(parseIsoDate(item.sessionDate))}) · Hạn nộp{" "}
+          Lớp {displayCode("class", item.classGroupId)}, buổi {item.sessionNumber} ({formatDate(parseIsoDate(item.sessionDate))}) - Hạn nộp{" "}
           {formatDateTime(item.homework.dueAt)}
         </p>
       </div>

@@ -8,7 +8,7 @@ import { GRADE_OPTIONS, GRADE_RANGE_LABEL, DELIVERY_MODE_OPTIONS, SCHEDULE_PATTE
 import { SESSION_STATUS } from "@/constants/labels";
 import { ROUTES } from "@/constants/routes";
 import type { Course } from "@/interfaces/course";
-import type { GradeLevel, TuitionClass } from "@/interfaces/api";
+import type { GradeLevel, TuitionClass } from "@/interfaces/dto";
 import { listTuitionClasses, getTuitionClass } from "@/services/tuitionPaymentService";
 import { useAuthStore } from "@/stores/authStore";
 import { useCart, useCartMutations } from "@/hooks/useCart";
@@ -17,17 +17,22 @@ import { UserAvatar } from "@/components/ui/UserAvatar";
 import { formatVnd } from "@/utils/currency";
 import { formatDate, parseIsoDate, startOfToday } from "@/utils/date";
 
+// Ngày dạng dd/mm/yyyy, chưa có thì hiện "Đang cập nhật"
 const dateLabel = (date?: string | null) => (date ? formatDate(parseIsoDate(date)) : "Đang cập nhật");
+// Tên lịch học của lớp (ví dụ Thứ 2 - 4 - 6)
 const scheduleLabel = (group: TuitionClass) =>
   SCHEDULE_PATTERN_OPTIONS.find((item) => item.value === group.schedulePattern)?.label ?? "Đang cập nhật";
+// Hình thức học của lớp (trực tuyến / tại trung tâm)
 const modeLabel = (group: TuitionClass) =>
   DELIVERY_MODE_OPTIONS.find((item) => item.value === group.deliveryMode)?.label ?? "Đang cập nhật";
+// Lớp không đăng ký được: hết chỗ, ngừng tuyển sinh hoặc quá hạn
 const unavailable = (group: TuitionClass) =>
   group.status !== "ENROLLING" ||
   group.spotsLeft < 1 ||
   Boolean(group.full) ||
   Boolean(group.enrollmentDeadline && parseIsoDate(group.enrollmentDeadline) < startOfToday());
 
+// Trang chi tiết khóa học: giới thiệu, chọn khối, chọn lớp, xem lịch và đăng ký
 export function CourseDetails({ course, backTo }: { course: Course; backTo: string }) {
   const user = useAuthStore((state) => state.user);
   const authenticated = useAuthStore((state) => state.isAuthenticated);
@@ -63,7 +68,7 @@ export function CourseDetails({ course, backTo }: { course: Course; backTo: stri
     .slice(-1)[0];
   const blocked = !selected || unavailable(selected) || detail.isError || detail.isFetching;
   const isStudent = authenticated && user?.role === "ROLE_STUDENT";
-  /** Thêm môn của khóa vào giỏ; khách thì đăng nhập trước rồi quay lại trang này */
+  // Thêm môn của khóa vào giỏ; khách thì đăng nhập trước rồi quay lại trang này
   function addToCart() {
     if (!authenticated) {
       navigate(ROUTES.login, { state: { returnTo: ROUTES.studentCatalog } });
@@ -72,6 +77,7 @@ export function CourseDetails({ course, backTo }: { course: Course; backTo: stri
     if (subjectId !== undefined) add.mutate(subjectId);
   }
 
+  // Đăng ký lớp đã chọn: chưa đăng nhập thì sang đăng nhập rồi quay lại thanh toán
   function register() {
     if (blocked || !selected) return;
     // Khách chưa đăng nhập: đăng nhập xong quay lại đúng trang thanh toán của lớp đã chọn
@@ -374,7 +380,9 @@ export function CourseDetails({ course, backTo }: { course: Course; backTo: stri
                 </div>
               </dl>
               <div className="border-t border-slate-200 pt-4">
-                {/* Đăng ký trả đủ học phí; lớp nhóm được hoàn phần giảm theo sĩ số vào ví khi lớp chốt */}
+                {
+                  // Đăng ký trả đủ học phí; lớp nhóm được hoàn phần giảm theo sĩ số vào ví khi lớp chốt
+                }
                 <p className="text-sm text-brand-muted">Học phí trọn khóa</p>
                 <p className="mt-1 text-2xl font-extrabold text-brand-navy">{formatVnd(selected.estimatedFee ?? selected.basePrice1on1)}</p>
                 {selected.classType !== "ONE_ON_ONE" && (

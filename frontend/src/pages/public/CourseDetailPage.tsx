@@ -4,6 +4,7 @@ import { ROUTES } from "@/constants/routes";
 import { CONTAINER, PORTAL_BTN_SECONDARY } from "@/constants/classNames";
 import { CourseDetails } from "@/components/course-detail/CourseDetails";
 
+// Trang chi tiết khóa học theo đường dẫn, dùng cho khu công khai và khu học viên
 export function CourseDetailPage({ variant = "public" }: { variant?: "public" | "student" }) {
   const { courseSlug } = useParams();
   const course = COURSES.find((item) => item.id === courseSlug);

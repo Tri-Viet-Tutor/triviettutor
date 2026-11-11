@@ -1,8 +1,8 @@
-import type { TeachingPeriodSummary, TeachingSessionResponse } from "@/interfaces/api";
+import type { TeachingPeriodSummary, TeachingSessionResponse } from "@/interfaces/dto";
 import { formatDate, parseIsoDate } from "@/utils/date";
 import { displayCode } from "@/utils/classes";
 
-/** Các nhóm buổi trong bảng đối soát, theo thứ tự hiển thị */
+// Các nhóm buổi trong bảng đối soát, theo thứ tự hiển thị
 const GROUPS: {
   key: keyof Pick<TeachingPeriodSummary, "completed" | "unfinalized" | "cancelled" | "substitutedOut">;
   label: string;
@@ -14,13 +14,14 @@ const GROUPS: {
   { key: "substitutedOut", label: "Buổi được dạy thay (gia sư khác dạy)", tone: "text-brand-muted" },
 ];
 
+// Mô tả một buổi dạy trong bảng đối soát lương: ngày giờ, lớp, buổi
 function sessionLine(session: TeachingSessionResponse): string {
   const time = `${session.startTime.slice(0, 5)} – ${session.endTime.slice(0, 5)}`;
   const makeup = session.originalSessionId !== null ? ` - học bù cho ${displayCode("session", session.originalSessionId)}` : "";
   return `${formatDate(parseIsoDate(session.date))}, ${time} - Lớp ${displayCode("class", session.classGroupId)} - Buổi ${displayCode("session", session.sessionId)}${makeup}`;
 }
 
-/** Danh sách các buổi dạy của một dòng lương, chia theo nhóm hợp lệ / chưa chốt / hủy / được dạy thay */
+// Danh sách các buổi dạy của một dòng lương, chia theo nhóm hợp lệ / chưa chốt / hủy / được dạy thay
 export function PayrollReconciliation({ summary }: { summary: TeachingPeriodSummary | null | undefined }) {
   if (!summary) {
     return <p className="text-[13.5px] text-brand-muted">Chưa có dữ liệu đối soát cho tháng này.</p>;

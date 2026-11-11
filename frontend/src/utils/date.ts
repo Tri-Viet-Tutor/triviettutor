@@ -1,48 +1,48 @@
-/* Các hàm xử lý ngày giờ theo giờ máy người xem, hiển thị kiểu Việt Nam. */
+// Các hàm xử lý ngày giờ theo giờ máy người xem, hiển thị kiểu Việt Nam.
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-/** Thêm số 0 phía trước cho đủ 2 chữ số: 5 → "05". */
+// Thêm số 0 phía trước cho đủ 2 chữ số: 5 → "05".
 const pad = (value: number) => String(value).padStart(2, "0");
 
-/** Đổi chuỗi "YYYY-MM-DD" thành ngày theo giờ máy người xem (0 giờ sáng). */
+// Đổi chuỗi "YYYY-MM-DD" thành ngày theo giờ máy người xem (0 giờ sáng).
 export function parseIsoDate(iso: string): Date {
   const [year, month, day] = iso.split("-").map(Number);
   return new Date(year, month - 1, day);
 }
 
-/** Hôm nay, bỏ phần giờ phút. */
+// Hôm nay, bỏ phần giờ phút.
 export function startOfToday(): Date {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
-/** Cộng (hoặc trừ, nếu âm) số ngày, giữ mốc 0 giờ. */
+// Cộng (hoặc trừ, nếu âm) số ngày, giữ mốc 0 giờ.
 export function addDays(date: Date, days: number): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 }
 
-/** Số ngày từ `from` tới `to` (âm nếu `to` ở trước). */
+// Số ngày từ `from` tới `to` (âm nếu `to` ở trước).
 export function diffDays(from: Date, to: Date): number {
   return Math.round((to.getTime() - from.getTime()) / MS_PER_DAY);
 }
 
-/** Ngày/tháng kiểu Việt Nam: 01/10. */
+// Ngày/tháng kiểu Việt Nam: 01/10.
 export function formatDayMonth(date: Date): string {
   return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}`;
 }
 
-/** Ngày/tháng/năm kiểu Việt Nam: 01/10/2026. */
+// Ngày/tháng/năm kiểu Việt Nam: 01/10/2026.
 export function formatDate(date: Date): string {
   return `${formatDayMonth(date)}/${date.getFullYear()}`;
 }
 
-/** Giờ:phút của một thời điểm: 18:05. */
+// Giờ:phút của một thời điểm: 18:05.
 export function formatClockTime(date: Date): string {
   return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-/** Đổi ngày thành chuỗi "YYYY-MM-DD" (theo giờ máy người xem). */
+// Đổi ngày thành chuỗi "YYYY-MM-DD" (theo giờ máy người xem).
 export function toIsoDate(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
@@ -50,22 +50,22 @@ export function toIsoDate(date: Date): string {
 const WEEKDAY_NAMES = ["Chủ nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
 const WEEKDAY_SHORT = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
-/** Tên thứ: "Thứ Sáu" (hoặc "T6" khi `short`). */
+// Tên thứ: "Thứ Sáu" (hoặc "T6" khi `short`).
 export function weekdayName(date: Date, short = false): string {
   return (short ? WEEKDAY_SHORT : WEEKDAY_NAMES)[date.getDay()];
 }
 
-/** Thứ Hai của tuần chứa `date` (tuần bắt đầu từ thứ Hai). */
+// Thứ Hai của tuần chứa `date` (tuần bắt đầu từ thứ Hai).
 export function startOfWeek(date: Date): Date {
   return addDays(date, -((date.getDay() + 6) % 7));
 }
 
-/** Ngày giờ kiểu Việt Nam: 18:05 01/10/2026. */
+// Ngày giờ kiểu Việt Nam: 18:05 01/10/2026.
 export function formatDateTime(date: Date): string {
   return `${formatClockTime(date)} ${formatDate(date)}`;
 }
 
-/** Đổi một thời điểm thành giá trị cho ô <input type="datetime-local">: "YYYY-MM-DDTHH:mm" (giờ máy người xem). */
+// Đổi một thời điểm thành giá trị cho ô <input type="datetime-local">: "YYYY-MM-DDTHH:mm" (giờ máy người xem).
 export function toDateTimeLocal(date: Date): string {
   return `${toIsoDate(date)}T${formatClockTime(date)}`;
 }

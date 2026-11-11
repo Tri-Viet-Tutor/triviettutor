@@ -5,13 +5,13 @@ import { ROUTES } from "@/constants/routes";
 import { prefersReducedMotion } from "@/utils/motion";
 import type { LanyardPoint, LanyardSimulation, LanyardTagProps } from "@/interfaces/home";
 
-/* ─────────────────────────────────────────────────────────────────────────────
- * Thẻ đeo "Tìm kiếm gia sư" treo bằng dây.
- *   • Khi tải trang: dây thả từ trên xuống rồi đung đưa cho tới khi đứng yên
- *   • Kéo thả được bằng chuột / ngón tay; cuộn trang làm thẻ lắc nhẹ
- *   • Bấm (không kéo) hoặc nhấn Enter: mở trang tìm gia sư
- * Mô phỏng dây bằng các điểm nối nhau (Verlet), không dùng thư viện ngoài.
- * ───────────────────────────────────────────────────────────────────────────── */
+// ─────────────────────────────────────────────────────────────────────────────
+// Thẻ đeo "Tìm kiếm gia sư" treo bằng dây.
+// • Khi tải trang: dây thả từ trên xuống rồi đung đưa cho tới khi đứng yên
+// • Kéo thả được bằng chuột / ngón tay; cuộn trang làm thẻ lắc nhẹ
+// • Bấm (không kéo) hoặc nhấn Enter: mở trang tìm gia sư
+// Mô phỏng dây bằng các điểm nối nhau (Verlet), không dùng thư viện ngoài.
+// ─────────────────────────────────────────────────────────────────────────────
 
 const WIDTH = 320; // bề ngang vùng treo, điểm treo nằm chính giữa
 
@@ -43,7 +43,7 @@ const ANCHOR_X = WIDTH / 2; // điểm treo
 
 const CARD_INDEX = SEGMENTS + 1; // điểm cuối cùng là tâm thẻ
 
-/** Các điểm của dây khi buông thẳng đứng, đứng yên */
+// Các điểm của dây khi buông thẳng đứng, đứng yên
 function restingPoints(): LanyardPoint[] {
   return Array.from({ length: SEGMENTS + 2 }, (_, i) => {
     const y = i <= SEGMENTS ? i * SEGMENT : ROPE + HALF;
@@ -51,7 +51,7 @@ function restingPoints(): LanyardPoint[] {
   });
 }
 
-/** Thẻ đeo "Tìm kiếm gia sư" ở phần mở đầu trang chủ (chi tiết ở đầu file). */
+// Thẻ đeo "Tìm kiếm gia sư" ở phần mở đầu trang chủ (chi tiết ở đầu file).
 export function LanyardTag({ to = ROUTES.tutorSearch, className = "" }: LanyardTagProps) {
   const navigate = useNavigate();
   // id riêng cho đường dây (bỏ dấu ":" của useId để dùng được trong href="#…")
@@ -80,7 +80,7 @@ export function LanyardTag({ to = ROUTES.tutorSearch, className = "" }: LanyardT
     };
     simRef.current = sim;
 
-    /** Vẽ dây (đường cong qua các điểm) và xoay thẻ theo hướng đoạn nối cuối */
+    // Vẽ dây (đường cong qua các điểm) và xoay thẻ theo hướng đoạn nối cuối
     const render = () => {
       const p = sim.points;
       let d = `M${p[0].x.toFixed(1)} ${p[0].y.toFixed(1)}`;
@@ -115,7 +115,7 @@ export function LanyardTag({ to = ROUTES.tutorSearch, className = "" }: LanyardT
       return { x, y, px: x, py: y };
     });
 
-    /** Một bước mô phỏng; trả về tổng chuyển động để biết khi nào dây đã đứng yên */
+    // Một bước mô phỏng; trả về tổng chuyển động để biết khi nào dây đã đứng yên
     const step = () => {
       const p = sim.points;
       let motion = 0;
@@ -171,7 +171,7 @@ export function LanyardTag({ to = ROUTES.tutorSearch, className = "" }: LanyardT
     let accumulator = 0;
     let quiet = 0;
 
-    /** Vòng vẽ: chạy mô phỏng theo bước cố định, tự dừng khi dây đứng yên đủ lâu */
+    // Vòng vẽ: chạy mô phỏng theo bước cố định, tự dừng khi dây đứng yên đủ lâu
     const loop = (now: number) => {
       frame = 0;
       accumulator += Math.min(64, now - (previous || now));
@@ -193,6 +193,7 @@ export function LanyardTag({ to = ROUTES.tutorSearch, className = "" }: LanyardT
 
     // Cuộn trang làm thẻ lắc nhẹ
     let lastScroll = window.scrollY;
+    // Cuộn trang thì thẻ đeo đung đưa theo
     const onScroll = () => {
       const delta = window.scrollY - lastScroll;
       lastScroll = window.scrollY;
@@ -216,13 +217,13 @@ export function LanyardTag({ to = ROUTES.tutorSearch, className = "" }: LanyardT
     };
   }, []);
 
-  /** Toạ độ con trỏ trong khung treo */
+  // Toạ độ con trỏ trong khung treo
   const localPoint = (event: ReactPointerEvent) => {
     const rect = wrapperRef.current!.getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   };
 
-  /** Bắt đầu kéo thẻ */
+  // Bắt đầu kéo thẻ
   const onPointerDown = (event: ReactPointerEvent<HTMLAnchorElement>) => {
     const sim = simRef.current;
     if (!sim || event.button > 0) return;
@@ -237,7 +238,7 @@ export function LanyardTag({ to = ROUTES.tutorSearch, className = "" }: LanyardT
     sim.wake();
   };
 
-  /** Đang kéo: cập nhật vị trí đích của tâm thẻ */
+  // Đang kéo: cập nhật vị trí đích của tâm thẻ
   const onPointerMove = (event: ReactPointerEvent<HTMLAnchorElement>) => {
     const sim = simRef.current;
     if (!sim?.dragging) return;
@@ -256,7 +257,7 @@ export function LanyardTag({ to = ROUTES.tutorSearch, className = "" }: LanyardT
     sim.target = { x, y };
   };
 
-  /** Thả thẻ; nếu gần như không di chuyển thì coi là bấm và mở trang */
+  // Thả thẻ; nếu gần như không di chuyển thì coi là bấm và mở trang
   const onPointerUp = (event: ReactPointerEvent<HTMLAnchorElement>) => {
     const sim = simRef.current;
     if (!sim?.dragging) return;
@@ -274,7 +275,9 @@ export function LanyardTag({ to = ROUTES.tutorSearch, className = "" }: LanyardT
       className={`pointer-events-none select-none transition-opacity duration-300 ${className}`}
       style={{ width: WIDTH, height: ROPE + (HOOK + CARD_H) * SCALE + 40, opacity: 0 }}
     >
-      {/* Dây đeo: bản rộng, hai mép sẫm, in chữ thương hiệu chạy dọc theo dây */}
+      {
+        // Dây đeo: bản rộng, hai mép sẫm, in chữ thương hiệu chạy dọc theo dây
+      }
       <svg
         aria-hidden="true"
         className="absolute inset-0 h-full w-full overflow-visible"
@@ -308,7 +311,9 @@ export function LanyardTag({ to = ROUTES.tutorSearch, className = "" }: LanyardT
         </text>
       </svg>
 
-      {/* Thẻ */}
+      {
+        // Thẻ
+      }
       <a
         ref={cardRef}
         href={to}
@@ -326,34 +331,46 @@ export function LanyardTag({ to = ROUTES.tutorSearch, className = "" }: LanyardT
         className="group pointer-events-auto absolute left-0 top-0 block cursor-grab touch-none outline-none active:cursor-grabbing"
         style={{ width: CARD_W, height: HOOK + CARD_H, transformOrigin: "50% 0", willChange: "transform" }}
       >
-        {/* Kẹp đầu dây */}
+        {
+          // Kẹp đầu dây
+        }
         <span
           aria-hidden="true"
           className="absolute left-1/2 top-[-3px] h-[13px] w-[21px] -translate-x-1/2 rounded-[3px] bg-gradient-to-b from-slate-100 via-slate-300 to-slate-500 shadow-[inset_0_-1px_0_rgba(0,0,0,0.25)]"
         />
-        {/* Móc kim loại xuyên qua khe thẻ */}
+        {
+          // Móc kim loại xuyên qua khe thẻ
+        }
         <span
           aria-hidden="true"
           className="absolute left-1/2 top-[8px] z-10 h-[34px] w-[16px] -translate-x-1/2 rounded-full border-[3px] border-slate-300 shadow-[0_1px_1px_rgba(0,0,0,0.3),inset_0_0_0_1px_rgba(100,116,139,0.55)]"
         />
 
-        {/* Thân thẻ */}
+        {
+          // Thân thẻ
+        }
         <span
           className="absolute inset-x-0 bottom-0 flex flex-col overflow-hidden rounded-[18px] bg-gradient-to-b from-brand-navy to-brand-navyDeep text-white shadow-[0_22px_34px_-16px_rgba(8,42,102,0.6),inset_0_0_0_1px_rgba(255,255,255,0.12)] group-focus-visible:ring-2 group-focus-visible:ring-brand-orange group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-[#E8E2D5]"
           style={{ top: HOOK, height: CARD_H }}
         >
-          {/* Vệt sáng chéo cho cảm giác thẻ nhựa bóng */}
+          {
+            // Vệt sáng chéo cho cảm giác thẻ nhựa bóng
+          }
           <span
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgba(255,255,255,0.16)_0%,rgba(255,255,255,0.04)_28%,transparent_46%)]"
           />
-          {/* Khe luồn móc */}
+          {
+            // Khe luồn móc
+          }
           <span
             aria-hidden="true"
             className="mx-auto mt-[9px] h-[7px] w-[30px] shrink-0 rounded-full bg-[#04163C] shadow-[inset_0_1px_2px_rgba(0,0,0,0.6)]"
           />
 
-          {/* Thương hiệu */}
+          {
+            // Thương hiệu
+          }
           <span className="relative mt-3 flex items-center gap-2 px-3.5">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white p-0.5">
               <img src={ASSETS.common.logo} alt="" draggable={false} className="h-full w-full rounded-full object-contain" />
@@ -368,13 +385,17 @@ export function LanyardTag({ to = ROUTES.tutorSearch, className = "" }: LanyardT
 
           <span aria-hidden="true" className="relative mx-3.5 mt-3 h-px bg-white/15" />
 
-          {/* Nội dung chính */}
+          {
+            // Nội dung chính
+          }
           <span className="relative flex flex-1 flex-col justify-center px-3.5">
             <span className="text-[22px] font-extrabold leading-[1.12] tracking-tight">Tìm kiếm</span>
             <span className="text-[22px] font-extrabold leading-[1.12] tracking-tight text-brand-orange">gia sư</span>
           </span>
 
-          {/* Nút */}
+          {
+            // Nút
+          }
           <span className="relative mx-3 mb-3 flex h-9 items-center justify-between rounded-full bg-brand-orange pl-3.5 pr-1.5 text-[12px] font-bold text-brand-navyDeep transition-colors group-hover:bg-[#FFB534]">
             Bấm để tìm
             <span

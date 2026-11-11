@@ -1,20 +1,22 @@
 import { StatusChip } from "@/components/dashboard/StatusChip";
 import { Icon } from "@/components/ui/Icon";
-import { PORTAL_CARD } from "@/constants/classNames";
 import { SESSION_STATUS } from "@/constants/labels";
 import { formatDayMonth, parseIsoDate } from "@/utils/date";
 import { dayLabel, formatTimeRange } from "@/utils/sessions";
 import type { SessionRowProps } from "@/interfaces/portal";
 import { displayCode } from "@/utils/classes";
 
-/** Một buổi trong danh sách lịch học / lịch dạy; bấm để mở phần chi tiết (children) ngay bên dưới. */
+// Một buổi trong danh sách lịch học / lịch dạy; bấm để mở phần chi tiết (children) ngay bên dưới.
 export function SessionRow({ session, open, onToggle, hasPendingLeave, badge, children }: SessionRowProps) {
   const date = parseIsoDate(session.date);
   const status = SESSION_STATUS[session.status];
   const detailId = `session-detail-${session.sessionId}`;
 
   return (
-    <li id={`session-${session.sessionId}`} className={`scroll-mt-24 overflow-hidden ${PORTAL_CARD} ${open ? "border-brand-navy/50" : ""}`}>
+    <li
+      id={`session-${session.sessionId}`}
+      className={`scroll-mt-24 bg-white transition-colors first:rounded-t-sm last:rounded-b-sm ${open ? "bg-brand-tint/40" : ""}`}
+    >
       <button
         type="button"
         aria-expanded={open}
@@ -36,7 +38,9 @@ export function SessionRow({ session, open, onToggle, hasPendingLeave, badge, ch
             Lớp {displayCode("class", session.classGroupId)}, buổi {session.sessionNumber}
             {session.originalSessionId !== null && " (học bù)"}
           </span>
-          {/* Điện thoại: nhãn trạng thái nằm dưới để không chèn mất giờ học */}
+          {
+            // Điện thoại: nhãn trạng thái nằm dưới để không chèn mất giờ học
+          }
           <span className="mt-1.5 flex flex-wrap gap-1.5 sm:hidden">
             <StatusChip tone={status.tone}>{status.label}</StatusChip>
             {hasPendingLeave && <StatusChip tone="amber">Đã xin nghỉ</StatusChip>}

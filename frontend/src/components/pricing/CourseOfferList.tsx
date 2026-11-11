@@ -5,7 +5,7 @@ import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING } from "@/constants/classNames";
 import { DELIVERY_MODE_OPTIONS, GRADE_OPTIONS, SCHEDULE_PATTERN_OPTIONS } from "@/constants/classOptions";
 import { SUBJECT_OPTIONS, coursePricePerSession, gradeLabel, subjectIcon, subjectLabel } from "@/constants/management";
-import type { CourseResponse, TuitionClass } from "@/interfaces/api";
+import type { CourseResponse, TuitionClass } from "@/interfaces/dto";
 import type { CourseOfferListProps } from "@/interfaces/pricing";
 import { listCatalogCourses } from "@/services/tuitionPaymentService";
 import { useAuthStore } from "@/stores/authStore";
@@ -13,14 +13,14 @@ import { formatVnd } from "@/utils/currency";
 import { normalizeText } from "@/utils/text";
 import { cartCourseKey } from "@/utils/cartPreference";
 
-/** Số khóa hiện mỗi lần; còn nữa thì có nút "Xem thêm" */
+// Số khóa hiện mỗi lần; còn nữa thì có nút "Xem thêm"
 const PAGE_SIZE = 8;
-/** Backend cho tối đa 100 khóa mỗi trang */
+// Backend cho tối đa 100 khóa mỗi trang
 const CATALOG_LIMIT = 100;
-/** Còn từ bấy nhiêu chỗ trở xuống thì báo "Sắp hết chỗ" */
+// Còn từ bấy nhiêu chỗ trở xuống thì báo "Sắp hết chỗ"
 const FEW_SPOTS = 3;
 
-/** Màu nhấn theo môn, xoay vòng theo thứ tự môn trong SUBJECT_OPTIONS */
+// Màu nhấn theo môn, xoay vòng theo thứ tự môn trong SUBJECT_OPTIONS
 const SUBJECT_TONES = [
   { tile: "bg-brand-navy text-white", band: "from-[#E3ECFB]", eyebrow: "text-brand-navy" },
   { tile: "bg-[#F5A00F] text-brand-navyDeep", band: "from-[#FFF1D6]", eyebrow: "text-[#B36F00]" },
@@ -29,21 +29,23 @@ const SUBJECT_TONES = [
   { tile: "bg-[#6A55B8] text-white", band: "from-[#ECE7FA]", eyebrow: "text-[#54429A]" },
 ];
 
-/** Khóa nhận diện một khóa học từ dữ liệu lớp (lớp không trả courseId) */
+// Khóa nhận diện một khóa học từ dữ liệu lớp (lớp không trả courseId)
 const courseKey = cartCourseKey;
 
 const labelOf = <T extends string>(options: { value: T; label: string }[], value: T) =>
   options.find((option) => option.value === value)?.label ?? value;
 
+// Màu thẻ khóa học theo môn
 function toneOf(subject: string) {
   const index = SUBJECT_OPTIONS.findIndex((option) => option.value === subject);
   return SUBJECT_TONES[(index === -1 ? SUBJECT_OPTIONS.length : index) % SUBJECT_TONES.length];
 }
 
-/** Xếp theo thứ tự môn rồi theo khối */
+// Xếp theo thứ tự môn rồi theo khối
 function sortCourses(courses: CourseResponse[]): CourseResponse[] {
   const subjects = SUBJECT_OPTIONS.map((option) => option.value);
   const grades = GRADE_OPTIONS.map((option) => option.value as string);
+  // Thứ tự của một giá trị trong danh sách ưu tiên, không có thì xếp cuối
   const rank = (list: string[], value: string) => (list.includes(value) ? list.indexOf(value) : list.length);
   return [...courses].sort(
     (first, second) =>
@@ -53,7 +55,7 @@ function sortCourses(courses: CourseResponse[]): CourseResponse[] {
   );
 }
 
-/** Tóm tắt các lớp đang mở của một khóa để hiện trên thẻ */
+// Tóm tắt các lớp đang mở của một khóa để hiện trên thẻ
 function summarize(classes: TuitionClass[]) {
   if (classes.length === 0) return null;
   const minFee = Math.min(...classes.map((item) => item.estimatedFee));
@@ -67,7 +69,7 @@ function summarize(classes: TuitionClass[]) {
   return { minFee, maxDiscount, spots, earliest, modes, patterns, slots };
 }
 
-/** Khung xương lúc đang tải */
+// Khung xương lúc đang tải
 function OfferSkeleton() {
   return (
     <ul className="mt-4 space-y-4" aria-hidden="true">
@@ -93,12 +95,10 @@ function OfferSkeleton() {
   );
 }
 
-/**
- * Thẻ các khóa học admin đang bật bán (GET /catalog/courses) trong khu học viên.
- * Admin bật / tắt bán khóa là thẻ của khóa đó hiện / ẩn. Mỗi thẻ tóm tắt các lớp đang mở của khóa
- * (học phí thấp nhất, ưu đãi, khai giảng sớm nhất, lịch, hình thức, số chỗ còn);
- * bấm "Chọn lớp" mở các lớp của khóa (đã áp bộ lọc hình thức, thứ học, sắp xếp) để đăng ký.
- */
+// Thẻ các khóa học admin đang bật bán (GET /catalog/courses) trong khu học viên.
+// Admin bật / tắt bán khóa là thẻ của khóa đó hiện / ẩn. Mỗi thẻ tóm tắt các lớp đang mở của khóa
+// (học phí thấp nhất, ưu đãi, khai giảng sớm nhất, lịch, hình thức, số chỗ còn);
+// bấm "Chọn lớp" mở các lớp của khóa (đã áp bộ lọc hình thức, thứ học, sắp xếp) để đăng ký.
 export function CourseOfferList({
   classes,
   classesLoading,
@@ -255,7 +255,9 @@ export function CourseOfferList({
                 }`}
               >
                 <article className="flex flex-col lg:flex-row">
-                  {/* Thông tin khóa */}
+                  {
+                    // Thông tin khóa
+                  }
                   <div className={`min-w-0 flex-1 bg-gradient-to-br ${tone.band} via-white to-white p-5 sm:p-6`}>
                     <div className="flex items-start gap-4">
                       <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-sm ${tone.tile}`}>
@@ -277,7 +279,9 @@ export function CourseOfferList({
                       </div>
                     </div>
 
-                    {/* Thông số của khóa */}
+                    {
+                      // Thông số của khóa
+                    }
                     <dl className="mt-4 grid grid-cols-2 gap-2 sm:max-w-[420px]">
                       {[
                         { icon: "groups", label: "Lớp đang mở", value: `${courseClasses.length} lớp` },
@@ -295,7 +299,9 @@ export function CourseOfferList({
 
                   </div>
 
-                  {/* Học phí và nút chọn lớp (thêm vào giỏ nằm ở từng lớp) */}
+                  {
+                    // Học phí và nút chọn lớp (thêm vào giỏ nằm ở từng lớp)
+                  }
                   <div className="flex shrink-0 flex-col justify-between gap-4 border-t border-slate-200 bg-brand-sand/50 p-5 sm:p-6 lg:w-[256px] lg:border-l lg:border-t-0">
                     <div>
                       <p className="text-[12.5px] font-medium text-brand-muted">{summary ? "Học phí chỉ từ" : "Học phí"}</p>

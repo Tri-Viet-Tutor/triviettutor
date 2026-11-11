@@ -6,16 +6,16 @@ import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/
 import { TutorSessionDetail } from "@/components/tutor/TutorSessionDetail";
 import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING, PORTAL_CARD } from "@/constants/classNames";
-import { TIME_SLOT_OPTIONS } from "@/constants/classOptions";
+import { TIME_SLOT_OPTIONS, TIME_SLOT_START } from "@/constants/classOptions";
 import { gradeLabel, patternLabel, subjectLabel } from "@/constants/management";
 import { useMyLeaveRequests, useMySessions } from "@/hooks/usePortalData";
-import type { SessionResponse, TuitionClass } from "@/interfaces/api";
+import type { SessionResponse, TuitionClass } from "@/interfaces/dto";
 import { getTuitionClass } from "@/services/tuitionPaymentService";
 import { displayCode } from "@/utils/classes";
 import { addDays, parseIsoDate, startOfWeek, toIsoDate } from "@/utils/date";
 import { needsAttendance, pendingLeaveOf, teacherOf } from "@/utils/sessions";
 
-/** Bảng màu cho từng lớp (nền nhạt, viền trái đậm, chữ) */
+// Bảng màu cho từng lớp (nền nhạt, viền trái đậm, chữ)
 const CLASS_COLORS = [
   { bg: "bg-sky-50", bar: "bg-sky-500", text: "text-sky-900", dot: "bg-sky-500" },
   { bg: "bg-amber-50", bar: "bg-amber-500", text: "text-amber-900", dot: "bg-amber-500" },
@@ -29,16 +29,23 @@ const CLASS_COLORS = [
 
 const WEEKDAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"];
 
-/** Các ca học lấy theo enum TimeSlot của backend; ca khác (buổi dạy bù lệch giờ) được thêm vào khi có */
-const FIXED_SLOTS = TIME_SLOT_OPTIONS.map((option) => (option.hint ?? "").replace(/\s*–\s*/, "-")).filter(Boolean);
+// Các ca học lấy theo enum TimeSlot của backend; ca khác (buổi dạy bù lệch giờ) được thêm vào khi có
+// Mỗi hàng của lưới là một ca, nhận theo GIỜ BẮT ĐẦU. Giờ tan không còn cố định vì mỗi khóa
+// một thời lượng, nên giờ tan hiện trên từng buổi chứ không nằm ở đầu hàng.
+const SLOT_ROWS = TIME_SLOT_OPTIONS.map((option, index) => ({
+  start: TIME_SLOT_START[option.value] ?? "",
+  label: option.label,
+  order: index + 1,
+})).filter((row) => row.start);
+const SLOT_STARTS = SLOT_ROWS.map((row) => row.start);
 
-const slotOf = (session: SessionResponse) => `${session.startTime.slice(0, 5)}-${session.endTime.slice(0, 5)}`;
+// Buổi thuộc hàng nào: nhận bằng giờ bắt đầu
+const slotOf = (session: SessionResponse) => session.startTime.slice(0, 5);
+// Ngày dạng dd/mm
 const shortDate = (date: Date) => `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
 
-/**
- * Thời khóa biểu tuần của gia sư: cột là ngày trong tuần, hàng là ca học; mỗi ô là buổi dạy tô màu theo lớp,
- * kèm tên khóa, mã lớp, buổi thứ mấy, hình thức và nhãn cần điểm danh. Bấm buổi để mở chi tiết / điểm danh / xin nghỉ.
- */
+// Thời khóa biểu tuần của gia sư: cột là ngày trong tuần, hàng là ca học; mỗi ô là buổi dạy tô màu theo lớp,
+// kèm tên khóa, mã lớp, buổi thứ mấy, hình thức và nhãn cần điểm danh. Bấm buổi để mở chi tiết / điểm danh / xin nghỉ.
 export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | undefined }) {
   const sessionsQuery = useMySessions();
   const leaveQuery = useMyLeaveRequests({ page: 0, size: 100 });
@@ -56,10 +63,8 @@ export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | 
     queries: classIds.map((id) => ({ queryKey: ["catalog-class", id], queryFn: () => getTuitionClass(id), staleTime: 5 * 60_000, retry: false })),
   });
   const classInfo = new Map<number, TuitionClass | undefined>(classIds.map((id, index) => [id, classQueries[index]?.data]));
-  /**
-   * Lớp còn đang bán (chưa mở / đang tuyển sinh) hoặc chưa công khai: lịch chỉ là dự kiến —
-   * lớp chạy khi có học viên, không có ai đăng ký thì trung tâm hủy lớp.
-   */
+  // Lớp còn đang bán (chưa mở / đang tuyển sinh) hoặc chưa công khai: lịch chỉ là dự kiến —
+  // lớp chạy khi có học viên, không có ai đăng ký thì trung tâm hủy lớp.
   const tentativeOf = (classId: number) => {
     const query = classQueries[classIds.indexOf(classId)];
     const status = query?.data?.status;
@@ -67,6 +72,7 @@ export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | 
     // Catalog cũng trả 404 cho lớp đang chạy của khóa đã ẩn: lớp đã có buổi diễn ra / hoàn tất thì không phải dự kiến
     return Boolean(query?.isError) && !sessions.some((session) => session.classGroupId === classId && (session.status === "IN_SESSION" || session.status === "COMPLETED"));
   };
+  // Màu của lớp trên thời khóa biểu
   const colorOf = (classId: number) => CLASS_COLORS[Math.max(0, classIds.indexOf(classId)) % CLASS_COLORS.length];
 
   // Mở sẵn buổi được dẫn tới qua ?buoi=: chuyển tới đúng tuần
@@ -81,7 +87,9 @@ export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | 
   const days = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
   const dayIsos = days.map(toIsoDate);
   const weekSessions = sessions.filter((session) => dayIsos.includes(session.date));
-  const slots = [...new Set([...FIXED_SLOTS, ...weekSessions.map(slotOf)])].sort();
+  // Bốn ca của trung tâm luôn có mặt để lưới không rỗng khi tuần chỉ có một buổi,
+  // cộng thêm giờ lạ nếu buổi nào bắt đầu ngoài bốn ca đó
+  const slots = [...new Set([...SLOT_STARTS, ...weekSessions.map(slotOf)])].sort();
   const todayIso = toIsoDate(now);
 
   const active = weekSessions.filter((session) => session.status !== "CANCELLED" && !tentativeOf(session.classGroupId));
@@ -108,7 +116,9 @@ export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | 
 
   return (
     <div className="space-y-5">
-      {/* Tổng quan: một dải bốn ô */}
+      {
+        // Tổng quan: một dải bốn ô
+      }
       <dl className={`grid grid-cols-2 divide-brand-sandLine overflow-hidden lg:grid-cols-4 lg:divide-x ${PORTAL_CARD}`}>
         <Stat
           icon="event"
@@ -131,7 +141,9 @@ export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | 
         />
       </dl>
 
-      {/* Thời khóa biểu */}
+      {
+        // Thời khóa biểu
+      }
       <section className={`overflow-hidden ${PORTAL_CARD}`}>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-sandLine px-4 py-3.5 sm:px-5">
           <div>
@@ -164,14 +176,14 @@ export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px] table-fixed border-collapse text-left">
             <thead>
-              <tr>
+              <tr className="border-y border-brand-sandLine">
                 <th scope="col" className="w-[120px] px-3 py-3 text-[11.5px] font-bold uppercase tracking-wide text-brand-muted">
                   Ca học
                 </th>
                 {days.map((day, index) => {
                   const isToday = dayIsos[index] === todayIso;
                   return (
-                    <th key={dayIsos[index]} scope="col" className="px-1.5 py-2.5 text-center">
+                    <th key={dayIsos[index]} scope="col" className="border-l border-brand-sandLine/70 px-1.5 py-2.5 text-center">
                       <span className={`block text-[12px] font-semibold ${isToday ? "text-brand-navy" : "text-brand-muted"}`}>{WEEKDAYS[index]}</span>
                       <span
                         className={`mt-1 inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-[14px] font-extrabold tabular-nums ${
@@ -187,16 +199,17 @@ export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | 
             </thead>
             <tbody>
               {slots.map((slot) => {
-                const [start, end] = slot.split("-");
-                const fixedIndex = FIXED_SLOTS.indexOf(slot);
+                const row = SLOT_ROWS.find((item) => item.start === slot);
                 return (
                   <tr key={slot} className="border-t border-brand-sandLine">
                     <th scope="row" className="px-3 py-2 align-top">
-                      <span className="block text-[11px] font-bold uppercase tracking-wide text-brand-muted">
-                        {fixedIndex >= 0 ? `Ca ${fixedIndex + 1}` : "Ca thêm"}
+                      <span className="block whitespace-nowrap text-[11px] font-bold uppercase tracking-wide text-brand-muted">
+                        {row ? `Ca ${row.order} - ${row.label}` : "Ca thêm"}
                       </span>
-                      <span className="block text-[14px] font-extrabold tabular-nums text-brand-ink">{start}</span>
-                      <span className="block text-[12px] tabular-nums text-brand-muted">đến {end}</span>
+                      <span className="block text-[14px] font-extrabold tabular-nums text-brand-ink">
+                        <span className="text-[11.5px] font-semibold text-brand-muted">Từ </span>
+                        {slot}
+                      </span>
                     </th>
                     {dayIsos.map((iso) => {
                       const cell = weekSessions.filter((session) => session.date === iso && slotOf(session) === slot);
@@ -231,7 +244,9 @@ export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | 
         )}
       </section>
 
-      {/* Các lớp đang dạy */}
+      {
+        // Các lớp đang dạy
+      }
       <section>
         <h2 className="mb-3 text-[16px] font-bold text-brand-navy">Lớp của tôi</h2>
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -311,7 +326,7 @@ export function TutorTimetable({ now, tutorId }: { now: Date; tutorId: number | 
   );
 }
 
-/** Một buổi trong ô thời khóa biểu: thẻ trắng có dải màu theo lớp; lớp còn tuyển sinh thì viền đứt cam */
+// Một buổi trong ô thời khóa biểu: thẻ trắng có dải màu theo lớp; lớp còn tuyển sinh thì viền đứt cam
 function SessionCard({
   session,
   info,
@@ -325,7 +340,7 @@ function SessionCard({
   session: SessionResponse;
   info: TuitionClass | undefined;
   color: (typeof CLASS_COLORS)[number];
-  /** Lớp còn đang tuyển sinh: lịch dự kiến */
+  // Lớp còn đang tuyển sinh: lịch dự kiến
   tentative: boolean;
   mark: boolean;
   substitute: boolean;
@@ -350,6 +365,9 @@ function SessionCard({
       <span className="block px-2 pb-1.5 pt-1">
         <span className={`block truncate text-[12.5px] font-extrabold leading-snug ${cancelled ? "text-slate-500 line-through" : tentative ? "text-brand-ink" : color.text}`}>
           {info?.courseName ?? `Lớp ${displayCode("class", session.classGroupId)}`}
+        </span>
+        <span className="block text-[11px] font-semibold tabular-nums text-brand-muted">
+          {session.startTime.slice(0, 5)} đến {session.endTime.slice(0, 5)}
         </span>
         <span className="flex items-center justify-between gap-1 text-[11px] text-brand-muted">
           <span className="truncate">
@@ -378,6 +396,7 @@ function SessionCard({
   );
 }
 
+// Nhãn nhỏ trên ô buổi dạy (dự kiến, đã hủy...)
 function Tag({ tone, children }: { tone: "amber" | "slate" | "red" | "navy"; children: string }) {
   const style = {
     amber: "bg-amber-100 text-amber-800",
@@ -388,6 +407,7 @@ function Tag({ tone, children }: { tone: "amber" | "slate" | "red" | "navy"; chi
   return <span className={`rounded px-1.5 py-px text-[10.5px] font-bold ${style}`}>{children}</span>;
 }
 
+// Ô số liệu ở đầu thời khóa biểu
 function Stat({ icon, label, value, sub, warn = false }: { icon: string; label: string; value: string; sub?: string; warn?: boolean }) {
   return (
     <div className="flex items-center gap-3 border-b border-brand-sandLine px-4 py-3.5 lg:border-b-0">
@@ -405,6 +425,7 @@ function Stat({ icon, label, value, sub, warn = false }: { icon: string; label: 
   );
 }
 
+// Nút chuyển tuần trước / tuần sau
 function WeekButton({ icon, label, onClick }: { icon: string; label: string; onClick: () => void }) {
   return (
     <button

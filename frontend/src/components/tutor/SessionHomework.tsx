@@ -15,10 +15,8 @@ import { formatDateTime } from "@/utils/homework";
 type GradingFilter = "all" | "pending" | "done";
 type DueFilter = "all" | "overdue" | "open";
 
-/**
- * Bài tập của một buổi (khu gia sư): danh sách bài và lối giao bài mới.
- * Soạn câu hỏi, công bố và chấm bài nằm ở trang riêng của từng bài.
- */
+// Bài tập của một buổi (khu gia sư): danh sách bài và lối giao bài mới.
+// Soạn câu hỏi, công bố và chấm bài nằm ở trang riêng của từng bài.
 export function SessionHomework({ sessionId }: { sessionId: number }) {
   const userId = useUserId();
   const homeworks = useQuery({

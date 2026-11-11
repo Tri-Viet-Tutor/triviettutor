@@ -18,10 +18,8 @@ import { startHomework } from "@/services/homeworkService";
 import { portalErrorMessage } from "@/utils/errors";
 import { acceptsWork, formatDateTime, homeworkPhase } from "@/utils/homework";
 
-/**
- * Trang làm một bài của học viên. Chưa bắt đầu: xem thông tin bài rồi bấm "Bắt đầu làm bài"
- * (bài có mật khẩu thì nhập mật khẩu gia sư cung cấp). Đang làm: làm và nộp. Đã nộp: xem bài, điểm và nhận xét.
- */
+// Trang làm một bài của học viên. Chưa bắt đầu: xem thông tin bài rồi bấm "Bắt đầu làm bài"
+// (bài có mật khẩu thì nhập mật khẩu gia sư cung cấp). Đang làm: làm và nộp. Đã nộp: xem bài, điểm và nhận xét.
 export function StudentHomeworkPage() {
   const homeworkId = Number(useParams().homeworkId);
   const now = useNow();
@@ -62,6 +60,7 @@ export function StudentHomeworkPage() {
   const canWork = acceptsWork(data, now);
   const phase = homeworkPhase(data, now);
 
+  // Bắt đầu làm bài
   function handleStart(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     start.mutate();

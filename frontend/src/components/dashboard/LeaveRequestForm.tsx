@@ -3,7 +3,7 @@ import { type FormEvent, useState } from "react";
 import { AuthNotice } from "@/components/auth/AuthNotice";
 import { AuthSubmitButton } from "@/components/auth/AuthSubmitButton";
 import { AntMascot } from "@/components/dashboard/AntMascot";
-import { AUTH_INPUT, AUTH_LABEL, PORTAL_CARD } from "@/constants/classNames";
+import { AUTH_INPUT, AUTH_LABEL } from "@/constants/classNames";
 import { LATE_NOTICE_HOURS } from "@/constants/rules";
 import { portalKeys, useUserId } from "@/hooks/usePortalData";
 import { submitLeaveRequest } from "@/services/portalService";
@@ -12,10 +12,10 @@ import { isLateNotice, sessionOptionLabel } from "@/utils/sessions";
 import type { LeaveRequestFormProps } from "@/interfaces/portal";
 import { Select } from "@/components/ui/Select";
 
-/** Giới hạn của LeaveRequestInput.reason ở backend */
+// Giới hạn của LeaveRequestInput.reason ở backend
 const REASON_MAX = 1000;
 
-/** Form gửi đơn xin nghỉ một buổi học (POST /sessions/{id}/leave). */
+// Form gửi đơn xin nghỉ một buổi học (POST /sessions/{id}/leave).
 export function LeaveRequestForm({ sessions, initialSessionId, now, role = "student" }: LeaveRequestFormProps) {
   const isTutor = role === "tutor";
   const userId = useUserId();
@@ -43,7 +43,7 @@ export function LeaveRequestForm({ sessions, initialSessionId, now, role = "stud
   const selected = sessions.find((session) => String(session.sessionId) === sessionId);
   const canSubmit = Boolean(selected) && reason.trim().length > 0;
 
-  /** Gửi đơn khi đã chọn buổi và có lý do */
+  // Gửi đơn khi đã chọn buổi và có lý do
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canSubmit) return;
@@ -52,7 +52,7 @@ export function LeaveRequestForm({ sessions, initialSessionId, now, role = "stud
   }
 
   return (
-    <section className={`p-5 sm:p-6 ${PORTAL_CARD}`} aria-labelledby="leave-form-title">
+    <section className="aged-paper aged-paper-frame rounded-sm p-6 sm:p-7" aria-labelledby="leave-form-title">
       <div className="flex items-end justify-between gap-3">
         <h2 id="leave-form-title" className="pb-1 text-[18px] font-bold text-brand-navy">
           Gửi đơn xin nghỉ

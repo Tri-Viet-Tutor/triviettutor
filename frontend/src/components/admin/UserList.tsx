@@ -4,33 +4,33 @@ import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
 import { ConfirmDialog } from "@/components/dashboard/ConfirmDialog";
 import { AuthNotice } from "@/components/auth/AuthNotice";
 import { PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
-import { deleteUser, updateUser } from "@/services/admin";
+import { deleteUser, updateUser } from "@/services/adminService";
 import { TutorProfileForm } from "@/components/admin/TutorForms";
 import { StatusChip } from "@/components/dashboard/StatusChip";
 import { Icon } from "@/components/ui/Icon";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { PORTAL_CARD } from "@/constants/classNames";
 import { ROLE_NAME } from "@/constants/labels";
-import type { AdminUserResponse, AdminUserStatus, Role } from "@/interfaces/api";
+import type { AdminUserResponse, AdminUserStatus, Role } from "@/interfaces/dto";
 import type { Tone } from "@/interfaces/ui";
 import { displayCode } from "@/utils/classes";
 import { formatDate } from "@/utils/date";
 import type { UserListProps } from "@/interfaces/admin";
 import { useRefreshAdmin } from "@/hooks/useAdminData";
-import { updateUserStatus } from "@/services/admin";
+import { updateUserStatus } from "@/services/adminService";
 import { useAuthStore } from "@/stores/authStore";
 import { portalErrorMessage } from "@/utils/errors";
 
-/** Màu nhãn vai trò */
+// Màu nhãn vai trò
 const ROLE_TONE: Record<Role, Tone> = { ROLE_STUDENT: "navy", ROLE_TUTOR: "green", ROLE_ADMIN: "amber" };
-/** Mã hiển thị theo vai trò: HV003, GV012, ND001 */
+// Mã hiển thị theo vai trò: HV003, GV012, ND001
 const codeOf = (role: Role, id: number) => displayCode(role === "ROLE_STUDENT" ? "student" : role === "ROLE_TUTOR" ? "tutor" : "user", id);
 
 const GRID = "lg:grid lg:grid-cols-[88px_minmax(0,1fr)_130px_130px_120px_128px] lg:items-center lg:gap-x-4";
 const ICON_BTN =
   "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-brand-sandLine bg-white px-2.5 text-[13px] font-semibold text-brand-navy transition-colors hover:border-brand-navy/40 hover:bg-brand-tint focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
 
-/** Form sửa họ tên / email ngay dưới dòng; gia sư có thêm phần lương và giới thiệu (TutorProfileForm) */
+// Form sửa họ tên / email ngay dưới dòng; gia sư có thêm phần lương và giới thiệu (TutorProfileForm)
 function EditUserPanel({ user, onClose }: { user: AdminUserResponse; onClose: () => void }) {
   const refresh = useRefreshAdmin();
   const [fullName, setFullName] = useState(user.fullName);
@@ -45,6 +45,7 @@ function EditUserPanel({ user, onClose }: { user: AdminUserResponse; onClose: ()
   });
   const valid = fullName.trim() !== "" && /\S+@\S+\.\S+/.test(email.trim());
 
+  // Lưu họ tên và email khi form hợp lệ
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (valid) save.mutate();
@@ -88,14 +89,14 @@ function EditUserPanel({ user, onClose }: { user: AdminUserResponse; onClose: ()
   );
 }
 
-/** Nhãn và màu trạng thái tài khoản */
+// Nhãn và màu trạng thái tài khoản
 const STATUS_LABEL: Record<AdminUserStatus, { label: string; tone: Tone }> = {
   ACTIVE: { label: "Hoạt động", tone: "green" },
   LOCKED: { label: "Đã khóa", tone: "red" },
   UNVERIFIED: { label: "Chưa kích hoạt", tone: "slate" },
 };
 
-/** Nút khóa / mở khóa một tài khoản (PATCH /admin/users/{id}/status), hỏi lại bằng hộp xác nhận */
+// Nút khóa / mở khóa một tài khoản (PATCH /admin/users/{id}/status), hỏi lại bằng hộp xác nhận
 function LockToggle({ user }: { user: AdminUserResponse }) {
   const refresh = useRefreshAdmin();
   const [asking, setAsking] = useState(false);
@@ -140,11 +141,9 @@ function LockToggle({ user }: { user: AdminUserResponse }) {
   );
 }
 
-/**
- * Bảng người dùng của khu quản trị: mã theo vai trò, ảnh + họ tên + email, vai trò, trạng thái, ngày tạo và thao tác
- * Chỉnh sửa (họ tên, email; gia sư thêm lương / giới thiệu), Khóa / mở khóa và Xóa (chỉ tài khoản chưa có dữ liệu).
- * Không khóa hay xóa chính mình.
- */
+// Bảng người dùng của khu quản trị: mã theo vai trò, ảnh + họ tên + email, vai trò, trạng thái, ngày tạo và thao tác
+// Chỉnh sửa (họ tên, email; gia sư thêm lương / giới thiệu), Khóa / mở khóa và Xóa (chỉ tài khoản chưa có dữ liệu).
+// Không khóa hay xóa chính mình.
 export function UserList({ users }: UserListProps) {
   const me = useAuthStore((state) => state.user?.id);
   const refresh = useRefreshAdmin();
@@ -154,7 +153,9 @@ export function UserList({ users }: UserListProps) {
 
   return (
     <div className={`overflow-hidden ${PORTAL_CARD}`}>
-      {/* Hàng tiêu đề cột — chỉ hiện ở màn hình rộng */}
+      {
+        // Hàng tiêu đề cột — chỉ hiện ở màn hình rộng
+      }
       <div
         aria-hidden="true"
         className={`hidden border-b border-brand-sandLine bg-brand-sand/60 px-5 py-3 text-[12px] font-bold uppercase tracking-wide text-brand-muted ${GRID}`}

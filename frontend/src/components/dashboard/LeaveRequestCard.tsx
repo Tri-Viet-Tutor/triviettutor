@@ -3,11 +3,11 @@ import { StatusChip } from "@/components/dashboard/StatusChip";
 import { AUTH_TEXT_LINK, PORTAL_CARD } from "@/constants/classNames";
 import { LEAVE_RESOLUTION, LEAVE_STATUS } from "@/constants/labels";
 import { formatClockTime, formatDate, formatDayMonth, parseIsoDate, weekdayName } from "@/utils/date";
-import { formatLongDate, formatTimeRange } from "@/utils/sessions";
+import { formatLongDate, formatTimeRange, leaveResolutionText } from "@/utils/sessions";
 import type { LeaveRequestCardProps } from "@/interfaces/portal";
 import { displayCode } from "@/utils/classes";
 
-/** Một đơn xin nghỉ: buổi nào, lý do, trạng thái duyệt và cách trung tâm xử lý. */
+// Một đơn xin nghỉ: buổi nào, lý do, trạng thái duyệt và cách trung tâm xử lý.
 export function LeaveRequestCard({ request, session, compact = false, scheduleTo }: LeaveRequestCardProps) {
   const status = LEAVE_STATUS[request.status];
   const requestedAt = new Date(request.requestedAt);
@@ -59,7 +59,7 @@ export function LeaveRequestCard({ request, session, compact = false, scheduleTo
           )}
         </p>
       )}
-      {request.resolutionReason && <p className="mt-1 text-[14.5px] text-brand-ink">Phản hồi của trung tâm: {request.resolutionReason}</p>}
+      {request.resolutionReason && <p className="mt-1 text-[14.5px] text-brand-ink">Phản hồi của trung tâm: {leaveResolutionText(request.resolutionReason)}</p>}
 
       <p className="mt-3 text-[13px] text-brand-muted">
         Gửi lúc {formatClockTime(requestedAt)} ngày {formatDate(requestedAt)}

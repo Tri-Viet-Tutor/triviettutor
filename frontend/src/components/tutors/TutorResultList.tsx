@@ -1,7 +1,7 @@
 import { Icon } from "@/components/ui/Icon";
 import type { TutorResultListProps } from "@/interfaces/tutor";
 
-/** Danh sách gia sư tìm được: hàng ngang vuốt được trên điện thoại, cột dọc trên màn hình lớn. */
+// Danh sách gia sư tìm được: hàng ngang vuốt được trên điện thoại, cột dọc trên màn hình lớn.
 export function TutorResultList({ tutors, selectedId, onSelect }: TutorResultListProps) {
   return (
     <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-3 lg:mx-0 lg:block lg:space-y-2 lg:overflow-visible lg:px-0 lg:pb-0">

@@ -9,14 +9,12 @@ import { listMyOrders } from "@/services/cartService";
 import { displayCode } from "@/utils/classes";
 import { formatVnd } from "@/utils/currency";
 
-/** Số đơn mỗi trang */
+// Số đơn mỗi trang
 const PAGE_SIZE = 10;
 
-/**
- * Lịch sử thanh toán học phí của học viên (PAY-01): mỗi đơn kèm nhãn trạng thái chuẩn
- * Thành công / Đang xử lý / Giữ chỗ / Thất bại / Đã hoàn tiền.
- * API: GET /orders/my.
- */
+// Lịch sử thanh toán học phí của học viên (PAY-01): mỗi đơn kèm nhãn trạng thái chuẩn
+// Thành công / Đang xử lý / Giữ chỗ / Thất bại / Đã hoàn tiền.
+// API: GET /orders/my.
 export function OrderHistory() {
   const userId = useUserId();
   const [page, setPage] = useState(0);
@@ -53,7 +51,7 @@ export function OrderHistory() {
                       </span>
                     </p>
                     <p className="truncate text-[13.5px] text-brand-muted">
-                      {order.items.map((item) => `${item.courseName}${item.classCode ? ` · ${item.classCode}` : ""}`).join(", ")}
+                      {order.items.map((item) => `${item.courseName}${item.classCode ? ` - ${item.classCode}` : ""}`).join(", ")}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end sm:gap-1">

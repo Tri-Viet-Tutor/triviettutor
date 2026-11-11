@@ -2,7 +2,7 @@ import { Sparkle } from "@/components/motion/Sparkle";
 import { DOODLE_STROKE } from "@/constants/doodle";
 import type { Doodle } from "@/interfaces/ui";
 
-/** Nét vẽ tay quanh chủ đề học phí: biên lai, lịch, máy tính, heo đất, tờ tiền, mũ tốt nghiệp */
+// Nét vẽ tay quanh chủ đề học phí: biên lai, lịch, máy tính, heo đất, tờ tiền, mũ tốt nghiệp
 const DOODLES: Doodle[] = [
   {
     id: "receipt",
@@ -108,14 +108,14 @@ const DOODLES: Doodle[] = [
   },
 ];
 
-/** Hàng đồng xu lớn dần ở phía dưới, như đang lăn về phía thẻ giá (đặt thấp để không che gương mặt trên ảnh nền) */
+// Hàng đồng xu lớn dần ở phía dưới, như đang lăn về phía thẻ giá (đặt thấp để không che gương mặt trên ảnh nền)
 const COIN_TRAIL = [
   { left: 70, top: 83, size: 16, delay: 0 },
   { left: 79, top: 87, size: 22, delay: -1.2 },
   { left: 89, top: 89, size: 28, delay: -2.4 },
 ];
 
-/** Sao nhấp nháy xen giữa các nét vẽ */
+// Sao nhấp nháy xen giữa các nét vẽ
 const SPARKLES = [
   { left: 21, top: 19, size: 18, delay: 0 },
   { left: 64, top: 17, size: 14, delay: 0.9 },
@@ -124,10 +124,8 @@ const SPARKLES = [
   { left: 97, top: 12, size: 12, delay: 2.1 },
 ];
 
-/**
- * Nét vẽ tay và đồng xu trôi nhẹ quanh phần chữ mở đầu trang "Mua khóa học", lấp khoảng trống ở nửa trái.
- * Chỉ để trang trí nên ẩn với trình đọc màn hình, và chỉ hiện từ màn hình lớn (lg).
- */
+// Nét vẽ tay và đồng xu trôi nhẹ quanh phần chữ mở đầu trang "Mua khóa học", lấp khoảng trống ở nửa trái.
+// Chỉ để trang trí nên ẩn với trình đọc màn hình, và chỉ hiện từ màn hình lớn (lg).
 export function PricingDoodles() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 hidden w-[63%] select-none lg:block">

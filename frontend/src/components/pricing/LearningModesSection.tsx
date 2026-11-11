@@ -5,13 +5,11 @@ import { CONTAINER, FOCUS_RING } from "@/constants/classNames";
 import { LEARNING_PHOTOS } from "@/constants/pricing";
 import { ROUTES } from "@/constants/routes";
 
-/** Ảnh giữa thấp hơn hai ảnh bên để ba khung vòm so le nhau */
+// Ảnh giữa thấp hơn hai ảnh bên để ba khung vòm so le nhau
 const STAGGER = ["", "translate-y-8 sm:translate-y-12", ""];
 
-/**
- * "Học tại trung tâm hoặc trực tuyến": chữ bên trái, ba ảnh khung vòm so le bên phải
- * (lớp tại trung tâm, học sinh THPT, lớp trực tuyến), mỗi ảnh một nhãn ở chân.
- */
+// "Học tại trung tâm hoặc trực tuyến": chữ bên trái, ba ảnh khung vòm so le bên phải
+// (lớp tại trung tâm, học sinh THPT, lớp trực tuyến), mỗi ảnh một nhãn ở chân.
 export function LearningModesSection() {
   return (
     <section id="learning-modes" className="bg-[#F5F1E9] pb-20 lg:pb-28">
@@ -36,7 +34,9 @@ export function LearningModesSection() {
         </Reveal>
 
         <div className="relative lg:col-span-8">
-          {/* Vầng tròn cam mờ và cung nét đứt phía sau ba ảnh */}
+          {
+            // Vầng tròn cam mờ và cung nét đứt phía sau ba ảnh
+          }
           <div
             aria-hidden="true"
             className="absolute left-1/2 top-1/2 aspect-square w-[62%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-orange/20"
@@ -53,7 +53,9 @@ export function LearningModesSection() {
           <ul className="relative grid grid-cols-3 gap-3 pb-16 sm:gap-6 sm:pb-20">
             {LEARNING_PHOTOS.map((photo, index) => (
               <Reveal as="li" key={photo.label} delay={index * 110}>
-                {/* So le đặt ở figure vì Reveal đã dùng transform của thẻ li */}
+                {
+                  // So le đặt ở figure vì Reveal đã dùng transform của thẻ li
+                }
                 <figure className={`group relative ${STAGGER[index % STAGGER.length]}`}>
                   <div className="overflow-hidden rounded-t-[999px] rounded-b-[26px] border-[5px] border-white bg-brand-tint shadow-[0_24px_38px_-22px_rgba(8,42,102,0.7)] sm:border-[6px]">
                     <img

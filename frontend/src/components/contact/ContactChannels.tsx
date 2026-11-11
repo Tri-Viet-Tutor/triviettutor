@@ -1,7 +1,7 @@
 import { Icon } from "@/components/ui/Icon";
 import { CONTACT_CHANNELS } from "@/constants/contact";
 
-/** Các cách liên hệ trung tâm: email, điện thoại, địa chỉ — mỗi cách một hàng, không đóng khung. */
+// Các cách liên hệ trung tâm: email, điện thoại, địa chỉ — mỗi cách một hàng, không đóng khung.
 export function ContactChannels() {
   return (
     <ul className="divide-y divide-dashed divide-brand-navy/25">

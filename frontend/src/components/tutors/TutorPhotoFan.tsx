@@ -1,16 +1,16 @@
 import type { TutorPhotoFanProps } from "@/interfaces/tutor";
 
-/** Vị trí và độ nghiêng của từng tấm ảnh trong xấp ảnh xòe quạt */
+// Vị trí và độ nghiêng của từng tấm ảnh trong xấp ảnh xòe quạt
 const FAN_SLOTS = ["left-0 top-[24%] z-10 -rotate-[9deg]", "left-1/2 top-0 z-20 -translate-x-1/2", "right-0 top-[24%] z-10 rotate-[9deg]"];
 
-/**
- * Xấp ba ảnh gia sư xòe như quạt trên một vầng tròn cam — ảnh mở đầu trang "Tìm gia sư".
- * Bấm một ảnh để mở hồ sơ gia sư đó ở phần bên dưới.
- */
+// Xấp ba ảnh gia sư xòe như quạt trên một vầng tròn cam — ảnh mở đầu trang "Tìm gia sư".
+// Bấm một ảnh để mở hồ sơ gia sư đó ở phần bên dưới.
 export function TutorPhotoFan({ tutors, onPickTutor }: TutorPhotoFanProps) {
   return (
     <div className="relative mx-auto aspect-[10/9] w-full max-w-[520px]">
-      {/* Vầng tròn cam và vòng nét đứt phía sau */}
+      {
+        // Vầng tròn cam và vòng nét đứt phía sau
+      }
       <div
         aria-hidden="true"
         className="absolute left-1/2 top-[56%] aspect-square w-[80%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_32%_28%,#FFE2A6,#F5A00F_78%)] shadow-[0_30px_60px_-30px_rgba(222,139,0,0.9)]"

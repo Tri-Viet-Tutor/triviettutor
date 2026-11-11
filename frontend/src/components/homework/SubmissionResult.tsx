@@ -10,7 +10,7 @@ import type { SubmissionResultProps } from "@/interfaces/homework";
 
 const OPTION_LETTERS = "ABCDEFGHIJ";
 
-/** Bài đã nộp của học viên: điểm và nhận xét (khi đã chấm), thời điểm nộp, câu trả lời và ảnh đã gửi. */
+// Bài đã nộp của học viên: điểm và nhận xét (khi đã chấm), thời điểm nộp, câu trả lời và ảnh đã gửi.
 export function SubmissionResult({ homework, submission }: SubmissionResultProps) {
   const graded = submission.status === "GRADED";
   const status = SUBMISSION_STATUS[submission.status];

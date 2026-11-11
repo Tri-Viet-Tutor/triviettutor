@@ -6,21 +6,23 @@ import { CONTAINER } from "@/constants/classNames";
 import { riseDelay } from "@/utils/motion";
 import type { CatalogHeroProps } from "@/interfaces/catalog";
 
-/**
- * Phần mở đầu trang "Khối lớp / Môn học": chữ bên trái, bên phải là ảnh học sinh
- * với các bong bóng môn học chung quanh (khác hẳn khung ảnh của trang chủ).
- * Quanh phần chữ có vài nét vẽ tay về các môn học cho đỡ trống.
- * Nền xanh nhạt chấm bi, nhạt dần về màu giấy ở mép dưới.
- */
+// Phần mở đầu trang "Khối lớp / Môn học": chữ bên trái, bên phải là ảnh học sinh
+// với các bong bóng môn học chung quanh (khác hẳn khung ảnh của trang chủ).
+// Quanh phần chữ có vài nét vẽ tay về các môn học cho đỡ trống.
+// Nền xanh nhạt chấm bi, nhạt dần về màu giấy ở mép dưới.
 export function CatalogHero({ activeSubject, onPickSubject }: CatalogHeroProps) {
   return (
     <section className="relative overflow-hidden bg-[linear-gradient(135deg,#CFE0F8_0%,#E3ECFA_48%,#F1EEE8_100%)]">
-      {/* Chấm bi mờ, đậm ở góc trên trái và tan dần */}
+      {
+        // Chấm bi mờ, đậm ở góc trên trái và tan dần
+      }
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(11,58,140,0.2)_1.3px,transparent_1.3px)] bg-[length:22px_22px] [mask-image:linear-gradient(120deg,black,transparent_70%)]"
       />
-      {/* Hai vòng tròn nét mảnh */}
+      {
+        // Hai vòng tròn nét mảnh
+      }
       <svg
         aria-hidden="true"
         viewBox="0 0 1200 600"
@@ -31,12 +33,16 @@ export function CatalogHero({ activeSubject, onPickSubject }: CatalogHeroProps) 
         <circle cx="110" cy="70" r="210" stroke="currentColor" strokeWidth="1.5" strokeDasharray="8 8" />
         <circle cx="1090" cy="560" r="280" stroke="currentColor" strokeWidth="2" />
       </svg>
-      {/* Quầng cam nhạt sau banner */}
+      {
+        // Quầng cam nhạt sau banner
+      }
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_40%_55%_at_72%_52%,rgba(245,160,15,0.2),transparent_72%)]"
       />
-      {/* Mép dưới hoà vào nền giấy của phần kế tiếp */}
+      {
+        // Mép dưới hoà vào nền giấy của phần kế tiếp
+      }
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-[#F5F1E9]"

@@ -3,11 +3,12 @@ import { useMutation } from "@tanstack/react-query";
 import { AntMascot } from "@/components/dashboard/AntMascot";
 import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING } from "@/constants/classNames";
-import { apiErrorMessage } from "@/services/api";
-import { askAssistant, type AssistantTurn } from "@/services/assistantService";
+import { apiErrorMessage } from "@/services/apiClient";
+import { askAssistant } from "@/services/assistantService";
+import type { AssistantTurn } from "@/interfaces/dto";
 import { useAuthStore } from "@/stores/authStore";
 
-/** Giới hạn độ dài câu hỏi, khớp với backend */
+// Giới hạn độ dài câu hỏi, khớp với backend
 const MAX_MESSAGE = 500;
 
 const ERROR_TEXT = {
@@ -18,11 +19,9 @@ const ERROR_TEXT = {
 
 const SUGGESTIONS = ["Có những lớp nào đang mở?", "Học phí lớp Toán 11 bao nhiêu?", "Quy định nghỉ học và học bù thế nào?"];
 
-/**
- * Khung chat nổi hỏi trợ lý AI về khóa học, lớp đang mở, học phí, quy định nghỉ/học bù.
- * Đã đăng nhập thì hỏi được lịch học của chính mình. Hội thoại chỉ giữ trong lúc mở trang.
- * placement: "public" nằm góc trái (góc phải có nút lên đầu trang); "portal" nằm góc phải, trên thanh điều hướng điện thoại.
- */
+// Khung chat nổi hỏi trợ lý AI về khóa học, lớp đang mở, học phí, quy định nghỉ/học bù.
+// Đã đăng nhập thì hỏi được lịch học của chính mình. Hội thoại chỉ giữ trong lúc mở trang.
+// placement: "public" nằm góc trái (góc phải có nút lên đầu trang); "portal" nằm góc phải, trên thanh điều hướng điện thoại.
 export function ChatWidget({ placement }: { placement: "public" | "portal" }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [open, setOpen] = useState(false);
@@ -49,6 +48,7 @@ export function ChatWidget({ placement }: { placement: "public" | "portal" }) {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
   }, [turns, ask.isPending, open]);
 
+  // Gửi một câu hỏi cho trợ lý AI và thêm vào khung chat
   function send(text: string) {
     const message = text.trim().slice(0, MAX_MESSAGE);
     if (!message || ask.isPending) return;
@@ -57,6 +57,7 @@ export function ChatWidget({ placement }: { placement: "public" | "portal" }) {
     ask.mutate(message);
   }
 
+  // Gửi nội dung ô nhập khi bấm Gửi hoặc Enter
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     send(input);
@@ -159,7 +160,9 @@ export function ChatWidget({ placement }: { placement: "public" | "portal" }) {
         </section>
       )}
 
-      {/* Chú kiến linh vật làm nút mở trợ lý: nhún nhảy, thỉnh thoảng nói "Hỏi mình nhé!" */}
+      {
+        // Chú kiến linh vật làm nút mở trợ lý: nhún nhảy, thỉnh thoảng nói "Hỏi mình nhé!"
+      }
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}

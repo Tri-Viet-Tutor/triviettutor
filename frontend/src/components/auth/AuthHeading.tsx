@@ -1,6 +1,6 @@
 import type { AuthHeadingProps } from "@/interfaces/auth";
 
-/** Tiêu đề của một trang xác thực, căn giữa dưới logo: tên trang và một dòng hướng dẫn. */
+// Tiêu đề của một trang xác thực, căn giữa dưới logo: tên trang và một dòng hướng dẫn.
 export function AuthHeading({ title, description }: AuthHeadingProps) {
   return (
     <div className="mb-7 text-center">

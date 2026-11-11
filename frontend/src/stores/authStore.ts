@@ -3,17 +3,13 @@ import { persist } from "zustand/middleware";
 import type { AuthState } from "@/interfaces/auth";
 import { queryClient } from "@/services/queryClient";
 
-/**
- * Trạng thái đăng nhập toàn cục (Zustand).
- *
- * Dùng middleware `persist` lưu vào localStorage để tải lại trang vẫn còn đăng nhập.
- * Khi lên production nên cân nhắc chuyển token sang cookie httpOnly.
- * Mỗi lần đổi người dùng đều xóa cache của TanStack Query để không lộ dữ liệu người trước.
- *
- * Chỉ lấy đúng phần cần dùng:
- *   const user = useAuthStore(s => s.user);
- *   const isAuthenticated = useAuthStore(s => s.isAuthenticated);
- */
+// Trạng thái đăng nhập toàn cục (Zustand).
+// Dùng middleware `persist` lưu vào localStorage để tải lại trang vẫn còn đăng nhập.
+// Khi lên production nên cân nhắc chuyển token sang cookie httpOnly.
+// Mỗi lần đổi người dùng đều xóa cache của TanStack Query để không lộ dữ liệu người trước.
+// Chỉ lấy đúng phần cần dùng:
+// const user = useAuthStore(s => s.user);
+// const isAuthenticated = useAuthStore(s => s.isAuthenticated);
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({

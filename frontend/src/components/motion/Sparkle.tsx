@@ -1,10 +1,8 @@
 import type { CSSProperties } from "react";
 import type { SparkleProps } from "@/interfaces/motion";
 
-/**
- * Ngôi sao bốn cánh nhấp nháy (hiệu ứng .twinkle trong styles/index.css),
- * đặt tuyệt đối trong khung chứa. Chỉ để trang trí — khung chứa nên có aria-hidden.
- */
+// Ngôi sao bốn cánh nhấp nháy (hiệu ứng .twinkle trong styles/index.css),
+// đặt tuyệt đối trong khung chứa. Chỉ để trang trí — khung chứa nên có aria-hidden.
 export function Sparkle({ left, top, size, delay, className = "fill-brand-orange" }: SparkleProps) {
   return (
     <svg

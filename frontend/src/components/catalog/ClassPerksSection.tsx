@@ -6,17 +6,17 @@ import { CONTAINER } from "@/constants/classNames";
 import { CLASS_PERKS } from "@/constants/classOptions";
 import { ROUTES } from "@/constants/routes";
 
-/**
- * Sĩ số và tiện ích lớp học: dải nền vàng kem tràn ngang trang, hai mép hoà vào nền giấy. Bên trái là sĩ số một lớp,
- * bên phải là những việc học viên làm được trên hệ thống, mỗi việc một thẻ trong suốt.
- */
+// Sĩ số và tiện ích lớp học: dải nền vàng kem tràn ngang trang, hai mép hoà vào nền giấy. Bên trái là sĩ số một lớp,
+// bên phải là những việc học viên làm được trên hệ thống, mỗi việc một thẻ trong suốt.
 export function ClassPerksSection() {
   return (
     <section
       id="class-perks"
       className="relative overflow-hidden bg-[linear-gradient(135deg,#FFF6E0_0%,#FFE9BE_50%,#FFDDA0_100%)] py-16 text-brand-navy lg:py-24"
     >
-      {/* Quầng sáng trắng sau sĩ số, quầng cam ở góc trên phải, chấm bi mờ */}
+      {
+        // Quầng sáng trắng sau sĩ số, quầng cam ở góc trên phải, chấm bi mờ
+      }
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_40%_58%_at_16%_66%,rgba(255,255,255,0.75),transparent_70%),radial-gradient(ellipse_45%_60%_at_92%_8%,rgba(245,160,15,0.38),transparent_70%)]"
@@ -26,7 +26,9 @@ export function ClassPerksSection() {
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(11,58,140,0.14)_1.2px,transparent_1.2px)] bg-[length:24px_24px] [mask-image:linear-gradient(200deg,black,transparent_60%)]"
       />
 
-      {/* Hai mép hoà vào nền giấy của phần trên và dưới */}
+      {
+        // Hai mép hoà vào nền giấy của phần trên và dưới
+      }
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-[#F5F1E9] to-transparent"

@@ -10,20 +10,18 @@ import { filterTutors } from "@/utils/tutors";
 import { TUTOR_FAQS, TUTOR_PROFILES } from "@/constants/tutors";
 import { scrollToId } from "@/utils/motion";
 
-/** Ba gia sư trên xấp ảnh mở đầu: người đầu tiên của ba khóa đầu, mỗi người một môn */
+// Ba gia sư trên xấp ảnh mở đầu: người đầu tiên của ba khóa đầu, mỗi người một môn
 const FEATURED_TUTORS = COURSES.slice(0, 3).flatMap((course) =>
   TUTOR_PROFILES.filter((tutor) => tutor.course.id === course.id).slice(0, 1),
 );
 
-/** Cuộn xuống phần kết quả tìm gia sư */
+// Cuộn xuống phần kết quả tìm gia sư
 function scrollToFinder() {
   scrollToId("tutor-finder");
 }
 
-/**
- * Trang "Tìm gia sư": tìm theo tên hoặc lọc theo môn, xem hồ sơ gia sư và khóa đang dạy.
- * Nhận sẵn bộ lọc từ đường dẫn: /tim-gia-su?mon=MATH&q=thuan.
- */
+// Trang "Tìm gia sư": tìm theo tên hoặc lọc theo môn, xem hồ sơ gia sư và khóa đang dạy.
+// Nhận sẵn bộ lọc từ đường dẫn: /tim-gia-su?mon=MATH&q=thuan.
 export function SearchPage() {
   const [searchParams] = useSearchParams();
   // Ô tìm và môn lọc nhận giá trị ban đầu từ ?q= và ?mon= (mã môn lạ thì bỏ qua)
@@ -42,7 +40,7 @@ export function SearchPage() {
     window.scrollTo({ top: 0 });
   }, []);
 
-  /** Bấm ảnh ở phần mở đầu: bỏ bộ lọc để chắc chắn gia sư đó có trong danh sách, rồi cuộn xuống hồ sơ */
+  // Bấm ảnh ở phần mở đầu: bỏ bộ lọc để chắc chắn gia sư đó có trong danh sách, rồi cuộn xuống hồ sơ
   function pickTutorFromHero(tutorId: string) {
     setQuery("");
     setSubject("");
@@ -50,7 +48,7 @@ export function SearchPage() {
     scrollToFinder();
   }
 
-  /** Xóa ô tìm và bộ lọc môn */
+  // Xóa ô tìm và bộ lọc môn
   function resetFilters() {
     setQuery("");
     setSubject("");

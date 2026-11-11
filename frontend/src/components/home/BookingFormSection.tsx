@@ -6,7 +6,7 @@ import { CONTAINER, FIELD, FIELD_LABEL, FOCUS_RING } from "@/constants/className
 import { COURSES } from "@/constants/courses";
 import { Select } from "@/components/ui/Select";
 
-/** Đăng ký tư vấn: phiếu đăng ký (chưa nối API — nút gửi chưa gửi dữ liệu đi đâu). */
+// Đăng ký tư vấn: phiếu đăng ký (chưa nối API — nút gửi chưa gửi dữ liệu đi đâu).
 export function BookingFormSection() {
   return (
     <section id="booking-form" className="paper-grid bg-[#E8E2D5] py-16 lg:py-24">
@@ -18,12 +18,16 @@ export function BookingFormSection() {
           <p className="mt-4 max-w-md text-[16px] lg:text-[18px] leading-relaxed text-brand-muted">
             Để lại thông tin, trung tâm sẽ liên hệ tư vấn khóa học và lớp phù hợp.
           </p>
-          {/* Máy bay giấy lượn vòng bên cạnh phiếu */}
+          {
+            // Máy bay giấy lượn vòng bên cạnh phiếu
+          }
           <PaperPlane className="mt-6 max-w-[520px] lg:mt-10" />
         </Reveal>
 
         <Reveal delay={120} className="lg:col-span-6 xl:col-span-5 xl:col-start-8">
-          {/* Bóng đổ đặt ở lớp ngoài vì lớp trong bị cắt mép răng cưa */}
+          {
+            // Bóng đổ đặt ở lớp ngoài vì lớp trong bị cắt mép răng cưa
+          }
           <div className="rotate-[0.6deg] drop-shadow-[0_18px_22px_rgba(8,42,102,0.22)]">
             <div className="bg-[#FFFDF7] px-6 pb-8 pt-9 [mask-image:radial-gradient(circle_at_10px_0,transparent_6px,black_6.5px)] [mask-size:20px_100%] sm:px-9 sm:pb-9 sm:pt-10">
               <div className="flex items-start justify-between gap-4 border-b-2 border-dashed border-brand-navy/25 pb-4">
@@ -31,7 +35,9 @@ export function BookingFormSection() {
                   <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-brand-muted">Tri Viet Tutor</p>
                   <h3 className="mt-1 text-[22px] font-extrabold leading-snug text-brand-navy">Phiếu đăng ký tư vấn</h3>
                 </div>
-                {/* Con dấu */}
+                {
+                  // Con dấu
+                }
                 <span
                   aria-hidden="true"
                   className="flex h-16 w-16 shrink-0 -rotate-12 items-center justify-center rounded-full border-2 border-dashed border-brand-orangeHover text-brand-orangeHover"
@@ -59,7 +65,9 @@ export function BookingFormSection() {
                       Lớp học của con
                     </label>
                     <Select id="booking-grade" className={FIELD}>
-                      {/* Các lựa chọn chỉ để hiển thị — phiếu chưa gửi dữ liệu đi đâu */}
+                      {
+                        // Các lựa chọn chỉ để hiển thị — phiếu chưa gửi dữ liệu đi đâu
+                      }
                       <option>Lớp 10</option>
                       <option>Lớp 11</option>
                       <option>Lớp 12</option>
@@ -100,7 +108,9 @@ export function BookingFormSection() {
                     <input id="booking-area" type="text" placeholder="Quận 1, Thủ Đức..." className={FIELD} />
                   </div>
                 </div>
-                {/* Nút gửi, có con kiến bò trên mép nút nhắc bấm đăng ký */}
+                {
+                  // Nút gửi, có con kiến bò trên mép nút nhắc bấm đăng ký
+                }
                 <div className="relative !mt-14">
                   <CrawlingAnt message="Nhấn nút đăng ký nào!" className="inset-x-[68px]" />
                   <button

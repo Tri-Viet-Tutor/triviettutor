@@ -1,15 +1,3 @@
-/* ─────────────────────────────────────────────────────────────────────────────
- * Kiểu dữ liệu khớp với backend (E:\triviettutor\backend — Spring Boot 3, Java 21).
- *
- * Tên thuộc tính ở đây lấy đúng theo các DTO / enum của backend; khi backend đổi
- * thì sửa file này trước, phần còn lại của frontend sẽ báo lỗi kiểu ở chỗ cần sửa.
- *
- * Quy ước chuyển kiểu Java → JSON:
- *   Long / Integer   → number
- *   LocalDate        → chuỗi "YYYY-MM-DD"
- *   LocalTime        → chuỗi "HH:mm:ss"
- *   OffsetDateTime   → chuỗi ISO-8601 có múi giờ
- * ───────────────────────────────────────────────────────────────────────────── */
 
 export type IsoDate = string;
 
@@ -19,7 +7,7 @@ export type IsoDateTime = string;
 
 // ── common/api ───────────────────────────────────────────────────────────────
 
-/** common.api.ApiResponse — mọi endpoint đều trả về khung này. Thuộc tính null bị lược bỏ. */
+// common.api.ApiResponse — mọi endpoint đều trả về khung này. Thuộc tính null bị lược bỏ.
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -27,7 +15,7 @@ export interface ApiResponse<T> {
   errorCode?: ErrorCode;
 }
 
-/** common.api.PageResponse */
+// common.api.PageResponse
 export interface PageResponse<T> {
   content: T[];
   page: number;
@@ -36,7 +24,7 @@ export interface PageResponse<T> {
   totalPages: number;
 }
 
-/** common.exception.ErrorCode, cộng các mã do GlobalExceptionHandler / SecurityConfig tự đặt */
+// common.exception.ErrorCode, cộng các mã do GlobalExceptionHandler / SecurityConfig tự đặt
 export type ErrorCode =
   | "UNAUTHORIZED"
   | "INVALID_CREDENTIALS"
@@ -223,46 +211,44 @@ export type ErrorCode =
 
 // ── Người dùng & đăng nhập (dto.auth, entity.User) ───────────────────────────
 
-/** Giá trị cột users.role — mỗi người dùng một vai trò */
+// Giá trị cột users.role — mỗi người dùng một vai trò
 export type Role = "ROLE_ADMIN" | "ROLE_TUTOR" | "ROLE_STUDENT";
 
-/** dto.auth.AuthRequest — POST /auth/login */
+// dto.auth.AuthRequest — POST /auth/login
 export interface AuthRequest {
   email: string;
   password: string;
 }
 
-/**
- * dto.auth.RegisterRequest — POST /auth/register (luôn tạo tài khoản ROLE_STUDENT).
- * Tài khoản mới chưa kích hoạt: backend gửi mã OTP qua email và trả về RegisterResponse;
- * phải gọi POST /auth/verify-email mới nhận được AuthResponse.
- */
+// dto.auth.RegisterRequest — POST /auth/register (luôn tạo tài khoản ROLE_STUDENT).
+// Tài khoản mới chưa kích hoạt: backend gửi mã OTP qua email và trả về RegisterResponse;
+// phải gọi POST /auth/verify-email mới nhận được AuthResponse.
 export interface RegisterRequest {
-  /** 2 – 100 ký tự */
+  // 2 – 100 ký tự
   fullName: string;
   email: string;
-  /** 6 – 128 ký tự */
+  // 6 – 128 ký tự
   password: string;
 }
 
-/** dto.auth.RegisterResponse — kết quả của /auth/register và /auth/resend-verification */
+// dto.auth.RegisterResponse — kết quả của /auth/register và /auth/resend-verification
 export interface RegisterResponse {
   email: string;
   message: string;
 }
 
-/** dto.auth.VerifyEmailRequest — POST /auth/verify-email (mã OTP 6 số, hết hạn sau 5 phút) */
+// dto.auth.VerifyEmailRequest — POST /auth/verify-email (mã OTP 6 số, hết hạn sau 5 phút)
 export interface VerifyEmailRequest {
   email: string;
   otp: string;
 }
 
-/** dto.auth.ResendVerificationRequest — POST /auth/resend-verification */
+// dto.auth.ResendVerificationRequest — POST /auth/resend-verification
 export interface ResendVerificationRequest {
   email: string;
 }
 
-/** dto.auth.AuthResponse.UserInfo */
+// dto.auth.AuthResponse.UserInfo
 export interface UserInfo {
   id: number;
   email: string;
@@ -270,7 +256,7 @@ export interface UserInfo {
   role: Role;
 }
 
-/** dto.auth.AuthResponse */
+// dto.auth.AuthResponse
 export interface AuthResponse {
   accessToken: string;
   user: UserInfo;
@@ -296,10 +282,10 @@ export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 
 export type SessionChangeType = "MAKEUP" | "SUBSTITUTE" | "CANCEL" | "REJECT_LEAVE";
 
-/** Lịch học cố định trong tuần */
+// Lịch học cố định trong tuần
 export type SchedulePattern = "MON_WED_FRI" | "TUE_THU_SAT" | "SAT_SUN";
 
-/** Ca học: sáng 08:00–10:00, chiều 14:00–16:00, tối 18:00–20:00, tối muộn 19:30–21:30 */
+// Ca học: sáng 08:00–10:00, chiều 14:00–16:00, tối 18:00–20:00, tối muộn 19:30–21:30
 export type TimeSlot = "SLOT_MORNING" | "SLOT_AFTERNOON" | "SLOT_EVENING" | "SLOT_LATE_EVENING";
 
 // ── Danh mục khóa học & lớp (catalog) ─────────────────────────────────────────
@@ -308,73 +294,73 @@ export type TimeSlot = "SLOT_MORNING" | "SLOT_AFTERNOON" | "SLOT_EVENING" | "SLO
 // (Documentation/02-System-Architecture/02-Backend-Architecture-and-API-Specification.md, mục 7.3)
 // để giao diện dùng đúng tên thuộc tính ngay từ đầu; đối chiếu lại khi backend làm xong.
 
-/** courses.grade_level — chỉ phục vụ học sinh THPT: lớp 10, 11, 12. */
+// courses.grade_level — chỉ phục vụ học sinh THPT: lớp 10, 11, 12.
 export type GradeLevel = "GRADE_10" | "GRADE_11" | "GRADE_12";
 
-/** class_groups.delivery_mode — OFFLINE là học tại trung tâm (không dạy tại nhà học viên) */
+// class_groups.delivery_mode — OFFLINE là học tại trung tâm (không dạy tại nhà học viên)
 export type DeliveryMode = "ONLINE" | "OFFLINE";
 
-/** Course — POST/GET /admin/courses */
+// Course — POST/GET /admin/courses
 export interface CourseResponse {
   id: number;
   name: string;
-  /** Mã môn, ví dụ "MATH" */
+  // Mã môn, ví dụ "MATH"
   subject: string;
-  /** Id môn trong bảng subjects (dùng để thêm môn vào giỏ hàng) */
+  // Id môn trong bảng subjects (dùng để thêm môn vào giỏ hàng)
   subjectId?: number;
-  /** Học phí 1 kèm 1 cho MỘT buổi; học phí lớp = giá này × số buổi của lớp */
+  // Học phí 1 kèm 1 cho MỘT buổi; học phí lớp = giá này × số buổi của lớp
   pricePerSession?: number;
   gradeLevel: GradeLevel;
-  /** Học phí gốc của lớp 1 kèm 1 cho trọn khóa (đồng) */
+  // Học phí gốc của lớp 1 kèm 1 cho trọn khóa (đồng)
   basePrice1on1: number;
   totalSessions: number;
-  /** Thời lượng mỗi buổi, mặc định 120 phút */
+  // Thời lượng mỗi buổi, mặc định 120 phút
   durationMinutes: number;
   description: string | null;
   active: boolean;
   createdAt: IsoDateTime;
   updatedAt?: IsoDateTime;
-  /** Học phí mỗi học viên theo bậc sĩ số do backend tính (PricingService); backend cũ chưa có thì undefined */
+  // Học phí mỗi học viên theo bậc sĩ số do backend tính (PricingService); backend cũ chưa có thì undefined
   priceTiers?: CoursePriceTier[];
 }
 
-/** Một bậc học phí theo sĩ số (CourseResponse.priceTiers) */
+// Một bậc học phí theo sĩ số (CourseResponse.priceTiers)
 export interface CoursePriceTier {
   minStudents: number;
   maxStudents: number;
-  /** 0, 0.2, 0.35, 0.4 */
+  // 0, 0.2, 0.35, 0.4
   discountRate: number;
-  /** Số tiền mỗi học viên trả (đồng) */
+  // Số tiền mỗi học viên trả (đồng)
   pricePerStudent: number;
 }
 
-/** GET /admin/classes/summary — số lớp theo từng trạng thái */
+// GET /admin/classes/summary — số lớp theo từng trạng thái
 export interface ClassSummaryResponse {
   total: number;
   byStatus: Record<ClassStatus, number>;
 }
 
-/** GET /admin/courses/summary */
+// GET /admin/courses/summary
 export interface CourseSummaryResponse {
   total: number;
   active: number;
   inactive: number;
 }
 
-/** Một môn học — GET /catalog/subjects; `code` là mã môn lưu ở khóa học ("MATH") */
+// Một môn học — GET /catalog/subjects; `code` là mã môn lưu ở khóa học ("MATH")
 export interface SubjectResponse {
   id: number;
   code: string;
 }
 
-/** Một lớp đang mở đăng ký — phần tử của GET /catalog/classes */
+// Một lớp đang mở đăng ký — phần tử của GET /catalog/classes
 export interface CatalogClassResponse {
   courseId?: number;
-  /** Id môn trong bảng subjects (dùng để thêm vào giỏ hàng) */
+  // Id môn trong bảng subjects (dùng để thêm vào giỏ hàng)
   subjectId?: number;
   full?: boolean;
   id: number;
-  /** Ví dụ "MATH-G10-MWF-M-001" */
+  // Ví dụ "MATH-G10-MWF-M-001"
   classCode: string;
   courseName: string;
   subject: string;
@@ -383,32 +369,32 @@ export interface CatalogClassResponse {
   deliveryMode: DeliveryMode;
   schedulePattern: SchedulePattern;
   timeSlot: TimeSlot;
-  /** Ví dụ "08:00 – 10:00" */
+  // Ví dụ "08:00 – 10:00"
   timeSlotLabel: string;
   startDate: IsoDate;
-  /** Hạn chốt đăng ký */
+  // Hạn chốt đăng ký
   enrollmentDeadline?: IsoDate | null;
   totalSessions: number;
   basePrice1on1: number;
-  /** Học phí ước tính nếu đăng ký ngay (theo bậc sĩ số sau khi thêm học viên này) */
+  // Học phí ước tính nếu đăng ký ngay (theo bậc sĩ số sau khi thêm học viên này)
   estimatedFee: number;
-  /** Ví dụ 0.35 = giảm 35% */
+  // Ví dụ 0.35 = giảm 35%
   discountRate: number;
   currentStudents: number;
-  /** 1 với ONE_ON_ONE, 8 với GROUP */
+  // 1 với ONE_ON_ONE, 8 với GROUP
   maxStudents: number;
   spotsLeft: number;
-  /** Gia sư phụ trách lớp (phân công khi mở lớp); chưa phân công thì không có */
+  // Gia sư phụ trách lớp (phân công khi mở lớp); chưa phân công thì không có
   tutorId?: number | null;
   tutorName?: string | null;
-  /** Điểm đánh giá trung bình của gia sư (1 – 5); chưa có đánh giá thì null */
+  // Điểm đánh giá trung bình của gia sư (1 – 5); chưa có đánh giá thì null
   tutorRating?: number | null;
   tutorRatingCount?: number;
-  /** Học phí 1 kèm 1 cho một buổi (basePrice1on1 là giá cả lớp theo số buổi của lớp) */
+  // Học phí 1 kèm 1 cho một buổi (basePrice1on1 là giá cả lớp theo số buổi của lớp)
   pricePerSession?: number;
 }
 
-/** Tham số lọc của GET /catalog/classes */
+// Tham số lọc của GET /catalog/classes
 export interface CatalogClassesQuery {
   subject?: string;
   gradeLevel?: GradeLevel;
@@ -421,7 +407,7 @@ export interface CatalogClassesQuery {
 
 // ── Buổi học (dto.schedule) ──────────────────────────────────────────────────
 
-/** dto.schedule.SessionResponse — /me/sessions, /admin/sessions, /sessions/{sessionId} */
+// dto.schedule.SessionResponse — /me/sessions, /admin/sessions, /sessions/{sessionId}
 export interface SessionResponse {
   sessionId: number;
   classGroupId: number;
@@ -434,18 +420,18 @@ export interface SessionResponse {
   actualTutorId: number | null;
   meetingUrl: string | null;
   topicId: number | null;
-  /** Khác null nghĩa là buổi học bù của buổi có mã này */
+  // Khác null nghĩa là buổi học bù của buổi có mã này
   originalSessionId: number | null;
   attendanceLocked: boolean;
   attendanceNeedsReview: boolean;
 }
 
-/** dto.schedule.MeetingUrlRequest — PUT /admin/sessions/{sessionId}/meeting-url (phải là URL https) */
+// dto.schedule.MeetingUrlRequest — PUT /admin/sessions/{sessionId}/meeting-url (phải là URL https)
 export interface MeetingUrlRequest {
   meetingUrl: string;
 }
 
-/** dto.meeting.MeetingTokenResponse — POST /api/v1/meetings/sessions/{sessionId}/token */
+// dto.meeting.MeetingTokenResponse — POST /api/v1/meetings/sessions/{sessionId}/token
 export interface MeetingTokenResponse {
   token: string;
   serverUrl: string;
@@ -500,7 +486,7 @@ export interface MeetingSessionLogsResponse {
   totalParticipants: number;
 }
 
-/** Tham số lọc của GET /me/sessions */
+// Tham số lọc của GET /me/sessions
 export interface MySessionsQuery {
   from?: IsoDate;
   to?: IsoDate;
@@ -508,7 +494,7 @@ export interface MySessionsQuery {
   classGroupId?: number;
 }
 
-/** Tham số lọc và phân trang của GET /admin/sessions (page từ 0, size 1 – 100, mặc định 20) */
+// Tham số lọc và phân trang của GET /admin/sessions (page từ 0, size 1 – 100, mặc định 20)
 export interface AdminSessionsQuery extends MySessionsQuery {
   tutorId?: number;
   page?: number;
@@ -517,14 +503,14 @@ export interface AdminSessionsQuery extends MySessionsQuery {
 
 // ── Phân công gia sư (dto.assignment) ────────────────────────────────────────
 
-/** dto.assignment.AvailabilityResponse — một khung giờ rảnh của gia sư */
+// dto.assignment.AvailabilityResponse — một khung giờ rảnh của gia sư
 export interface AvailabilityResponse {
   availableDate: IsoDate;
   startTime: IsoTime;
   endTime: IsoTime;
 }
 
-/** dto.assignment.TutorBoardResponse — GET /admin/tutor-board: khung rảnh đã khai và buổi đang dạy của một gia sư */
+// dto.assignment.TutorBoardResponse — GET /admin/tutor-board: khung rảnh đã khai và buổi đang dạy của một gia sư
 export interface TutorBoardResponse {
   tutorId: number;
   tutorName: string;
@@ -532,12 +518,12 @@ export interface TutorBoardResponse {
   teaching: { sessionId: number; classGroupId: number; date: IsoDate; startTime: IsoTime; endTime: IsoTime }[];
 }
 
-/** dto.assignment.AvailabilityRequest — PUT /tutor/availability (tối đa 1000 khung giờ) */
+// dto.assignment.AvailabilityRequest — PUT /tutor/availability (tối đa 1000 khung giờ)
 export interface AvailabilityRequest {
   slots: AvailabilityResponse[];
 }
 
-/** dto.assignment.ScheduleConflictResponse — cũng là data của lỗi SCHEDULE_CONFLICT */
+// dto.assignment.ScheduleConflictResponse — cũng là data của lỗi SCHEDULE_CONFLICT
 export interface ScheduleConflictResponse {
   requestedSessionId: number;
   conflictSessionId: number;
@@ -547,7 +533,7 @@ export interface ScheduleConflictResponse {
   endTime: IsoTime;
 }
 
-/** dto.assignment.AvailableTutorResponse — GET /admin/classes/{classId}/available-tutors */
+// dto.assignment.AvailableTutorResponse — GET /admin/classes/{classId}/available-tutors
 export interface AvailableTutorResponse {
   tutorId: number;
   tutorName: string;
@@ -557,19 +543,19 @@ export interface AvailableTutorResponse {
   conflicts: ScheduleConflictResponse[];
 }
 
-/** dto.assignment.AssignTutorRequest — POST /admin/classes/{classId}/assign */
+// dto.assignment.AssignTutorRequest — POST /admin/classes/{classId}/assign
 export interface AssignTutorRequest {
   tutorId: number;
 }
 
-/** dto.assignment.ReassignTutorRequest — PUT /admin/classes/{classId}/reassign */
+// dto.assignment.ReassignTutorRequest — PUT /admin/classes/{classId}/reassign
 export interface ReassignTutorRequest {
   tutorId: number;
-  /** tối đa 1000 ký tự */
+  // tối đa 1000 ký tự
   reason: string;
 }
 
-/** dto.assignment.AssignmentResponse */
+// dto.assignment.AssignmentResponse
 export interface AssignmentResponse {
   assignmentId: number;
   classGroupId: number;
@@ -584,23 +570,21 @@ export interface AssignmentResponse {
 
 // ── Điểm danh (dto.attendance) ───────────────────────────────────────────────
 
-/** dto.attendance.AttendanceRecordResponse */
+// dto.attendance.AttendanceRecordResponse
 export interface AttendanceRecordResponse {
   recordId: number;
   studentId: number;
   status: AttendanceStatus;
   note: string | null;
-  /** Giờ tới lớp (khi đi trễ) */
+  // Giờ tới lớp (khi đi trễ)
   arrivedAt: IsoDateTime | null;
   recordedBy: number | null;
   recordedAt: IsoDateTime | null;
   locked: boolean;
 }
 
-/**
- * dto.attendance.AttendanceResponse — GET /sessions/{sessionId}/attendance.
- * Học viên chỉ nhận bản ghi của chính mình: `records` rỗng nghĩa là buổi này chưa điểm danh.
- */
+// dto.attendance.AttendanceResponse — GET /sessions/{sessionId}/attendance.
+// Học viên chỉ nhận bản ghi của chính mình: `records` rỗng nghĩa là buổi này chưa điểm danh.
 export interface AttendanceResponse {
   sessionId: number;
   sessionStatus: SessionStatus;
@@ -612,39 +596,37 @@ export interface AttendanceResponse {
   studentIds: number[];
   missingStudentIds: number[];
   records: AttendanceRecordResponse[];
-  /** Họ tên học viên theo mã (backend mới); backend cũ không có thì chỉ hiện mã */
+  // Họ tên học viên theo mã (backend mới); backend cũ không có thì chỉ hiện mã
   studentNames?: Record<string, string>;
-  /** Học viên trung tâm đã duyệt nghỉ có phép buổi này: miễn điểm danh */
+  // Học viên trung tâm đã duyệt nghỉ có phép buổi này: miễn điểm danh
   excusedStudentIds?: number[];
 }
 
-/** dto.attendance.AttendanceRecordInput */
+// dto.attendance.AttendanceRecordInput
 export interface AttendanceRecordInput {
   studentId: number;
   status: AttendanceStatus;
-  /** tối đa 1000 ký tự */
+  // tối đa 1000 ký tự
   note?: string;
-  /** Giờ học viên tới lớp (tuỳ chọn); phải nằm trong buổi học và không ở tương lai */
+  // Giờ học viên tới lớp (tuỳ chọn); phải nằm trong buổi học và không ở tương lai
   arrivedAt?: IsoDateTime;
 }
 
-/**
- * dto.attendance.AttendanceSubmission — PUT /sessions/{sessionId}/attendance.
- * Gia sư gửi là tự xác nhận đã dạy. Quản trị muốn xác nhận đã dạy thì gửi teachingConfirmed = true kèm reason.
- */
+// dto.attendance.AttendanceSubmission — PUT /sessions/{sessionId}/attendance.
+// Gia sư gửi là tự xác nhận đã dạy. Quản trị muốn xác nhận đã dạy thì gửi teachingConfirmed = true kèm reason.
 export interface AttendanceSubmission {
   records: AttendanceRecordInput[];
   teachingConfirmed?: boolean;
   reason?: string;
 }
 
-/** dto.attendance.AttendanceLockInput — PATCH /admin/sessions/{sessionId}/attendance/lock */
+// dto.attendance.AttendanceLockInput — PATCH /admin/sessions/{sessionId}/attendance/lock
 export interface AttendanceLockInput {
   locked: boolean;
   reason: string;
 }
 
-/** dto.attendance.AttendanceCorrection — PATCH /admin/sessions/{sessionId}/attendance/{recordId} */
+// dto.attendance.AttendanceCorrection — PATCH /admin/sessions/{sessionId}/attendance/{recordId}
 export interface AttendanceCorrection {
   status: AttendanceStatus;
   note?: string;
@@ -654,39 +636,35 @@ export interface AttendanceCorrection {
 
 // ── Hồ sơ của tôi (dto.user) ─────────────────────────────────────────────────
 
-/** dto.user.MeResponse.StudentProfileResponse */
+// dto.user.MeResponse.StudentProfileResponse
 export interface StudentProfileResponse {
   phone: string | null;
   address: string | null;
 }
 
-/** dto.user.MeResponse.TutorProfileResponse */
+// dto.user.MeResponse.TutorProfileResponse
 export interface TutorProfileResponse {
-  /** Lương cơ bản mỗi tháng (VND) */
+  // Lương cơ bản mỗi tháng (VND)
   baseSalary: number | null;
-  /** Thù lao mỗi buổi dạy (VND) */
+  // Thù lao mỗi buổi dạy (VND)
   sessionRate: number | null;
   bio: string | null;
 }
 
-/**
- * dto.user.MeResponse — GET /me, PUT /me.
- * `profile` theo vai trò: học viên có phone / address, gia sư có baseSalary / sessionRate / bio, quản trị là null.
- */
+// dto.user.MeResponse — GET /me, PUT /me.
+// `profile` theo vai trò: học viên có phone / address, gia sư có baseSalary / sessionRate / bio, quản trị là null.
 export interface MeResponse extends UserInfo {
   createdAt: IsoDateTime;
   googleLinked: boolean;
   profile: Partial<StudentProfileResponse & TutorProfileResponse> | null;
 }
 
-/**
- * dto.user.UpdateMeRequest — PUT /me. Trường lạ hoặc trường của vai trò khác bị backend từ chối:
- * học viên chỉ gửi phone / address, gia sư chỉ gửi bio, quản trị chỉ gửi fullName.
- */
+// dto.user.UpdateMeRequest — PUT /me. Trường lạ hoặc trường của vai trò khác bị backend từ chối:
+// học viên chỉ gửi phone / address, gia sư chỉ gửi bio, quản trị chỉ gửi fullName.
 export interface UpdateMeRequest {
-  /** bắt buộc, tối đa 100 ký tự */
+  // bắt buộc, tối đa 100 ký tự
   fullName: string;
-  /** tối đa 20 ký tự */
+  // tối đa 20 ký tự
   phone?: string;
   address?: string;
   bio?: string;
@@ -694,68 +672,68 @@ export interface UpdateMeRequest {
 
 // ── Quản trị người dùng (dto.user) ───────────────────────────────────────────
 
-/** dto.user.AdminUserResponse — GET /admin/users */
+// dto.user.AdminUserResponse — GET /admin/users
 export interface AdminUserResponse extends UserInfo {
   createdAt: IsoDateTime;
-  /** Bị quản trị viên khóa: không đăng nhập được (cả Google), phiên cũ hết hiệu lực */
+  // Bị quản trị viên khóa: không đăng nhập được (cả Google), phiên cũ hết hiệu lực
   locked: boolean;
-  /** Đã xác thực email / kích hoạt */
+  // Đã xác thực email / kích hoạt
   enabled: boolean;
-  /** LOCKED ưu tiên hơn UNVERIFIED; còn lại ACTIVE */
+  // LOCKED ưu tiên hơn UNVERIFIED; còn lại ACTIVE
   status: AdminUserStatus;
 }
 
-/** Trạng thái tài khoản trong AdminUserResponse */
+// Trạng thái tài khoản trong AdminUserResponse
 export type AdminUserStatus = "ACTIVE" | "LOCKED" | "UNVERIFIED";
 
-/** PATCH /admin/users/{userId}/status */
+// PATCH /admin/users/{userId}/status
 export interface UpdateUserStatusRequest {
   locked: boolean;
 }
 
-/** Tham số của GET /admin/users (page từ 0, size 1 – 100) */
+// Tham số của GET /admin/users (page từ 0, size 1 – 100)
 export interface AdminUsersQuery {
   role?: Role;
-  /** Tìm theo email hoặc họ tên, không phân biệt hoa thường */
+  // Tìm theo email hoặc họ tên, không phân biệt hoa thường
   search?: string;
   page?: number;
   size?: number;
 }
 
-/** dto.user.UpdateTutorProfileRequest — PUT /admin/users/{userId}/tutor-profile (tiền là số nguyên không âm) */
+// dto.user.UpdateTutorProfileRequest — PUT /admin/users/{userId}/tutor-profile (tiền là số nguyên không âm)
 export interface UpdateTutorProfileRequest {
   baseSalary: number;
   sessionRate: number;
   bio?: string;
 }
 
-/** dto.user.CreateTutorRequest — POST /admin/users/tutors */
+// dto.user.CreateTutorRequest — POST /admin/users/tutors
 export interface CreateTutorRequest extends UpdateTutorProfileRequest {
   email: string;
-  /** 6 – 128 ký tự */
+  // 6 – 128 ký tự
   password: string;
-  /** 2 – 100 ký tự */
+  // 2 – 100 ký tự
   fullName: string;
 }
 
 // ── Xin nghỉ & đổi buổi (dto.leave) ──────────────────────────────────────────
 
-/** dto.leave.LeaveRequestInput — POST /sessions/{sessionId}/leave, PATCH /admin/leave-requests/{requestId}/reject */
+// dto.leave.LeaveRequestInput — POST /sessions/{sessionId}/leave, PATCH /admin/leave-requests/{requestId}/reject
 export interface LeaveRequestInput {
-  /** tối đa 1000 ký tự */
+  // tối đa 1000 ký tự
   reason: string;
 }
 
-/** dto.leave.LeaveRequestResponse */
+// dto.leave.LeaveRequestResponse
 export interface LeaveRequestResponse {
   leaveRequestId: number;
   sessionId: number;
   requesterId: number;
-  /** "ROLE_TUTOR" hoặc "ROLE_STUDENT" */
+  // "ROLE_TUTOR" hoặc "ROLE_STUDENT"
   requesterRole: string;
   reason: string;
   requestedAt: IsoDateTime;
-  /** Tên lấy theo thành phần record `isLateNotice` của backend */
+  // Tên lấy theo thành phần record `isLateNotice` của backend
   isLateNotice: boolean;
   status: LeaveRequestStatus;
   resolution: LeaveResolution | null;
@@ -766,78 +744,78 @@ export interface LeaveRequestResponse {
   sessionNewStatus: SessionStatus;
 }
 
-/** Tham số của GET /me/leave-requests */
+// Tham số của GET /me/leave-requests
 export interface MyLeaveRequestsQuery {
   status?: LeaveRequestStatus;
   page?: number;
   size?: number;
 }
 
-/** Tham số của GET /admin/leave-requests */
+// Tham số của GET /admin/leave-requests
 export interface AdminLeaveRequestsQuery extends MyLeaveRequestsQuery {
   requesterId?: number;
   sessionId?: number;
 }
 
-/** dto.leave.MakeupRequest — POST /admin/sessions/{sessionId}/makeup */
+// dto.leave.MakeupRequest — POST /admin/sessions/{sessionId}/makeup
 export interface MakeupRequest {
-  /** Bỏ trống khi xếp bù cho buổi đã hủy mà không có đơn xin nghỉ */
+  // Bỏ trống khi xếp bù cho buổi đã hủy mà không có đơn xin nghỉ
   leaveRequestId?: number;
   makeupDate: IsoDate;
   startTime: IsoTime;
   endTime: IsoTime;
 }
 
-/** dto.leave.SubstituteRequest — POST /admin/sessions/{sessionId}/substitute */
+// dto.leave.SubstituteRequest — POST /admin/sessions/{sessionId}/substitute
 export interface SubstituteRequest {
   leaveRequestId: number;
   substituteTutorId: number;
   reason: string;
 }
 
-/** dto.leave.CancelSessionRequest — POST /admin/sessions/{sessionId}/cancel */
+// dto.leave.CancelSessionRequest — POST /admin/sessions/{sessionId}/cancel
 export interface CancelSessionRequest {
   reason: string;
   leaveRequestId?: number;
 }
 
-// ── services/api.ts ──
-/** Lỗi đã tách ra từ khung ApiResponse của backend. */
+// ── services/apiClient.ts ──
+// Lỗi đã tách ra từ khung ApiResponse của backend.
 export interface ApiError {
-  /** Thông báo dễ đọc do backend gửi về */
+  // Thông báo dễ đọc do backend gửi về
   message?: string;
-  /** Mã lỗi cho máy đọc — đổi sang câu chữ hiển thị ở nơi cần */
+  // Mã lỗi cho máy đọc — đổi sang câu chữ hiển thị ở nơi cần
   errorCode?: ErrorCode;
-  /** Với VALIDATION_ERROR: tên trường → thông báo lỗi (nằm trong `data` của khung) */
+  // Với VALIDATION_ERROR: tên trường → thông báo lỗi (nằm trong `data` của khung)
   fieldErrors?: Record<string, string>;
 }
 
 // ── services/authService.ts ──
-/** POST /auth/forgot-password — email nhận liên kết (địa chỉ trang do backend tự cấu hình) */
+// POST /auth/forgot-password — email nhận liên kết (địa chỉ trang do backend tự cấu hình)
 export interface ForgotPasswordRequest {
   email: string;
 }
 
-/** POST /auth/reset-password — token lấy từ liên kết trong email */
+// POST /auth/reset-password — token lấy từ liên kết trong email
 export interface ResetPasswordRequest {
   token: string;
-  /** 6 – 128 ký tự, cùng giới hạn với mật khẩu lúc đăng ký */
+  // 6 – 128 ký tự, cùng giới hạn với mật khẩu lúc đăng ký
   newPassword: string;
 }
 
 // ── Thanh toán học phí qua VNPay (services/tuitionPaymentService.ts) ──
 
-/** Trạng thái một giao dịch học phí */
+// Trạng thái một giao dịch học phí
 export type PaymentStatus = "COMPLETED" | "FAILED" | "REQUIRES_REFUND" | "PARTIALLY_REFUNDED" | "REFUNDED";
 
-/** Lớp đang mở đăng ký kèm số chỗ đã giữ và lịch các buổi (GET /catalog/classes) */
+// Lớp đang mở đăng ký kèm số chỗ đã giữ và lịch các buổi (GET /catalog/classes)
 export interface TuitionClass extends CatalogClassResponse {
   status: ClassStatus;
   reservedStudents: number;
   sessions?: { id: number; sessionNumber?: number; date: string; startTime: string; endTime: string; status?: SessionStatus }[];
 }
 
-/** Yêu cầu thanh toán — giữ chỗ trong lớp tới `expiresAt` */
+// Yêu cầu thanh toán — giữ chỗ trong lớp tới `expiresAt`
 export interface PaymentIntent {
   intentId: number;
   classGroupId: number;
@@ -846,7 +824,7 @@ export interface PaymentIntent {
   expiresAt: string;
 }
 
-/** Một lần hoàn tiền của giao dịch */
+// Một lần hoàn tiền của giao dịch
 export interface TuitionRefund {
   refundId: number;
   amount: number;
@@ -857,7 +835,7 @@ export interface TuitionRefund {
   providerResponseCode: string | null;
 }
 
-/** Giao dịch học phí (GET /admin/payments) */
+// Giao dịch học phí (GET /admin/payments)
 export interface TuitionPayment {
   paymentId: number;
   studentId: number;
@@ -870,11 +848,11 @@ export interface TuitionPayment {
   transactionRef: string;
   refundReason: string | null;
   refunds: TuitionRefund[];
-  /** Ưu đãi lớp nhóm đã hoàn vào ví cho ghi danh của giao dịch này */
+  // Ưu đãi lớp nhóm đã hoàn vào ví cho ghi danh của giao dịch này
   discountCredited?: number;
 }
 
-/** Chi tiết yêu cầu thanh toán: giao dịch và ghi danh đi kèm (nếu đã có) */
+// Chi tiết yêu cầu thanh toán: giao dịch và ghi danh đi kèm (nếu đã có)
 export interface IntentDetail {
   intent: PaymentIntent;
   cancelled: boolean;
@@ -882,7 +860,7 @@ export interface IntentDetail {
   enrollment: { enrollmentId: number; status: "ACTIVE" | "CANCELLED" | "REFUNDED" } | null;
 }
 
-/** Đường dẫn sang cổng VNPay Sandbox của một yêu cầu */
+// Đường dẫn sang cổng VNPay Sandbox của một yêu cầu
 export interface VnpayRedirect {
   intentId: number;
   transactionRef: string;
@@ -892,26 +870,26 @@ export interface VnpayRedirect {
 }
 
 // ── Quản lý khóa học / lớp, ghi danh và bảng lương (CourseController, ClassController,
-//    EnrollmentController, PayrollController) ──────────────────────────────────
+// EnrollmentController, PayrollController) ──────────────────────────────────
 
-/** dto.course.CourseRequest — POST /admin/courses, PUT /admin/courses/{courseId} */
+// dto.course.CourseRequest — POST /admin/courses, PUT /admin/courses/{courseId}
 export interface CourseRequest {
   name: string;
-  /** Mã môn, ví dụ "MATH" */
+  // Mã môn, ví dụ "MATH"
   subject: string;
   gradeLevel: GradeLevel;
-  /** Học phí 1 kèm 1 cho MỘT buổi (đồng) khi không gửi totalSessions */
+  // Học phí 1 kèm 1 cho MỘT buổi (đồng) khi không gửi totalSessions
   basePrice1on1: number;
-  /** Bỏ trống: số buổi đặt ở từng lớp (chỉ client cũ còn gửi) */
+  // Bỏ trống: số buổi đặt ở từng lớp (chỉ client cũ còn gửi)
   totalSessions?: number;
   durationMinutes: number;
   description?: string;
 }
 
-/** Tham số lọc của GET /admin/courses */
+// Tham số lọc của GET /admin/courses
 export interface AdminCoursesQuery {
   subject?: string;
-  /** Tìm trong tên khóa (không phân biệt hoa thường) */
+  // Tìm trong tên khóa (không phân biệt hoa thường)
   q?: string;
   gradeLevel?: GradeLevel;
   active?: boolean;
@@ -919,7 +897,7 @@ export interface AdminCoursesQuery {
   size?: number;
 }
 
-/** Một buổi trong lịch dự kiến của lớp (ClassResponse.sessions) */
+// Một buổi trong lịch dự kiến của lớp (ClassResponse.sessions)
 export interface ClassSessionPreview {
   id: number;
   sessionNumber: number;
@@ -929,10 +907,10 @@ export interface ClassSessionPreview {
   status: SessionStatus;
 }
 
-/** dto.classgroup.ClassResponse — GET/POST /admin/classes */
+// dto.classgroup.ClassResponse — GET/POST /admin/classes
 export interface AdminClassResponse extends Omit<CatalogClassResponse, "estimatedFee" | "discountRate"> {
   courseId: number;
-  /** null khi lớp đã đủ chỗ (lớp 1-1 đã có học viên, lớp nhóm đủ 8) */
+  // null khi lớp đã đủ chỗ (lớp 1-1 đã có học viên, lớp nhóm đủ 8)
   estimatedFee: number | null;
   discountRate: number | null;
   status: ClassStatus;
@@ -944,10 +922,10 @@ export interface AdminClassResponse extends Omit<CatalogClassResponse, "estimate
   sessions?: ClassSessionPreview[];
 }
 
-/** Tham số lọc của GET /admin/classes */
+// Tham số lọc của GET /admin/classes
 export interface AdminClassesQuery {
   courseId?: number;
-  /** Tìm trong mã lớp hoặc tên khóa */
+  // Tìm trong mã lớp hoặc tên khóa
   q?: string;
   status?: ClassStatus;
   classType?: ClassType;
@@ -956,7 +934,7 @@ export interface AdminClassesQuery {
   size?: number;
 }
 
-/** dto.classgroup.CreateClassRequest — POST /admin/classes */
+// dto.classgroup.CreateClassRequest — POST /admin/classes
 export interface CreateClassRequest {
   courseId: number;
   classType: ClassType;
@@ -966,29 +944,29 @@ export interface CreateClassRequest {
   startDate: IsoDate;
   enrollmentDeadline?: IsoDate;
   meetingUrl?: string;
-  /** Gia sư phụ trách, phân công ngay khi mở lớp (backend kiểm tra trùng lịch) */
+  // Gia sư phụ trách, phân công ngay khi mở lớp (backend kiểm tra trùng lịch)
   tutorId?: number;
-  /** Số buổi của lớp (1 – 200) */
+  // Số buổi của lớp (1 – 200)
   totalSessions?: number;
 }
 
-/** PATCH /admin/classes/{classId}/status */
+// PATCH /admin/classes/{classId}/status
 export interface ChangeClassStatusRequest {
   newStatus: ClassStatus;
   reason?: string;
 }
 
-/** POST /admin/classes/{classId}/reopen */
+// POST /admin/classes/{classId}/reopen
 export interface ReopenClassRequest {
   startDate: IsoDate;
   enrollmentDeadline?: IsoDate;
   reason: string;
 }
 
-/** Trạng thái một ghi danh đã đóng học phí */
+// Trạng thái một ghi danh đã đóng học phí
 export type EnrollmentStatus = "ACTIVE" | "CANCELLED" | "REFUNDED";
 
-/** dto.payment.EnrollmentResponse — GET /enrollments/my, GET /admin/classes/{classId}/enrollments */
+// dto.payment.EnrollmentResponse — GET /enrollments/my, GET /admin/classes/{classId}/enrollments
 export interface EnrollmentResponse {
   enrollmentId: number;
   studentId: number;
@@ -1002,27 +980,27 @@ export interface EnrollmentResponse {
   cancelledAt: IsoDateTime | null;
   cancellationReason: string | null;
   cancelledBy: number | null;
-  /** Trạng thái lần hoàn tiền gần nhất của giao dịch; null khi chưa có */
+  // Trạng thái lần hoàn tiền gần nhất của giao dịch; null khi chưa có
   refundStatus: "PENDING" | "COMPLETED" | "FAILED" | null;
-  /** Học viên còn được tự hủy và hoàn 100% học phí hay không (BR-02.32) */
+  // Học viên còn được tự hủy và hoàn 100% học phí hay không (BR-02.32)
   cancellable: boolean;
-  /** Đăng ký này được tạo khi đổi từ đăng ký khác (mỗi đăng ký chỉ đổi lớp một lần) */
+  // Đăng ký này được tạo khi đổi từ đăng ký khác (mỗi đăng ký chỉ đổi lớp một lần)
   transferredFromEnrollmentId?: number | null;
-  /** Còn đổi sang lớp khác cùng khóa được không; backend chưa trả thì giao diện tự xét theo hạn chốt */
+  // Còn đổi sang lớp khác cùng khóa được không; backend chưa trả thì giao diện tự xét theo hạn chốt
   transferable?: boolean;
 }
 
-/** Tham số của GET /enrollments/my và GET /admin/classes/{classId}/enrollments */
+// Tham số của GET /enrollments/my và GET /admin/classes/{classId}/enrollments
 export interface EnrollmentsQuery {
   status?: EnrollmentStatus;
   page?: number;
   size?: number;
 }
 
-/** Trạng thái bảng lương của một tháng */
+// Trạng thái bảng lương của một tháng
 export type PayrollStatus = "DRAFT" | "FINALIZED" | "DISPUTED";
 
-/** dto.payroll.PayrollLineResponse — lương một gia sư trong một tháng */
+// dto.payroll.PayrollLineResponse — lương một gia sư trong một tháng
 export interface PayrollLineResponse {
   tutorId: number;
   tutorName: string;
@@ -1032,23 +1010,23 @@ export interface PayrollLineResponse {
   finalizedAt: IsoDateTime | null;
   baseSalary: number;
   sessionRate: number;
-  /** Buổi được tính lương */
+  // Buổi được tính lương
   validSessions: number;
   cancelledSessions: number;
-  /** Buổi của gia sư này nhưng do gia sư khác dạy thay (được dạy thay) */
+  // Buổi của gia sư này nhưng do gia sư khác dạy thay (được dạy thay)
   substitutedOutSessions: number;
-  /** Buổi chưa chốt (chưa khóa điểm danh / chưa xác nhận đã dạy) */
+  // Buổi chưa chốt (chưa khóa điểm danh / chưa xác nhận đã dạy)
   unfinalizedSessions: number;
   sessionPay: number;
   totalPay: number;
-  /** Đối soát từng buổi của tháng (backend luôn trả kèm) */
+  // Đối soát từng buổi của tháng (backend luôn trả kèm)
   reconciliation?: TeachingPeriodSummary | null;
-  /** Lý do và thời điểm gia sư khiếu nại phiếu lương (chỉ có khi status là DISPUTED) */
+  // Lý do và thời điểm gia sư khiếu nại phiếu lương (chỉ có khi status là DISPUTED)
   disputeReason?: string;
   disputedAt?: IsoDateTime;
 }
 
-/** dto.attendance.TeachingSessionResponse — một buổi trong bảng đối soát lương */
+// dto.attendance.TeachingSessionResponse — một buổi trong bảng đối soát lương
 export interface TeachingSessionResponse {
   sessionId: number;
   classGroupId: number;
@@ -1069,10 +1047,10 @@ export interface TeachingSessionResponse {
   actualTutorAtCancellation: number | null;
 }
 
-/** dto.attendance.TeachingPeriodSummary — các buổi của một gia sư trong tháng, chia theo nhóm */
+// dto.attendance.TeachingPeriodSummary — các buổi của một gia sư trong tháng, chia theo nhóm
 export interface TeachingPeriodSummary {
   tutorId: number;
-  /** "2026-10" */
+  // "2026-10"
   month: string;
   completed: TeachingSessionResponse[];
   cancelled: TeachingSessionResponse[];
@@ -1080,13 +1058,13 @@ export interface TeachingPeriodSummary {
   unfinalized: TeachingSessionResponse[];
 }
 
-/** dto.attendance.ActualTutorChange — PATCH /admin/sessions/{sessionId}/actual-tutor */
+// dto.attendance.ActualTutorChange — PATCH /admin/sessions/{sessionId}/actual-tutor
 export interface ActualTutorChange {
   tutorId: number;
   reason: string;
 }
 
-/** dto.payroll.PayrollResponse — GET /admin/payroll/{year}/{month} */
+// dto.payroll.PayrollResponse — GET /admin/payroll/{year}/{month}
 export interface PayrollResponse {
   year: number;
   month: number;
@@ -1094,13 +1072,13 @@ export interface PayrollResponse {
   lines: PayrollLineResponse[];
   totalPayroll: number;
   canFinalize: boolean;
-  /** Các buổi còn chặn việc chốt lương */
+  // Các buổi còn chặn việc chốt lương
   blockingSessionIds: number[];
   finalizedBy: number | null;
   finalizedAt: IsoDateTime | null;
 }
 
-/** Tham số của GET /tutor/payroll */
+// Tham số của GET /tutor/payroll
 export interface TutorPayrollQuery {
   year?: number;
   month?: number;
@@ -1110,10 +1088,10 @@ export interface TutorPayrollQuery {
 
 // ── Giỏ hàng & đơn nhiều lớp (CartController, OrderController) ─────────────
 
-/** GET /cart — giỏ của học viên; mỗi dòng là một môn, chọn lớp cụ thể lúc đặt đơn */
+// GET /cart — giỏ của học viên; mỗi dòng là một môn, chọn lớp cụ thể lúc đặt đơn
 export interface CartResponse {
   id: number | null;
-  /** Tăng mỗi khi giỏ đổi; gửi lại khi đặt đơn để backend biết giỏ chưa bị sửa ở nơi khác */
+  // Tăng mỗi khi giỏ đổi; gửi lại khi đặt đơn để backend biết giỏ chưa bị sửa ở nơi khác
   cartVersion: number;
   items: CartItem[];
 }
@@ -1121,12 +1099,12 @@ export interface CartResponse {
 export interface CartItem {
   id: number;
   subjectId: number;
-  /** Mã môn, ví dụ "MATH" */
+  // Mã môn, ví dụ "MATH"
   subjectName: string;
   addedAt: IsoDateTime;
 }
 
-/** POST /orders/checkout */
+// POST /orders/checkout
 export interface CartCheckoutRequest {
   cartVersion: number;
   items: { cartItemId: number; classId: number }[];
@@ -1134,14 +1112,14 @@ export interface CartCheckoutRequest {
 
 export type CartOrderStatus = "PENDING_PAYMENT" | "PAID" | "CANCELLED" | "EXPIRED" | "PARTIALLY_REFUNDED" | "REFUNDED";
 
-/** Một đơn nhiều lớp với giá đã chốt cho từng lớp */
+// Một đơn nhiều lớp với giá đã chốt cho từng lớp
 export interface CartOrderResponse {
   id: number;
   status: CartOrderStatus;
   totalAmount: number;
   refundedAmount: number;
   createdAt: IsoDateTime;
-  /** Giá giữ đến thời điểm này; quá hạn phải đặt lại */
+  // Giá giữ đến thời điểm này; quá hạn phải đặt lại
   expiresAt: IsoDateTime;
   paidAt: IsoDateTime | null;
   items: {
@@ -1163,11 +1141,11 @@ export interface CartOrderResponse {
 export type HomeworkStatus = "DRAFT" | "PUBLISHED" | "CLOSED";
 export type SubmissionStatus = "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED" | "GRADED";
 
-/** dto.learning.HomeworkResponse */
+// dto.learning.HomeworkResponse
 export interface HomeworkResponse {
   id: number;
   sessionId: number;
-  /** Phiên bản để chống ghi đè; gửi kèm mọi lần sửa / đổi trạng thái */
+  // Phiên bản để chống ghi đè; gửi kèm mọi lần sửa / đổi trạng thái
   version: number;
   title: string;
   instructions: string;
@@ -1180,17 +1158,17 @@ export interface HomeworkResponse {
   closedAt?: IsoDateTime | null;
 }
 
-/** dto.learning.HomeworkRequest — POST /sessions/{sessionId}/homeworks (tạo ở trạng thái DRAFT) */
+// dto.learning.HomeworkRequest — POST /sessions/{sessionId}/homeworks (tạo ở trạng thái DRAFT)
 export interface HomeworkRequest {
   title: string;
   instructions: string;
   resourceUrl?: string;
-  /** Hạn nộp trong tương lai, ISO có múi giờ */
+  // Hạn nộp trong tương lai, ISO có múi giờ
   dueAt: string;
   maxScore: number;
 }
 
-/** dto.learning.SubmissionResponse */
+// dto.learning.SubmissionResponse
 export interface SubmissionResponse {
   id?: number;
   homeworkId: number;
@@ -1206,10 +1184,56 @@ export interface SubmissionResponse {
   gradedAt?: IsoDateTime | null;
 }
 
-/** dto.learning.StudentHomeworkResponse — GET /student/homeworks */
+// dto.learning.StudentHomeworkResponse — GET /student/homeworks
 export interface StudentHomeworkResponse {
   homework: HomeworkResponse;
   classGroupId: number;
   sessionDate: IsoDate;
   submission: SubmissionResponse;
+}
+
+// Một lượt trong hội thoại với chatbot (FE giữ lịch sử, backend không lưu)
+export interface AssistantTurn {
+  role: "user" | "assistant";
+  text: string;
+}
+
+export interface AssistantReply {
+  reply: string;
+  // Số câu hỏi còn lại trong ngày
+  remainingToday: number;
+}
+
+// Tệp đã tải lên (LearningFileController)
+export interface UploadedFile {
+  // Đường dẫn tải về, lưu vào resourceUrl của bài tập / bài nộp
+  url: string;
+  fileName: string;
+  contentType: string;
+  size: number;
+}
+
+// dto.rating.TutorRatingResponse
+export interface TutorRating {
+  id: number;
+  studentId: number;
+  tutorId: number;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// dto.rating.TutorRatingSummaryResponse
+export interface TutorRatingSummary {
+  tutorId: number;
+  tutorName: string | null;
+  averageRating: number | null;
+  totalRatings: number;
+}
+
+export interface StudentTutor {
+  id: number;
+  name: string;
+  classes: TuitionClass[];
 }

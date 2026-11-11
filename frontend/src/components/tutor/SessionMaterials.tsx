@@ -3,11 +3,9 @@ import { AttachmentLink } from "@/components/ui/AttachmentLink";
 import { listSessionHomeworks } from "@/services/homeworkService";
 import { portalErrorMessage } from "@/utils/errors";
 
-/**
- * Tab "Tài liệu" của một buổi: các file / link tài liệu đính kèm theo từng bài tập của buổi này
- * (ô "File / link tài liệu" khi giao bài) — ảnh và video hiện xem trước ngay, YouTube nhúng trình phát.
- * Dùng chung dữ liệu bài tập với tab "Bài tập" (cùng khoá truy vấn).
- */
+// Tab "Tài liệu" của một buổi: các file / link tài liệu đính kèm theo từng bài tập của buổi này
+// (ô "File / link tài liệu" khi giao bài) — ảnh và video hiện xem trước ngay, YouTube nhúng trình phát.
+// Dùng chung dữ liệu bài tập với tab "Bài tập" (cùng khoá truy vấn).
 export function SessionMaterials({ sessionId }: { sessionId: number }) {
   const homeworks = useQuery({ queryKey: ["session-homeworks", sessionId], queryFn: () => listSessionHomeworks(sessionId) });
   const items = (homeworks.data?.content ?? []).filter((homework) => homework.resourceUrl);

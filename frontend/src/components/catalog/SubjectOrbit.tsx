@@ -5,17 +5,17 @@ import { GRADE_LIST_LABEL } from "@/constants/classOptions";
 import { COURSES } from "@/constants/courses";
 import type { SubjectOrbitProps } from "@/interfaces/catalog";
 
-/** Bán kính quỹ đạo, tính theo % cạnh khung vuông */
+// Bán kính quỹ đạo, tính theo % cạnh khung vuông
 const ORBIT_RADIUS = 37;
 
-/**
- * Ảnh mở đầu trang "Khối lớp / Môn học": ảnh học sinh hình tròn ở giữa (khối lớp),
- * năm bong bóng môn học xếp trên một quỹ đạo nét đứt chung quanh. Bấm bong bóng để chọn môn.
- */
+// Ảnh mở đầu trang "Khối lớp / Môn học": ảnh học sinh hình tròn ở giữa (khối lớp),
+// năm bong bóng môn học xếp trên một quỹ đạo nét đứt chung quanh. Bấm bong bóng để chọn môn.
 export function SubjectOrbit({ activeSubject, onPickSubject }: SubjectOrbitProps) {
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[580px]">
-      {/* Quỹ đạo nét đứt và một cung cam */}
+      {
+        // Quỹ đạo nét đứt và một cung cam
+      }
       <svg aria-hidden="true" viewBox="0 0 100 100" fill="none" className="absolute inset-0 h-full w-full">
         <circle cx="50" cy="50" r={ORBIT_RADIUS} className="orbit-dash stroke-brand-navy/30" strokeWidth="0.45" strokeDasharray="1.4 1.8" />
         <circle
@@ -31,18 +31,24 @@ export function SubjectOrbit({ activeSubject, onPickSubject }: SubjectOrbitProps
         />
       </svg>
 
-      {/* Ảnh giữa */}
+      {
+        // Ảnh giữa
+      }
       <div className="absolute inset-[18%] overflow-hidden rounded-full border-[6px] border-white bg-brand-tint shadow-[0_24px_40px_-18px_rgba(8,42,102,0.55)]">
         <img src={CATALOG_HERO_PHOTO.src} alt={CATALOG_HERO_PHOTO.alt} className="h-full w-full object-cover" />
       </div>
 
-      {/* Nhãn khối lớp vắt ngang đáy ảnh */}
+      {
+        // Nhãn khối lớp vắt ngang đáy ảnh
+      }
       <p className="absolute left-1/2 top-[82%] flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-brand-navyDeep px-3 py-1.5 text-[12px] font-bold text-white shadow-soft sm:gap-2 sm:px-4 sm:py-2 sm:text-[15px]">
         <Icon name="school" className="text-[15px] text-brand-orange sm:text-[18px]" />
         {GRADE_LIST_LABEL}
       </p>
 
-      {/* Bong bóng môn học */}
+      {
+        // Bong bóng môn học
+      }
       {COURSES.map((course, index) => {
         // Đổi góc (độ) sang toạ độ % trên quỹ đạo tròn
         const angle = (SUBJECT_ORBIT_ANGLES[index % SUBJECT_ORBIT_ANGLES.length] * Math.PI) / 180;

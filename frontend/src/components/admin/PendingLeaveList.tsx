@@ -4,12 +4,12 @@ import { Icon } from "@/components/ui/Icon";
 import { PORTAL_CARD, PORTAL_MORE_LINK } from "@/constants/classNames";
 import { ROUTES } from "@/constants/routes";
 import { useUserDirectory } from "@/hooks/useAdminData";
-import type { Role } from "@/interfaces/api";
+import type { Role } from "@/interfaces/dto";
 import { formatClockTime, formatDate } from "@/utils/date";
 import type { PendingLeaveListProps } from "@/interfaces/admin";
 import { displayCode } from "@/utils/classes";
 
-/** Mấy đơn xin nghỉ mới nhất đang chờ duyệt, ở trang Tổng quan của quản trị; bấm để sang trang xử lý. */
+// Mấy đơn xin nghỉ mới nhất đang chờ duyệt, ở trang Tổng quan của quản trị; bấm để sang trang xử lý.
 export function PendingLeaveList({ requests, isError }: PendingLeaveListProps) {
   const { label } = useUserDirectory();
   return (

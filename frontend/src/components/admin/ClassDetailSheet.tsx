@@ -7,28 +7,26 @@ import { CLASS_STATUS, CLASS_TYPE_LABEL, ENROLLMENT_STATUS, SESSION_STATUS } fro
 import { patternLabel } from "@/constants/management";
 import { useAdminSessions, useUserDirectory } from "@/hooks/useAdminData";
 import { useClassEnrollments } from "@/hooks/useManagementData";
-import type { AdminClassResponse } from "@/interfaces/api";
+import type { AdminClassResponse } from "@/interfaces/dto";
 import { formatVnd } from "@/utils/currency";
 import { classNextStep, classStatusActions, discountForSize, estimatedEndDate, sizeTierLabel, displayCode } from "@/utils/classes";
 import { formatDate, parseIsoDate } from "@/utils/date";
 
-/** "02/11/2026" từ "2026-11-02" */
+// "02/11/2026" từ "2026-11-02"
 const isoToText = (iso: string | null | undefined) => (iso ? formatDate(parseIsoDate(iso)) : "–");
 
 interface ClassDetailSheetProps {
-  /** Lớp đang xem; null là đóng ngăn */
+  // Lớp đang xem; null là đóng ngăn
   classItem: AdminClassResponse | null;
   onClose: () => void;
   onChangeStatus: (item: AdminClassResponse, mode: "status" | "reopen") => void;
-  /** Mở hộp thoại phân công gia sư chính cho lớp chưa có gia sư */
+  // Mở hộp thoại phân công gia sư chính cho lớp chưa có gia sư
   onAssign?: (item: AdminClassResponse) => void;
 }
 
-/**
- * Ngăn chi tiết lớp học trượt từ cạnh phải (thẻ <dialog> gốc: giữ tiêu điểm, Esc để đóng):
- * trạng thái và việc cần làm tiếp, thông tin chính, sĩ số và học phí, học viên, lịch từng buổi (thu gọn).
- * Hộp thoại đổi trạng thái / mở lại mở chồng lên trên ngăn này.
- */
+// Ngăn chi tiết lớp học trượt từ cạnh phải (thẻ <dialog> gốc: giữ tiêu điểm, Esc để đóng):
+// trạng thái và việc cần làm tiếp, thông tin chính, sĩ số và học phí, học viên, lịch từng buổi (thu gọn).
+// Hộp thoại đổi trạng thái / mở lại mở chồng lên trên ngăn này.
 export function ClassDetailSheet({ classItem, onClose, onChangeStatus, onAssign }: ClassDetailSheetProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const open = classItem !== null;
@@ -59,6 +57,7 @@ export function ClassDetailSheet({ classItem, onClose, onChangeStatus, onAssign 
   );
 }
 
+// Nội dung ngăn chi tiết lớp: thông tin lớp, việc cần làm tiếp, học viên và lịch từng buổi
 function SheetBody({ item, onClose, onChangeStatus, onAssign }: { item: AdminClassResponse } & Omit<ClassDetailSheetProps, "classItem">) {
   const style = CLASS_STATUS[item.status];
   const next = classNextStep(item, new Date());
@@ -105,7 +104,9 @@ function SheetBody({ item, onClose, onChangeStatus, onAssign }: { item: AdminCla
           </button>
         </div>
 
-        {/* Việc cần làm tiếp và thao tác chính (lớp đã đóng thì không hiện) */}
+        {
+          // Việc cần làm tiếp và thao tác chính (lớp đã đóng thì không hiện)
+        }
         {!closed && (next || actions.length > 0 || reopen) && (
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-brand-sand/60 py-2 pl-4 pr-2">
             <p className={`min-w-0 text-[13.5px] font-medium ${next ? "text-amber-800" : "text-brand-muted"}`}>
@@ -136,7 +137,9 @@ function SheetBody({ item, onClose, onChangeStatus, onAssign }: { item: AdminCla
       </header>
 
       <div className="flex-1 overflow-y-auto overscroll-contain">
-        {/* Thông tin chính */}
+        {
+          // Thông tin chính
+        }
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-b border-brand-sandLine p-6">
           <Fact label="Lịch học" value={patternLabel(item.schedulePattern)} sub={item.timeSlotLabel} />
           <Fact label="Thời gian" value={`${isoToText(item.startDate)} → ${isoToText(endDate)}`} sub={`${item.totalSessions} buổi`} />
@@ -149,7 +152,9 @@ function SheetBody({ item, onClose, onChangeStatus, onAssign }: { item: AdminCla
           {showDeadline && <Fact label="Hạn đăng ký" value={isoToText(item.enrollmentDeadline)} />}
         </dl>
 
-        {/* Sĩ số và học phí theo sĩ số */}
+        {
+          // Sĩ số và học phí theo sĩ số
+        }
         <section className="border-b border-brand-sandLine p-6">
           <div className="flex items-baseline justify-between gap-4">
             <p className="text-[22px] font-extrabold tabular-nums text-brand-ink">
@@ -169,7 +174,9 @@ function SheetBody({ item, onClose, onChangeStatus, onAssign }: { item: AdminCla
           </div>
         </section>
 
-        {/* Học viên */}
+        {
+          // Học viên
+        }
         <section className="border-b border-brand-sandLine p-6">
           <h3 className="text-[15px] font-bold text-brand-navy">Học viên</h3>
           {enrollments.isPending ? (
@@ -200,7 +207,9 @@ function SheetBody({ item, onClose, onChangeStatus, onAssign }: { item: AdminCla
           )}
         </section>
 
-        {/* Lịch từng buổi: thu gọn, mở khi cần */}
+        {
+          // Lịch từng buổi: thu gọn, mở khi cần
+        }
         <details className="group p-6">
           <summary
             className={`flex cursor-pointer list-none items-center justify-between rounded-lg text-[15px] font-bold text-brand-navy ${FOCUS_RING}`}
@@ -242,6 +251,7 @@ function SheetBody({ item, onClose, onChangeStatus, onAssign }: { item: AdminCla
   );
 }
 
+// Một dòng thông tin dạng nhãn - giá trị trong ngăn chi tiết
 function Fact({ label, value, sub, muted = false }: { label: string; value: string; sub?: string; muted?: boolean }) {
   return (
     <div className="min-w-0">

@@ -5,10 +5,8 @@ import { FOCUS_RING as FOCUS } from "@/constants/classNames";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import type { AccountMenuProps } from "@/interfaces/portal";
 
-/**
- * Nút avatar ở góc phải thanh trên; bấm vào sổ xuống menu tài khoản (Hồ sơ, Đăng xuất).
- * Đóng khi bấm ra ngoài, nhấn Esc hoặc chọn một mục.
- */
+// Nút avatar ở góc phải thanh trên; bấm vào sổ xuống menu tài khoản (Hồ sơ, Đăng xuất).
+// Đóng khi bấm ra ngoài, nhấn Esc hoặc chọn một mục.
 export function AccountMenu({ userId, fullName, roleName, email, profileTo, onLogout }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -17,9 +15,11 @@ export function AccountMenu({ userId, fullName, roleName, email, profileTo, onLo
   // Bấm ra ngoài hoặc nhấn Esc thì đóng menu
   useEffect(() => {
     if (!open) return;
+    // Bấm ra ngoài thì đóng menu tài khoản
     function handlePointer(event: MouseEvent) {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     }
+    // Nhấn Esc thì đóng menu và trả focus về nút
     function handleKey(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setOpen(false);
@@ -63,7 +63,9 @@ export function AccountMenu({ userId, fullName, roleName, email, profileTo, onLo
           aria-label="Tài khoản"
           className="absolute right-0 top-[calc(100%+8px)] z-50 w-[260px] overflow-hidden rounded-2xl border border-brand-sandLine bg-white p-2 shadow-[0_20px_44px_-18px_rgba(8,42,102,0.45)]"
         >
-          {/* Thông tin tài khoản */}
+          {
+            // Thông tin tài khoản
+          }
           <div className="mb-1 flex items-center gap-3 rounded-xl bg-brand-sand/70 p-3">
             <UserAvatar userId={userId} name={fullName} size={40} />
             <span className="min-w-0 leading-tight">

@@ -1,16 +1,14 @@
 import { SummaryCard } from "@/components/dashboard/SummaryCard";
 import { ROUTES } from "@/constants/routes";
-import type { AttendanceStatus } from "@/interfaces/api";
+import type { AttendanceStatus } from "@/interfaces/dto";
 import type { LearningSummaryProps } from "@/interfaces/portal";
 import type { SummaryRow } from "@/interfaces/ui";
 import { completedHours, formatHours } from "@/utils/sessions";
 
-/**
- * Thẻ "Hồ sơ học tập" ở cột phải trang Tổng quan của học viên: chuyên cần mấy buổi gần nhất và các con số
- * tổng kết, tất cả tính từ buổi học, điểm danh và đơn xin nghỉ của backend.
- */
+// Thẻ "Hồ sơ học tập" ở cột phải trang Tổng quan của học viên: chuyên cần mấy buổi gần nhất và các con số
+// tổng kết, tất cả tính từ buổi học, điểm danh và đơn xin nghỉ của backend.
 export function LearningSummary({ sessions, upcomingCount, attendance, leaveTotal }: LearningSummaryProps) {
-  /** Số buổi gần nhất có trạng thái điểm danh `status` */
+  // Số buổi gần nhất có trạng thái điểm danh `status`
   const count = (status: AttendanceStatus) => attendance.filter((item) => item.record?.status === status).length;
   const recorded = attendance.filter((item) => item.record).length;
   const completed = sessions.filter((session) => session.status === "COMPLETED").length;

@@ -13,27 +13,25 @@ import {
 import type { CardDetails, DemoCardFormProps } from "@/interfaces/checkout";
 import { cardDigits, matchesDemoCard } from "@/utils/checkout";
 
-/** Form trống, ngân hàng chọn sẵn ngân hàng của thẻ thử nghiệm */
+// Form trống, ngân hàng chọn sẵn ngân hàng của thẻ thử nghiệm
 const EMPTY_CARD: CardDetails = { bank: DEMO_TEST_CARD.bank, number: "", holder: "", issueDate: "" };
 
-/** Chèn khoảng trắng mỗi 4 số: "9704198526191432198" → "9704 1985 2619 1432 198" */
+// Chèn khoảng trắng mỗi 4 số: "9704198526191432198" → "9704 1985 2619 1432 198"
 function formatCardNumber(value: string): string {
   return cardDigits(value)
     .slice(0, 19)
     .replace(/(.{4})(?=.)/g, "$1 ");
 }
 
-/** Thêm dấu "/" giữa tháng và năm: "0715" → "07/15" */
+// Thêm dấu "/" giữa tháng và năm: "0715" → "07/15"
 function formatIssueDate(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 4);
   return digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
 }
 
-/**
- * Thanh toán bằng thẻ ATM nội địa — BẢN DEMO, hai bước như cổng thanh toán: nhập thông tin thẻ rồi nhập mã OTP.
- * Chỉ nhận đúng thẻ thử nghiệm (DEMO_TEST_CARD); mọi thẻ khác đều bị từ chối.
- * Thông tin nhập vào chỉ so sánh ngay trên trình duyệt, không gửi đi đâu và không lưu lại.
- */
+// Thanh toán bằng thẻ ATM nội địa — BẢN DEMO, hai bước như cổng thanh toán: nhập thông tin thẻ rồi nhập mã OTP.
+// Chỉ nhận đúng thẻ thử nghiệm (DEMO_TEST_CARD); mọi thẻ khác đều bị từ chối.
+// Thông tin nhập vào chỉ so sánh ngay trên trình duyệt, không gửi đi đâu và không lưu lại.
 export function DemoCardForm({ isConfirming, onPaid }: DemoCardFormProps) {
   const [card, setCard] = useState<CardDetails>(EMPTY_CARD);
   // Hai bước: nhập thẻ → nhập OTP
@@ -41,13 +39,13 @@ export function DemoCardForm({ isConfirming, onPaid }: DemoCardFormProps) {
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
 
-  /** Sửa một phần thông tin thẻ và xóa lỗi cũ */
+  // Sửa một phần thông tin thẻ và xóa lỗi cũ
   function update(patch: Partial<CardDetails>) {
     setCard((current) => ({ ...current, ...patch }));
     setError("");
   }
 
-  /** Điền nhanh thẻ thử nghiệm */
+  // Điền nhanh thẻ thử nghiệm
   function fillTestCard() {
     setCard({
       bank: DEMO_TEST_CARD.bank,
@@ -58,7 +56,7 @@ export function DemoCardForm({ isConfirming, onPaid }: DemoCardFormProps) {
     setError("");
   }
 
-  /** Bước 1: thẻ khớp thẻ thử nghiệm thì sang bước OTP */
+  // Bước 1: thẻ khớp thẻ thử nghiệm thì sang bước OTP
   function submitCard(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!matchesDemoCard(card)) {
@@ -69,7 +67,7 @@ export function DemoCardForm({ isConfirming, onPaid }: DemoCardFormProps) {
     setStep("otp");
   }
 
-  /** Bước 2: OTP đúng thì báo đã thanh toán */
+  // Bước 2: OTP đúng thì báo đã thanh toán
   function submitOtp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (otp !== DEMO_TEST_CARD.otp) {
@@ -127,7 +125,9 @@ export function DemoCardForm({ isConfirming, onPaid }: DemoCardFormProps) {
 
   return (
     <form onSubmit={submitCard} autoComplete="off" className="space-y-4">
-      {/* Nhắc rõ đây là demo và cho điền nhanh thẻ thử nghiệm */}
+      {
+        // Nhắc rõ đây là demo và cho điền nhanh thẻ thử nghiệm
+      }
       <div className="flex flex-col gap-2.5 rounded-md border border-brand-navy/20 bg-brand-tint px-3.5 py-3 text-[13.5px] leading-relaxed text-brand-navyDeep sm:flex-row sm:items-center sm:justify-between">
         <p className="flex gap-2">
           <Icon name="info" className="mt-px shrink-0 text-[18px] text-brand-navy" />

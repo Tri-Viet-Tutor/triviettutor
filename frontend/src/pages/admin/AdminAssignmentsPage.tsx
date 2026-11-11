@@ -10,23 +10,21 @@ import { UserAvatar } from "@/components/ui/UserAvatar";
 import { subjectIcon } from "@/constants/management";
 import { adminKeys, useAdminLeaveRequests, useUserDirectory } from "@/hooks/useAdminData";
 import { managementKeys } from "@/hooks/useManagementData";
-import type { AdminClassesQuery, ClassStatus } from "@/interfaces/api";
-import { fetchSession } from "@/services/admin";
+import type { AdminClassesQuery, ClassStatus } from "@/interfaces/dto";
+import { fetchSession } from "@/services/adminService";
 import { fetchAdminClasses } from "@/services/managementService";
 import { displayCode } from "@/utils/classes";
 import { parseIsoDate, weekdayName } from "@/utils/date";
 import { dayLabel, formatTimeRange } from "@/utils/sessions";
 import { normalizeText } from "@/utils/text";
 
-/** Lớp có thể có buổi cần dạy thay */
+// Lớp có thể có buổi cần dạy thay
 const CLASS_STATUSES: ClassStatus[] = ["ENROLLING", "ASSIGNED", "IN_PROGRESS"];
 
-/**
- * Trang Phân công dạy thay: gia sư chính đã được chọn ngay lúc mở lớp, nên trang này chỉ lo các buổi
- * gia sư phụ trách xin nghỉ (đơn chờ duyệt của gia sư, GET /admin/leave-requests). Chọn một buổi ở bên trái,
- * bên phải hiện gia sư rảnh đúng giờ đó và lịch rảnh họ đã khai, rồi nhờ người dạy thay (SubstitutePanel).
- * Buổi đang chọn nằm ở ?don=<mã đơn>.
- */
+// Trang Phân công dạy thay: gia sư chính đã được chọn ngay lúc mở lớp, nên trang này chỉ lo các buổi
+// gia sư phụ trách xin nghỉ (đơn chờ duyệt của gia sư, GET /admin/leave-requests). Chọn một buổi ở bên trái,
+// bên phải hiện gia sư rảnh đúng giờ đó và lịch rảnh họ đã khai, rồi nhờ người dạy thay (SubstitutePanel).
+// Buổi đang chọn nằm ở ?don=<mã đơn>.
 export function AdminAssignmentsPage() {
   const [params, setParams] = useSearchParams();
   const [search, setSearch] = useState("");
@@ -65,6 +63,7 @@ export function AdminAssignmentsPage() {
   const selected = items.find((item) => item.request.leaveRequestId === selectedId) ?? null;
   const urgent = items.filter((item) => item.request.isLateNotice).length;
   const loading = leaves.isPending || sessionQueries.some((query) => query.isPending);
+  // Tên gia sư xin nghỉ, chưa có tên thì hiện mã
   const busyName = (tutorId: number) => nameOf(tutorId) ?? `Gia sư ${displayCode("tutor", tutorId)}`;
 
   return (
@@ -107,7 +106,9 @@ export function AdminAssignmentsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
-          {/* Danh sách buổi cần dạy thay */}
+          {
+            // Danh sách buổi cần dạy thay
+          }
           <section aria-label="Buổi cần dạy thay" className="lg:sticky lg:top-24">
             <div className="flex flex-col overflow-hidden rounded-2xl border border-brand-sandLine bg-white shadow-[0_14px_34px_-26px_rgba(11,58,140,0.35)]">
               <div className="space-y-3 p-4 pb-3">
@@ -209,7 +210,9 @@ export function AdminAssignmentsPage() {
           </section>
         </div>
       )}
-      {/* Bảng lịch rảnh của mọi gia sư để tra nhanh ai rảnh ngày nào */}
+      {
+        // Bảng lịch rảnh của mọi gia sư để tra nhanh ai rảnh ngày nào
+      }
       <TutorBoard />
     </>
   );

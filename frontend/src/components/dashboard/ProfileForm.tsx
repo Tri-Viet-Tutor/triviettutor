@@ -7,13 +7,13 @@ import { AuthNotice } from "@/components/auth/AuthNotice";
 import { AuthSubmitButton } from "@/components/auth/AuthSubmitButton";
 import { AUTH_ERROR, AUTH_INPUT, AUTH_LABEL } from "@/constants/classNames";
 import { portalKeys, useUserId } from "@/hooks/usePortalData";
-import type { MeResponse, UpdateMeRequest } from "@/interfaces/api";
+import type { MeResponse, UpdateMeRequest } from "@/interfaces/dto";
 import { updateMe } from "@/services/portalService";
 import { useAuthStore } from "@/stores/authStore";
 import { portalErrorMessage } from "@/utils/errors";
 import type { ProfileFormProps, ProfileFormValues } from "@/interfaces/portal";
 
-/** Giới hạn theo UpdateMeRequest của backend: họ tên bắt buộc ≤ 100 ký tự, điện thoại ≤ 20 ký tự */
+// Giới hạn theo UpdateMeRequest của backend: họ tên bắt buộc ≤ 100 ký tự, điện thoại ≤ 20 ký tự
 const profileSchema = z.object({
   fullName: z.string().trim().min(1, "Hãy nhập họ tên").max(100, "Họ tên tối đa 100 ký tự"),
   phone: z
@@ -25,16 +25,14 @@ const profileSchema = z.object({
   bio: z.string().trim().max(2000, "Phần giới thiệu tối đa 2000 ký tự"),
 });
 
-/** Đổi hồ sơ từ máy chủ sang giá trị form (null → chuỗi rỗng) */
+// Đổi hồ sơ từ máy chủ sang giá trị form (null → chuỗi rỗng)
 function toValues(me: MeResponse): ProfileFormValues {
   return { fullName: me.fullName, phone: me.profile?.phone ?? "", address: me.profile?.address ?? "", bio: me.profile?.bio ?? "" };
 }
 
-/**
- * Form sửa hồ sơ của tôi (PUT /me). Email không đổi được.
- * Mỗi vai trò chỉ được sửa các trường của mình — gửi trường của vai trò khác backend sẽ từ chối:
- * học viên: điện thoại, địa chỉ - gia sư: giới thiệu bản thân - quản trị: chỉ họ tên.
- */
+// Form sửa hồ sơ của tôi (PUT /me). Email không đổi được.
+// Mỗi vai trò chỉ được sửa các trường của mình — gửi trường của vai trò khác backend sẽ từ chối:
+// học viên: điện thoại, địa chỉ - gia sư: giới thiệu bản thân - quản trị: chỉ họ tên.
 export function ProfileForm({ me }: ProfileFormProps) {
   const userId = useUserId();
   const queryClient = useQueryClient();
@@ -58,7 +56,7 @@ export function ProfileForm({ me }: ProfileFormProps) {
     },
   });
 
-  /** Chỉ gửi những trường vai trò này được phép sửa */
+  // Chỉ gửi những trường vai trò này được phép sửa
   function onSubmit(values: ProfileFormValues) {
     const request: UpdateMeRequest = { fullName: values.fullName };
     if (isStudent) {

@@ -4,7 +4,8 @@ import { Link } from "react-router-dom";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
 import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/PortalState";
 import { RateTutorDialog } from "@/components/student/RateTutor";
-import { type StudentTutor, useMyRating, useStudentTutors } from "@/hooks/useRatingData";
+import { useMyRating, useStudentTutors } from "@/hooks/useRatingData";
+import type { StudentTutor } from "@/interfaces/dto";
 import { Icon } from "@/components/ui/Icon";
 import { StarRating } from "@/components/ui/StarRating";
 import { UserAvatar } from "@/components/ui/UserAvatar";
@@ -13,10 +14,8 @@ import { subjectLabel } from "@/constants/management";
 import { ROUTES } from "@/constants/routes";
 import { fetchRatingSummary } from "@/services/ratingService";
 
-/**
- * Trang Đánh giá (/student/feedback): mỗi gia sư đang dạy học viên là một thẻ (môn, khóa, điểm trung bình,
- * đánh giá của mình); bấm "Đánh giá" / "Sửa" mở khung bật lên để chấm sao (RateTutorDialog).
- */
+// Trang Đánh giá (/student/feedback): mỗi gia sư đang dạy học viên là một thẻ (môn, khóa, điểm trung bình,
+// đánh giá của mình); bấm "Đánh giá" / "Sửa" mở khung bật lên để chấm sao (RateTutorDialog).
 export function StudentFeedbackPage() {
   const { tutors, isPending, isError, refetch } = useStudentTutors();
   const [rating, setRating] = useState<StudentTutor | null>(null);
@@ -53,6 +52,7 @@ export function StudentFeedbackPage() {
   );
 }
 
+// Thẻ một gia sư: điểm trung bình, đánh giá của tôi và nút đánh giá
 function TutorCard({ tutor, onRate }: { tutor: StudentTutor; onRate: () => void }) {
   const mine = useMyRating(tutor.id);
   const summary = useQuery({ queryKey: ["rating-summary", tutor.id], queryFn: () => fetchRatingSummary(tutor.id), retry: false });

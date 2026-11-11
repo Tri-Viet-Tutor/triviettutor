@@ -7,10 +7,8 @@ import { HeroSection } from "@/components/home/HeroSection";
 import { StudyMomentsSection } from "@/components/home/StudyMomentsSection";
 import { TutorShowcaseSection } from "@/components/home/TutorShowcaseSection";
 
-/**
- * Trang chủ — ghép các phần trong components/home theo thứ tự hiển thị.
- * Nội dung chữ và dữ liệu nằm ở constants/home.ts, giao diện từng phần ở components/home.
- */
+// Trang chủ — ghép các phần trong components/home theo thứ tự hiển thị.
+// Nội dung chữ và dữ liệu nằm ở constants/home.ts, giao diện từng phần ở components/home.
 export function HomePage() {
   // Mở trang thì về đầu trang
   useEffect(() => {

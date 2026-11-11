@@ -2,12 +2,11 @@ import { Link } from "react-router-dom";
 import { Icon } from "@/components/ui/Icon";
 import { PORTAL_MORE_LINK } from "@/constants/classNames";
 import { ROUTES } from "@/constants/routes";
-import { useSessionHomeworks } from "@/hooks/useLearningData";
-import type { SessionHomeworkListProps } from "@/interfaces/learning";
+import { useSessionHomeworks } from "@/hooks/useHomeworkData";
 import { formatDateTime } from "@/utils/date";
 
-/** Bài tập đã công bố của một buổi học (GET /sessions/{id}/homeworks), kèm lối sang trang Bài tập để làm bài. */
-export function SessionHomeworkList({ sessionId }: SessionHomeworkListProps) {
+// Bài tập đã công bố của một buổi học, kèm link sang trang Bài tập để làm bài
+export function SessionHomeworkList({ sessionId }: { sessionId: number }) {
   const homeworks = useSessionHomeworks(sessionId);
   const items = homeworks.data?.content ?? [];
   // Không tải được hoặc buổi không có bài thì không hiện gì, tránh làm rối chi tiết buổi học

@@ -1,9 +1,7 @@
 import { type RefObject, useEffect, useRef, useState } from "react";
 
-/**
- * Theo dõi một phần tử đã cuộn vào màn hình hay chưa (chỉ bật một lần, sau đó ngừng theo dõi).
- * Gắn `ref` vào phần tử cần theo dõi; `inView` chuyển thành true khi phần tử xuất hiện.
- */
+// Theo dõi một phần tử đã cuộn vào màn hình hay chưa (chỉ bật một lần, sau đó ngừng theo dõi).
+// Gắn `ref` vào phần tử cần theo dõi; `inView` chuyển thành true khi phần tử xuất hiện.
 export function useInView<T extends Element = HTMLElement>(
   options: IntersectionObserverInit = { threshold: 0.12, rootMargin: "0px 0px -6% 0px" },
 ): [RefObject<T>, boolean] {

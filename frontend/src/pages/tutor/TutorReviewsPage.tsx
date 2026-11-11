@@ -10,11 +10,9 @@ import { useAuthStore } from "@/stores/authStore";
 
 type Filter = 0 | 1 | 2 | 3 | 4 | 5;
 
-/**
- * Trang Đánh giá của gia sư (/tutor/reviews): điểm trung bình, phân bố số sao và từng nhận xét học viên gửi,
- * mới nhất lên trước, lọc được theo số sao. Học viên được giữ ẩn danh.
- * Dữ liệu: GET /tutors/{id}/ratings/summary và GET /tutors/{id}/ratings.
- */
+// Trang Đánh giá của gia sư (/tutor/reviews): điểm trung bình, phân bố số sao và từng nhận xét học viên gửi,
+// mới nhất lên trước, lọc được theo số sao. Học viên được giữ ẩn danh.
+// Dữ liệu: GET /tutors/{id}/ratings/summary và GET /tutors/{id}/ratings.
 export function TutorReviewsPage() {
   const tutorId = useAuthStore((state) => state.user?.id);
   const ratings = useQuery({ queryKey: ["tutor-ratings", tutorId], queryFn: () => fetchTutorRatings(tutorId!), enabled: Boolean(tutorId) });
@@ -22,6 +20,7 @@ export function TutorReviewsPage() {
   const [filter, setFilter] = useState<Filter>(0);
 
   const list = [...(ratings.data ?? [])].sort((a, b) => (b.updatedAt ?? b.createdAt).localeCompare(a.updatedAt ?? a.createdAt));
+  // Làm tròn điểm về số sao 1 - 5
   const starsOf = (value: number) => Math.min(5, Math.max(1, Math.round(Number(value))));
   const counts = [5, 4, 3, 2, 1].map((star) => ({ star, count: list.filter((item) => starsOf(item.rating) === star).length }));
   const shown = filter ? list.filter((item) => starsOf(item.rating) === filter) : list;
@@ -41,7 +40,9 @@ export function TutorReviewsPage() {
         <PortalEmpty icon="reviews" title="Bạn chưa có đánh giá nào." description="Khi học viên chấm sao cho bạn, đánh giá sẽ hiện ở đây." />
       ) : (
         <div className="grid items-start gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
-          {/* Tổng quan */}
+          {
+            // Tổng quan
+          }
           <section className={`p-5 lg:sticky lg:top-24 ${PORTAL_CARD}`}>
             <div className="flex items-center gap-4">
               <p className="text-[52px] font-extrabold leading-none tabular-nums text-brand-navy">
@@ -82,7 +83,9 @@ export function TutorReviewsPage() {
             )}
           </section>
 
-          {/* Danh sách nhận xét */}
+          {
+            // Danh sách nhận xét
+          }
           <section>
             <p className="mb-3 text-[14px] text-brand-muted">
               {filter ? `${shown.length} đánh giá ${filter} sao` : `${total} đánh giá, mới nhất trước`}

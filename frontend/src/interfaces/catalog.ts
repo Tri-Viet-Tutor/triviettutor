@@ -1,25 +1,25 @@
 import type { ReactNode } from "react";
-import type { DeliveryMode, GradeLevel, SchedulePattern, TimeSlot } from "@/interfaces/api";
+import type { ClassStatus, DeliveryMode, GradeLevel, SchedulePattern, TimeSlot } from "@/interfaces/dto";
 import type { ClassOption, Course } from "@/interfaces/course";
 
 // ── components/catalog ──
-/** Props của CatalogHero */
+// Props của CatalogHero
 export interface CatalogHeroProps {
-  /** Mã môn đang chọn ở phiếu chọn lớp */
+  // Mã môn đang chọn ở phiếu chọn lớp
   activeSubject: string;
-  /** Bấm một bong bóng môn học */
+  // Bấm một bong bóng môn học
   onPickSubject: (subject: string) => void;
 }
 
-/** Props của ClassBuilderSection */
+// Props của ClassBuilderSection
 export interface ClassBuilderSectionProps {
-  /** Mã môn đang chọn — do trang giữ để phần mở đầu cũng chọn được */
+  // Mã môn đang chọn — do trang giữ để phần mở đầu cũng chọn được
   subject: string;
-  /** Đổi môn */
+  // Đổi môn
   onSubjectChange: (subject: string) => void;
 }
 
-/** Các lựa chọn hiện tại trên phiếu */
+// Các lựa chọn hiện tại trên phiếu
 export interface ClassSlipProps {
   course: Course;
   grade: ClassOption<GradeLevel>;
@@ -28,78 +28,97 @@ export interface ClassSlipProps {
   timeSlot: ClassOption<TimeSlot>;
 }
 
-/** Props của CourseOutline */
+// Props của CourseOutline
 export interface CourseOutlineProps {
-  /** Khóa đang chọn */
+  // Khóa đang chọn
   course: Course;
 }
 
-/** Một nét vẽ trang trí */
+// Một nét vẽ trang trí
 export interface CatalogDoodle {
   id: string;
-  /** Vị trí góc trên trái, tính theo % của nửa trái phần mở đầu */
+  // Vị trí góc trên trái, tính theo % của nửa trái phần mở đầu
   left: number;
   top: number;
-  /** Góc nghiêng (độ) */
+  // Góc nghiêng (độ)
   tilt: number;
-  /** Lệch pha trôi lên xuống (giây) */
+  // Lệch pha trôi lên xuống (giây)
   delay: number;
-  /** Lớp Tailwind: cỡ chữ / chiều rộng, màu */
+  // Lớp Tailwind: cỡ chữ / chiều rộng, màu
   className: string;
-  /** Chữ hoặc SVG của nét vẽ */
+  // Chữ hoặc SVG của nét vẽ
   content: ReactNode;
 }
 
-/** Props của OptionGroup */
+// Props của OptionGroup
 export interface OptionGroupProps<T extends string> {
-  /** Số thứ tự của mục trên phiếu */
+  // Số thứ tự của mục trên phiếu
   step: number;
-  /** Tiêu đề mục */
+  // Tiêu đề mục
   legend: string;
-  /** Tên nhóm radio — mỗi nhóm trên trang phải khác nhau */
+  // Tên nhóm radio — mỗi nhóm trên trang phải khác nhau
   name: string;
   options: ClassOption<T>[];
-  /** Giá trị đang chọn */
+  // Giá trị đang chọn
   value: T;
   onChange: (value: T) => void;
-  /** Lớp Tailwind chia cột cho các ô lựa chọn */
+  // Lớp Tailwind chia cột cho các ô lựa chọn
   columns?: string;
 }
 
-/** Props của OptionSelect */
+// Props của OptionSelect
 export interface OptionSelectProps<T extends string> {
-  /** Số thứ tự của mục trên phiếu */
+  // Số thứ tự của mục trên phiếu
   step: number;
-  /** Tiêu đề mục */
+  // Tiêu đề mục
   legend: string;
-  /** Dùng làm id và name của ô chọn — mỗi ô trên trang phải khác nhau */
+  // Dùng làm id và name của ô chọn — mỗi ô trên trang phải khác nhau
   name: string;
   options: ClassOption<T>[];
   value: T;
   onChange: (value: T) => void;
 }
 
-/** Props của SubjectOrbit */
+// Props của SubjectOrbit
 export interface SubjectOrbitProps {
-  /** Mã môn đang chọn ở phiếu chọn lớp */
+  // Mã môn đang chọn ở phiếu chọn lớp
   activeSubject: string;
-  /** Bấm một bong bóng môn học */
+  // Bấm một bong bóng môn học
   onPickSubject: (subject: string) => void;
 }
 
 // ── constants/classOptions.ts ──
-/** Một tiện ích của lớp học */
+// Một tiện ích của lớp học
 export interface ClassPerk {
-  /** Tên biểu tượng Material Symbols */
+  // Tên biểu tượng Material Symbols
   icon: string;
   title: string;
   description: string;
 }
 
-/** Một bước trong quy trình đăng ký */
+// Một bước trong quy trình đăng ký
 export interface EnrollmentStep {
-  /** Tên biểu tượng Material Symbols */
+  // Tên biểu tượng Material Symbols
   icon: string;
   title: string;
   description: string;
 }
+
+// Một thao tác đổi trạng thái lớp; `targets` gọi lần lượt (Bản nháp → Mở đăng ký đi qua PUBLISHED)
+export interface ClassStatusAction {
+  key: string;
+  label: string;
+  hint: string;
+  icon: string;
+  targets: ClassStatus[];
+  // Thao tác hủy: tô đỏ và bắt buộc nhập lý do
+  danger?: boolean;
+}
+
+// Việc admin cần làm tiếp với một lớp (null nếu không có gì cần làm)
+export interface ClassNextStep {
+  text: string;
+  // "assign": phân công gia sư - "status": đổi trạng thái - "reopen": xử lý lớp không đủ sĩ số
+  action: "assign" | "status" | "reopen";
+}
+

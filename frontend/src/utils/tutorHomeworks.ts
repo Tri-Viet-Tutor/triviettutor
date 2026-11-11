@@ -1,10 +1,7 @@
 import type { TutorHomeworkResponse } from "@/interfaces/homework";
+import type { ClassGroup, HomeworkFilter, HomeworkGroupBy, HomeworkSort, SessionGroup } from "@/interfaces/homework";
 
-/* Nhóm, sắp xếp và lọc danh sách bài tập của gia sư (làm phía trình duyệt). */
-
-export type HomeworkGroupBy = "class" | "none";
-export type HomeworkSort = "due-nearest" | "due-latest" | "session-latest" | "session-earliest" | "pending" | "title";
-export type HomeworkFilter = "all" | "pending" | "DRAFT" | "PUBLISHED" | "CLOSED";
+// Nhóm, sắp xếp và lọc danh sách bài tập của gia sư (làm phía trình duyệt).
 
 export const GROUP_BY_OPTIONS: { value: HomeworkGroupBy; label: string }[] = [
   { value: "class", label: "Lớp → buổi" },
@@ -28,37 +25,22 @@ export const FILTER_OPTIONS: { value: HomeworkFilter; label: string }[] = [
   { value: "CLOSED", label: "Đã đóng" },
 ];
 
-export interface SessionGroup {
-  key: string;
-  sessionNumber: number;
-  sessionDate: string;
-  items: TutorHomeworkResponse[];
-  pendingCount: number;
-}
-
-export interface ClassGroup {
-  key: string;
-  classGroupId: number;
-  sessions: SessionGroup[];
-  total: number;
-  pendingCount: number;
-  draftCount: number;
-}
-
+// Bài tập có khớp bộ lọc đang chọn không
 export function matchesFilter(item: TutorHomeworkResponse, filter: HomeworkFilter): boolean {
   if (filter === "all") return true;
   if (filter === "pending") return item.submittedCount > 0;
   return item.homework.status === filter;
 }
 
-/**
- * Hàm so sánh theo kiểu sắp xếp. "Hạn nộp gần nhất": các hạn chưa tới xếp trước (gần nhất trước),
- * sau đó là các hạn đã qua (vừa qua trước).
- */
+// Hàm so sánh theo kiểu sắp xếp. "Hạn nộp gần nhất": các hạn chưa tới xếp trước (gần nhất trước),
+// sau đó là các hạn đã qua (vừa qua trước).
 export function homeworkComparator(sort: HomeworkSort, now: Date): (a: TutorHomeworkResponse, b: TutorHomeworkResponse) => number {
+  // Hạn nộp dạng mili giây
   const due = (item: TutorHomeworkResponse) => new Date(item.homework.dueAt).getTime();
   const nowMs = now.getTime();
+  // So sánh theo tên bài
   const byTitle = (a: TutorHomeworkResponse, b: TutorHomeworkResponse) => a.homework.title.localeCompare(b.homework.title, "vi");
+  // So sánh theo ngày và số buổi
   const bySession = (a: TutorHomeworkResponse, b: TutorHomeworkResponse) =>
     a.sessionDate.localeCompare(b.sessionDate) || a.sessionNumber - b.sessionNumber;
 
@@ -85,7 +67,7 @@ export function homeworkComparator(sort: HomeworkSort, now: Date): (a: TutorHome
   }
 }
 
-/** Lọc và sắp xếp phẳng */
+// Lọc và sắp xếp phẳng
 export function sortHomeworks(
   items: TutorHomeworkResponse[],
   sort: HomeworkSort,
@@ -95,10 +77,8 @@ export function sortHomeworks(
   return items.filter((item) => matchesFilter(item, filter)).sort(homeworkComparator(sort, now));
 }
 
-/**
- * Nhóm lớp → buổi. Thứ tự lớp và buổi theo phần tử đứng đầu của nhóm trong danh sách đã sắp xếp,
- * nên kiểu sắp xếp áp dụng cho cả ba tầng (lớp, buổi, bài).
- */
+// Nhóm lớp → buổi. Thứ tự lớp và buổi theo phần tử đứng đầu của nhóm trong danh sách đã sắp xếp,
+// nên kiểu sắp xếp áp dụng cho cả ba tầng (lớp, buổi, bài).
 export function groupHomeworks(sorted: TutorHomeworkResponse[]): ClassGroup[] {
   const classes = new Map<number, ClassGroup>();
   for (const item of sorted) {
@@ -122,7 +102,7 @@ export function groupHomeworks(sorted: TutorHomeworkResponse[]): ClassGroup[] {
   return [...classes.values()];
 }
 
-/** Mặc định mở buổi đầu tiên của mỗi lớp và mọi buổi đang có bài chờ chấm */
+// Mặc định mở buổi đầu tiên của mỗi lớp và mọi buổi đang có bài chờ chấm
 export function sessionOpenByDefault(group: ClassGroup, session: SessionGroup): boolean {
   return group.sessions[0] === session || session.pendingCount > 0;
 }

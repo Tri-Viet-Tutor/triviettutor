@@ -2,28 +2,28 @@ import { Sparkle } from "@/components/motion/Sparkle";
 import { Icon } from "@/components/ui/Icon";
 import { PRICE_TAG_POINTS } from "@/constants/pricing";
 
-/** Đồng xu trôi quanh thẻ giá: vị trí theo % khung, cỡ theo px */
+// Đồng xu trôi quanh thẻ giá: vị trí theo % khung, cỡ theo px
 const COINS = [
   { left: 2, top: 20, size: 54, delay: 0 },
   { left: 84, top: 46, size: 42, delay: -1.8 },
   { left: 10, top: 76, size: 34, delay: -3.1 },
 ];
 
-/** Sao nhấp nháy quanh thẻ giá */
+// Sao nhấp nháy quanh thẻ giá
 const SPARKLES = [
   { left: 86, top: 14, size: 22, delay: 0.2 },
   { left: 0, top: 54, size: 14, delay: 1.2 },
   { left: 78, top: 84, size: 18, delay: 0.8 },
 ];
 
-/**
- * Thẻ giá treo dây đung đưa — ảnh mở đầu trang "Mua khóa học".
- * Trên thẻ ghi một khóa gồm những gì (số buổi, thời lượng, sĩ số) thay cho một con số tiền.
- */
+// Thẻ giá treo dây đung đưa — ảnh mở đầu trang "Mua khóa học".
+// Trên thẻ ghi một khóa gồm những gì (số buổi, thời lượng, sĩ số) thay cho một con số tiền.
 export function PriceTag() {
   return (
     <div className="relative mx-auto h-[440px] w-full max-w-[440px] sm:h-[480px]">
-      {/* Quầng sáng sau thẻ */}
+      {
+        // Quầng sáng sau thẻ
+      }
       <div
         aria-hidden="true"
         className="absolute left-1/2 top-[56%] aspect-square w-[92%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.9),transparent_68%)]"
@@ -51,14 +51,20 @@ export function PriceTag() {
         ))}
       </div>
 
-      {/* Thẻ giá: đung đưa quanh lỗ xỏ dây */}
+      {
+        // Thẻ giá: đung đưa quanh lỗ xỏ dây
+      }
       <div className="tag-swing absolute left-1/2 top-0 w-[270px] -translate-x-1/2 sm:w-[290px]">
-        {/* Sợi dây từ mép trên xuống lỗ thẻ */}
+        {
+          // Sợi dây từ mép trên xuống lỗ thẻ
+        }
         <svg aria-hidden="true" viewBox="0 0 290 70" fill="none" className="absolute inset-x-0 top-0 w-full">
           <path d="M150 0c-10 18-12 34-5 52" className="stroke-brand-orangeHover" strokeWidth="3" strokeLinecap="round" />
         </svg>
         <div className="relative mt-[26px] drop-shadow-[0_26px_28px_rgba(8,42,102,0.38)]">
-          {/* Thân thẻ: vát hai góc trên, có lỗ xỏ dây */}
+          {
+            // Thân thẻ: vát hai góc trên, có lỗ xỏ dây
+          }
           <svg
             aria-hidden="true"
             viewBox="0 0 290 400"

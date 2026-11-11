@@ -3,7 +3,7 @@ const ROOT = "/assets";
 const COMMON = `${ROOT}/common`;
 const PUBLIC = `${ROOT}/public`;
 
-/** Bảng đường dẫn ảnh — luôn lấy ảnh qua đây thay vì viết tay chuỗi đường dẫn. */
+// Bảng đường dẫn ảnh — luôn lấy ảnh qua đây thay vì viết tay chuỗi đường dẫn.
 export const ASSETS = {
   common: {
     logo: `${COMMON}/brand/logo-sba.png`,
@@ -15,7 +15,7 @@ export const ASSETS = {
   },
 
   public: {
-    /** Ảnh lớp học — tự chuyển ở phần mở đầu trang chủ */
+    // Ảnh lớp học — tự chuyển ở phần mở đầu trang chủ
     classrooms: {
       classroom1: `${PUBLIC}/classrooms/classroom-1.png`,
       classroom2: `${PUBLIC}/classrooms/classroom-2.jpg`,
@@ -24,7 +24,7 @@ export const ASSETS = {
       classroom4: `${PUBLIC}/classrooms/classroom-4.png`,
       classroom5: `${PUBLIC}/classrooms/classroom-5.png`,
     },
-    /** Ảnh giảng viên (tên file: ten-thay-co-mon.png) */
+    // Ảnh giảng viên (tên file: ten-thay-co-mon.png)
     tutors: {
       hoDucThuan: `${PUBLIC}/tutors/ho-duc-thuan-toan.png`,
       nguyenCongChinh: `${PUBLIC}/tutors/nguyen-cong-chinh-toan.png`,
@@ -33,7 +33,7 @@ export const ASSETS = {
       nguyenCongKhanh: `${PUBLIC}/tutors/nguyen-cong-khanh-hoa.png`,
       leThiHien: `${PUBLIC}/tutors/le-thi-hien-tin-hoc.png`,
     },
-    /** Ảnh thành tích học viên */
+    // Ảnh thành tích học viên
     achievements: {
       achievement1: `${PUBLIC}/achievements/achievement-1.png`,
     },

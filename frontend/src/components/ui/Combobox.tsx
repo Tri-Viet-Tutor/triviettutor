@@ -1,29 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
+import type { ComboboxOption, ComboboxProps } from "@/interfaces/ui";
 
-export interface ComboboxOption {
-  value: string;
-  label: string;
-}
-
-export interface ComboboxProps {
-  id?: string;
-  /** Giá trị hiện tại — có thể khớp với value của một option, hoặc là chuỗi tự gõ không có trong danh sách */
-  value: string;
-  options: ComboboxOption[];
-  onChange: (value: string) => void;
-  placeholder?: string;
-  /** Lớp của ô (thường là PORTAL_INPUT) */
-  className?: string;
-  "aria-label"?: string;
-}
-
-/**
- * Ô nhập kết hợp sổ xuống: gõ để lọc gợi ý hoặc bấm chọn trong danh sách, vẫn cho phép gõ giá
- * trị mới không có sẵn (vd. backend tự tạo môn học mới khi gõ tên chưa từng có).
- * Thay cho <input list="…"> + <datalist> của trình duyệt — datalist không style được, hiển thị
- * thành ô gợi ý màu đen mặc định của hệ điều hành, không đồng bộ với giao diện trang.
- */
+// Ô nhập kết hợp sổ xuống: gõ để lọc gợi ý hoặc bấm chọn trong danh sách, vẫn cho phép gõ giá
+// trị mới không có sẵn (vd. backend tự tạo môn học mới khi gõ tên chưa từng có).
+// Thay cho <input list="…"> + <datalist> của trình duyệt — datalist không style được, hiển thị
+// thành ô gợi ý màu đen mặc định của hệ điều hành, không đồng bộ với giao diện trang.
 export function Combobox({ id, value, options, onChange, placeholder, className = "", ...rest }: ComboboxProps) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(() => options.find((option) => option.value === value)?.label ?? value);
@@ -36,6 +18,7 @@ export function Combobox({ id, value, options, onChange, placeholder, className 
 
   useEffect(() => {
     if (!open) return;
+    // Bấm ra ngoài thì đóng danh sách gợi ý
     const onPointer = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
@@ -46,6 +29,7 @@ export function Combobox({ id, value, options, onChange, placeholder, className 
   const query = text.trim().toLowerCase();
   const filtered = query ? options.filter((option) => option.label.toLowerCase().includes(query)) : options;
 
+  // Chốt chữ đã gõ: khớp một lựa chọn thì chọn lựa chọn đó
   function commit(raw: string) {
     const match = options.find(
       (option) => option.label.toLowerCase() === raw.trim().toLowerCase() || option.value.toLowerCase() === raw.trim().toLowerCase(),
@@ -53,6 +37,7 @@ export function Combobox({ id, value, options, onChange, placeholder, className 
     onChange(match ? match.value : raw);
   }
 
+  // Chọn một lựa chọn trong danh sách và đóng lại
   function pick(option: ComboboxOption) {
     setText(option.label);
     onChange(option.value);

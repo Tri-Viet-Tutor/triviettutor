@@ -8,13 +8,13 @@ import type {
   PayrollStatus,
   Role,
   SessionStatus,
-} from "@/interfaces/api";
-import type { HomeworkStatus, SubmissionStatus } from "@/interfaces/learning";
+} from "@/interfaces/dto";
+import type { HomeworkStatus, SubmissionStatus } from "@/interfaces/homework";
 import type { Tone, StatusStyle } from "@/interfaces/ui";
 
-/* Chữ và màu hiển thị cho các enum của backend dùng trong ba khu sau đăng nhập */
+// Chữ và màu hiển thị cho các enum của backend dùng trong ba khu sau đăng nhập
 
-/** Màu nền + chữ của nhãn trạng thái */
+// Màu nền + chữ của nhãn trạng thái
 export const TONE_CHIP: Record<Tone, string> = {
   navy: "bg-brand-tint text-brand-navy ring-1 ring-inset ring-brand-navy/10",
   green: "bg-emerald-50 text-emerald-800 ring-1 ring-inset ring-emerald-600/15",
@@ -23,7 +23,7 @@ export const TONE_CHIP: Record<Tone, string> = {
   slate: "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-400/15",
 };
 
-/** Trạng thái buổi học */
+// Trạng thái buổi học
 export const SESSION_STATUS: Record<SessionStatus, StatusStyle> = {
   SCHEDULED: { label: "Sắp học", tone: "navy", icon: "event" },
   IN_SESSION: { label: "Đang học", tone: "green", icon: "play_circle" },
@@ -32,7 +32,7 @@ export const SESSION_STATUS: Record<SessionStatus, StatusStyle> = {
   CANCELLED: { label: "Đã hủy", tone: "red", icon: "event_busy" },
 };
 
-/** Trạng thái điểm danh */
+// Trạng thái điểm danh
 export const ATTENDANCE_STATUS: Record<AttendanceStatus, StatusStyle> = {
   PRESENT: { label: "Có mặt", tone: "green", icon: "check_circle" },
   LATE: { label: "Đi trễ", tone: "amber", icon: "schedule" },
@@ -40,17 +40,17 @@ export const ATTENDANCE_STATUS: Record<AttendanceStatus, StatusStyle> = {
   EXCUSED: { label: "Nghỉ có phép", tone: "navy", icon: "verified" },
 };
 
-/** Trạng thái được chọn khi điểm danh: chỉ Có mặt / Vắng mặt (Đi trễ, Có phép chỉ còn để hiện bản ghi cũ) */
+// Trạng thái được chọn khi điểm danh: chỉ Có mặt / Vắng mặt (Đi trễ, Có phép chỉ còn để hiện bản ghi cũ)
 export const ATTENDANCE_STATUS_ORDER: AttendanceStatus[] = ["PRESENT", "ABSENT"];
 
-/** Trạng thái đơn xin nghỉ */
+// Trạng thái đơn xin nghỉ
 export const LEAVE_STATUS: Record<LeaveRequestStatus, StatusStyle> = {
   PENDING: { label: "Chờ duyệt", tone: "amber", icon: "hourglass_top" },
   APPROVED: { label: "Đã duyệt", tone: "green", icon: "check_circle" },
   REJECTED: { label: "Bị từ chối", tone: "red", icon: "cancel" },
 };
 
-/** Cách trung tâm xử lý một đơn đã duyệt */
+// Cách trung tâm xử lý một đơn đã duyệt
 export const LEAVE_RESOLUTION: Record<LeaveResolution, string> = {
   MAKEUP: "Được xếp buổi học bù",
   SUBSTITUTE: "Có gia sư dạy thay",
@@ -58,14 +58,14 @@ export const LEAVE_RESOLUTION: Record<LeaveResolution, string> = {
   EXCUSED: "Tính là nghỉ có phép",
 };
 
-/** Tên gọi của từng vai trò */
+// Tên gọi của từng vai trò
 export const ROLE_NAME: Record<Role, string> = {
   ROLE_STUDENT: "Học viên",
   ROLE_TUTOR: "Gia sư",
   ROLE_ADMIN: "Quản trị viên",
 };
 
-/** Trạng thái lớp học (vòng đời DRAFT → PUBLISHED → ENROLLING → ASSIGNED → IN_PROGRESS → COMPLETED) */
+// Trạng thái lớp học (vòng đời DRAFT → PUBLISHED → ENROLLING → ASSIGNED → IN_PROGRESS → COMPLETED)
 export const CLASS_STATUS: Record<ClassStatus, StatusStyle> = {
   DRAFT: { label: "Bản nháp", tone: "slate", icon: "edit_note" },
   PUBLISHED: { label: "Chưa mở đăng ký", tone: "slate", icon: "public" },
@@ -77,7 +77,7 @@ export const CLASS_STATUS: Record<ClassStatus, StatusStyle> = {
   CANCELLED: { label: "Đã hủy", tone: "red", icon: "cancel" },
 };
 
-/** Thứ tự trạng thái lớp trên bộ lọc */
+// Thứ tự trạng thái lớp trên bộ lọc
 export const CLASS_STATUS_ORDER: ClassStatus[] = [
   "DRAFT",
   "PUBLISHED",
@@ -89,20 +89,20 @@ export const CLASS_STATUS_ORDER: ClassStatus[] = [
   "CANCELLED",
 ];
 
-/** Loại lớp */
+// Loại lớp
 export const CLASS_TYPE_LABEL: Record<ClassType, string> = {
   GROUP: "Lớp nhóm",
   ONE_ON_ONE: "1 kèm 1",
 };
 
-/** Trạng thái ghi danh */
+// Trạng thái ghi danh
 export const ENROLLMENT_STATUS: Record<EnrollmentStatus, StatusStyle> = {
   ACTIVE: { label: "Đang học", tone: "green", icon: "check_circle" },
   CANCELLED: { label: "Đã hủy", tone: "slate", icon: "cancel" },
   REFUNDED: { label: "Đã hoàn tiền", tone: "amber", icon: "currency_exchange" },
 };
 
-/** Nhãn chuẩn của trạng thái giao dịch học phí (PAY-01) */
+// Nhãn chuẩn của trạng thái giao dịch học phí (PAY-01)
 export const TRANSACTION_STATUS = {
   SUCCESS: { label: "Thành công", tone: "green", icon: "check_circle" },
   PENDING: { label: "Đang xử lý / Giữ chỗ", tone: "amber", icon: "hourglass_top" },
@@ -110,7 +110,7 @@ export const TRANSACTION_STATUS = {
   REFUNDED: { label: "Đã hoàn tiền", tone: "slate", icon: "currency_exchange" },
 } satisfies Record<string, StatusStyle>;
 
-/** Trạng thái ngoài 4 nhãn chuẩn mà backend vẫn có thể trả về */
+// Trạng thái ngoài 4 nhãn chuẩn mà backend vẫn có thể trả về
 const OTHER_TRANSACTION_STATUS: Record<string, StatusStyle> = {
   PARTIALLY_REFUNDED: { label: "Hoàn một phần", tone: "amber", icon: "currency_exchange" },
   REQUIRES_REFUND: { label: "Cần hoàn tiền", tone: "red", icon: "warning" },
@@ -118,10 +118,8 @@ const OTHER_TRANSACTION_STATUS: Record<string, StatusStyle> = {
   CANCELLED: { label: "Đã hủy", tone: "slate", icon: "block" },
 };
 
-/**
- * Nhãn của một trạng thái giao dịch backend (đơn học phí, thanh toán, yêu cầu thanh toán):
- * COMPLETED / PAID là "Thành công", PENDING / PENDING_PAYMENT là "Đang xử lý / Giữ chỗ".
- */
+// Nhãn của một trạng thái giao dịch backend (đơn học phí, thanh toán, yêu cầu thanh toán):
+// COMPLETED / PAID là "Thành công", PENDING / PENDING_PAYMENT là "Đang xử lý / Giữ chỗ".
 export function transactionStatus(status: string): StatusStyle {
   if (status === "SUCCESS" || status === "COMPLETED" || status === "PAID") return TRANSACTION_STATUS.SUCCESS;
   if (status === "PENDING" || status === "PENDING_PAYMENT") return TRANSACTION_STATUS.PENDING;
@@ -130,21 +128,21 @@ export function transactionStatus(status: string): StatusStyle {
   return OTHER_TRANSACTION_STATUS[status] ?? { label: status, tone: "slate", icon: "help" };
 }
 
-/** Trạng thái bảng lương tháng */
+// Trạng thái bảng lương tháng
 export const PAYROLL_STATUS: Record<PayrollStatus, StatusStyle> = {
   DRAFT: { label: "Tạm tính", tone: "amber", icon: "pending" },
   FINALIZED: { label: "Đã chốt", tone: "green", icon: "lock" },
   DISPUTED: { label: "Đang khiếu nại", tone: "red", icon: "report" },
 };
 
-/** Trạng thái bài tập (phía gia sư) */
+// Trạng thái bài tập (phía gia sư)
 export const HOMEWORK_STATUS: Record<HomeworkStatus, StatusStyle> = {
   DRAFT: { label: "Bản nháp", tone: "slate", icon: "edit_note" },
   PUBLISHED: { label: "Đã công bố", tone: "green", icon: "campaign" },
   CLOSED: { label: "Đã đóng", tone: "red", icon: "lock" },
 };
 
-/** Trạng thái bài làm của học viên */
+// Trạng thái bài làm của học viên
 export const SUBMISSION_STATUS: Record<SubmissionStatus, StatusStyle> = {
   NOT_STARTED: { label: "Chưa làm", tone: "slate", icon: "radio_button_unchecked" },
   IN_PROGRESS: { label: "Đang làm", tone: "amber", icon: "edit" },

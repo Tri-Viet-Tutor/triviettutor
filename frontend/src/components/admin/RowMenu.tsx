@@ -1,17 +1,9 @@
 import { useEffect, useRef, type KeyboardEvent } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING } from "@/constants/classNames";
+import type { RowMenuItem } from "@/interfaces/ui";
 
-export interface RowMenuItem {
-  icon: string;
-  label: string;
-  onSelect: () => void;
-  disabled?: boolean;
-  hint?: string;
-  tone?: "danger";
-}
-
-/** Nút ⋮ mở menu thao tác của một dòng: Esc / bấm ra ngoài để đóng, phím ↑ ↓ để di chuyển */
+// Nút ⋮ mở menu thao tác của một dòng: Esc / bấm ra ngoài để đóng, phím ↑ ↓ để di chuyển
 export function RowMenu({
   label,
   open,
@@ -30,6 +22,7 @@ export function RowMenu({
   useEffect(() => {
     if (!open) return;
     menuRef.current?.querySelector<HTMLButtonElement>("[role=menuitem]:not(:disabled)")?.focus();
+    // Bấm ra ngoài menu thì đóng menu
     function onPointer(event: MouseEvent) {
       if (!wrapRef.current?.contains(event.target as Node)) onOpenChange(false);
     }
@@ -37,11 +30,13 @@ export function RowMenu({
     return () => document.removeEventListener("mousedown", onPointer);
   }, [open, onOpenChange]);
 
+  // Đóng menu và trả focus về nút mở menu
   function close() {
     onOpenChange(false);
     buttonRef.current?.focus();
   }
 
+  // Di chuyển giữa các mục menu bằng phím mũi tên, Home, End, Esc
   function onMenuKey(event: KeyboardEvent) {
     const enabled = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>("[role=menuitem]:not(:disabled)") ?? []);
     const index = enabled.indexOf(document.activeElement as HTMLButtonElement);

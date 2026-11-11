@@ -10,7 +10,7 @@ import { walletService } from "@/services/walletService";
 import { useAuthStore } from "@/stores/authStore";
 import { formatVnd } from "@/utils/currency";
 import { readTopup, saveTopup, walletError } from "@/utils/wallet";
-import type { TopupAttempt } from "@/utils/wallet";
+import type { TopupAttempt } from "@/interfaces/wallet";
 import { displayCode } from "@/utils/classes";
 
 const STATUS = {
@@ -20,11 +20,12 @@ const STATUS = {
   EXPIRED: "Yêu cầu đã hết hạn",
 };
 
-/** Adapted from Bike Exchange WalletTab, using persisted IPN results and the student portal UI. */
+// Adapted from Bike Exchange WalletTab, using persisted IPN results and the student portal UI.
 export function StudentWalletPage() {
   const user = useAuthStore((s) => s.user);
   return user ? <WalletContent key={user.id} userId={user.id} fullName={user.fullName} /> : null;
 }
+// Nội dung trang ví: thẻ ví, nạp tiền và lịch sử giao dịch
 function WalletContent({ userId, fullName }: { userId: number; fullName: string }) {
   const cache = useQueryClient();
   const navigate = useNavigate();
@@ -115,6 +116,7 @@ function WalletContent({ userId, fullName }: { userId: number; fullName: string 
   );
   const pending = topup?.status === "PENDING";
   const error = create.error ?? reconcile.error ?? returned.error ?? detail.error;
+  // Tải lại số dư và trạng thái lần nạp đang chờ
   function refresh() {
     void wallet.refetch();
     if (topupId) void detail.refetch();
@@ -140,7 +142,9 @@ function WalletContent({ userId, fullName }: { userId: number; fullName: string 
       {error && <AuthNotice tone="error">{walletError(error)}</AuthNotice>}
 
       <div className="grid items-start gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
-        {/* Thẻ ví */}
+        {
+          // Thẻ ví
+        }
         <section className="relative mx-auto flex aspect-[1.586/1] w-full max-w-[420px] flex-col overflow-hidden rounded-3xl bg-gradient-to-br from-brand-navyDeep via-brand-navy to-[#2563C9] p-5 text-white shadow-[0_30px_60px_-34px_rgba(8,42,102,0.9)] sm:p-6">
           <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-white/10" />
           <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 -left-10 h-64 w-64 rounded-full bg-brand-orange/25 blur-2xl" />
@@ -155,7 +159,9 @@ function WalletContent({ userId, fullName }: { userId: number; fullName: string 
                 Tri Viet <span className="text-brand-orange">Tutor</span>
               </p>
             </div>
-            {/* Chip thẻ */}
+            {
+              // Chip thẻ
+            }
             <span aria-hidden="true" className="grid h-9 w-12 grid-cols-3 gap-px overflow-hidden rounded-md bg-gradient-to-br from-[#F7D98B] to-[#C9A24A] p-1 opacity-90">
               {Array.from({ length: 6 }, (_, index) => (
                 <span key={index} className="rounded-[2px] bg-black/10" />
@@ -192,7 +198,9 @@ function WalletContent({ userId, fullName }: { userId: number; fullName: string 
           </div>
         </section>
 
-        {/* Nạp tiền */}
+        {
+          // Nạp tiền
+        }
         <section className={`${PORTAL_CARD} flex flex-col p-6`}>
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -302,7 +310,9 @@ function WalletContent({ userId, fullName }: { userId: number; fullName: string 
 
           {topup ? (
             <>
-              {/* Tiến trình */}
+              {
+                // Tiến trình
+              }
               <ol className="mt-5 grid grid-cols-3 gap-2">
                 {["Tạo yêu cầu", "Thanh toán tại VNPay", "Cộng vào ví"].map((label, index) => {
                   const done = index < step;
@@ -362,7 +372,7 @@ function WalletContent({ userId, fullName }: { userId: number; fullName: string 
   );
 }
 
-/** Kiểu giao dịch: nhãn, biểu tượng, màu và dấu cộng / trừ */
+// Kiểu giao dịch: nhãn, biểu tượng, màu và dấu cộng / trừ
 const KINDS = {
   TOPUP: { label: "Nạp tiền", icon: "south_west", tone: "bg-emerald-50 text-emerald-700", sign: "+" },
   TUITION: { label: "Đóng học phí", icon: "school", tone: "bg-brand-tint text-brand-navy", sign: "−" },
@@ -371,7 +381,7 @@ const KINDS = {
 } as const;
 type Kind = keyof typeof KINDS;
 
-/** Lịch sử giao dịch: lọc theo loại, nhóm theo ngày, mỗi dòng có biểu tượng loại và số dư sau giao dịch */
+// Lịch sử giao dịch: lọc theo loại, nhóm theo ngày, mỗi dòng có biểu tượng loại và số dư sau giao dịch
 function WalletHistory({ userId }: { userId: number }) {
   const [page, setPage] = useState(0);
   const [kind, setKind] = useState<Kind | "">("");

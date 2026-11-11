@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ROUTES } from "@/constants/routes";
 import type { ErrorScreenProps } from "@/interfaces/ui";
 
-/** Khung chung của các trang lỗi: mã lỗi, câu giải thích và liên kết về trang chủ. */
+// Khung chung của các trang lỗi: mã lỗi, câu giải thích và liên kết về trang chủ.
 export function ErrorScreen({ code, message }: ErrorScreenProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">

@@ -7,14 +7,13 @@ import { changeClassStatus, reopenClass } from "@/services/managementService";
 import { classStatusActions } from "@/utils/classes";
 import { addDays, startOfToday, toIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
-import type { AdminClassResponse } from "@/interfaces/api";
+import type { AdminClassResponse } from "@/interfaces/dto";
 import type { ClassStatusDialogProps } from "@/interfaces/admin";
 import { DateField } from "@/components/ui/DateField";
+import { REASON_MAX, requireText, validateEnrollmentDeadline } from "@/utils/validation";
 
-/**
- * Cập nhật lớp: chỉ đưa ra các bước hợp lệ lúc này (Mở đăng ký, Chốt lớp, Bắt đầu học, Kết thúc, Hủy…)
- * rồi gọi PATCH /admin/classes/{id}/status lần lượt; hoặc mở lại lớp không đủ sĩ số (POST /admin/classes/{id}/reopen).
- */
+// Cập nhật lớp: chỉ đưa ra các bước hợp lệ lúc này (Mở đăng ký, Chốt lớp, Bắt đầu học, Kết thúc, Hủy…)
+// rồi gọi PATCH /admin/classes/{id}/status lần lượt; hoặc mở lại lớp không đủ sĩ số (POST /admin/classes/{id}/reopen).
 export function ClassStatusDialog({ classItem, mode, onClose, onSaved }: ClassStatusDialogProps) {
   const actions = useMemo(() => (classItem ? classStatusActions(classItem, new Date()) : []), [classItem]);
   const [actionKey, setActionKey] = useState("");
@@ -46,12 +45,22 @@ export function ClassStatusDialog({ classItem, mode, onClose, onSaved }: ClassSt
     onError: (error) => setFormError(portalErrorMessage(error, "Chưa cập nhật được lớp. Vui lòng thử lại.")),
   });
 
+  // Kiểm tra lý do rồi gửi đổi trạng thái hoặc mở lại lớp
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (mode === "reopen" && !reason.trim()) return setFormError("Hãy nhập lý do mở lại lớp.");
-    if (mode === "reopen" && deadline && deadline >= startDate) return setFormError("Hạn đăng ký phải trước ngày khai giảng.");
+    if (mode === "reopen") {
+      const reasonError = requireText(reason, "Lý do mở lại lớp", REASON_MAX);
+      if (reasonError) return setFormError(reasonError);
+    }
+    if (mode === "reopen") {
+      const deadlineError = validateEnrollmentDeadline(deadline, startDate);
+      if (deadlineError) return setFormError(deadlineError);
+    }
     if (mode === "status" && !action) return;
-    if (mode === "status" && action.danger && !reason.trim()) return setFormError("Hãy nhập lý do hủy lớp.");
+    if (mode === "status" && action.danger) {
+      const reasonError = requireText(reason, "Lý do hủy lớp", REASON_MAX);
+      if (reasonError) return setFormError(reasonError);
+    }
     setFormError(null);
     save.mutate();
   }

@@ -6,7 +6,7 @@ import { ROUTES } from "@/constants/routes";
 import { Sparkle } from "@/components/motion/Sparkle";
 import type { ConsultCtaSectionProps } from "@/interfaces/ui";
 
-/* Sao bốn cánh nhấp nháy hai bên câu hỏi — vị trí tính theo % của cả dải */
+// Sao bốn cánh nhấp nháy hai bên câu hỏi — vị trí tính theo % của cả dải
 const SPARKLES = [
   { left: 14, top: 30, size: 22, delay: 0 },
   { left: 24, top: 66, size: 14, delay: 1.1 },
@@ -14,10 +14,13 @@ const SPARKLES = [
   { left: 88, top: 58, size: 24, delay: 1.7 },
 ];
 
+// Khối kêu gọi đăng ký tư vấn ở cuối trang
 export function ConsultCtaSection({ title, highlight, description }: ConsultCtaSectionProps) {
   return (
     <section className="relative overflow-hidden bg-[#E8E2D5]">
-      {/* Mép trên hoà vào phần phía trên, quầng cam mờ ở giữa */}
+      {
+        // Mép trên hoà vào phần phía trên, quầng cam mờ ở giữa
+      }
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[#F5F1E9] to-transparent"
@@ -27,7 +30,9 @@ export function ConsultCtaSection({ title, highlight, description }: ConsultCtaS
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_44%_72%_at_50%_58%,rgba(245,160,15,0.34),transparent_72%)]"
       />
 
-      {/* Sao nhấp nháy và hai mũi tên nét đứt chỉ vào nút (chỉ hiện từ máy tính bảng) */}
+      {
+        // Sao nhấp nháy và hai mũi tên nét đứt chỉ vào nút (chỉ hiện từ máy tính bảng)
+      }
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden md:block">
         {SPARKLES.map((sparkle) => (
           <Sparkle key={sparkle.left} {...sparkle} />
@@ -59,7 +64,9 @@ export function ConsultCtaSection({ title, highlight, description }: ConsultCtaS
           {title}{" "}
           <span className="relative inline-block whitespace-nowrap">
             {highlight}
-            {/* Nét gạch chân vẽ tay */}
+            {
+              // Nét gạch chân vẽ tay
+            }
             <svg
               aria-hidden="true"
               viewBox="0 0 240 14"

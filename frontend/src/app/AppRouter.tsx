@@ -79,17 +79,20 @@ import { ProfilePage } from "@/pages/dashboard/ProfilePage";
 // Phòng học trực tuyến LiveKit
 import ClassroomPage from "@/pages/ClassroomPage";
 
-//Khai báo toàn bộ tuyến đường (route) của ứng dụng.
-//admin / gia sư / học viên đều qua 2 lớp chặn: phải đăng nhập (PrivateRoute)
-//và đúng vai trò (RoleRoute); trang hồ sơ dùng chung một component cho cả 3 vai trò.
-
+// Khai báo toàn bộ tuyến đường (route) của ứng dụng.
+// admin / gia sư / học viên đều qua 2 lớp chặn: phải đăng nhập (PrivateRoute)
+// và đúng vai trò (RoleRoute); trang hồ sơ dùng chung một component cho cả 3 vai trò.
 export function AppRouter() {
   return (
     <BrowserRouter>
-      {/* Xóa giỏ hàng của khách khi rời luồng mua khóa học */}
+      {
+        // Xóa giỏ hàng của khách khi rời luồng mua khóa học
+      }
       <GuestCartScope />
       <Routes>
-        {/* Guest */}
+        {
+          // Guest
+        }
         <Route element={<PublicLayout />}>
           <Route path={ROUTES.home} element={<HomePage />} />
           <Route path={ROUTES.subjects} element={<SubjectsPage />} />
@@ -101,7 +104,9 @@ export function AppRouter() {
           <Route path={ROUTES.contact} element={<ContactPage />} />
         </Route>
 
-        {/* ── Đăng nhập / đăng ký / quên mật khẩu ─────────────────────── */}
+        {
+          // ── Đăng nhập / đăng ký / quên mật khẩu ───────────────────────
+        }
         <Route element={<AuthLayout />}>
           <Route path={ROUTES.login} element={<LoginPage />} />
           <Route path={ROUTES.register} element={<RegisterPage />} />
@@ -111,7 +116,9 @@ export function AppRouter() {
           <Route path={ROUTES.oauth2Success} element={<OAuth2SuccessPage />} />
         </Route>
 
-        {/* Admin*/}
+        {
+          // Admin
+        }
         <Route element={<PrivateRoute />}>
           <Route element={<RoleRoute allowedRole="ROLE_ADMIN" />}>
             <Route element={<AdminLayout />}>
@@ -132,12 +139,15 @@ export function AppRouter() {
           </Route>
         </Route>
 
-        {/* Tutor */}
+        {
+          // Tutor
+        }
         <Route element={<PrivateRoute />}>
           <Route element={<RoleRoute allowedRole="ROLE_TUTOR" />}>
             <Route element={<TutorLayout />}>
               <Route path={ROUTES.tutor} element={<TutorHomePage />} />
               <Route path={ROUTES.tutorSessions} element={<TutorSchedulePage />} />
+              <Route path={ROUTES.tutorClasses} element={<TutorSchedulePage initialView="list" />} />
               <Route path={ROUTES.tutorAvailability} element={<TutorAvailabilityPage />} />
               <Route path={ROUTES.tutorLeave} element={<TutorLeavePage />} />
               <Route path={ROUTES.tutorPayroll} element={<TutorPayrollPage />} />
@@ -150,7 +160,9 @@ export function AppRouter() {
           </Route>
         </Route>
 
-        {/* Student */}
+        {
+          // Student
+        }
         <Route element={<PrivateRoute />}>
           <Route element={<RoleRoute allowedRole="ROLE_STUDENT" />}>
             <Route element={<StudentLayout />}>
@@ -172,12 +184,16 @@ export function AppRouter() {
           </Route>
         </Route>
 
-        {/* ── Phòng học trực tuyến LiveKit SFU (Admin, Gia sư, Học viên) ─ */}
+        {
+          // ── Phòng học trực tuyến LiveKit SFU (Admin, Gia sư, Học viên) ─
+        }
         <Route element={<PrivateRoute />}>
           <Route path={ROUTES.classroom} element={<ClassroomPage />} />
         </Route>
 
-        {/* ── Trang lỗi ────────────────────────────────────────────────── */}
+        {
+          // ── Trang lỗi ──────────────────────────────────────────────────
+        }
         <Route path={ROUTES.forbidden} element={<ForbiddenPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

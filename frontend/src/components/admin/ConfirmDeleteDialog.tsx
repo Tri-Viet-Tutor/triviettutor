@@ -1,6 +1,6 @@
 import { ConfirmDialog } from "@/components/dashboard/ConfirmDialog";
 
-/** Hộp xác nhận xóa hẳn một khóa / lớp / người dùng; lỗi của backend (đang được dùng…) hiện ngay trong hộp */
+// Hộp xác nhận xóa hẳn một khóa / lớp / người dùng; lỗi của backend (đang được dùng…) hiện ngay trong hộp
 export function ConfirmDeleteDialog({
   open,
   title,
@@ -12,7 +12,7 @@ export function ConfirmDeleteDialog({
   title: string;
   message: string;
   onClose: () => void;
-  /** Gọi API xóa; ném lỗi thì hộp giữ nguyên và hiện lỗi */
+  // Gọi API xóa; ném lỗi thì hộp giữ nguyên và hiện lỗi
   onConfirm: () => Promise<void>;
 }) {
   return (

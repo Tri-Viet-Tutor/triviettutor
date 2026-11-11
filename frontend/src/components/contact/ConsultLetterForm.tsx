@@ -13,7 +13,7 @@ import { buildConsultMailto } from "@/utils/contact";
 import type { ConsultLetterFormValues } from "@/interfaces/contact";
 import { Select } from "@/components/ui/Select";
 
-/** Kiểm tra thư đăng ký: số điện thoại VN (0… hoặc +84…), email không bắt buộc */
+// Kiểm tra thư đăng ký: số điện thoại VN (0… hoặc +84…), email không bắt buộc
 const letterSchema = z.object({
   fullName: z.string().trim().min(2, "Vui lòng nhập họ tên"),
   phone: z
@@ -27,15 +27,13 @@ const letterSchema = z.object({
   note: z.string().trim().max(1000, "Ghi chú tối đa 1000 ký tự"),
 });
 
-/** Lớp Tailwind của dòng báo lỗi dưới ô nhập */
+// Lớp Tailwind của dòng báo lỗi dưới ô nhập
 const ERROR_TEXT = "mt-1.5 text-[13px] font-semibold text-red-700";
 
-/**
- * Thư đăng ký tư vấn, trình bày như một lá thư có viền sọc bưu điện và con tem.
- * Backend chưa có API nhận yêu cầu tư vấn nên bấm gửi sẽ mở ứng dụng thư của người dùng
- * với nội dung điền sẵn, gửi tới email của trung tâm.
- * Nhận sẵn môn từ đường dẫn: /lien-he?mon=MATH#form-lien-he.
- */
+// Thư đăng ký tư vấn, trình bày như một lá thư có viền sọc bưu điện và con tem.
+// Backend chưa có API nhận yêu cầu tư vấn nên bấm gửi sẽ mở ứng dụng thư của người dùng
+// với nội dung điền sẵn, gửi tới email của trung tâm.
+// Nhận sẵn môn từ đường dẫn: /lien-he?mon=MATH#form-lien-he.
 export function ConsultLetterForm() {
   const [searchParams] = useSearchParams();
   // Đã mở ứng dụng thư — đổi dòng ghi chú dưới nút gửi
@@ -58,7 +56,7 @@ export function ConsultLetterForm() {
     },
   });
 
-  /** Đổi giá trị ô chọn sang chữ hiển thị rồi mở ứng dụng thư với nội dung điền sẵn */
+  // Đổi giá trị ô chọn sang chữ hiển thị rồi mở ứng dụng thư với nội dung điền sẵn
   function openMail(values: ConsultLetterFormValues) {
     window.location.href = buildConsultMailto({
       fullName: values.fullName,
@@ -84,7 +82,9 @@ export function ConsultLetterForm() {
             <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-brand-muted">Thư gửi Tri Viet Tutor</p>
             <h2 className="mt-1 text-[24px] font-extrabold leading-snug text-brand-navy">Đăng ký tư vấn</h2>
           </div>
-          {/* Con tem và dấu bưu điện */}
+          {
+            // Con tem và dấu bưu điện
+          }
           <div aria-hidden="true" className="relative shrink-0">
             <svg
               viewBox="0 0 84 60"

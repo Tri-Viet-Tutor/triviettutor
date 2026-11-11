@@ -1,6 +1,6 @@
 import { type CSSProperties, forwardRef } from "react";
 
-/** Các vòng của phễu lốc xoáy, từ miệng phễu (rộng) xuống đuôi (hẹp) */
+// Các vòng của phễu lốc xoáy, từ miệng phễu (rộng) xuống đuôi (hẹp)
 const RINGS = [
   { y: 16, rx: 50 },
   { y: 36, rx: 43 },
@@ -13,14 +13,14 @@ const RINGS = [
   { y: 136, rx: 4.5 },
 ];
 
-/** Hạt bụi phấn bay vòng quanh phễu */
+// Hạt bụi phấn bay vòng quanh phễu
 const DUST = [
   { y: 30, rx: 56, duration: 0.7 },
   { y: 70, rx: 44, duration: 0.55 },
   { y: 108, rx: 30, duration: 0.62 },
 ];
 
-/** Lốc xoáy vẽ bằng nét phấn: các vòng elip xoay liên tục và lắc lư lệch pha nhau. */
+// Lốc xoáy vẽ bằng nét phấn: các vòng elip xoay liên tục và lắc lư lệch pha nhau.
 export const Whirlwind = forwardRef<HTMLDivElement>(function Whirlwind(_props, ref) {
   return (
     <div ref={ref} aria-hidden="true" className="whirlwind pointer-events-none absolute left-0 top-0 z-10 w-[120px] sm:w-[150px]">

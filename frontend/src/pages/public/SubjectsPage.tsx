@@ -8,11 +8,9 @@ import { ClassPerksSection } from "@/components/catalog/ClassPerksSection";
 import { COURSES } from "@/constants/courses";
 import { scrollToId } from "@/utils/motion";
 
-/**
- * Trang "Khối lớp / Môn học".
- * Nội dung dựng từ đúng các thuộc tính backend dùng để mô tả một khóa và một lớp
- * (xem constants/classOptions.ts và phần "Danh mục" trong interfaces/api.ts).
- */
+// Trang "Khối lớp / Môn học".
+// Nội dung dựng từ đúng các thuộc tính backend dùng để mô tả một khóa và một lớp
+// (xem constants/classOptions.ts và phần "Danh mục" trong interfaces/dto.ts).
 export function SubjectsPage() {
   // Môn mở sẵn lấy từ đường dẫn (/cap-hoc-mon-hoc?mon=MATH), ví dụ khi đi từ hồ sơ gia sư sang
   const [searchParams] = useSearchParams();
@@ -30,7 +28,7 @@ export function SubjectsPage() {
     }
   }, [subjectFromUrl]);
 
-  /** Bấm bong bóng môn ở phần mở đầu: chọn môn rồi cuộn xuống phiếu */
+  // Bấm bong bóng môn ở phần mở đầu: chọn môn rồi cuộn xuống phiếu
   function pickSubjectFromHero(nextSubject: string) {
     setSubject(nextSubject);
     scrollToId("class-builder");

@@ -7,10 +7,8 @@ import { TUTOR_SEARCH_TITLE_LINES } from "@/constants/tutors";
 import type { TutorSearchHeroProps } from "@/interfaces/tutor";
 import { riseDelay } from "@/utils/motion";
 
-/**
- * Phần mở đầu trang "Tìm gia sư": tiêu đề và thanh tìm (tên gia sư + môn học) bên trái,
- * xấp ảnh gia sư xòe quạt bên phải. Kết quả hiện ngay ở phần bên dưới khi gõ hoặc đổi môn.
- */
+// Phần mở đầu trang "Tìm gia sư": tiêu đề và thanh tìm (tên gia sư + môn học) bên trái,
+// xấp ảnh gia sư xòe quạt bên phải. Kết quả hiện ngay ở phần bên dưới khi gõ hoặc đổi môn.
 export function TutorSearchHero({
   query,
   subject,
@@ -20,7 +18,7 @@ export function TutorSearchHero({
   featuredTutors,
   onPickTutor,
 }: TutorSearchHeroProps) {
-  /** Chặn tải lại trang khi gửi form */
+  // Chặn tải lại trang khi gửi form
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     onSubmit();
@@ -28,7 +26,9 @@ export function TutorSearchHero({
 
   return (
     <section className="paper-grid relative overflow-hidden bg-[#FBF6EC]">
-      {/* Mép dưới hoà vào nền giấy của phần kế tiếp */}
+      {
+        // Mép dưới hoà vào nền giấy của phần kế tiếp
+      }
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-b from-transparent to-[#F5F1E9]"

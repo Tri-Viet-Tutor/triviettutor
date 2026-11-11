@@ -7,10 +7,10 @@ import type { AssistantKeySource, AssistantSettingsRequest } from "@/interfaces/
 import { fetchAssistantSettings, updateAssistantSettings } from "@/services/settingsService";
 import { portalErrorMessage } from "@/utils/errors";
 
-/** Khóa cache của cài đặt trợ lý AI */
+// Khóa cache của cài đặt trợ lý AI
 const ASSISTANT_SETTINGS_KEY = ["admin", "settings", "assistant"] as const;
 
-/** Giới hạn khớp AssistantSettingsDto.Request của backend */
+// Giới hạn khớp AssistantSettingsDto.Request của backend
 const PROMPT_MAX = 4000;
 const KEY_PATTERN = /^\S{10,200}$/;
 
@@ -20,11 +20,9 @@ const KEY_SOURCE_TEXT: Record<AssistantKeySource, string> = {
   NONE: "Chưa có API key — trợ lý AI đang tạm ngưng",
 };
 
-/**
- * Cấu hình trợ lý tư vấn AI (AI-01): API key Gemini lưu mã hóa trong cơ sở dữ liệu (không bao giờ hiển thị lại,
- * chỉ 4 ký tự cuối) và prompt tư vấn. Quy tắc bảo mật dữ liệu luôn được hệ thống thêm sau prompt.
- * API: GET / PUT /admin/settings/assistant.
- */
+// Cấu hình trợ lý tư vấn AI (AI-01): API key Gemini lưu mã hóa trong cơ sở dữ liệu (không bao giờ hiển thị lại,
+// chỉ 4 ký tự cuối) và prompt tư vấn. Quy tắc bảo mật dữ liệu luôn được hệ thống thêm sau prompt.
+// API: GET / PUT /admin/settings/assistant.
 export function AssistantSettingsCard() {
   const cache = useQueryClient();
   const query = useQuery({ queryKey: ASSISTANT_SETTINGS_KEY, queryFn: fetchAssistantSettings });
@@ -43,6 +41,7 @@ export function AssistantSettingsCard() {
     },
   });
 
+  // Gửi cài đặt trợ lý AI lên máy chủ kèm câu báo khi lưu xong
   function run(body: AssistantSettingsRequest, done: string) {
     setNotice(null);
     save.mutate({ body, done });
@@ -52,11 +51,13 @@ export function AssistantSettingsCard() {
   const promptValid = prompt.trim() !== "" && prompt.length <= PROMPT_MAX;
   const promptChanged = query.data ? prompt.trim() !== query.data.systemPrompt.trim() : false;
 
+  // Lưu API key mới của trợ lý AI
   function handleKey(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (keyValid) run({ apiKey: apiKey.trim() }, "Đã lưu API key mới. Trợ lý AI dùng key này ngay từ câu hỏi tiếp theo.");
   }
 
+  // Lưu prompt tư vấn của trợ lý AI khi có thay đổi
   function handlePrompt(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (promptValid && promptChanged) run({ systemPrompt: prompt }, "Đã lưu prompt tư vấn.");
@@ -88,7 +89,7 @@ export function AssistantSettingsCard() {
             <p className="mt-0.5 text-[13px] text-brand-muted">
               Mô hình: {query.data.model}
               {query.data.updatedAt &&
-                ` · Cập nhật lần cuối ${new Date(query.data.updatedAt).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" })}${query.data.updatedByName ? ` bởi ${query.data.updatedByName}` : ""}`}
+                ` - Cập nhật lần cuối ${new Date(query.data.updatedAt).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" })}${query.data.updatedByName ? ` bởi ${query.data.updatedByName}` : ""}`}
             </p>
           </div>
 

@@ -9,13 +9,13 @@ import { PORTAL_TEXT_LINK } from "@/constants/classNames";
 import { LEAVE_STATUS } from "@/constants/labels";
 import { ROUTES } from "@/constants/routes";
 import { useAdminLeaveRequests } from "@/hooks/useAdminData";
-import type { LeaveRequestStatus } from "@/interfaces/api";
+import type { LeaveRequestStatus } from "@/interfaces/dto";
 import { displayCode } from "@/utils/classes";
 
-/** Số đơn mỗi trang */
+// Số đơn mỗi trang
 const PAGE_SIZE = 10;
 
-/** Thẻ lọc theo trạng thái — "Chờ duyệt" đứng đầu vì là việc cần làm */
+// Thẻ lọc theo trạng thái — "Chờ duyệt" đứng đầu vì là việc cần làm
 const STATUS_TABS: { value: LeaveRequestStatus | ""; label: string }[] = [
   { value: "PENDING", label: LEAVE_STATUS.PENDING.label },
   { value: "APPROVED", label: LEAVE_STATUS.APPROVED.label },
@@ -23,10 +23,8 @@ const STATUS_TABS: { value: LeaveRequestStatus | ""; label: string }[] = [
   { value: "", label: "Tất cả" },
 ];
 
-/**
- * Trang Đơn xin nghỉ của quản trị (GET /admin/leave-requests): mặc định xem các đơn đang chờ, mới nhất trước.
- * Mỗi đơn có sẵn các cách xử lý (xem AdminLeaveCard). Mở kèm ?buoi=<mã buổi> thì chỉ hiện đơn của buổi đó.
- */
+// Trang Đơn xin nghỉ của quản trị (GET /admin/leave-requests): mặc định xem các đơn đang chờ, mới nhất trước.
+// Mỗi đơn có sẵn các cách xử lý (xem AdminLeaveCard). Mở kèm ?buoi=<mã buổi> thì chỉ hiện đơn của buổi đó.
 export function AdminReschedulesPage() {
   const [params] = useSearchParams();
   // Xem đơn của riêng một buổi qua ?buoi=<mã buổi>

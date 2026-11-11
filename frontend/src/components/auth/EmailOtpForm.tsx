@@ -15,6 +15,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { authErrorCode, authErrorMessage } from "@/utils/errors";
 import { clearPendingEmail, readPendingPhone, savePendingEmail, secondsSinceOtpSent } from "@/utils/pendingEmail";
 
+// Form nhập mã OTP gửi qua email để xác thực tài khoản, có gửi lại mã
 export function EmailOtpForm({ email, onVerified, onChangeEmail, signIn = true, align = "center", loginState }: EmailOtpFormProps) {
   const setAuth = useAuthStore((s) => s.setAuth);
   const [otp, setOtp] = useState("");
@@ -36,7 +37,7 @@ export function EmailOtpForm({ email, onVerified, onChangeEmail, signIn = true, 
   // Tài khoản đã kích hoạt từ trước → chỉ đường sang trang đăng nhập
   const alreadyVerified = [verify.error, resend.error].some((error) => error && authErrorCode(error) === "ACCOUNT_ALREADY_VERIFIED");
 
-  /** Gửi mã; đúng thì xóa email đang chờ, lưu phiên (nếu `signIn`) rồi báo lên trên */
+  // Gửi mã; đúng thì xóa email đang chờ, lưu phiên (nếu `signIn`) rồi báo lên trên
   function handleVerify(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!otpComplete) return;
@@ -60,7 +61,7 @@ export function EmailOtpForm({ email, onVerified, onChangeEmail, signIn = true, 
     );
   }
 
-  /** Gửi lại mã: xóa mã đang nhập và đếm lại cả hạn mã lẫn thời gian chờ gửi lại */
+  // Gửi lại mã: xóa mã đang nhập và đếm lại cả hạn mã lẫn thời gian chờ gửi lại
   function handleResend() {
     verify.reset();
     resend.mutate(

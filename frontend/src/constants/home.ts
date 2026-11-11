@@ -2,22 +2,22 @@ import { ASSETS } from "@/constants/assets";
 import type { Tutor } from "@/interfaces/tutor";
 import type { ClassPractice, HeroSlide } from "@/interfaces/home";
 
-/* Nội dung tĩnh của trang chủ. */
+// Nội dung tĩnh của trang chủ.
 
-/** Hai dòng của tiêu đề chính (mỗi dòng được tô đầy dần khi tải trang) */
+// Hai dòng của tiêu đề chính (mỗi dòng được tô đầy dần khi tải trang)
 export const HERO_TITLE_LINES = ["Gia Sư Cấp 3", "Tại TP. Hồ Chí Minh"];
 
-/** Ba ảnh tự chuyển trong khung ảnh mở đầu */
+// Ba ảnh tự chuyển trong khung ảnh mở đầu
 export const HERO_SLIDES: HeroSlide[] = [
   { src: ASSETS.public.classrooms.classroom1, alt: "Thầy giáo hướng dẫn nhóm học sinh ngồi quây quần trong lớp" },
   { src: ASSETS.public.classrooms.classroom2, alt: "Thầy giáo giảng bài bên bảng cho một lớp học nhỏ" },
   { src: ASSETS.public.classrooms.classroom3, alt: "Nhóm học sinh THPT cùng làm bài trong phòng học" },
 ];
 
-/** Thời gian hiển thị mỗi ảnh (mili giây) */
+// Thời gian hiển thị mỗi ảnh (mili giây)
 export const HERO_SLIDE_MS = 5000;
 
-/** Bốn ý ở phần "Cách Trí Việt tổ chức lớp học" (bảng phấn). */
+// Bốn ý ở phần "Cách Trí Việt tổ chức lớp học" (bảng phấn).
 export const CLASS_PRACTICES: ClassPractice[] = [
   {
     icon: "how_to_reg",
@@ -41,7 +41,7 @@ export const CLASS_PRACTICES: ClassPractice[] = [
   },
 ];
 
-/** Gia sư đứng lớp các khóa học — hiển thị ở tấm quảng cáo "Đội ngũ gia sư". */
+// Gia sư đứng lớp các khóa học — hiển thị ở tấm quảng cáo "Đội ngũ gia sư".
 export const TUTORS: Tutor[] = [
   {
     name: "Thầy Hồ Đức Thuận",
@@ -81,7 +81,7 @@ export const TUTORS: Tutor[] = [
   },
 ];
 
-/** Ba ý chính trên tấm quảng cáo */
+// Ba ý chính trên tấm quảng cáo
 export const TUTOR_PROMO_POINTS = [
   "Gia sư được phỏng vấn và thử giảng",
   "Mỗi khóa một môn, lộ trình học theo tuần",

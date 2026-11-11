@@ -3,10 +3,8 @@ import { avatarUrl } from "@/services/avatarService";
 import { useAvatarVersion } from "@/stores/avatarStore";
 import { nameInitial } from "@/utils/sessions";
 
-/**
- * Ảnh đại diện tròn của một người dùng; chưa có ảnh (hoặc tải lỗi) thì hiện chữ cái đầu của tên trên nền cam.
- * `size` là cạnh tính bằng px.
- */
+// Ảnh đại diện tròn của một người dùng; chưa có ảnh (hoặc tải lỗi) thì hiện chữ cái đầu của tên trên nền cam.
+// `size` là cạnh tính bằng px.
 export function UserAvatar({
   userId,
   name,

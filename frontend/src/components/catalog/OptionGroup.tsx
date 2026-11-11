@@ -1,7 +1,7 @@
 import { Icon } from "@/components/ui/Icon";
 import type { OptionGroupProps } from "@/interfaces/catalog";
 
-/** Một mục của phiếu chọn lớp: nhóm ô đánh dấu, chỉ chọn được một ô. */
+// Một mục của phiếu chọn lớp: nhóm ô đánh dấu, chỉ chọn được một ô.
 export function OptionGroup<T extends string>({
   step,
   legend,
@@ -42,7 +42,9 @@ export function OptionGroup<T extends string>({
                 onChange={() => onChange(option.value)}
                 className="sr-only"
               />
-              {/* Ô đánh dấu vẽ tay */}
+              {
+                // Ô đánh dấu vẽ tay
+              }
               <span
                 aria-hidden="true"
                 className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border-2 ${

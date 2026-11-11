@@ -3,13 +3,13 @@ import { Icon } from "@/components/ui/Icon";
 import { ROUTES } from "@/constants/routes";
 import type { BackHomeLinkProps } from "@/interfaces/auth";
 
-/** Màu chữ theo nền */
+// Màu chữ theo nền
 const TONE = {
   onPhoto: "text-white/85 hover:text-white focus-visible:outline-white",
   onLight: "text-brand-navy/80 hover:text-brand-navy focus-visible:outline-brand-navy",
 };
 
-/** Liên kết "Về trang chủ", luôn nằm ở góc trên bên trái các trang xác thực. */
+// Liên kết "Về trang chủ", luôn nằm ở góc trên bên trái các trang xác thực.
 export function BackHomeLink({ tone, className = "" }: BackHomeLinkProps) {
   return (
     <Link

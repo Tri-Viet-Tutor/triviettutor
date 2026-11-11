@@ -8,8 +8,8 @@ import { UserAvatar } from "@/components/ui/UserAvatar";
 import { PORTAL_BTN_PRIMARY } from "@/constants/classNames";
 import { subjectIcon } from "@/constants/management";
 import { adminKeys, useRefreshAdmin } from "@/hooks/useAdminData";
-import type { AdminClassResponse, AvailableTutorResponse, LeaveRequestResponse, SessionResponse } from "@/interfaces/api";
-import { assignSubstitute, fetchSubstituteTutors } from "@/services/admin";
+import type { AdminClassResponse, AvailableTutorResponse, LeaveRequestResponse, SessionResponse } from "@/interfaces/dto";
+import { assignSubstitute, fetchSubstituteTutors } from "@/services/adminService";
 import { displayCode } from "@/utils/classes";
 import { formatDate, parseIsoDate, weekdayName } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
@@ -19,17 +19,16 @@ interface SubstitutePanelProps {
   request: LeaveRequestResponse;
   session: SessionResponse;
   info?: AdminClassResponse;
-  /** Tên gia sư đang bận (người xin nghỉ) */
+  // Tên gia sư đang bận (người xin nghỉ)
   busyName: string;
 }
 
+// Giờ dạng "HH:mm" từ "HH:mm:ss"
 const hhmm = (time: string) => time.slice(0, 5);
 
-/**
- * Chọn gia sư dạy thay một buổi khi gia sư phụ trách xin nghỉ: gợi ý từ GET /admin/sessions/{id}/available-tutors
- * (rảnh đúng giờ đó xếp trước, kèm khung rảnh đã khai trong ngày), bấm "Nhờ dạy thay" rồi ghi lý do
- * → POST /admin/sessions/{id}/substitute. Gia sư chính của lớp không đổi.
- */
+// Chọn gia sư dạy thay một buổi khi gia sư phụ trách xin nghỉ: gợi ý từ GET /admin/sessions/{id}/available-tutors
+// (rảnh đúng giờ đó xếp trước, kèm khung rảnh đã khai trong ngày), bấm "Nhờ dạy thay" rồi ghi lý do
+// → POST /admin/sessions/{id}/substitute. Gia sư chính của lớp không đổi.
 export function SubstitutePanel({ request, session, info, busyName }: SubstitutePanelProps) {
   const refresh = useRefreshAdmin();
   const query = useQuery({
@@ -55,6 +54,7 @@ export function SubstitutePanel({ request, session, info, busyName }: Substitute
   const free = tutors.filter((tutor) => tutor.available);
   const busy = tutors.filter((tutor) => !tutor.available);
 
+  // Thẻ một gia sư được gợi ý dạy thay
   const card = (tutor: AvailableTutorResponse) => (
     <li
       key={tutor.tutorId}
@@ -144,7 +144,9 @@ export function SubstitutePanel({ request, session, info, busyName }: Substitute
 
   return (
     <div className="space-y-5">
-      {/* Băng đầu: buổi cần người dạy thay */}
+      {
+        // Băng đầu: buổi cần người dạy thay
+      }
       <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-navyDeep via-brand-navy to-[#1F56B8] text-white shadow-[0_24px_48px_-30px_rgba(8,42,102,0.8)]">
         <div
           aria-hidden="true"

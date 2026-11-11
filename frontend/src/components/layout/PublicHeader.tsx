@@ -1,38 +1,33 @@
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { ASSETS } from "@/constants/assets";
+import { PUBLIC_NAV, PUBLIC_NAV_LEFT_COUNT } from "@/constants/nav";
 import { ROUTES } from "@/constants/routes";
 import { getRoleHome } from "@/services/authService";
 import { useAuthStore } from "@/stores/authStore";
 
-/** Các mục của menu chính (3 mục đầu nằm ở trang trái của "cuốn sách", còn lại ở trang phải) */
-const NAV_ITEMS = [
-  { label: "Trang chủ", to: ROUTES.home },
-  { label: "Khối lớp / Môn học", to: ROUTES.subjects },
-  { label: "Tìm gia sư", to: ROUTES.tutorSearch },
-  { label: "Mua khóa học", to: ROUTES.pricing },
-  { label: "Liên hệ", to: ROUTES.contact },
-];
-
-/**
- * Thanh đầu trang của các trang công khai.
- * Hàng 1: logo + nút tài khoản / đăng ký; hàng 2 (màn hình lớn): menu hình cuốn sách mở;
- * màn hình nhỏ: menu thả xuống.
- */
+// Thanh đầu trang của các trang công khai.
+// Hàng 1: logo + nút tài khoản / đăng ký; hàng 2 (màn hình lớn): menu hình cuốn sách mở;
+// màn hình nhỏ: menu thả xuống.
 export function PublicHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Đã đăng nhập thì nút "Đăng nhập" đổi thành lối vào tài khoản + nút đăng xuất
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const accountLink = user ? getRoleHome(user.role) : ROUTES.login;
+  // Đóng menu trên điện thoại
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
     <header className="w-full z-50 sticky top-0 bg-white shadow-sm">
-      {/* ── Hàng 1: Logo, nút hành động ───────────────────────────────── */}
+      {
+        // ── Hàng 1: Logo, nút hành động ─────────────────────────────────
+      }
       <div className="bg-white py-2 sm:py-2.5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-6">
-          {/* Logo + tên trung tâm */}
+          {
+            // Logo + tên trung tâm
+          }
           <Link to={ROUTES.home} className="flex items-center gap-3.5 shrink-0">
             <div className="w-11 h-11 rounded-full p-0.5 ring-1 ring-[#DCE6F5] flex items-center justify-center overflow-hidden shrink-0 bg-white">
               <img src={ASSETS.common.logo} alt="Logo Gia Sư Trí Việt" className="w-full h-full rounded-full object-contain" />
@@ -50,7 +45,9 @@ export function PublicHeader() {
             </div>
           </Link>
 
-          {/* Nút hành động */}
+          {
+            // Nút hành động
+          }
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <Link
               to={accountLink}
@@ -85,7 +82,9 @@ export function PublicHeader() {
               </Link>
             )}
 
-            {/* Nút mở / đóng menu trên điện thoại */}
+            {
+              // Nút mở / đóng menu trên điện thoại
+            }
             <button
               type="button"
               onClick={() => setMobileMenuOpen((open) => !open)}
@@ -101,9 +100,11 @@ export function PublicHeader() {
         </div>
       </div>
 
-      {/* ── Hàng 2: Thanh menu hình cuốn sách đang mở ─────────────────────
-           Hai trang xanh đậm, gáy sách ở giữa, các lớp giấy và bìa lộ ra phía dưới.
-           Mục đang chọn được đánh dấu bằng dải ruy băng kẹp sách màu cam. */}
+      {
+        // ── Hàng 2: Thanh menu hình cuốn sách đang mở ─────────────────────
+        // Hai trang xanh đậm, gáy sách ở giữa, các lớp giấy và bìa lộ ra phía dưới.
+        // Mục đang chọn được đánh dấu bằng dải ruy băng kẹp sách màu cam.
+      }
       <div className="hidden lg:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative -mx-5 h-[54px]">
@@ -123,9 +124,13 @@ export function PublicHeader() {
                   <stop offset="1" stopColor="#0E449F" />
                 </linearGradient>
               </defs>
-              {/* Bìa sách */}
+              {
+                // Bìa sách
+              }
               <path d="M0,40 L1000,40 L1000,66 Q1000,70 996,70.3 Q750,73 500,83 Q250,73 4,70.3 Q0,70 0,66 Z" fill="#051B45" />
-              {/* Các lớp giấy */}
+              {
+                // Các lớp giấy
+              }
               <path
                 d="M8,40 L992,40 L992,61 Q992,65 988,65.3 Q750,68 500,78 Q250,68 12,65.3 Q8,65 8,61 Z"
                 fill="#E9EEF7"
@@ -140,12 +145,16 @@ export function PublicHeader() {
                 strokeWidth="1"
                 vectorEffect="non-scaling-stroke"
               />
-              {/* Hai trang sách */}
+              {
+                // Hai trang sách
+              }
               <path
                 d="M0,6 Q250,-1 500,7 Q750,-1 1000,6 L1000,50 Q1000,54 996,54.3 Q750,57 500,66 Q250,57 4,54.3 Q0,54 0,50 Z"
                 fill="url(#book-spread)"
               />
-              {/* Mép sáng phía trên trang */}
+              {
+                // Mép sáng phía trên trang
+              }
               <path
                 d="M0,6 Q250,-1 500,7 Q750,-1 1000,6"
                 fill="none"
@@ -153,12 +162,14 @@ export function PublicHeader() {
                 strokeWidth="1"
                 vectorEffect="non-scaling-stroke"
               />
-              {/* Gáy sách */}
+              {
+                // Gáy sách
+              }
               <path d="M500,7 L500,66" stroke="rgba(0,0,0,0.45)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
             </svg>
 
             <nav aria-label="Menu chính" className="relative grid h-full grid-cols-2 pt-1.5">
-              {[NAV_ITEMS.slice(0, 3), NAV_ITEMS.slice(3)].map((page, pageIndex) => (
+              {[PUBLIC_NAV.slice(0, PUBLIC_NAV_LEFT_COUNT), PUBLIC_NAV.slice(PUBLIC_NAV_LEFT_COUNT)].map((page, pageIndex) => (
                 <div key={pageIndex} className="flex items-center gap-2 px-5">
                   {page.map((item) => (
                     <NavLink
@@ -191,11 +202,13 @@ export function PublicHeader() {
         </div>
       </div>
 
-      {/* ── Menu thả xuống trên điện thoại ───────────────────────────── */}
+      {
+        // ── Menu thả xuống trên điện thoại ─────────────────────────────
+      }
       {mobileMenuOpen && (
         <div className="lg:hidden bg-white border-t border-slate-200 px-4 py-4 space-y-3 shadow-xl">
           <nav className="flex flex-col space-y-1">
-            {NAV_ITEMS.map((item) => (
+            {PUBLIC_NAV.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

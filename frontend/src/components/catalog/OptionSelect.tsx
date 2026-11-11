@@ -1,10 +1,8 @@
 import { Icon } from "@/components/ui/Icon";
 import type { OptionSelectProps } from "@/interfaces/catalog";
 
-/**
- * Một mục của phiếu chọn lớp ở dạng ô chọn sổ xuống — dùng cho danh sách còn dài thêm
- * (ví dụ môn học): thêm lựa chọn mới không làm phiếu cao lên.
- */
+// Một mục của phiếu chọn lớp ở dạng ô chọn sổ xuống — dùng cho danh sách còn dài thêm
+// (ví dụ môn học): thêm lựa chọn mới không làm phiếu cao lên.
 export function OptionSelect<T extends string>({ step, legend, name, options, value, onChange }: OptionSelectProps<T>) {
   // Lựa chọn đang chọn — để hiện biểu tượng của nó trong ô
   const selected = options.find((option) => option.value === value) ?? options[0];

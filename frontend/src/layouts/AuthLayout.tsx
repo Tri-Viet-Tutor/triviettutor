@@ -4,18 +4,18 @@ import { ROUTES } from "@/constants/routes";
 import { AuthBrandPanel } from "@/components/auth/AuthBrandPanel";
 import { BackHomeLink } from "@/components/auth/BackHomeLink";
 
-/**
- * Khung chung của các trang xác thực (/login, /register, /verify-email, /forgot-password, /reset-password).
- * Chia đôi màn hình: bên trái là tấm ảnh phủ xanh (từ màn hình lớn), bên phải là form
- * trong một khung trắng bo góc, đầu khung có logo trung tâm.
- */
+// Khung chung của các trang xác thực (/login, /register, /verify-email, /forgot-password, /reset-password).
+// Chia đôi màn hình: bên trái là tấm ảnh phủ xanh (từ màn hình lớn), bên phải là form
+// trong một khung trắng bo góc, đầu khung có logo trung tâm.
 export function AuthLayout() {
   return (
     <div className="min-h-screen bg-[#F3F6FC] text-brand-ink lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
       <AuthBrandPanel />
 
       <div className="flex min-h-screen flex-col px-4 py-6 sm:px-8 lg:py-10">
-        {/* Nút về trang chủ cho màn hình nhỏ; từ màn hình lớn nút này nằm ở tấm ảnh bên trái */}
+        {
+          // Nút về trang chủ cho màn hình nhỏ; từ màn hình lớn nút này nằm ở tấm ảnh bên trái
+        }
         <header className="lg:hidden">
           <BackHomeLink tone="onLight" />
         </header>

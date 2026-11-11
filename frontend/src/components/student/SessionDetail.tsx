@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { StatusChip } from "@/components/dashboard/StatusChip";
 import { SessionHomeworkList } from "@/components/student/SessionHomeworkList";
 import { Icon } from "@/components/ui/Icon";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { ATTENDANCE_STATUS } from "@/constants/labels";
 import { ROUTES } from "@/constants/routes";
 import { useSessionAttendance } from "@/hooks/usePortalData";
@@ -19,18 +20,17 @@ import {
   teacherOf,
 } from "@/utils/sessions";
 import { RateTutorDialog } from "@/components/student/RateTutor";
-import { type StudentTutor, useStudentTutors } from "@/hooks/useRatingData";
+import { useStudentTutors } from "@/hooks/useRatingData";
+import type { StudentTutor } from "@/interfaces/dto";
 import type { SessionDetailProps } from "@/interfaces/portal";
 import { displayCode } from "@/utils/classes";
 
-/** Khung chung của hai nút "Vào lớp" và "Xin nghỉ" (màu thêm ở từng nút) */
+// Khung chung của hai nút "Vào lớp" và "Xin nghỉ" (màu thêm ở từng nút)
 const LINK =
   "inline-flex h-10 items-center justify-center gap-1.5 rounded-xl px-4 text-[14px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
 
-/**
- * Chi tiết một buổi học: ngày giờ, ghi chú (học bù, dạy thay), điểm danh của tôi
- * (GET /sessions/{id}/attendance, chỉ tải khi buổi đã bắt đầu), bài tập đã công bố và lối xin nghỉ / vào lớp.
- */
+// Chi tiết một buổi học: ngày giờ, ghi chú (học bù, dạy thay), điểm danh của tôi
+// (GET /sessions/{id}/attendance, chỉ tải khi buổi đã bắt đầu), bài tập đã công bố và lối xin nghỉ / vào lớp.
 export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailProps) {
   const started = sessionStart(session).getTime() <= now.getTime();
   // Chỉ xem điểm danh khi buổi đã bắt đầu và không bị hủy
@@ -45,9 +45,12 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
   // Hiện khu vực vào lớp khi phòng đang mở hoặc sắp mở
   const canJoin = joinNow || opensLater;
   const canLeave = canRequestLeave(session, now);
-  // Buổi đã học xong: mời chấm sao gia sư dạy buổi đó
+  // Gia sư dạy buổi này: ưu tiên người dạy thay nếu có (teacherOf), tra tên từ các lớp đang học
   const { tutors } = useStudentTutors();
-  const tutor = session.status === "COMPLETED" ? tutors.find((item) => item.id === teacherOf(session)) : undefined;
+  const teacherId = teacherOf(session);
+  const teacher = tutors.find((item) => item.id === teacherId);
+  // Buổi đã học xong: mời chấm sao gia sư dạy buổi đó
+  const tutor = session.status === "COMPLETED" ? teacher : undefined;
   const [rating, setRating] = useState<StudentTutor | null>(null);
 
   return (
@@ -60,6 +63,22 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
         <div className="flex gap-2">
           <dt className="w-20 shrink-0 text-brand-muted">Giờ học</dt>
           <dd className="font-medium text-brand-ink">{formatTimeRange(session)}</dd>
+        </div>
+        <div className="flex gap-2">
+          <dt className="w-20 shrink-0 text-brand-muted">Gia sư</dt>
+          <dd className="min-w-0 font-medium text-brand-ink">
+            {teacher ? (
+              <span className="flex min-w-0 items-center gap-1.5">
+                <UserAvatar userId={teacher.id} name={teacher.name} size={24} />
+                <span className="truncate">{teacher.name}</span>
+              </span>
+            ) : teacherId ? (
+              // Gia sư dạy thay không nằm trong danh sách gia sư của các lớp đang học nên chưa tra được tên
+              <span className="text-brand-muted">{hasSubstituteTutor(session) ? "Gia sư dạy thay" : "Đang cập nhật"}</span>
+            ) : (
+              <span className="text-brand-muted">Chưa phân công</span>
+            )}
+          </dd>
         </div>
         <div className="flex gap-2">
           <dt className="w-20 shrink-0 text-brand-muted">Lớp</dt>

@@ -1,13 +1,8 @@
 import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING } from "@/constants/classNames";
+import type { AdminNotice } from "@/interfaces/ui";
 
-/** Nội dung thông báo nổi */
-export interface AdminNotice {
-  tone: "ok" | "error";
-  text: string;
-}
-
-/** Thông báo nổi ở góc trên bên phải (dưới thanh trên cùng), không đẩy bảng xuống */
+// Thông báo nổi ở góc trên bên phải (dưới thanh trên cùng), không đẩy bảng xuống
 export function AdminToast({ notice, onClose }: { notice: AdminNotice | null; onClose: () => void }) {
   return (
     <div aria-live="polite" className="pointer-events-none fixed inset-x-4 top-20 z-50 flex justify-end sm:left-auto sm:right-6">

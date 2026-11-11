@@ -10,10 +10,10 @@ import type { EnrollmentStatus } from "@/interfaces/pricing";
 import { diffDays, formatDate, formatDayMonth, startOfToday } from "@/utils/date";
 import { enrollmentStatus, enrollmentStatusLabel } from "@/utils/pricing";
 
-/** Hai cột dùng chung cho hàng trục ngày và từng hàng khóa học (từ màn hình lớn) */
+// Hai cột dùng chung cho hàng trục ngày và từng hàng khóa học (từ màn hình lớn)
 const ROW_GRID = "lg:grid lg:grid-cols-[minmax(0,300px)_1fr] lg:items-center lg:gap-10";
 
-/** Màu nhãn trạng thái theo đợt đăng ký */
+// Màu nhãn trạng thái theo đợt đăng ký
 const STATUS_CHIP: Record<EnrollmentStatus, string> = {
   UPCOMING: "border border-brand-navy/30 text-brand-navy",
   OPEN: "bg-brand-orange text-brand-navyDeep",
@@ -21,7 +21,7 @@ const STATUS_CHIP: Record<EnrollmentStatus, string> = {
   STARTED: "bg-brand-navy/10 text-brand-muted",
 };
 
-/** Màu thanh thời gian theo đợt đăng ký */
+// Màu thanh thời gian theo đợt đăng ký
 const STATUS_BAR: Record<EnrollmentStatus, string> = {
   UPCOMING: "bg-brand-navy/35",
   OPEN: "bg-gradient-to-r from-brand-marker to-brand-orange",
@@ -29,10 +29,8 @@ const STATUS_BAR: Record<EnrollmentStatus, string> = {
   STARTED: "bg-brand-navy/20",
 };
 
-/**
- * Lịch mở đăng ký: mỗi khóa một thanh trên trục ngày — thanh màu là thời gian nhận đăng ký
- * (từ ngày mở tới hạn chốt), lá cờ là ngày khai giảng, vạch dọc là hôm nay.
- */
+// Lịch mở đăng ký: mỗi khóa một thanh trên trục ngày — thanh màu là thời gian nhận đăng ký
+// (từ ngày mở tới hạn chốt), lá cờ là ngày khai giảng, vạch dọc là hôm nay.
 export function EnrollmentScheduleSection() {
   const today = useMemo(() => startOfToday(), []);
   // Thanh thời gian chỉ chạy dài ra khi danh sách vào màn hình
@@ -42,7 +40,7 @@ export function EnrollmentScheduleSection() {
   const axisStart = ENROLLMENT_WINDOWS.reduce((min, item) => (item.opens < min ? item.opens : min), ENROLLMENT_WINDOWS[0].opens);
   const axisEnd = ENROLLMENT_WINDOWS.reduce((max, item) => (item.starts > max ? item.starts : max), ENROLLMENT_WINDOWS[0].starts);
   const axisDays = Math.max(diffDays(axisStart, axisEnd), 1);
-  /** Vị trí (%) của một ngày trên trục */
+  // Vị trí (%) của một ngày trên trục
   const position = (date: Date) => Math.min(Math.max((diffDays(axisStart, date) / axisDays) * 100, 0), 100);
   const todayPosition = today >= axisStart && today <= axisEnd ? position(today) : null;
 
@@ -55,7 +53,9 @@ export function EnrollmentScheduleSection() {
         />
 
         <div ref={listRef}>
-          {/* Trục ngày: ngày đầu, ngày cuối và nhãn "Hôm nay" */}
+          {
+            // Trục ngày: ngày đầu, ngày cuối và nhãn "Hôm nay"
+          }
           <div aria-hidden="true" className={ROW_GRID}>
             <span />
             <div className="relative mx-4 h-8 text-[12.5px] font-bold text-brand-muted">
@@ -97,7 +97,9 @@ export function EnrollmentScheduleSection() {
                   </div>
 
                   <div className="mt-5 lg:mt-0">
-                    {/* Thanh thời gian */}
+                    {
+                      // Thanh thời gian
+                    }
                     <div aria-hidden="true" className="relative mx-4 h-3 rounded-full bg-brand-navy/10">
                       <span
                         className={`absolute inset-y-0 rounded-full transition-[width] duration-1000 ease-out motion-reduce:transition-none ${STATUS_BAR[status]}`}

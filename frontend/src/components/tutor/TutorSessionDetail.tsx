@@ -25,10 +25,8 @@ import { displayCode } from "@/utils/classes";
 
 type DetailTab = "attendance" | "homework" | "materials";
 
-/**
- * Chi tiết một buổi dạy: ngày giờ, link lớp trực tuyến, điểm danh cả lớp (chỉ khi tôi là người dạy buổi đó)
- * lối xin nghỉ dạy và mục bài tập (giao, công bố, đóng, chấm bài nộp).
- */
+// Chi tiết một buổi dạy: ngày giờ, link lớp trực tuyến, điểm danh cả lớp (chỉ khi tôi là người dạy buổi đó)
+// lối xin nghỉ dạy và mục bài tập (giao, công bố, đóng, chấm bài nộp).
 export function TutorSessionDetail({ session, now, tutorId, hasPendingLeave }: TutorSessionDetailProps) {
   // Tôi là người dạy thật sự (gia sư chính hoặc người dạy thay)
   const isTeacher = teacherOf(session) === tutorId;
@@ -49,7 +47,9 @@ export function TutorSessionDetail({ session, now, tutorId, hasPendingLeave }: T
 
   return (
     <div className="space-y-5">
-      {/* Tóm tắt buổi */}
+      {
+        // Tóm tắt buổi
+      }
       <div className="flex flex-wrap items-stretch gap-3">
         <div className="flex w-[74px] shrink-0 flex-col items-center justify-center rounded-2xl bg-brand-navy py-2 text-white">
           <span className="text-[11.5px] font-bold uppercase text-white/75">{weekdayName(day, true)}</span>
@@ -89,7 +89,9 @@ export function TutorSessionDetail({ session, now, tutorId, hasPendingLeave }: T
 
       {isTeacher && (
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Phòng học chỉ mở từ 15 phút trước giờ dạy đến 15 phút sau khi kết thúc, và chỉ cho người dạy thật sự */}
+          {
+            // Phòng học chỉ mở từ 15 phút trước giờ dạy đến 15 phút sau khi kết thúc, và chỉ cho người dạy thật sự
+          }
           {canJoinNow(session, now) && (
             <Link
               to={`/classroom/${session.sessionId}`}
@@ -121,7 +123,9 @@ export function TutorSessionDetail({ session, now, tutorId, hasPendingLeave }: T
 
       {showTabs && (
         <section className="rounded-2xl border border-brand-sandLine bg-brand-sand/30 p-4">
-          {/* Chi tiết buổi học: Điểm danh / Bài tập / Tài liệu */}
+          {
+            // Chi tiết buổi học: Điểm danh / Bài tập / Tài liệu
+          }
           <div role="tablist" aria-label="Chi tiết buổi học" className="mb-4 flex flex-wrap gap-1.5 rounded-xl bg-white p-1 shadow-sm">
             {tabs.map((option) => (
               <button

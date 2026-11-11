@@ -8,13 +8,11 @@ import type { CourseClassesPanelProps } from "@/interfaces/admin";
 import { classStatusActions } from "@/utils/classes";
 import { formatDate, parseIsoDate } from "@/utils/date";
 
-/** Số lớp tối đa hiện trong một khóa (backend cho tối đa 100 mỗi trang) */
+// Số lớp tối đa hiện trong một khóa (backend cho tối đa 100 mỗi trang)
 const LIMIT = 50;
 
-/**
- * Các lớp đã mở từ một khóa (GET /admin/classes?courseId=…), mỗi lớp một dòng gọn:
- * mã lớp, lịch, khai giảng, sĩ số, trạng thái và nút đổi trạng thái / mở lại. Có nút tạo lớp mới cho khóa.
- */
+// Các lớp đã mở từ một khóa (GET /admin/classes?courseId=…), mỗi lớp một dòng gọn:
+// mã lớp, lịch, khai giảng, sĩ số, trạng thái và nút đổi trạng thái / mở lại. Có nút tạo lớp mới cho khóa.
 export function CourseClassesPanel({ course, onCreate, onChangeStatus }: CourseClassesPanelProps) {
   const classes = useAdminClasses({ courseId: course.id, size: LIMIT });
   const items = classes.data?.content ?? [];

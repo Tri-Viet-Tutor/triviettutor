@@ -4,7 +4,7 @@ import { Icon } from "@/components/ui/Icon";
 import { CONTAINER, FOCUS_RING } from "@/constants/classNames";
 import type { TutorFinderSectionProps } from "@/interfaces/tutor";
 
-/** Kết quả tìm gia sư: danh sách bên trái, hồ sơ gia sư đang chọn bên phải. */
+// Kết quả tìm gia sư: danh sách bên trái, hồ sơ gia sư đang chọn bên phải.
 export function TutorFinderSection({ tutors, selectedId, onSelect, subjectLabel, onReset }: TutorFinderSectionProps) {
   // Gia sư đang chọn không còn trong kết quả thì lấy người đầu tiên
   const selected = tutors.find((tutor) => tutor.id === selectedId) ?? tutors[0];

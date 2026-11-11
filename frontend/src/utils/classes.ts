@@ -1,9 +1,21 @@
 import type { ClassSummary } from "@/interfaces/admin";
-import type { ClassStatus, SessionResponse } from "@/interfaces/api";
+import type { SessionResponse } from "@/interfaces/dto";
+import type { ClassNextStep, ClassStatusAction } from "@/interfaces/catalog";
 
-/* Hàm gom các buổi học thành danh sách lớp (khu quản trị). */
+// Hàm gom các buổi học thành danh sách lớp (khu quản trị).
 
-/** Gom các buổi (đã xếp theo ngày) thành danh sách lớp; lớp chưa có gia sư đứng trước */
+// Ngày dạng "yyyy-mm-dd" theo giờ máy
+const isoOf = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+// Đã chốt được sĩ số: 1 kèm 1 có học viên; lớp nhóm qua hạn đăng ký và có 2 – 8 học viên
+function readyToClose(item: ClassLike, todayIso: string): boolean {
+  if (item.classType === "ONE_ON_ONE") return item.currentStudents === 1;
+  const deadlinePassed = item.enrollmentDeadline != null && todayIso > item.enrollmentDeadline;
+  return deadlinePassed && item.currentStudents >= 2 && item.currentStudents <= 8;
+}
+
+// Gom các buổi (đã xếp theo ngày) thành danh sách lớp; lớp chưa có gia sư đứng trước
 export function summarizeClasses(sessions: SessionResponse[]): ClassSummary[] {
   const byClass = new Map<number, ClassSummary>();
   for (const session of sessions) {
@@ -21,7 +33,7 @@ export function summarizeClasses(sessions: SessionResponse[]): ClassSummary[] {
   return [...byClass.values()].sort((a, b) => Number(a.tutorId !== null) - Number(b.tutorId !== null) || a.classId - b.classId);
 }
 
-/** Lớp tối thiểu để tính bước tiếp theo */
+// Lớp tối thiểu để tính bước tiếp theo
 type ClassLike = {
   status: string;
   classType: string;
@@ -31,38 +43,8 @@ type ClassLike = {
   tutorId?: number | null;
 };
 
-/** Một thao tác đổi trạng thái lớp; `targets` gọi lần lượt (Bản nháp → Mở đăng ký đi qua PUBLISHED) */
-export interface ClassStatusAction {
-  key: string;
-  label: string;
-  hint: string;
-  icon: string;
-  targets: ClassStatus[];
-  /** Thao tác hủy: tô đỏ và bắt buộc nhập lý do */
-  danger?: boolean;
-}
-
-/** Việc admin cần làm tiếp với một lớp (null nếu không có gì cần làm) */
-export interface ClassNextStep {
-  text: string;
-  /** "assign": phân công gia sư - "status": đổi trạng thái - "reopen": xử lý lớp không đủ sĩ số */
-  action: "assign" | "status" | "reopen";
-}
-
-const isoOf = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-
-/** Đã chốt được sĩ số: 1 kèm 1 có học viên; lớp nhóm qua hạn đăng ký và có 2 – 8 học viên */
-function readyToClose(item: ClassLike, todayIso: string): boolean {
-  if (item.classType === "ONE_ON_ONE") return item.currentStudents === 1;
-  const deadlinePassed = item.enrollmentDeadline != null && todayIso > item.enrollmentDeadline;
-  return deadlinePassed && item.currentStudents >= 2 && item.currentStudents <= 8;
-}
-
-/**
- * Chỉ những bước chuyển hợp lệ lúc này (khớp ClassService.changeStatus ở backend), để admin không phải
- * chọn trong cả danh sách trạng thái. Lớp chưa có học viên mới hủy được.
- */
+// Chỉ những bước chuyển hợp lệ lúc này (khớp ClassService.changeStatus ở backend), để admin không phải
+// chọn trong cả danh sách trạng thái. Lớp chưa có học viên mới hủy được.
 export function classStatusActions(item: ClassLike, today: Date): ClassStatusAction[] {
   const todayIso = isoOf(today);
   const actions: ClassStatusAction[] = [];
@@ -112,7 +94,7 @@ export function classStatusActions(item: ClassLike, today: Date): ClassStatusAct
   return actions;
 }
 
-/** Gợi ý bước tiếp theo theo vòng đời lớp (BR-04), hiện dưới trạng thái của lớp */
+// Gợi ý bước tiếp theo theo vòng đời lớp (BR-04), hiện dưới trạng thái của lớp
 export function classNextStep(item: ClassLike, today: Date): ClassNextStep | null {
   const todayIso = isoOf(today);
   switch (item.status) {
@@ -136,21 +118,21 @@ export function classNextStep(item: ClassLike, today: Date): ClassNextStep | nul
   }
 }
 
-/** Thứ trong tuần (0 = Chủ nhật) của từng mẫu lịch */
+// Thứ trong tuần (0 = Chủ nhật) của từng mẫu lịch
 const PATTERN_DAYS: Record<string, number[]> = {
   MON_WED_FRI: [1, 3, 5],
   TUE_THU_SAT: [2, 4, 6],
   SAT_SUN: [6, 0],
 };
 
-/** Tên các thứ của mẫu lịch, dùng để báo lỗi khi ngày chọn không khớp */
+// Tên các thứ của mẫu lịch, dùng để báo lỗi khi ngày chọn không khớp
 const PATTERN_WEEKDAY_LABEL: Record<string, string> = {
   MON_WED_FRI: "Thứ 2, 4 hoặc 6",
   TUE_THU_SAT: "Thứ 3, 5 hoặc 7",
   SAT_SUN: "Thứ 7 hoặc Chủ nhật",
 };
 
-/** Ngày (chuỗi "YYYY-MM-DD") có rơi đúng vào một trong các thứ của mẫu lịch không */
+// Ngày (chuỗi "YYYY-MM-DD") có rơi đúng vào một trong các thứ của mẫu lịch không
 export function weekdayMatchesPattern(dateIso: string, pattern: string): boolean {
   const days = PATTERN_DAYS[pattern];
   if (!days || !dateIso) return true;
@@ -158,15 +140,13 @@ export function weekdayMatchesPattern(dateIso: string, pattern: string): boolean
   return days.includes(new Date(y, m - 1, d).getDay());
 }
 
-/** Câu mô tả các thứ hợp lệ của một mẫu lịch, dùng trong thông báo lỗi/gợi ý */
+// Câu mô tả các thứ hợp lệ của một mẫu lịch, dùng trong thông báo lỗi/gợi ý
 export function patternWeekdayLabel(pattern: string): string {
   return PATTERN_WEEKDAY_LABEL[pattern] ?? "đúng lịch học";
 }
 
-/**
- * Ngày học dự kiến của buổi cuối: đếm các ngày đúng mẫu lịch kể từ ngày khai giảng (cùng cách backend sinh buổi).
- * Không tính buổi bù phát sinh sau; lịch thật xem trong chi tiết lớp.
- */
+// Ngày học dự kiến của buổi cuối: đếm các ngày đúng mẫu lịch kể từ ngày khai giảng (cùng cách backend sinh buổi).
+// Không tính buổi bù phát sinh sau; lịch thật xem trong chi tiết lớp.
 export function estimatedEndDate(startDate: string, pattern: string, totalSessions: number): string | null {
   const days = PATTERN_DAYS[pattern];
   if (!days || totalSessions < 1) return null;
@@ -181,22 +161,22 @@ export function estimatedEndDate(startDate: string, pattern: string, totalSessio
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-/** Mức giảm theo sĩ số (BR-02.11): 1 kèm 1 không giảm; nhóm 2–3: 20%, 4–5: 35%, 6–8: 40% */
+// Mức giảm theo sĩ số (BR-02.11): 1 kèm 1 không giảm; nhóm 2–3: 20%, 4–5: 35%, 6–8: 40%
 export function discountForSize(classType: string, size: number): number {
   if (classType === "ONE_ON_ONE") return 0;
   const n = Math.max(2, size);
   return n <= 3 ? 0.2 : n <= 5 ? 0.35 : 0.4;
 }
 
-/** Nhãn bậc sĩ số, ví dụ "nhóm 4–5 người" */
+// Nhãn bậc sĩ số, ví dụ "nhóm 4–5 người"
 export function sizeTierLabel(classType: string, size: number): string {
   if (classType === "ONE_ON_ONE") return "1 kèm 1";
   const n = Math.max(2, size);
   return n <= 3 ? "nhóm 2–3 người" : n <= 5 ? "nhóm 4–5 người" : "nhóm 6–8 người";
 }
 
-/** Mã hiển thị: khóa học KH001, lớp học LH001 (theo id trong database) */
-/** Tiền tố mã hiển thị theo loại đối tượng: KH001 (khóa), LH001 (lớp), BH001 (buổi học)… */
+// Mã hiển thị: khóa học KH001, lớp học LH001 (theo id trong database)
+// Tiền tố mã hiển thị theo loại đối tượng: KH001 (khóa), LH001 (lớp), BH001 (buổi học)…
 const CODE_PREFIX = {
   course: "KH",
   class: "LH",
@@ -214,7 +194,7 @@ const CODE_PREFIX = {
 
 export type DisplayCodeKind = keyof typeof CODE_PREFIX;
 
-/** Mã dễ đọc thay cho "#id": displayCode("class", 12) → "LH012" */
+// Mã dễ đọc thay cho "#id": displayCode("class", 12) → "LH012"
 export function displayCode(kind: DisplayCodeKind, id: number): string {
   return `${CODE_PREFIX[kind]}${String(id).padStart(3, "0")}`;
 }

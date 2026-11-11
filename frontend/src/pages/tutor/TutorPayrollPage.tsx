@@ -11,12 +11,12 @@ import { PAYROLL_STATUS } from "@/constants/labels";
 import { monthLabel } from "@/constants/management";
 import { useMyPayroll, useMyPayrollEstimate } from "@/hooks/useManagementData";
 import { useNow } from "@/hooks/useNow";
-import type { PayrollLineResponse } from "@/interfaces/api";
+import type { PayrollLineResponse } from "@/interfaces/dto";
 import { fetchMyPayroll } from "@/services/managementService";
 import { formatVnd } from "@/utils/currency";
 import { downloadPayrollCsv } from "@/utils/payrollExport";
 
-/** Tải mọi tháng lương (mỗi lần tối đa 100 tháng) rồi xuất file CSV */
+// Tải mọi tháng lương (mỗi lần tối đa 100 tháng) rồi xuất file CSV
 async function exportAllMonths(): Promise<void> {
   const all: PayrollLineResponse[] = [];
   for (let page = 0, pages = 1; page < pages; page += 1) {
@@ -27,11 +27,9 @@ async function exportAllMonths(): Promise<void> {
   downloadPayrollCsv(all, "bang-luong-cua-toi.csv");
 }
 
-/**
- * Thu nhập của gia sư theo từng tháng đã chốt: lương cứng, thù lao theo buổi hợp lệ, buổi bị hủy / được dạy thay / chưa chốt,
- * kèm danh sách từng buổi đã dạy.
- * API: GET /tutor/payroll.
- */
+// Thu nhập của gia sư theo từng tháng đã chốt: lương cứng, thù lao theo buổi hợp lệ, buổi bị hủy / được dạy thay / chưa chốt,
+// kèm danh sách từng buổi đã dạy.
+// API: GET /tutor/payroll.
 export function TutorPayrollPage() {
   const payroll = useMyPayroll();
   // GET /tutor/payroll chỉ trả tháng đã chốt, nên số "đang chờ duyệt" và "dự kiến" phải lấy từ bản tạm tính
@@ -48,9 +46,13 @@ export function TutorPayrollPage() {
   // Tạm tính của tháng đang chạy (tháng hiện tại) là số dự kiến, có thể còn đổi khi buổi dạy phát sinh thêm.
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
+  // Bảng lương của tháng đã qua
   const isPast = (line: PayrollLineResponse) => line.year < currentYear || (line.year === currentYear && line.month < currentMonth);
+  // Bảng lương của tháng hiện tại
   const isCurrent = (line: PayrollLineResponse) => line.year === currentYear && line.month === currentMonth;
   const estimateLines = estimate.data ?? [];
+  // Quá trần một trang thì "Đã nhận" chưa cộng hết, phải nói ra thay vì đưa số thiếu
+  const payrollCapped = payroll.data ? payroll.data.totalElements > lines.length : false;
   const received = lines.filter((line) => line.status === "FINALIZED").reduce((sum, line) => sum + line.totalPay, 0);
   const pendingApproval = estimateLines.filter(isPast).reduce((sum, line) => sum + line.totalPay, 0);
   const projected = estimateLines.filter(isCurrent).reduce((sum, line) => sum + line.totalPay, 0);
@@ -87,8 +89,10 @@ export function TutorPayrollPage() {
         </p>
       )}
 
-      {/* Các mốc thu nhập: đã nhận / đang chờ duyệt / dự kiến tháng này.
-          Hiện cả khi chưa có tháng nào được chốt, vì lúc đó "dự kiến tháng này" mới là số gia sư cần nhất. */}
+      {
+        // Các mốc thu nhập: đã nhận / đang chờ duyệt / dự kiến tháng này.
+        // Hiện cả khi chưa có tháng nào được chốt, vì lúc đó "dự kiến tháng này" mới là số gia sư cần nhất.
+      }
       {(latest || estimateLines.length > 0) && (
         <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <StatTile icon="account_balance" tone="green" label="Đã nhận (các tháng đã chốt)" value={formatVnd(received)} />
@@ -106,6 +110,11 @@ export function TutorPayrollPage() {
           />
         </div>
       )}
+      {payrollCapped && (
+        <p className="mb-4 text-[12.5px] text-brand-muted">
+          Ô “Đã nhận” mới cộng {lines.length} tháng gần nhất trong {payroll.data?.totalElements} tháng đã chốt.
+        </p>
+      )}
 
       {payroll.isPending ? (
         <PortalLoading label="Đang tải bảng lương" rows={3} />
@@ -119,7 +128,9 @@ export function TutorPayrollPage() {
         />
       ) : (
         <>
-          {/* Tháng gần nhất nổi bật */}
+          {
+            // Tháng gần nhất nổi bật
+          }
           <section className="relative mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-brand-navyDeep via-brand-navy to-[#1F63D8] p-6 text-white shadow-[0_24px_48px_-28px_rgba(8,42,102,0.9)] sm:p-8">
             <div
               aria-hidden="true"
@@ -142,9 +153,9 @@ export function TutorPayrollPage() {
               </div>
               <dl className="grid grid-cols-3 gap-2 text-center">
                 {[
-                  { label: "Hợp lệ", value: latest.validSessions, icon: "task_alt" },
-                  { label: "Được dạy thay", value: latest.substitutedOutSessions, icon: "swap_horiz" },
-                  { label: "Chưa chốt", value: latest.unfinalizedSessions, icon: "pending" },
+                  { label: "Buổi hợp lệ", value: latest.validSessions, icon: "task_alt" },
+                  { label: "Buổi được dạy thay", value: latest.substitutedOutSessions, icon: "swap_horiz" },
+                  { label: "Buổi chưa chốt", value: latest.unfinalizedSessions, icon: "pending" },
                 ].map((item) => (
                   <div key={item.label} className="rounded-2xl bg-white/10 px-3 py-2.5 ring-1 ring-inset ring-white/15">
                     <dt className="flex items-center justify-center gap-1 text-[12px] text-white/70">

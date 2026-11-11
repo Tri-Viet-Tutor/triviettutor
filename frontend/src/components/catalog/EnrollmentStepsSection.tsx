@@ -4,14 +4,16 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { CONTAINER } from "@/constants/classNames";
 import { ENROLLMENT_STEPS } from "@/constants/classOptions";
 
-/** Từ đăng ký đến khai giảng: năm bước nối nhau bằng nét đứt. */
+// Từ đăng ký đến khai giảng: năm bước nối nhau bằng nét đứt.
 export function EnrollmentStepsSection() {
   return (
     <section id="enrollment-steps" className="bg-[#F5F1E9] py-14 lg:py-20">
       <div className={CONTAINER}>
         <SectionHeading title="Từ Đăng Ký Đến Khai Giảng" />
         <ol className="relative grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-5 lg:gap-6">
-          {/* Nét đứt nối các bước trên màn hình rộng */}
+          {
+            // Nét đứt nối các bước trên màn hình rộng
+          }
           <li
             aria-hidden="true"
             className="pointer-events-none absolute left-[7%] right-[7%] top-7 hidden border-t-[3px] border-dashed border-brand-navy/25 lg:block"

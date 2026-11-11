@@ -6,10 +6,8 @@ import { ROUTES } from "@/constants/routes";
 import { TUTOR_ASSURANCES, TUTOR_PROFILES } from "@/constants/tutors";
 import type { TutorProfilePanelProps } from "@/interfaces/tutor";
 
-/**
- * Hồ sơ gia sư đang chọn: ảnh, giới thiệu, chuyên môn, hình thức học, ba điều trung tâm bảo đảm,
- * lộ trình khóa đang dạy và đường dẫn sang phiếu chọn lớp của đúng môn đó.
- */
+// Hồ sơ gia sư đang chọn: ảnh, giới thiệu, chuyên môn, hình thức học, ba điều trung tâm bảo đảm,
+// lộ trình khóa đang dạy và đường dẫn sang phiếu chọn lớp của đúng môn đó.
 export function TutorProfilePanel({ tutor, onSelect }: TutorProfilePanelProps) {
   const { course } = tutor;
   // Gia sư khác cùng dạy khóa này
@@ -26,7 +24,9 @@ export function TutorProfilePanel({ tutor, onSelect }: TutorProfilePanelProps) {
     <article key={tutor.id} className="diary-flip">
       <div className="grid grid-cols-1 items-center gap-8 sm:grid-cols-[minmax(0,250px)_1fr] sm:gap-10 xl:grid-cols-[minmax(0,290px)_1fr]">
         <div className="relative mx-auto w-full max-w-[230px] sm:max-w-[290px]">
-          {/* Mảng màu cam mềm sau ảnh */}
+          {
+            // Mảng màu cam mềm sau ảnh
+          }
           <span aria-hidden="true" className="absolute -inset-5 rounded-[42%_58%_55%_45%/52%_44%_56%_48%] bg-brand-orange/25" />
           <figure className="relative -rotate-2 rounded-[26px] border-[6px] border-white bg-white shadow-[0_26px_40px_-22px_rgba(8,42,102,0.7)]">
             <span aria-hidden="true" className={`${TAPE} -top-3 left-1/2 w-24 -translate-x-1/2 rotate-2`} />
@@ -52,7 +52,9 @@ export function TutorProfilePanel({ tutor, onSelect }: TutorProfilePanelProps) {
           <h2 className="mt-4 text-[30px] font-extrabold leading-tight tracking-tight text-brand-navy lg:text-[38px]">{tutor.name}</h2>
           <p className="mt-3 max-w-xl text-[16.5px] leading-relaxed text-brand-ink/85">{tutor.bio}</p>
 
-          {/* Chuyên môn */}
+          {
+            // Chuyên môn
+          }
           <ul aria-label="Chuyên môn" className="mt-4 flex flex-wrap gap-2">
             {tutor.specialties.map((specialty) => (
               <li
@@ -93,7 +95,9 @@ export function TutorProfilePanel({ tutor, onSelect }: TutorProfilePanelProps) {
         </div>
       </div>
 
-      {/* Bằng cấp, kinh nghiệm, thành tích — chỉ hiện khi gia sư đã cung cấp */}
+      {
+        // Bằng cấp, kinh nghiệm, thành tích — chỉ hiện khi gia sư đã cung cấp
+      }
       {tutor.credentials.length > 0 && (
         <div className="mt-10">
           <h3 className="text-[19px] font-extrabold text-brand-navy">Hồ sơ</h3>
@@ -108,7 +112,9 @@ export function TutorProfilePanel({ tutor, onSelect }: TutorProfilePanelProps) {
         </div>
       )}
 
-      {/* Ba điều trung tâm bảo đảm cho mọi gia sư */}
+      {
+        // Ba điều trung tâm bảo đảm cho mọi gia sư
+      }
       <ul className="mt-10 grid grid-cols-1 gap-y-5 sm:grid-cols-3 sm:divide-x sm:divide-brand-navy/15">
         {TUTOR_ASSURANCES.map((assurance) => (
           <li key={assurance.title} className="flex gap-3.5 sm:px-6 sm:first:pl-0 sm:last:pr-0">

@@ -2,39 +2,21 @@ import { useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { usePopover } from "@/components/ui/usePopoverPosition";
 import { addDays, parseIsoDate, startOfToday, toIsoDate } from "@/utils/date";
+import type { DateFieldProps } from "@/interfaces/ui";
 
 const WEEKDAYS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 const PANEL_WIDTH = 296;
 const PANEL_HEIGHT = 352;
 
-export interface DateFieldProps {
-  id?: string;
-  /** "YYYY-MM-DD" hoặc "" */
-  value: string;
-  onChange: (value: string) => void;
-  min?: string;
-  max?: string;
-  /** Khóa thêm những ngày không hợp lệ theo quy tắc riêng (ví dụ: không đúng thứ của lịch học đã chọn) */
-  disabledDate?: (iso: string) => boolean;
-  /** Lớp của ô (thường là PORTAL_INPUT / AUTH_INPUT) */
-  className?: string;
-  placeholder?: string;
-  required?: boolean;
-  disabled?: boolean;
-  "aria-label"?: string;
-}
-
-/** "2026-10-30" → "T6, 30/10/2026" */
+// "2026-10-30" → "T6, 30/10/2026"
 function display(iso: string): string {
   const date = parseIsoDate(iso);
   const weekday = WEEKDAYS[(date.getDay() + 6) % 7];
   return `${weekday}, ${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
 }
 
-/**
- * Ô chọn ngày thay cho <input type="date"> của trình duyệt: lịch tháng tiếng Việt (tuần bắt đầu Thứ Hai),
- * ngày đang chọn tô navy, hôm nay viền cam, ngày ngoài min/max bị khóa; có nút "Hôm nay" và "Xóa".
- */
+// Ô chọn ngày thay cho <input type="date"> của trình duyệt: lịch tháng tiếng Việt (tuần bắt đầu Thứ Hai),
+// ngày đang chọn tô navy, hôm nay viền cam, ngày ngoài min/max bị khóa; có nút "Hôm nay" và "Xóa".
 export function DateField({
   id,
   value,
@@ -56,11 +38,13 @@ export function DateField({
   const base = value ? parseIsoDate(value) : min && min > todayIso ? parseIsoDate(min) : today;
   const [month, setMonth] = useState(() => new Date(base.getFullYear(), base.getMonth(), 1));
 
+  // Ngày nằm ngoài khoảng cho phép hoặc bị khóa
   const outOfRange = (iso: string) => (min !== undefined && iso < min) || (max !== undefined && iso > max) || Boolean(disabledDate?.(iso));
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
   const gridStart = addDays(first, -((first.getDay() + 6) % 7));
   const cells = Array.from({ length: 42 }, (_, index) => addDays(gridStart, index));
 
+  // Mở / đóng lịch chọn ngày, mở ra ở đúng tháng đang chọn
   function toggle() {
     if (disabled) return;
     if (!open) {
@@ -69,6 +53,7 @@ export function DateField({
     }
     setOpen(!open);
   }
+  // Chọn một ngày, đóng lịch và trả focus về ô
   function pick(iso: string) {
     onChange(iso);
     setOpen(false);

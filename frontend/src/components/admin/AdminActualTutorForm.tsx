@@ -5,15 +5,13 @@ import { Select } from "@/components/ui/Select";
 import { AUTH_LABEL, PORTAL_INPUT } from "@/constants/classNames";
 import { useRefreshAdmin } from "@/hooks/useAdminData";
 import { portalKeys, useUserId } from "@/hooks/usePortalData";
-import { changeActualTutor } from "@/services/admin";
+import { changeActualTutor } from "@/services/adminService";
 import { teacherOf } from "@/utils/sessions";
 import type { AdminActualTutorFormProps } from "@/interfaces/admin";
 import { displayCode } from "@/utils/classes";
 
-/**
- * Đổi gia sư thực dạy của buổi đã bắt đầu (vd. gia sư được phân công vắng, gia sư khác dạy thay).
- * Backend kiểm tra trùng lịch, bỏ xác nhận đã dạy cũ để gia sư thực dạy xác nhận lại, và ghi nhật ký.
- */
+// Đổi gia sư thực dạy của buổi đã bắt đầu (vd. gia sư được phân công vắng, gia sư khác dạy thay).
+// Backend kiểm tra trùng lịch, bỏ xác nhận đã dạy cũ để gia sư thực dạy xác nhận lại, và ghi nhật ký.
 export function AdminActualTutorForm({ session, tutors, onDone }: AdminActualTutorFormProps) {
   const userId = useUserId();
   const queryClient = useQueryClient();

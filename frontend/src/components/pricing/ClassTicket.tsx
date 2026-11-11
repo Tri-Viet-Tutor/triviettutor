@@ -8,7 +8,7 @@ import { formatVnd } from "@/utils/currency";
 import { formatDate, parseIsoDate } from "@/utils/date";
 import { discountForSize, estimatedEndDate } from "@/utils/classes";
 
-/** Màu cuống vé, xoay vòng theo vị trí lớp trong danh sách */
+// Màu cuống vé, xoay vòng theo vị trí lớp trong danh sách
 const STUB_TONES = [
   "bg-brand-navy text-white",
   "bg-[#FFE2A6] text-brand-navyDeep",
@@ -17,13 +17,11 @@ const STUB_TONES = [
   "bg-[#E4DFF6] text-brand-navyDeep",
 ];
 
-/** Lỗ khuyết hình bán nguyệt ở hai đầu đường xé, tô cùng màu nền của phần danh sách */
+// Lỗ khuyết hình bán nguyệt ở hai đầu đường xé, tô cùng màu nền của phần danh sách
 const NOTCH = "absolute h-5 w-5 rounded-full border border-slate-200";
 
-/**
- * Một lớp đang mở đăng ký (dữ liệu thật từ GET /catalog/classes — các lớp admin mở bán),
- * trình bày như tấm vé: cuống vé là môn, thân vé là thông tin lớp, phần xé là học phí và nút đăng ký.
- */
+// Một lớp đang mở đăng ký (dữ liệu thật từ GET /catalog/classes — các lớp admin mở bán),
+// trình bày như tấm vé: cuống vé là môn, thân vé là thông tin lớp, phần xé là học phí và nút đăng ký.
 export function ClassTicket({
   item,
   index,

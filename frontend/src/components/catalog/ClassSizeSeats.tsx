@@ -1,9 +1,7 @@
 import { CLASS_SIZE } from "@/constants/classOptions";
 
-/**
- * Sĩ số một lớp: con số lớn và một hàng "chỗ ngồi" —
- * chỗ chắc chắn có người tô đậm, chỗ có thể có thêm người tô nhạt.
- */
+// Sĩ số một lớp: con số lớn và một hàng "chỗ ngồi" —
+// chỗ chắc chắn có người tô đậm, chỗ có thể có thêm người tô nhạt.
 export function ClassSizeSeats() {
   return (
     <div className="flex flex-col items-center text-center lg:items-start lg:text-left">

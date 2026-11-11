@@ -1,30 +1,16 @@
 import { useEffect, useRef } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { usePopover } from "@/components/ui/usePopoverPosition";
+import type { TimeFieldProps } from "@/interfaces/ui";
 
 const PANEL_WIDTH = 216;
 const PANEL_HEIGHT = 286;
 
-export interface TimeFieldProps {
-  id?: string;
-  /** "HH:mm" hoặc "" */
-  value: string;
-  onChange: (value: string) => void;
-  /** Bước phút, mặc định 15 */
-  step?: number;
-  className?: string;
-  placeholder?: string;
-  required?: boolean;
-  disabled?: boolean;
-  "aria-label"?: string;
-}
-
+// Thêm số 0 phía trước cho đủ 2 chữ số
 const pad = (n: number) => String(n).padStart(2, "0");
 
-/**
- * Ô chọn giờ thay cho <input type="time"> của trình duyệt: hai cột giờ / phút (bước 15 phút),
- * chọn giờ trước rồi phút; giờ đang chọn tô navy và tự cuộn tới.
- */
+// Ô chọn giờ thay cho <input type="time"> của trình duyệt: hai cột giờ / phút (bước 15 phút),
+// chọn giờ trước rồi phút; giờ đang chọn tô navy và tự cuộn tới.
 export function TimeField({ id, value, onChange, step = 15, className = "", placeholder = "--:--", required, disabled, ...rest }: TimeFieldProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -38,6 +24,7 @@ export function TimeField({ id, value, onChange, step = 15, className = "", plac
     panelRef.current?.querySelectorAll<HTMLElement>("[data-selected='true']").forEach((element) => element.scrollIntoView({ block: "center" }));
   }, [open]);
 
+  // Chọn giờ / phút; chọn xong phút thì đóng bảng chọn
   function setTime(h: number, m: number, close: boolean) {
     onChange(`${pad(h)}:${pad(m)}`);
     if (close) {
@@ -46,6 +33,7 @@ export function TimeField({ id, value, onChange, step = 15, className = "", plac
     }
   }
 
+  // Class của một ô giờ / phút, ô đang chọn tô màu đậm
   const cell = (selected: boolean) =>
     `flex h-8 w-full items-center justify-center rounded-lg text-[13.5px] font-semibold tabular-nums transition-colors ${
       selected ? "bg-brand-navy text-white" : "text-brand-ink hover:bg-brand-tint"

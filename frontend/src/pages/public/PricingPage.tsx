@@ -7,17 +7,15 @@ import { LearningModesSection } from "@/components/pricing/LearningModesSection"
 import { PricingHero } from "@/components/pricing/PricingHero";
 import { scrollToId } from "@/utils/motion";
 
-/** Cuộn xuống danh sách khóa học */
+// Cuộn xuống danh sách khóa học
 function scrollToCourseShop() {
   scrollToId("course-shop");
 }
 
-/**
- * Trang "Mua khóa học" (trước đây là "Bảng học phí"): tìm và lọc khóa học, thêm vào giỏ hoặc mua ngay,
- * rồi sang trang thanh toán;
- * bên dưới là ảnh hai hình thức học và lịch mở đăng ký.
- * Học phí từng khóa lấy từ dữ liệu khóa học — xem constants/pricing.ts.
- */
+// Trang "Mua khóa học" (trước đây là "Bảng học phí"): tìm và lọc khóa học, thêm vào giỏ hoặc mua ngay,
+// rồi sang trang thanh toán;
+// bên dưới là ảnh hai hình thức học và lịch mở đăng ký.
+// Học phí từng khóa lấy từ dữ liệu khóa học — xem constants/pricing.ts.
 export function PricingPage() {
   // Mở trang thì về đầu trang
   useEffect(() => {

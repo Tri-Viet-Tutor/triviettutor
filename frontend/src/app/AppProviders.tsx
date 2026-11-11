@@ -10,7 +10,9 @@ export function AppProviders({ children }: AppProvidersProps) {
     <QueryClientProvider client={queryClient}>
       {children}
 
-      {/* Devtools (nút tròn logo TanStack) chỉ hiện khi bật VITE_QUERY_DEVTOOLS=true trong frontend/.env khi phát triển */}
+      {
+        // Devtools (nút tròn logo TanStack) chỉ hiện khi bật VITE_QUERY_DEVTOOLS=true trong frontend/.env khi phát triển
+      }
       {import.meta.env.DEV && import.meta.env.VITE_QUERY_DEVTOOLS === "true" && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   );

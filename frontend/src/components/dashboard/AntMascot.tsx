@@ -5,11 +5,9 @@ const LINE = "#D9620C"; // màu viền cam đậm
 
 const DARK = "#3A2011"; // màu nâu sẫm của mắt, miệng, giày
 
-/**
- * Linh vật của khu học viên: chú kiến cam kiểu chibi — đầu to, mặt sáng, mắt long lanh, má hồng.
- * Hình vẽ riêng của dự án (SVG), chỉ để trang trí. Mỗi hình có bộ màu chuyển riêng (useId) nên đặt
- * nhiều chú trên cùng một trang không bị lẫn.
- */
+// Linh vật của khu học viên: chú kiến cam kiểu chibi — đầu to, mặt sáng, mắt long lanh, má hồng.
+// Hình vẽ riêng của dự án (SVG), chỉ để trang trí. Mỗi hình có bộ màu chuyển riêng (useId) nên đặt
+// nhiều chú trên cùng một trang không bị lẫn.
 export function AntMascot({ variant = "leaf", className = "" }: AntMascotProps) {
   // Tiền tố id riêng cho các gradient (bỏ dấu ":" để dùng được trong url(#…))
   const id = useId().replace(/:/g, "");
@@ -41,10 +39,14 @@ export function AntMascot({ variant = "leaf", className = "" }: AntMascotProps) 
         </linearGradient>
       </defs>
 
-      {/* Bóng dưới chân */}
+      {
+        // Bóng dưới chân
+      }
       <ellipse cx="75" cy="152.5" rx="34" ry="3.2" fill="#0B2A66" opacity="0.12" />
 
-      {/* Chiếc lá làm ô: phiến lá nằm sau đầu, cuống cầm trong tay */}
+      {
+        // Chiếc lá làm ô: phiến lá nằm sau đầu, cuống cầm trong tay
+      }
       {variant === "leaf" && (
         <>
           <path d="M121 103 C131 80 130 52 112 28" stroke="#3F8E2A" strokeWidth="3.6" />
@@ -64,7 +66,9 @@ export function AntMascot({ variant = "leaf", className = "" }: AntMascotProps) 
         </>
       )}
 
-      {/* Cây bút chì to dựng bên cạnh */}
+      {
+        // Cây bút chì to dựng bên cạnh
+      }
       {variant === "pen" && (
         <g transform="rotate(8 118 96)">
           <rect x="111" y="52" width="15" height="92" rx="2.5" fill="#FFCB3D" stroke="#D99A00" strokeWidth="1.4" />
@@ -76,20 +80,26 @@ export function AntMascot({ variant = "leaf", className = "" }: AntMascotProps) 
         </g>
       )}
 
-      {/* Chân và giày */}
+      {
+        // Chân và giày
+      }
       <path d="M65 143 L63 150 M85 143 L87 150" stroke="#EE7C14" strokeWidth="5.5" />
       <ellipse cx="60.5" cy="151" rx="8.5" ry="4.2" fill={DARK} />
       <ellipse cx="89.5" cy="151" rx="8.5" ry="4.2" fill={DARK} />
       <ellipse cx="58" cy="149.6" rx="3" ry="1.2" fill="#fff" opacity="0.35" />
       <ellipse cx="87" cy="149.6" rx="3" ry="1.2" fill="#fff" opacity="0.35" />
 
-      {/* Bụng tròn có sọc và ngực */}
+      {
+        // Bụng tròn có sọc và ngực
+      }
       <ellipse cx="75" cy="130" rx="23" ry="18.5" fill={belly} stroke={LINE} strokeWidth="1.6" />
       <path d="M54.5 125 Q75 134 95.5 125" stroke="#D9620C" strokeWidth="4.2" opacity="0.75" />
       <path d="M56.5 136 Q75 145 93.5 136" stroke="#D9620C" strokeWidth="4.2" opacity="0.75" />
       <ellipse cx="75" cy="110" rx="14.5" ry="11.5" fill={belly} stroke={LINE} strokeWidth="1.6" />
 
-      {/* Tay — tùy dáng */}
+      {
+        // Tay — tùy dáng
+      }
       {variant === "leaf" && (
         <>
           <path d="M62 108 Q44 106 36 92" stroke="#F48A1E" strokeWidth="6.5" />
@@ -108,7 +118,9 @@ export function AntMascot({ variant = "leaf", className = "" }: AntMascotProps) 
       )}
       {variant === "book" && (
         <>
-          {/* Quyển sách mở nâng trước ngực */}
+          {
+            // Quyển sách mở nâng trước ngực
+          }
           <path d="M43 109 L75 116 L107 109 L109 134 L75 142 L41 134 Z" fill="#0B3A8C" stroke="#082A66" strokeWidth="1.6" />
           <path d="M46 111 L75 117.5 L75 138.5 L44.5 131.5 Z" fill="#fff" />
           <path d="M104 111 L75 117.5 L75 138.5 L105.5 131.5 Z" fill="#F1F5FC" />
@@ -123,7 +135,9 @@ export function AntMascot({ variant = "leaf", className = "" }: AntMascotProps) 
         </>
       )}
 
-      {/* Râu */}
+      {
+        // Râu
+      }
       <path d="M58 28 Q54 12 44 9" stroke={LINE} strokeWidth="3" />
       <path d="M92 28 Q96 12 106 9" stroke={LINE} strokeWidth="3" />
       <circle cx="42.5" cy="8.5" r="5.6" fill={skin} stroke={LINE} strokeWidth="1.4" />
@@ -131,20 +145,28 @@ export function AntMascot({ variant = "leaf", className = "" }: AntMascotProps) 
       <circle cx="40.8" cy="6.8" r="1.7" fill="#fff" opacity="0.85" />
       <circle cx="105.8" cy="6.8" r="1.7" fill="#fff" opacity="0.85" />
 
-      {/* Đầu to, mặt sáng */}
+      {
+        // Đầu to, mặt sáng
+      }
       <ellipse cx="75" cy="62" rx="45" ry="39" fill={skin} stroke={LINE} strokeWidth="1.8" />
       <ellipse cx="75" cy="72" rx="34" ry="24" fill="#FFEFD9" opacity="0.92" />
       <ellipse cx="52" cy="36" rx="11" ry="4.6" transform="rotate(-28 52 36)" fill="#fff" opacity="0.7" />
       <circle cx="68" cy="29" r="2.2" fill="#fff" opacity="0.7" />
 
-      {/* Má hồng */}
+      {
+        // Má hồng
+      }
       <ellipse cx="46" cy="81" rx="7" ry="4.6" fill="#FF8C8C" opacity="0.6" />
       <ellipse cx="104" cy="81" rx="7" ry="4.6" fill="#FF8C8C" opacity="0.6" />
 
-      {/* Mắt và miệng — tùy nét mặt */}
+      {
+        // Mắt và miệng — tùy nét mặt
+      }
       {variant === "book" ? (
         <>
-          {/* Cười tít mắt */}
+          {
+            // Cười tít mắt
+          }
           <path d="M49 69 Q58 59 67 69" stroke={DARK} strokeWidth="3.4" />
           <path d="M83 69 Q92 59 101 69" stroke={DARK} strokeWidth="3.4" />
           <path d="M47.5 66 L44.5 63.5 M102.5 66 L105.5 63.5" stroke={DARK} strokeWidth="2.2" />
@@ -158,7 +180,9 @@ export function AntMascot({ variant = "leaf", className = "" }: AntMascotProps) 
           <path d="M48.6 60 L45 57 M51.5 56.6 L49 52.8" stroke={DARK} strokeWidth="2" />
           {variant === "pen" ? (
             <>
-              {/* Nháy mắt, lè lưỡi tinh nghịch */}
+              {
+                // Nháy mắt, lè lưỡi tinh nghịch
+              }
               <path d="M83 68 Q92 61 101 68" stroke={DARK} strokeWidth="3.4" />
               <path d="M102.5 65 L106 62.5" stroke={DARK} strokeWidth="2.2" />
               <path d="M67 81 Q75 88.5 83 81" stroke={DARK} strokeWidth="2.8" />
@@ -170,7 +194,9 @@ export function AntMascot({ variant = "leaf", className = "" }: AntMascotProps) 
               <circle cx="88.6" cy="62.4" r="3.9" fill="#fff" />
               <circle cx="95.4" cy="72" r="1.9" fill="#fff" opacity="0.9" />
               <path d="M101.4 60 L105 57 M98.5 56.6 L101 52.8" stroke={DARK} strokeWidth="2" />
-              {/* Cười tươi thấy lưỡi */}
+              {
+                // Cười tươi thấy lưỡi
+              }
               <path d="M65.5 80.5 Q75 95 84.5 80.5 Q75 84 65.5 80.5 Z" fill="#A2341F" stroke={DARK} strokeWidth="1.4" />
               <path d="M70.4 87.2 Q75 92 79.6 87.2 Q75 85 70.4 87.2 Z" fill="#FF8FA3" />
             </>
@@ -178,7 +204,9 @@ export function AntMascot({ variant = "leaf", className = "" }: AntMascotProps) 
         </>
       )}
 
-      {/* Lấp lánh quanh từng chú */}
+      {
+        // Lấp lánh quanh từng chú
+      }
       {variant === "pen" && <path d="M134 22 L135.8 27.2 L141 29 L135.8 30.8 L134 36 L132.2 30.8 L127 29 L132.2 27.2 Z" fill="#F5A00F" />}
       {variant === "book" && (
         <>

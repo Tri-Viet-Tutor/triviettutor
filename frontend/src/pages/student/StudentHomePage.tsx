@@ -1,11 +1,12 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { RateTutorDialog } from "@/components/student/RateTutor";
-import { type StudentTutor, useMyRating, useStudentTutors } from "@/hooks/useRatingData";
+import { useMyRating, useStudentTutors } from "@/hooks/useRatingData";
+import type { StudentTutor } from "@/interfaces/dto";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { Link } from "react-router-dom";
 import { PORTAL_CARD, PORTAL_MORE_LINK } from "@/constants/classNames";
-import type { SessionResponse, StudentHomeworkResponse } from "@/interfaces/api";
+import type { SessionResponse, StudentHomeworkResponse } from "@/interfaces/dto";
 import { addDays, startOfWeek, toIsoDate, weekdayName } from "@/utils/date";
 import { listMyHomeworks } from "@/services/homeworkService";
 import { getTuitionClass } from "@/services/tuitionPaymentService";
@@ -26,19 +27,18 @@ import { useNow } from "@/hooks/useNow";
 import { useAuthStore } from "@/stores/authStore";
 import { startOfToday } from "@/utils/date";
 
+// Nhóm của bài tập: cần làm, đã nộp hoặc đã chấm
 const stateOf = (item: StudentHomeworkResponse) =>
   item.submission.status === "GRADED" ? "GRADED" : item.submission.status === "SUBMITTED" ? "SUBMITTED" : "TODO";
-/** Số buổi gần nhất lấy điểm danh để tính chuyên cần */
+// Số buổi gần nhất lấy điểm danh để tính chuyên cần
 const ATTENDANCE_RECENT = 10;
-/** Số buổi hiện trong danh sách "Điểm danh gần đây" */
+// Số buổi hiện trong danh sách "Điểm danh gần đây"
 const ATTENDANCE_LIST = 5;
 
-/**
- * Trang Tổng quan của học viên: bảng buổi học hôm nay có chú kiến nhắc lịch, tiến độ các lớp và bài tập tổng quan;
- * cột phải là hồ sơ học tập (chuyên cần, tổng kết), điểm danh gần đây và đơn xin nghỉ;
- * bên dưới là thời khóa biểu tổng quan cả tuần.
- * Tất cả lấy từ GET /me/sessions, /sessions/{id}/attendance và /me/leave-requests.
- */
+// Trang Tổng quan của học viên: bảng buổi học hôm nay có chú kiến nhắc lịch, tiến độ các lớp và bài tập tổng quan;
+// cột phải là hồ sơ học tập (chuyên cần, tổng kết), điểm danh gần đây và đơn xin nghỉ;
+// bên dưới là thời khóa biểu tổng quan cả tuần.
+// Tất cả lấy từ GET /me/sessions, /sessions/{id}/attendance và /me/leave-requests.
 export function StudentHomePage() {
   const user = useAuthStore((state) => state.user);
   const now = useNow();
@@ -85,7 +85,9 @@ export function StudentHomePage() {
             />
 
             <ClassProgressList sessions={sessions} />
-            {/* Bài tập tổng quan */}
+            {
+              // Bài tập tổng quan
+            }
             <HomeworkOverview now={now} />
             <RatePrompt />
           </div>
@@ -109,7 +111,9 @@ export function StudentHomePage() {
         </div>
       )}
 
-      {/* Thời khóa biểu tổng quan của cả tuần */}
+      {
+        // Thời khóa biểu tổng quan của cả tuần
+      }
       {!sessionsQuery.isPending && !sessionsQuery.isError && (
         <div className="mt-6">
           <WeekOverview sessions={sessions} now={now} />
@@ -119,7 +123,7 @@ export function StudentHomePage() {
   );
 }
 
-/** Bài tập hôm nay: chỉ báo hôm nay có bài cần nộp hay không (bài chưa nộp, hạn nộp trong hôm nay) */
+// Bài tập hôm nay: chỉ báo hôm nay có bài cần nộp hay không (bài chưa nộp, hạn nộp trong hôm nay)
 function HomeworkOverview({ now }: { now: Date }) {
   const homeworks = useQuery({ queryKey: ["my-homeworks"], queryFn: () => listMyHomeworks() });
   const todayIso = toIsoDate(now);
@@ -169,7 +173,7 @@ function HomeworkOverview({ now }: { now: Date }) {
   );
 }
 
-/** Thời khóa biểu tuần này dạng gọn: bảy cột Thứ 2 → Chủ nhật, mỗi cột liệt kê giờ và tên khóa của các buổi */
+// Thời khóa biểu tuần này dạng gọn: bảy cột Thứ 2 → Chủ nhật, mỗi cột liệt kê giờ và tên khóa của các buổi
 function WeekOverview({ sessions, now }: { sessions: SessionResponse[]; now: Date }) {
   const monday = startOfWeek(now);
   const days = Array.from({ length: 7 }, (_, index) => addDays(monday, index));
@@ -182,7 +186,9 @@ function WeekOverview({ sessions, now }: { sessions: SessionResponse[]; now: Dat
   const classes = useQueries({
     queries: classIds.map((id) => ({ queryKey: ["catalog-class", id], queryFn: () => getTuitionClass(id), staleTime: 5 * 60_000, retry: false })),
   });
+  // Tên khóa của lớp, chưa tải được thì hiện mã lớp
   const courseName = (id: number) => classes[classIds.indexOf(id)]?.data?.courseName ?? `Lớp ${displayCode("class", id)}`;
+  // Ngày dạng dd/mm
   const label = (date: Date) => `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
   const total = week.filter((session) => session.status !== "CANCELLED").length;
 
@@ -259,7 +265,7 @@ function WeekOverview({ sessions, now }: { sessions: SessionResponse[]; now: Dat
   );
 }
 
-/** Nhắc chấm sao các thầy cô chưa được đánh giá; bấm "Chấm sao" mở khung bật lên */
+// Nhắc chấm sao các thầy cô chưa được đánh giá; bấm "Chấm sao" mở khung bật lên
 function RatePrompt() {
   const { tutors } = useStudentTutors();
   const [rating, setRating] = useState<StudentTutor | null>(null);
@@ -286,6 +292,7 @@ function RatePrompt() {
   );
 }
 
+// Một dòng gia sư trong ô nhắc đánh giá
 function RateRow({ tutor, onRate }: { tutor: StudentTutor; onRate: () => void }) {
   const mine = useMyRating(tutor.id);
   const rated = Boolean(mine.data);

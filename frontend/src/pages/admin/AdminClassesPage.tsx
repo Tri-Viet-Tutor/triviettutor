@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { AdminToast, type AdminNotice } from "@/components/admin/AdminToast";
+import { AdminToast } from "@/components/admin/AdminToast";
+import type { AdminNotice } from "@/interfaces/ui";
 import { ClassDetailSheet } from "@/components/admin/ClassDetailSheet";
 import { AssignmentPanel } from "@/components/admin/AssignmentPanel";
 import { PortalDialog } from "@/components/dashboard/PortalDialog";
@@ -20,39 +21,33 @@ import { patternLabel } from "@/constants/management";
 import { useRefreshAdmin } from "@/hooks/useAdminData";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAdminClasses, useAdminCourses, useClassSummary } from "@/hooks/useManagementData";
-import type { AdminClassResponse, ClassStatus, ClassType } from "@/interfaces/api";
+import type { AdminClassResponse, ClassStatus, ClassType } from "@/interfaces/dto";
 import { classNextStep, classStatusActions, displayCode } from "@/utils/classes";
 import { formatDayMonth, parseIsoDate } from "@/utils/date";
 
 const PAGE_SIZE = 12;
 
-/** "02/11" từ "2026-11-02" */
+// "02/11" từ "2026-11-02"
 const isoToShort = (iso: string) => formatDayMonth(parseIsoDate(iso));
 
-/** Vòng đời chính của lớp (BR-04), hiển thị nối tiếp nhau trên thanh trạng thái */
+// Vòng đời chính của lớp (BR-04), hiển thị nối tiếp nhau trên thanh trạng thái
 const MAIN_FLOW: ClassStatus[] = ["DRAFT", "PUBLISHED", "ENROLLING", "ASSIGNED", "IN_PROGRESS", "COMPLETED"];
-/** Hai trạng thái ngoại lệ, tách riêng */
+// Hai trạng thái ngoại lệ, tách riêng
 const EXCEPTIONS: ClassStatus[] = ["FAILED_TO_OPEN", "CANCELLED"];
 
-/** Lưới cột của dòng lớp trên máy tính (bội số 8px) */
-const ROW_GRID = "lg:grid-cols-[minmax(0,1fr)_168px_112px_160px_168px_48px] lg:gap-x-6";
-const ROW_PAD_X = "px-4 lg:px-6";
-
-/** Khung chung của các điều khiển trên thanh công cụ */
+// Khung chung của các điều khiển trên thanh công cụ
 const CONTROL = "h-12 rounded-xl border border-brand-sandLine bg-white shadow-[0_1px_2px_rgba(20,33,61,0.05)]";
 const STRIP_SELECT = `h-full min-w-0 cursor-pointer appearance-none bg-transparent pl-3 pr-8 text-[14px] font-medium text-brand-ink outline-none ${FOCUS_RING}`;
 
 const TOAST_MS = 4000;
 
-/**
- * Quản lý lớp học: lớp là đợt mở thực tế của một khóa (lịch cố định, gia sư, học viên, học phí theo sĩ số).
- * - Thanh công cụ: tìm theo mã lớp / tên khóa, lọc khóa, loại lớp; mở lớp mới.
- * - Tab trạng thái: chỉ hiện các trạng thái đang có lớp, kèm số lớp.
- * - Mỗi lớp một dòng gọn: tên + mã, lịch, sĩ số, gia sư, trạng thái và việc cần làm tiếp.
- * - Bấm lớp mở ngăn chi tiết: thông tin đầy đủ, học viên đã ghi danh, lịch từng buổi kèm gia sư.
- * API: GET/POST /admin/classes (lọc q, courseId, status, classType), GET /admin/classes/summary,
- * PATCH /admin/classes/{id}/status, POST /admin/classes/{id}/reopen, GET /admin/classes/{id}/enrollments.
- */
+// Quản lý lớp học: lớp là đợt mở thực tế của một khóa (lịch cố định, gia sư, học viên, học phí theo sĩ số).
+// - Thanh công cụ: tìm theo mã lớp / tên khóa, lọc khóa, loại lớp; mở lớp mới.
+// - Tab trạng thái: chỉ hiện các trạng thái đang có lớp, kèm số lớp.
+// - Mỗi lớp một dòng gọn: tên + mã, lịch, sĩ số, gia sư, trạng thái và việc cần làm tiếp.
+// - Bấm lớp mở ngăn chi tiết: thông tin đầy đủ, học viên đã ghi danh, lịch từng buổi kèm gia sư.
+// API: GET/POST /admin/classes (lọc q, courseId, status, classType), GET /admin/classes/summary,
+// PATCH /admin/classes/{id}/status, POST /admin/classes/{id}/reopen, GET /admin/classes/{id}/enrollments.
 export function AdminClassesPage() {
   const [status, setStatus] = useState<ClassStatus | "">("");
   const [classType, setClassType] = useState<ClassType | "">("");
@@ -93,11 +88,13 @@ export function AdminClassesPage() {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
+  // Đổi bộ lọc và quay về trang 1
   function changeFilter(apply: () => void) {
     apply();
     setPage(0);
   }
 
+  // Xóa hết bộ lọc
   function clearFilters() {
     changeFilter(() => {
       setStatus("");
@@ -107,6 +104,7 @@ export function AdminClassesPage() {
     });
   }
 
+  // Báo đã lưu, đóng hộp thoại và tải lại danh sách
   function saved(text: string) {
     setNotice({ tone: "ok", text });
     setCreating(false);
@@ -115,6 +113,7 @@ export function AdminClassesPage() {
   }
 
   const narrowed = status !== "" || classType !== "" || courseId !== "" || search.trim() !== "";
+  // Số lớp ở một trạng thái (để hiện trên tab)
   const countOf = (value: ClassStatus | "") => (value === "" ? summary.data?.total : summary.data?.byStatus[value]);
 
   return (
@@ -125,7 +124,9 @@ export function AdminClassesPage() {
         description="Mỗi lớp là một đợt mở thực tế của khóa học: lịch cố định, gia sư, học viên và học phí theo sĩ số."
       />
 
-      {/* Thanh công cụ */}
+      {
+        // Thanh công cụ
+      }
       <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-center">
         <div className={`flex min-w-0 flex-1 items-stretch focus-within:border-brand-navy/40 ${CONTROL}`}>
           <label className="relative flex min-w-0 flex-1 items-center">
@@ -171,7 +172,9 @@ export function AdminClassesPage() {
         </button>
       </div>
 
-      {/* Trạng thái lớp: chỉ hiện các trạng thái đang có lớp, theo thứ tự vòng đời */}
+      {
+        // Trạng thái lớp: chỉ hiện các trạng thái đang có lớp, theo thứ tự vòng đời
+      }
       <div role="tablist" aria-label="Trạng thái lớp" className="-mx-1 mb-8 flex items-center gap-2 overflow-x-auto px-1 pb-1">
         <StatusTab label="Tất cả" count={countOf("")} selected={status === ""} onClick={() => changeFilter(() => setStatus(""))} />
         {[...MAIN_FLOW, ...EXCEPTIONS]
@@ -216,33 +219,36 @@ export function AdminClassesPage() {
         />
       ) : (
         <>
-          <div
-            className={`mb-3 hidden items-center gap-4 border-x border-transparent text-[12px] font-semibold text-brand-muted lg:grid ${ROW_PAD_X} ${ROW_GRID}`}
-          >
-            <span className="flex gap-4">
-              <span className="w-14 shrink-0">Mã</span>
-              Lớp học
-            </span>
-            <span>Lịch học</span>
-            <span>Sĩ số</span>
-            <span>Gia sư</span>
-            <span>Trạng thái</span>
-            <span aria-hidden="true" />
+          <div className="overflow-x-auto rounded-sm border border-brand-sandLine bg-white">
+            <table className="w-full min-w-[1040px] table-fixed border-collapse text-left">
+              <thead className="bg-brand-sand/70 text-[11.5px] font-bold uppercase tracking-wide text-brand-muted">
+                <tr>
+                  <th scope="col" className="w-[9%] px-4 py-3">Mã</th>
+                  <th scope="col" className="w-[24%] border-l border-brand-sandLine px-4 py-3">Lớp học</th>
+                  <th scope="col" className="w-[19%] border-l border-brand-sandLine px-4 py-3">Lịch học</th>
+                  <th scope="col" className="w-[14%] border-l border-brand-sandLine px-4 py-3">Sĩ số</th>
+                  <th scope="col" className="w-[16%] border-l border-brand-sandLine px-4 py-3">Gia sư</th>
+                  <th scope="col" className="w-[13%] border-l border-brand-sandLine px-4 py-3">Trạng thái</th>
+                  <th scope="col" className="w-[5%] border-l border-brand-sandLine px-2 py-3">
+                    <span className="sr-only">Thao tác</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((item) => (
+                  <ClassRowCard
+                    key={item.id}
+                    item={item}
+                    selected={viewingFresh?.id === item.id}
+                    onOpen={() => setViewing(item)}
+                    onChangeStatus={(mode) => setStatusTarget({ item, mode })}
+                    onAssign={() => setAssigning(item)}
+                    onDelete={() => setRemoving(item)}
+                  />
+                ))}
+              </tbody>
+            </table>
           </div>
-          <ul className="space-y-2">
-            {rows.map((item) => (
-              <li key={item.id}>
-                <ClassRowCard
-                  item={item}
-                  selected={viewingFresh?.id === item.id}
-                  onOpen={() => setViewing(item)}
-                  onChangeStatus={(mode) => setStatusTarget({ item, mode })}
-                  onAssign={() => setAssigning(item)}
-                  onDelete={() => setRemoving(item)}
-                />
-              </li>
-            ))}
-          </ul>
           <Pager page={page} totalPages={classes.data.totalPages} onChange={setPage} label="Phân trang lớp học" />
         </>
       )}
@@ -297,7 +303,7 @@ export function AdminClassesPage() {
   );
 }
 
-/** Ô chọn nằm trong dải công cụ */
+// Ô chọn nằm trong dải công cụ
 function StripSelect({
   label,
   value,
@@ -335,7 +341,7 @@ function StripSelect({
   );
 }
 
-/** Một bước trên thanh vòng đời lớp, kèm số lớp */
+// Một bước trên thanh vòng đời lớp, kèm số lớp
 function StatusTab({
   label,
   count,
@@ -370,10 +376,8 @@ function StatusTab({
   );
 }
 
-/**
- * Một lớp ở dạng dòng gọn: tên khóa + mã lớp, lịch, sĩ số, gia sư, trạng thái và việc cần làm tiếp (nếu có).
- * Bấm vào dòng mở chi tiết; học phí, học viên và lịch từng buổi nằm trong chi tiết.
- */
+// Một lớp ở dạng dòng gọn: tên khóa + mã lớp, lịch, sĩ số, gia sư, trạng thái và việc cần làm tiếp (nếu có).
+// Bấm vào dòng mở chi tiết; học phí, học viên và lịch từng buổi nằm trong chi tiết.
 function ClassRowCard({
   item,
   selected,
@@ -398,67 +402,57 @@ function ClassRowCard({
   const tutor = item.tutorName ?? (item.tutorId ? `Gia sư ${displayCode("tutor", item.tutorId)}` : null);
 
   return (
-    <div
-      className={`group relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-xl border bg-white py-4 shadow-[0_1px_2px_rgba(20,33,61,0.04)] transition-[border-color,box-shadow] duration-150 hover:shadow-[0_4px_16px_-8px_rgba(11,58,140,0.24)] ${ROW_PAD_X} ${ROW_GRID} ${
-        selected ? "border-brand-navy/40 ring-1 ring-brand-navy/15" : "border-brand-sandLine hover:border-brand-navy/25"
-      } ${menuOpen ? "z-20" : ""}`}
-    >
-      <div className="flex min-w-0 items-center gap-4">
-        <span className={`w-14 shrink-0 text-[13.5px] font-semibold tabular-nums ${closed ? "text-brand-muted" : "text-brand-navy"}`}>{displayCode("class", item.id)}</span>
-        <div className="min-w-0">
-          <button
-            type="button"
-            onClick={onOpen}
-            className="text-left text-[15px] font-semibold leading-snug text-brand-ink outline-none after:absolute after:inset-0 after:rounded-xl after:content-[''] group-hover:text-brand-navy focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-brand-navy"
-          >
-            {item.courseName}
-          </button>
-          <p className="mt-0.5 truncate text-[12.5px] text-brand-muted">
-            {item.classCode} - {CLASS_TYPE_LABEL[item.classType]} - {item.deliveryMode === "ONLINE" ? "Online" : "Tại trung tâm"}
-          </p>
-          {/* Màn hình hẹp: lịch, sĩ số, trạng thái gộp xuống dưới */}
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-brand-muted lg:hidden">
-            <span>
-              {patternLabel(item.schedulePattern)} - {item.timeSlotLabel}
-            </span>
-            <span className="tabular-nums">
-              {item.currentStudents}/{item.maxStudents}
-            </span>
-            <StatusChip tone={style.tone} icon={style.icon}>
-              {style.label}
-            </StatusChip>
-          </div>
-        </div>
-      </div>
+    <tr className={`border-t border-brand-sandLine ${selected ? "bg-brand-tint/50" : "hover:bg-brand-sand/50"} ${menuOpen ? "relative z-20" : ""}`}>
+      <td className="h-14 px-4 py-2 align-middle">
+        <span className={`text-[14px] font-bold tabular-nums ${closed ? "text-brand-muted" : "text-brand-navy"}`}>
+          {displayCode("class", item.id)}
+        </span>
+      </td>
 
-      <div className="hidden text-[13px] lg:block">
-        <p className="text-brand-ink">{patternLabel(item.schedulePattern)}</p>
-        <p className="tabular-nums text-brand-muted">
+      <td className="border-l border-brand-sandLine px-4 py-2 align-middle">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="block max-w-full truncate text-left text-[14.5px] font-semibold leading-tight text-brand-ink hover:text-brand-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+        >
+          {item.courseName}
+        </button>
+        <span className="mt-0.5 block truncate text-[12.5px] leading-tight text-brand-muted">
+          {item.classCode} - {CLASS_TYPE_LABEL[item.classType]} - {item.deliveryMode === "ONLINE" ? "Online" : "Tại trung tâm"}
+        </span>
+      </td>
+
+      <td className="border-l border-brand-sandLine px-4 py-2 align-middle">
+        <span className="block text-[13.5px] leading-tight text-brand-ink">{patternLabel(item.schedulePattern)}</span>
+        <span className="block text-[12.5px] leading-tight tabular-nums text-brand-muted">
           {item.timeSlotLabel} - từ {isoToShort(item.startDate)}
-        </p>
-      </div>
+        </span>
+      </td>
 
-      <div className="hidden lg:block">
-        <p className="text-[13.5px] font-semibold tabular-nums text-brand-ink">
-          {item.currentStudents}/{item.maxStudents}
-        </p>
-        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-brand-sand" aria-hidden="true">
-          <div className={`h-full rounded-full ${item.full ? "bg-emerald-500" : "bg-brand-navy"}`} style={{ width: `${percent}%` }} />
-        </div>
-      </div>
+      <td className="border-l border-brand-sandLine px-4 py-2 align-middle">
+        <span className="block text-[13.5px] font-semibold tabular-nums text-brand-ink">
+          {item.currentStudents}/{item.maxStudents} học viên
+        </span>
+        <span aria-hidden="true" className="mt-1.5 block h-1.5 overflow-hidden bg-brand-sand">
+          <span className={`block h-full ${item.full ? "bg-emerald-500" : "bg-brand-navy"}`} style={{ width: `${percent}%` }} />
+        </span>
+      </td>
 
-      <p className={`hidden min-w-0 items-center gap-2 text-[13.5px] lg:flex ${tutor ? "text-brand-ink" : "text-brand-muted"}`}>
-        {tutor && <UserAvatar userId={item.tutorId} name={tutor} size={24} />}
-        <span className="truncate">{tutor ?? "Chưa phân công"}</span>
-      </p>
+      <td className="border-l border-brand-sandLine px-4 py-2 align-middle">
+        <span className={`flex min-w-0 items-center gap-2 text-[13.5px] ${tutor ? "text-brand-ink" : "text-brand-muted"}`}>
+          {tutor && <UserAvatar userId={item.tutorId} name={tutor} size={24} />}
+          <span className="truncate">{tutor ?? "Chưa phân công"}</span>
+        </span>
+      </td>
 
-      <div className="hidden lg:block">
+      <td className="border-l border-brand-sandLine px-4 py-2 align-middle">
         <StatusChip tone={style.tone} icon={style.icon}>
           {style.label}
         </StatusChip>
-        {next && <p className="mt-1.5 text-[12px] leading-snug text-amber-700">{next.text}</p>}
-      </div>
+        {next && <span className="mt-1.5 block text-[12px] leading-snug text-amber-700">{next.text}</span>}
+      </td>
 
+      <td className="border-l border-brand-sandLine px-2 py-2 text-center align-middle">
       <RowMenu
         label={`lớp ${item.classCode}`}
         open={menuOpen}
@@ -479,6 +473,7 @@ function ClassRowCard({
             : []),
         ]}
       />
-    </div>
+      </td>
+    </tr>
   );
 }

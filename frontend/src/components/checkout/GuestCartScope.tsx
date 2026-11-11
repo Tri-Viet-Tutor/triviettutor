@@ -4,7 +4,7 @@ import { ROUTES } from "@/constants/routes";
 import { useAuthStore } from "@/stores/authStore";
 import { useCartStore } from "@/stores/cartStore";
 
-/** Các trang thuộc luồng mua: chọn khóa, thanh toán và các bước tài khoản đi kèm (đăng nhập, nhập mã OTP…) */
+// Các trang thuộc luồng mua: chọn khóa, thanh toán và các bước tài khoản đi kèm (đăng nhập, nhập mã OTP…)
 const PURCHASE_FLOW_PATHS: string[] = [
   ROUTES.pricing,
   ROUTES.pricingLegacy,
@@ -16,11 +16,9 @@ const PURCHASE_FLOW_PATHS: string[] = [
   ROUTES.resetPassword,
 ];
 
-/**
- * Khách chưa đăng nhập chỉ giữ giỏ khóa học trong lúc đang mua.
- * Rời luồng mua sang trang khác (trang chủ, tìm gia sư, liên hệ…) là giỏ được xóa;
- * học viên đã đăng nhập thì giỏ vẫn giữ. Không hiển thị gì, chỉ theo dõi đường dẫn.
- */
+// Khách chưa đăng nhập chỉ giữ giỏ khóa học trong lúc đang mua.
+// Rời luồng mua sang trang khác (trang chủ, tìm gia sư, liên hệ…) là giỏ được xóa;
+// học viên đã đăng nhập thì giỏ vẫn giữ. Không hiển thị gì, chỉ theo dõi đường dẫn.
 export function GuestCartScope() {
   const { pathname } = useLocation();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);

@@ -2,14 +2,14 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { AuthNotice } from "@/components/auth/AuthNotice";
 import { AUTH_LABEL, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT } from "@/constants/classNames";
-import { createMakeup } from "@/services/admin";
+import { createMakeup } from "@/services/adminService";
 import { startOfToday, toIsoDate } from "@/utils/date";
 import { portalErrorMessage } from "@/utils/errors";
 import type { MakeupFormProps } from "@/interfaces/admin";
 import { DateField } from "@/components/ui/DateField";
 import { TimeField } from "@/components/ui/TimeField";
 
-/** Form chọn ngày giờ học bù cho một buổi (theo đơn xin nghỉ, hoặc cho buổi đã hủy khi không có đơn) */
+// Form chọn ngày giờ học bù cho một buổi (theo đơn xin nghỉ, hoặc cho buổi đã hủy khi không có đơn)
 export function MakeupForm({ idPrefix, sessionId, leaveRequestId, note, onDone, onCancel }: MakeupFormProps) {
   const [makeupDate, setMakeupDate] = useState("");
   const [startTime, setStartTime] = useState("18:00");
