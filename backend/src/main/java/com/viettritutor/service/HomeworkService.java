@@ -10,6 +10,7 @@ import com.viettritutor.repository.HomeworkRepository;
 import com.viettritutor.repository.HomeworkSubmissionRepository;
 import com.viettritutor.repository.LearningScheduleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ public class HomeworkService {
     private final LearningAuditService audit;
     private final NotificationService notifications;
     private final PasswordEncoder passwordEncoder;
+    private final ApplicationEventPublisher events;
 
     @Transactional
     public HomeworkResponse create(Long sessionId, HomeworkRequest input, User actor) {
@@ -108,7 +110,7 @@ public class HomeworkService {
         homeworks.flush();
         var response = HomeworkResponse.from(h, true);
         audit.homework(id, actor, "STATUS", before, response);
-        if (target == HomeworkStatus.PUBLISHED) notifyStudents(context.session(), h);
+        if (target == HomeworkStatus.PUBLISHED) notifyStudents(context.session(), h, actor);
         return response;
     }
 
@@ -173,16 +175,22 @@ public class HomeworkService {
         return requested != null && (current == null || requested.toInstant().isAfter(current.toInstant()));
     }
 
-    private void notifyStudents(Session session, Homework h) {
+    /** In-app notification now, and an email to each student once the publish commits (HomeworkPublishedMailer). */
+    private void notifyStudents(Session session, Homework h, User actor) {
         String message = "Hạn nộp " + notifications.formatTime(h.getDueAt())
                 + (h.getOpenAt() != null && h.getOpenAt().toInstant().isAfter(h.getPublishedAt().toInstant())
                         ? ", mở làm bài từ " + notifications.formatTime(h.getOpenAt()) : "")
                 + (h.getAccessPasswordHash() != null ? ". Cần mật khẩu do gia sư cung cấp để làm bài." : ".");
-        learning.findByClassGroupIdAndStatusOrderByStudentIdAscIdAsc(session.getClassGroupId(), LearningScheduleStatus.ACTIVE)
+        List<Long> students = learning.findByClassGroupIdAndStatusOrderByStudentIdAscIdAsc(session.getClassGroupId(), LearningScheduleStatus.ACTIVE)
                 .stream()
                 .filter(row -> !row.getStartDate().isAfter(session.getSessionDate()) && !row.getEndDate().isBefore(session.getSessionDate()))
-                .map(LearningSchedule::getStudentId).distinct()
-                .forEach(studentId -> notifications.send(studentId, "HOMEWORK_PUBLISHED", "Bài tập mới: " + h.getTitle(),
-                        message, "/student/homework/" + h.getId()));
+                .map(LearningSchedule::getStudentId).distinct().toList();
+        students.forEach(studentId -> notifications.send(studentId, "HOMEWORK_PUBLISHED", "Bài tập mới: " + h.getTitle(),
+                message, "/student/homework/" + h.getId()));
+        if (!students.isEmpty())
+            events.publishEvent(new HomeworkPublishedEvent(h.getId(), h.getTitle(), h.getInstructions(), session.getClassGroupId(),
+                    session.getSessionNumber(), session.getSessionDate(), h.getOpenAt(), h.getDueAt(),
+                    h.getAccessPasswordHash() != null, questions.of(h.getId()).size(), h.getMaxScore(),
+                    actor.getFullName(), students));
     }
 }

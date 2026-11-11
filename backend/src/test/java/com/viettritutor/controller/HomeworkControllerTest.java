@@ -39,11 +39,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @AutoConfigureMockMvc
 @Transactional
+@org.springframework.test.context.event.RecordApplicationEvents
 class HomeworkControllerTest {
+    @Autowired org.springframework.test.context.event.ApplicationEvents events;
     static final Instant NOW = Instant.parse("2030-01-01T02:00:00Z");
     static final OffsetDateTime DUE = OffsetDateTime.parse("2030-01-10T12:00:00+07:00");
     static final String API = "/api/v1";
     @MockBean Clock clock;
+    @MockBean org.springframework.mail.javamail.JavaMailSender mailSender; // never reach a real SMTP server
     @MockBean SessionLifecycleJob lifecycleJob;
     @MockBean AttendanceLockJob attendanceJob;
     @Autowired MockMvc mvc;
@@ -706,6 +709,10 @@ class HomeworkControllerTest {
         var note=notificationsOf(student).getFirst();
         assertEquals("HOMEWORK_PUBLISHED",note.getType());assertEquals("/student/homework/"+id,note.getLink());
         assertTrue(notificationsOf(outsider).isEmpty());
+        // The email goes to the same enrolled students (sent after commit by HomeworkPublishedMailer)
+        var mail=events.stream(HomeworkPublishedEvent.class).toList();
+        assertEquals(1,mail.size());assertEquals(id,mail.getFirst().homeworkId());
+        assertEquals(List.of(student.getId()),mail.getFirst().studentIds());
         submit(id);
         var item=data(call("GET","/tutor/homeworks",null,t),200).path("content").get(0);
         assertEquals(id,item.path("homework").path("id").asLong());assertEquals(1,item.path("submittedCount").asInt());
