@@ -24,9 +24,8 @@ export const SUBJECT_OPTIONS: { value: string; label: string; icon: string }[] =
 export const DEFAULT_DURATION_MINUTES = 120;
 
 /**
- * Giới hạn thời lượng mỗi buổi khi tạo khóa học (phút).
- * Lưu ý: backend (CourseService/ClassService) hiện vẫn chỉ chấp nhận đúng 120 — các mốc khác sẽ
- * hoạt động được sau khi phần backend của CLS-01 (Đỗ Nam Quang) gỡ bỏ chốt cứng này.
+ * Giới hạn thời lượng mỗi buổi khi tạo khóa học (phút), khớp @Min/@Max của CourseRequest bên backend.
+ * Buổi học bắt đầu đúng giờ của ca và kết thúc sau đúng số phút này.
  */
 export const DURATION_MIN = 30;
 export const DURATION_MAX = 120;

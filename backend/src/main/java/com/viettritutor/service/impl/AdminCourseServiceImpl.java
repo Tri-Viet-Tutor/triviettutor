@@ -131,7 +131,27 @@ public class AdminCourseServiceImpl implements AdminCourseService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.COURSE_NOT_FOUND));
     }
 
+    /**
+     * CLS-01: đổi thời lượng khi lớp đã sinh buổi sẽ làm giờ kết thúc của các buổi cũ lệch với
+     * cấu hình mới, SessionGenerator sẽ ném SESSION_CONFIG_MISMATCH ở lần đụng vào lớp kế tiếp.
+     * Khóa chưa có buổi nào (mới tạo, hoặc chỉ có lớp nháp) thì vẫn sửa thoải mái.
+     */
+    private void assertDurationEditable(Course course, Integer newDuration) {
+        if (course.getId() == null || newDuration == null || newDuration.equals(course.getDurationMinutes())) {
+            return;
+        }
+        Number scheduled = (Number) entityManager.createNativeQuery("""
+                SELECT COUNT(*) FROM sessions s
+                JOIN class_groups g ON g.id = s.class_group_id
+                WHERE g.course_id = :id
+                """).setParameter("id", course.getId()).getSingleResult();
+        if (scheduled.longValue() > 0) {
+            throw new BusinessException(ErrorCode.COURSE_DURATION_LOCKED);
+        }
+    }
+
     private void apply(Course course, CourseRequest request) {
+        assertDurationEditable(course, request.getDurationMinutes());
         course.setName(request.getName().trim());
         var subject = subjects.resolve(request.getSubject());
         course.setSubject(subject.getName());

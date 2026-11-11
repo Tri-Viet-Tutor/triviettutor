@@ -45,6 +45,7 @@ public enum ErrorCode {
     USER_NOT_TUTOR            (HttpStatus.UNPROCESSABLE_ENTITY, "This user is not a tutor"),
     COURSE_NOT_FOUND          (HttpStatus.NOT_FOUND,      "Course not found"),
     COURSE_IN_USE             (HttpStatus.CONFLICT,       "This course already has classes or orders; stop selling it instead"),
+    COURSE_DURATION_LOCKED    (HttpStatus.CONFLICT,       "This course already has scheduled sessions; its session length can no longer be changed"),
     CLASS_IN_USE              (HttpStatus.CONFLICT,       "This class has students, payments or teaching history; cancel it instead"),
     USER_IN_USE               (HttpStatus.CONFLICT,       "This user already has classes, payments or teaching history and cannot be deleted"),
     RATING_NOT_FOUND          (HttpStatus.NOT_FOUND,      "Rating not found"),

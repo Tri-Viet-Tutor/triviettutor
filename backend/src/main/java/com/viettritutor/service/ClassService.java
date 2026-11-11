@@ -35,9 +35,7 @@ public class ClassService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.COURSE_NOT_FOUND));
         if (!course.isActive()) throw new BusinessException(ErrorCode.COURSE_INACTIVE);
         // CLS-01: course.durationMinutes no longer has to be 120 to open a class (see CourseRequest).
-        // Note: SessionGenerator still schedules every session using the class's fixed TimeSlot (always a
-        // two-hour window), so a non-120-minute course does not yet change the generated sessions' actual
-        // start/end time; that part of TimeSlot is unchanged by CLS-01.
+        // Sessions start at the class's TimeSlot start time and run for the course's durationMinutes.
         int totalSessions = request.getTotalSessions() != null ? request.getTotalSessions() : course.getTotalSessions();
         if (totalSessions < 1 || totalSessions > 1000) {
             throw new BusinessException(ErrorCode.INVALID_CLASS_CONFIGURATION,

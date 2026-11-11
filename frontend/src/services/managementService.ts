@@ -125,6 +125,11 @@ export async function fetchMyPayroll(query: TutorPayrollQuery = {}): Promise<Pag
   return unwrap(await api.get<ApiResponse<PageResponse<PayrollLineResponse>>>("/tutor/payroll", { params: query }));
 }
 
+/** GET /tutor/payroll/estimate — tạm tính các tháng trung tâm chưa chốt lương (ROLE_TUTOR) */
+export async function fetchMyPayrollEstimate(): Promise<PayrollLineResponse[]> {
+  return unwrap(await api.get<ApiResponse<PayrollLineResponse[]>>("/tutor/payroll/estimate"));
+}
+
 /** POST /tutor/payroll/{year}/{month}/dispute — gia sư khiếu nại phiếu lương đã chốt; admin nhận email (ROLE_TUTOR) */
 export async function disputePayroll(year: number, month: number, reason: string): Promise<PayrollLineResponse> {
   return unwrap(await api.post<ApiResponse<PayrollLineResponse>>(`/tutor/payroll/${year}/${month}/dispute`, { reason }));

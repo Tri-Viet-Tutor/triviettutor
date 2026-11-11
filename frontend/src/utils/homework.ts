@@ -62,6 +62,8 @@ export function newQuestionDraft(type: QuestionDraft["type"]): QuestionDraft {
     correctOptions: [0],
     multiple: false,
     points: "1",
+    mediaUrl: "",
+    mediaType: null,
   };
 }
 
@@ -76,6 +78,8 @@ export function toQuestionDrafts(questions: QuestionResponse[] = []): QuestionDr
       correctOptions: correct,
       multiple: correct.length > 1,
       points: String(question.points),
+      mediaUrl: question.mediaUrl ?? "",
+      mediaType: question.mediaType ?? null,
     };
   });
 }
@@ -84,7 +88,10 @@ export function toQuestionDrafts(questions: QuestionResponse[] = []): QuestionDr
 export function toQuestionInputs(drafts: QuestionDraft[]): QuestionInput[] {
   return drafts.map((draft) => {
     const points = Number(draft.points);
-    if (draft.type === "ESSAY") return { type: "ESSAY", prompt: draft.prompt.trim(), points };
+    // Ảnh/video chỉ gửi khi có đủ cả link lẫn loại, vì backend bắt đi theo cặp
+    const url = draft.mediaUrl.trim();
+    const media = url && draft.mediaType ? { mediaUrl: url, mediaType: draft.mediaType } : {};
+    if (draft.type === "ESSAY") return { type: "ESSAY", prompt: draft.prompt.trim(), points, ...media };
     const kept = draft.options.map((text, index) => ({ text: text.trim(), index })).filter((option) => option.text);
     const correct = kept
       .map((option, newIndex) => (draft.correctOptions.includes(option.index) ? newIndex : -1))
@@ -97,6 +104,7 @@ export function toQuestionInputs(drafts: QuestionDraft[]): QuestionInput[] {
       correctOption: correctOptions[0],
       ...(correctOptions.length > 1 ? { correctOptions } : {}),
       points,
+      ...media,
     };
   });
 }

@@ -42,12 +42,36 @@ export const SCHEDULE_PATTERN_OPTIONS: ClassOption<SchedulePattern>[] = [
   { value: "SAT_SUN", label: "Thứ 7 – Chủ nhật", hint: "2 buổi mỗi tuần" },
 ];
 
-/** enums.TimeSlot — bốn ca học cố định, giờ lấy đúng theo enum của backend */
+/** enums.TimeSlot — giờ bắt đầu của bốn ca, lấy đúng theo enum của backend */
+export const TIME_SLOT_START: Record<string, string> = {
+  SLOT_MORNING: "08:00",
+  SLOT_AFTERNOON: "14:00",
+  SLOT_EVENING: "18:00",
+  SLOT_LATE_EVENING: "19:30",
+};
+
+/** Thời lượng mặc định của một buổi khi chưa biết khóa nào (phút) */
+const DEFAULT_SLOT_MINUTES = 120;
+
+/**
+ * Khoảng giờ thật của một ca: buổi bắt đầu đúng giờ của ca và kết thúc sau `durationMinutes` phút.
+ * Không truyền thời lượng thì lấy mặc định 2 tiếng.
+ */
+export function timeSlotRange(slot: string, durationMinutes?: number | null): string {
+  const start = TIME_SLOT_START[slot];
+  if (!start) return "";
+  const minutes = durationMinutes && durationMinutes > 0 ? durationMinutes : DEFAULT_SLOT_MINUTES;
+  const [hour, minute] = start.split(":").map(Number);
+  const total = hour * 60 + minute + minutes;
+  return `${start} – ${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/** enums.TimeSlot — bốn ca học cố định, nhãn mặc định theo buổi 2 tiếng */
 export const TIME_SLOT_OPTIONS: ClassOption<TimeSlot>[] = [
-  { value: "SLOT_MORNING", label: "Sáng", hint: "08:00 – 10:00" },
-  { value: "SLOT_AFTERNOON", label: "Chiều", hint: "14:00 – 16:00" },
-  { value: "SLOT_EVENING", label: "Tối", hint: "18:00 – 20:00" },
-  { value: "SLOT_LATE_EVENING", label: "Tối muộn", hint: "19:30 – 21:30" },
+  { value: "SLOT_MORNING", label: "Sáng", hint: timeSlotRange("SLOT_MORNING") },
+  { value: "SLOT_AFTERNOON", label: "Chiều", hint: timeSlotRange("SLOT_AFTERNOON") },
+  { value: "SLOT_EVENING", label: "Tối", hint: timeSlotRange("SLOT_EVENING") },
+  { value: "SLOT_LATE_EVENING", label: "Tối muộn", hint: timeSlotRange("SLOT_LATE_EVENING") },
 ];
 
 /**

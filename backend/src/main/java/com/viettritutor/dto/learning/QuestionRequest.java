@@ -1,6 +1,7 @@
 package com.viettritutor.dto.learning;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.viettritutor.enums.QuestionMediaType;
 import com.viettritutor.enums.QuestionType;
 import jakarta.validation.constraints.*;
 import lombok.Data;
@@ -27,6 +28,18 @@ public class QuestionRequest {
     @DecimalMin(value = "0", inclusive = false)
     @Digits(integer = 8, fraction = 2)
     private BigDecimal points;
+    /** Ảnh/video minh họa: ảnh là link trả về từ POST /api/v1/files, video là link ngoài gia sư dán vào. */
+    @Size(max = 2000)
+    private String mediaUrl;
+    /** Bắt buộc đi cùng mediaUrl; gửi một trong hai mà thiếu cái kia sẽ bị từ chối. */
+    private QuestionMediaType mediaType;
+
+    /** Ảnh và loại phải cùng có hoặc cùng vắng, khớp ràng buộc homework_questions_media_pair dưới DB. */
+    @AssertTrue(message = "mediaUrl and mediaType must be provided together")
+    public boolean isMediaConsistent() {
+        boolean hasUrl = mediaUrl != null && !mediaUrl.isBlank();
+        return hasUrl == (mediaType != null);
+    }
 
     @JsonAnySetter
     public void rejectUnknownField(String name, Object value) {

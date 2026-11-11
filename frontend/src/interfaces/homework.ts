@@ -5,6 +5,9 @@ import type { IsoDate, IsoDateTime } from "@/interfaces/api";
  * (HomeworkController, SubmissionController, NotificationController)
  * ───────────────────────────────────────────────────────────────────────────── */
 
+/** enums.QuestionMediaType — tư liệu minh họa kèm câu hỏi */
+export type QuestionMediaType = "IMAGE" | "VIDEO";
+
 /** enums.HomeworkStatus */
 export type HomeworkStatus = "DRAFT" | "PUBLISHED" | "CLOSED";
 
@@ -25,6 +28,9 @@ export interface QuestionInput {
   /** Chỉ câu trắc nghiệm nhiều đáp án: mọi vị trí đúng, học viên phải chọn đủ và đúng mới có điểm */
   correctOptions?: number[];
   points: number;
+  /** Ảnh/video minh họa; luôn gửi kèm mediaType, thiếu một trong hai là backend từ chối */
+  mediaUrl?: string;
+  mediaType?: QuestionMediaType;
 }
 
 /** dto.learning.QuestionImportResponse — POST /homeworks/questions/import (HW-02), backend không lưu gì */
@@ -59,6 +65,9 @@ export interface QuestionResponse {
   /** Câu trắc nghiệm: số đáp án cần chọn (1 = chọn một) */
   selectCount?: number;
   points: number;
+  /** Ảnh/video minh họa của câu hỏi; học viên cũng nhận được */
+  mediaUrl?: string | null;
+  mediaType?: QuestionMediaType | null;
 }
 
 /** dto.learning.HomeworkRequest (POST /sessions/{id}/homeworks) */
@@ -231,6 +240,9 @@ export interface QuestionDraft {
   /** Bật "Nhiều đáp án đúng": học viên phải chọn đủ và đúng mọi đáp án */
   multiple: boolean;
   points: string;
+  /** Ảnh/video minh họa đã gắn vào câu; rỗng là chưa có */
+  mediaUrl: string;
+  mediaType: QuestionMediaType | null;
 }
 
 export interface QuestionBuilderProps {

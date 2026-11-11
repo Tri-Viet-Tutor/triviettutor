@@ -139,6 +139,17 @@ export async function submitHomework(homeworkId: number, input: SubmissionInput)
 }
 
 /** POST /homeworks/{id}/submissions/me/attachments — gửi ảnh chụp / PDF bài làm */
+/** POST /files — tải một file lên kho chung, trả về link tải dùng được cho ảnh minh họa câu hỏi */
+export async function uploadLearningFile(file: File): Promise<{ url: string; fileName: string; contentType: string; size: number }> {
+  const form = new FormData();
+  form.append("file", file, file.name);
+  return unwrap(
+    await api.post<ApiResponse<{ url: string; fileName: string; contentType: string; size: number }>>("/files", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  );
+}
+
 export async function uploadAttachment(homeworkId: number, file: Blob, fileName: string): Promise<AttachmentResponse> {
   const form = new FormData();
   form.append("file", file, fileName);

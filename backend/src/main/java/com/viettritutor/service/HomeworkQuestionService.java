@@ -42,9 +42,13 @@ public class HomeworkQuestionService {
                     || (in.getCorrectOptions() != null && !in.getCorrectOptions().isEmpty())) {
                 throw new BusinessException(ErrorCode.INVALID_HOMEWORK_QUESTION);
             }
+            String mediaUrl = in.getMediaUrl() == null || in.getMediaUrl().isBlank() ? null : in.getMediaUrl().trim();
+            // Ảnh/video phải đi theo cặp; @AssertTrue ở DTO đã chặn, đây là chốt cuối trước khi chạm DB
+            if ((mediaUrl == null) != (in.getMediaType() == null)) throw new BusinessException(ErrorCode.INVALID_HOMEWORK_QUESTION);
             result.add(HomeworkQuestion.builder().position(result.size()).type(in.getType()).prompt(in.getPrompt().trim())
                     .options(options.isEmpty() ? null : write(options)).correctOption(correct.isEmpty() ? null : correct.get(0))
-                    .correctOptions(OptionIndexes.format(correct)).points(in.getPoints()).build());
+                    .correctOptions(OptionIndexes.format(correct)).points(in.getPoints())
+                    .mediaUrl(mediaUrl).mediaType(mediaUrl == null ? null : in.getMediaType()).build());
         }
         return result;
     }

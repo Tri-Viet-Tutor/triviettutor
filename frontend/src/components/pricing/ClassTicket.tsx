@@ -6,7 +6,7 @@ import { DELIVERY_MODE_OPTIONS, GRADE_OPTIONS, SCHEDULE_PATTERN_OPTIONS } from "
 import type { ClassTicketProps } from "@/interfaces/pricing";
 import { formatVnd } from "@/utils/currency";
 import { formatDate, parseIsoDate } from "@/utils/date";
-import { discountForSize } from "@/utils/classes";
+import { discountForSize, estimatedEndDate } from "@/utils/classes";
 
 /** Màu cuống vé, xoay vòng theo vị trí lớp trong danh sách */
 const STUB_TONES = [
@@ -42,6 +42,8 @@ export function ClassTicket({
   const isGroup = item.classType !== "ONE_ON_ONE";
   const refundNow = isGroup ? discountForSize(item.classType, item.currentStudents + 1) : 0;
   const soldOut = item.spotsLeft < 1;
+  // Buổi cuối theo lịch, chưa tính buổi bù nếu lớp phải nghỉ giữa chừng
+  const endDate = estimatedEndDate(item.startDate, item.schedulePattern, item.totalSessions);
 
   return (
     <article className="relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_22px_44px_-36px_rgba(8,42,102,0.5)] md:flex-row">
@@ -92,6 +94,12 @@ export function ClassTicket({
             <Icon name="flag" className="text-[17px] text-brand-navy" />
             Khai giảng <strong className="font-semibold">{formatDate(parseIsoDate(item.startDate))}</strong>
           </li>
+          {endDate && (
+            <li className="flex items-center gap-1.5" title="Tính theo lịch học, chưa gồm buổi bù nếu lớp nghỉ giữa chừng">
+              <Icon name="sports_score" className="text-[17px] text-brand-navy" />
+              Dự kiến hết <strong className="font-semibold">{formatDate(parseIsoDate(endDate))}</strong>
+            </li>
+          )}
           {item.enrollmentDeadline && (
             <li>
               <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[12.5px] font-semibold text-emerald-800">

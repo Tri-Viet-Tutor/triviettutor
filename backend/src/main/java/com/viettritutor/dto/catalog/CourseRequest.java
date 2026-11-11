@@ -45,10 +45,9 @@ public class CourseRequest {
     @Min(value = 30, message = "must be between 30 and 120 minutes")
     @Max(value = 120, message = "must be between 30 and 120 minutes")
     @Schema(example = "120", defaultValue = "120", minimum = "30", maximum = "120",
-            description = "Session length in minutes (30-120). Note: class time slots (TimeSlot) are still fixed "
-                    + "two-hour windows regardless of this value, so the generated sessions' actual start/end time "
-                    + "does not yet shrink or stretch to match a non-120 duration (CLS-01 covers the course field "
-                    + "and class-opening validation only; reworking TimeSlot to honor durationMinutes is a separate task).")
+            description = "Session length in minutes (30-120). Generated sessions start at the class's TimeSlot "
+                    + "start time and end this many minutes later, so a 90-minute course really produces "
+                    + "90-minute sessions.")
     @JsonDeserialize(using = WholeNumberDeserializer.class)
     private Integer durationMinutes = 120;
 

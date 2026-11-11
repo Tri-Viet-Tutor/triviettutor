@@ -3,9 +3,9 @@ import { useMutation } from "@tanstack/react-query";
 import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { Icon } from "@/components/ui/Icon";
 import { AUTH_ERROR, FOCUS_RING, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
-import { DELIVERY_MODE_OPTIONS, SCHEDULE_PATTERN_OPTIONS, TIME_SLOT_OPTIONS } from "@/constants/classOptions";
+import { DELIVERY_MODE_OPTIONS, SCHEDULE_PATTERN_OPTIONS, TIME_SLOT_OPTIONS, timeSlotRange } from "@/constants/classOptions";
 import { weekdayMatchesPattern, patternWeekdayLabel } from "@/utils/classes";
-import { DEFAULT_DURATION_MINUTES, coursePricePerSession, gradeLabel, subjectLabel } from "@/constants/management";
+import { coursePricePerSession, gradeLabel, subjectLabel } from "@/constants/management";
 import { useAdminUsers } from "@/hooks/useAdminData";
 import { useAdminCourses } from "@/hooks/useManagementData";
 import { createClass } from "@/services/managementService";
@@ -109,6 +109,11 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
     [startDate, pattern, sessionCount],
   );
   const classPrice = course && sessionCount > 0 ? Math.round(coursePricePerSession(course) * sessionCount) : null;
+  // Giờ tan của ca phụ thuộc thời lượng khóa đã chọn, không phải lúc nào cũng 2 tiếng
+  const slotOptions = useMemo(
+    () => TIME_SLOT_OPTIONS.map((option) => ({ ...option, hint: timeSlotRange(option.value, course?.durationMinutes) })),
+    [course?.durationMinutes],
+  );
 
   function changeStart(value: string) {
     setStartDate(value);
@@ -125,13 +130,6 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
     event.preventDefault();
     if (courseId === "") return setFormError("Hãy chọn khóa học.");
     if (tutorId === "") return setFormError("Hãy chọn gia sư phụ trách lớp.");
-    // Backend hiện chỉ cho mở lớp từ khóa đúng 120 phút/buổi (CLS-01 — phần backend chưa xong),
-    // chặn sớm ở đây để không hiện nhầm lỗi "ngày khai giảng" của backend khi nguyên nhân thật là thời lượng khóa.
-    if (course && course.durationMinutes !== DEFAULT_DURATION_MINUTES) {
-      return setFormError(
-        `Khóa học này đang để ${course.durationMinutes} phút/buổi. Hệ thống hiện chỉ mở được lớp từ khóa ${DEFAULT_DURATION_MINUTES} phút/buổi — vào khóa học, bấm "Sửa thông tin" để tạm đổi về ${DEFAULT_DURATION_MINUTES} phút rồi mở lớp lại.`,
-      );
-    }
     if (!Number.isInteger(sessionCount) || sessionCount < 1 || sessionCount > 200) return setFormError("Số buổi phải từ 1 đến 200.");
     if (!startDate) return setFormError("Hãy chọn ngày khai giảng.");
     if (!weekdayMatchesPattern(startDate, pattern)) {
@@ -241,7 +239,7 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
             onChange={setPattern}
             options={SCHEDULE_PATTERN_OPTIONS.map(({ value, label }) => ({ value, label }))}
           />
-          <Segmented label="Ca học" value={slot} onChange={setSlot} options={TIME_SLOT_OPTIONS} />
+          <Segmented label="Ca học" value={slot} onChange={setSlot} options={slotOptions} />
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <label htmlFor="class-sessions" className={PORTAL_LABEL}>
