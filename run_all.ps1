@@ -62,13 +62,13 @@ function Import-SampleData {
     }
 
     # Uu tien chay qua Docker PostgreSQL neu container dang chay hoac chay truc tiep psql
-    $dockerRunning = $false
+    $pgContainerRunning = $false
     try {
-        $null = docker info 2>&1
-        if ($LASTEXITCODE -eq 0) { $dockerRunning = $true }
-    } catch { $dockerRunning = $false }
+        $containerId = docker compose ps --status running -q postgres 2>$null
+        if ($containerId) { $pgContainerRunning = $true }
+    } catch { $pgContainerRunning = $false }
 
-    if ($dockerRunning) {
+    if ($pgContainerRunning) {
         # Copy sql file vao container va thuc thi
         $targetInContainer = "/tmp/" + (Split-Path $dataFile -Leaf)
         docker compose cp "$dataFile" "postgres:$targetInContainer" 2>$null | Out-Null
@@ -80,6 +80,8 @@ function Import-SampleData {
             $env:PGPASSWORD = $dbPass
             psql -h localhost -U $dbUser -d $dbName -f "$dataFile" 2>$null | Out-Null
             Write-Host " - Da nap du lieu vao PostgreSQL host thanh cong!" -ForegroundColor Green
+        } else {
+            Write-Host " - [CANH BAO] Khong the nap du lieu vao PostgreSQL (Container postgres khong chay va khong tim thay psql tren host)." -ForegroundColor Yellow
         }
     }
 }
@@ -104,13 +106,13 @@ function Import-MongoSampleData {
         }
     }
 
-    $dockerRunning = $false
+    $mongoContainerRunning = $false
     try {
-        $null = docker info 2>&1
-        if ($LASTEXITCODE -eq 0) { $dockerRunning = $true }
-    } catch { $dockerRunning = $false }
+        $containerId = docker compose ps --status running -q mongodb 2>$null
+        if ($containerId) { $mongoContainerRunning = $true }
+    } catch { $mongoContainerRunning = $false }
 
-    if ($dockerRunning) {
+    if ($mongoContainerRunning) {
         $targetInContainer = "/tmp/" + (Split-Path $mongoFile -Leaf)
         docker compose cp "$mongoFile" "mongodb:$targetInContainer" 2>$null | Out-Null
         docker compose exec -T mongodb mongosh $mongoDb "$targetInContainer" 2>$null | Out-Null
@@ -238,13 +240,27 @@ do {
 
     # Nap dataset mau sau khi DB/Backend san sang
     $dataCandidates = @(
-        (Join-Path $rootDir "data\sample_data.sql"),
-        (Join-Path $rootDir "backend\src\main\resources\data\sample_data.sql")
+        (Join-Path $rootDir "backend\src\main\resources\data\R__sample_data.sql"),
+        (Join-Path $rootDir "data\R__sample_data.sql"),
+        (Join-Path $rootDir "backend\src\main\resources\data\sample_data.sql"),
+        (Join-Path $rootDir "data\sample_data.sql")
     )
     $foundDataFile = $dataCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
     if ($foundDataFile) {
         Write-Host "`n[*] Dang kiem tra va cap nhat du lieu mau vao Database PostgreSQL..." -ForegroundColor Yellow
         Import-SampleData -dataFile $foundDataFile
+
+        # Nap them file sample data meeting neu co
+        $meetingCandidates = @(
+            (Join-Path $rootDir "backend\src\main\resources\data\R__z_meeting_sample_data.sql"),
+            (Join-Path $rootDir "data\R__z_meeting_sample_data.sql")
+        )
+        $foundMeetingFile = $meetingCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+        if ($foundMeetingFile) {
+            Import-SampleData -dataFile $foundMeetingFile
+        }
+    } else {
+        Write-Host "`n[*] Bo qua buoc nap dataset PostgreSQL (khong tim thay file R__sample_data.sql hoac sample_data.sql)." -ForegroundColor DarkGray
     }
 
     $mongoCandidates = @(
@@ -255,6 +271,8 @@ do {
     if ($foundMongoFile) {
         Write-Host "`n[*] Dang kiem tra va cap nhat du lieu mau vao Database MongoDB..." -ForegroundColor Yellow
         Import-MongoSampleData -mongoFile $foundMongoFile
+    } else {
+        Write-Host "`n[*] Bo qua buoc nap dataset MongoDB (khong tim thay file mongo_seed.js)." -ForegroundColor DarkGray
     }
 
     # 5. Khoi dong Frontend (React + Vite :5173)

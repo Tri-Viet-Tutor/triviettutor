@@ -21,6 +21,12 @@ export default function ClassroomPage() {
   const [error, setError] = useState<string | null>(null);
   const [meetingData, setMeetingData] = useState<MeetingTokenResponse | null>(null);
 
+  const isTutor = meetingData?.role === "TUTOR";
+  const isAdmin = meetingData?.role === "ADMIN";
+  const isHost = isTutor || isAdmin;
+  const roleLabel = isTutor ? "Gia sư" : isAdmin ? "Quản trị viên" : "Học sinh";
+  const currentUserName = user?.fullName || (isHost ? (meetingData?.tutorName || "Gia sư") : "Học sinh");
+
   // Classroom media states
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
@@ -1216,11 +1222,6 @@ export default function ClassroomPage() {
     );
   }
 
-  const isTutor = meetingData.role === "TUTOR";
-  const isAdmin = meetingData.role === "ADMIN";
-  const isHost = isTutor || isAdmin;
-  const roleLabel = isTutor ? "Gia sư" : isAdmin ? "Quản trị viên" : "Học sinh";
-  const currentUserName = user?.fullName || (isHost ? (meetingData.tutorName || "Gia sư") : "Học sinh");
 
   const hasOnlineStudent = onlineParticipantIds.size > 0 || participants.some((p) => !p.isSelf && p.role !== "TUTOR");
   const studentParticipant = participants.find((p) => !p.isSelf && p.role !== "TUTOR");
