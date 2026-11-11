@@ -6,37 +6,38 @@
 SET session_replication_role = 'replica';
 
 -- ------------------------------------------------------------
--- Table: users (25 records)
+-- Table: users (26 records)
 -- ------------------------------------------------------------
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (30, 'nam.hoang@viettritutor.local', '$2a$10$5EzoBveVRnGEo4xBYoZKAOhgrc32G70K7iebIT.O2a8o2RYi3rTC6', 'Hoàng Văn Nam', 'ROLE_ADMIN', '2026-10-05 09:00:00', TRUE, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (25, 'hung.pham@viettritutor.local', '$2a$10$BUkOlFsxhLb8tww3krrR5uRd3/DIsmR8sy.VDxEbLVPg6TDqHDjOa', 'Phạm Quốc Hùng', 'ROLE_TUTOR', '2026-10-19 09:11:47.27108', TRUE, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (25, 'cuongnguyenphu2005@gmail.com', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'Nguyễn Phú Cường', 'ROLE_TUTOR', '2026-10-19 09:11:47.27108', TRUE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (26, 'ha.do@viettritutor.local', '$2a$10$oZdAx0pmZ/jILDRWNkZQeOqeOCsso.hr5zynSwRBgEh2Rp9jWoHVW', 'Đỗ Thị Thu Hà', 'ROLE_TUTOR', '2026-10-19 09:11:47.27108', TRUE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (27, 'thang.vo@viettritutor.local', '$2a$10$28OW1hhafxqsqBKmGwFkauuhVtLR69ES8jqB97cqKjd4IJ04ndbCS', 'Võ Đức Thắng', 'ROLE_TUTOR', '2026-10-19 09:11:47.27108', TRUE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (31, 'huong.nguyen@viettritutor.local', '$2a$10$L3T7H.3Hk7nxWs6pGPRB6Ox86.wbB1LMWAFlav/mOng5y3eaZTw7K', 'Nguyễn Thị Lan Hương', 'ROLE_TUTOR', '2026-10-05 09:00:00', TRUE, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (13, 'quangdnis@gmail.com', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'Cường Đô La', 'ROLE_STUDENT', '2026-10-08 16:15:51.870528', TRUE, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (13, 'quangdnis@gmail.com', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'Đỗ Quang', 'ROLE_STUDENT', '2026-10-08 16:15:51.870528', TRUE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (22, 'minhanh.nguyen@viettritutor.local', '$2a$10$90CHfiTTSlywKf/dyiUIluZX25kGzj5l6cNBp5hhtTaDYiNLzH.sW', 'Nguyễn Minh Anh', 'ROLE_STUDENT', '2026-10-19 09:07:00.242528', TRUE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (28, 'tiendung17578@gmail.com', '$2a$10$3PCxdVd3.N6T9KQkxse6J.DbB0eoGfI8pcuaO7GbI1G2EU/YK2GnC', 'Thu Phuong Pham Thi', 'ROLE_STUDENT', '2026-10-22 11:30:51.501443', FALSE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (11, 'ronaldo@gmail.com', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'Admin', 'ROLE_ADMIN', '2026-10-08 15:43:04.019099', TRUE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (29, 'hieubtse172435@fpt.edu.vn', '$2a$10$f1FxPTFWlJjl3f8V8U3Po.b6iB0RkEa02a6NaMUMRVI7PEYpEF1AO', 'Hieu Dog', 'ROLE_STUDENT', '2026-10-22 13:19:06.477059', TRUE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (1, 'admin@viettritutor.local', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'System Administrator', 'ROLE_ADMIN', '2026-10-08 06:23:27.367612', TRUE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (9, 'nkienotaku@gmail.com', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'kien', 'ROLE_STUDENT', '2026-10-08 15:32:22.657044', TRUE, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (10, 'cuongnguyenphu2005@gmail.com', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'Phuong', 'ROLE_STUDENT', '2026-10-08 15:40:56.991575', TRUE, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (14, 'phamthuphuong29062004@gmail.com', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'phuong', 'ROLE_STUDENT', '2026-10-09 10:33:08.702436', TRUE, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (10, 'hoangnk2003@gmail.com', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'Nguyễn Khắc Hoàng', 'ROLE_STUDENT', '2026-10-08 15:40:56.991575', TRUE, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (14, 'phamthuphuong29062004@gmail.com', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'Phạm Thu Phương', 'ROLE_STUDENT', '2026-10-09 10:33:08.702436', TRUE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (15, 'phamthuphuong9062004@gmail.com', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'MI', 'ROLE_STUDENT', '2026-10-09 14:54:15.619312', FALSE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (16, 'phamthuphuong290624@gmail.com', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'Phuong', 'ROLE_STUDENT', '2026-10-09 15:42:07.036664', FALSE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (17, 'phuongpttse184761@fpt.edu.vn', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'Phuong', 'ROLE_STUDENT', '2026-10-09 15:45:19.513469', TRUE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (18, 'thuphuong78990@gmail.com', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'phuong', 'ROLE_STUDENT', '2026-10-09 17:44:15.672665', FALSE, NULL) ON CONFLICT DO NOTHING;
-INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (3, 'bobnguyen1906@gmail.com', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'Vo Tran Ngoc Huu', 'ROLE_STUDENT', '2026-10-08 14:33:33.849615', TRUE, 104521054255607497326) ON CONFLICT DO NOTHING;
+INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (3, 'bobnguyen1906@gmail.com', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'Bob Nguyễn', 'ROLE_STUDENT', '2026-10-08 14:33:33.849615', TRUE, 104521054255607497326) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (23, 'giabao.tran@viettritutor.local', '$2a$10$/4kC3hLj.HguGBWJ9BPTEu1jO6lI/hlyWXqi/IEkesAy5gHljx/iW', 'Trần Gia Bảo', 'ROLE_STUDENT', '2026-10-19 09:07:00.242528', TRUE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (24, 'khanhlinh.le@viettritutor.local', '$2a$10$h6RnJnNSL24xfDWvmL3oB.Ey2TxEcZ1G4X2eGikSjYj8VTm4e1r0S', 'Lê Khánh Linh', 'ROLE_STUDENT', '2026-10-19 09:07:00.242528', TRUE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (32, 'khoa.tran@viettritutor.local', '$2a$10$G7XvGxGoYl9RfmNOmQIvTucaOxDaitezBDiRGwpAvKZZzGzyWqTJO', 'Trần Văn Khoa', 'ROLE_TUTOR', '2026-10-05 09:00:00', TRUE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (33, 'ngochan.pham@viettritutor.local', '$2a$10$tkLqDi37fEyv2YIYdk1jD.pfWPDUyCVux29TxQPM/evRVYOeHg2K2', 'Phạm Ngọc Hân', 'ROLE_STUDENT', '2026-10-05 09:00:00', TRUE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (34, 'hoangphuc.le@viettritutor.local', '$2a$10$KzZwTZY8sMvl5xDMCIyOb.qhIhl/b37BBJ211UoXp7gUntLeReQSa', 'Lê Hoàng Phúc', 'ROLE_STUDENT', '2026-10-05 09:00:00', TRUE, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (35, 'thaovy.bui@viettritutor.local', '$2a$10$FteMmoa0htGl8hDe3pDezuv8yVdGPaZmSIhk0x6hJfow9emkaa2qO', 'Bùi Thảo Vy', 'ROLE_STUDENT', '2026-10-05 09:00:00', TRUE, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO users (id, email, password, full_name, role, created_at, enabled, google_id) VALUES (36, 'votranngochuu@gmail.com', '$2a$10$FsWLKRKex4El1xyCFVdPvOxLw1Dc3l3hhHCRdKMdGWal3URgKzoYa', 'Võ Trần Ngọc Hữu', 'ROLE_STUDENT', '2026-10-05 09:00:00', TRUE, NULL) ON CONFLICT DO NOTHING;
 SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(id) FROM users), 1));
 
 -- ------------------------------------------------------------
--- Table: student_profiles (6 records)
+-- Table: student_profiles (11 records)
 -- ------------------------------------------------------------
 INSERT INTO student_profiles (id, phone, address) VALUES (22, 0912345671, '12 Nguyễn Văn Cừ, Phường 4, Quận 5, TP. Hồ Chí Minh') ON CONFLICT DO NOTHING;
 INSERT INTO student_profiles (id, phone, address) VALUES (23, 0912345672, '45 Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh') ON CONFLICT DO NOTHING;
@@ -44,6 +45,11 @@ INSERT INTO student_profiles (id, phone, address) VALUES (24, 0912345673, '88 V�
 INSERT INTO student_profiles (id, phone, address) VALUES (33, NULL, '102 Phan Đăng Lưu, Phường 3, Quận Phú Nhuận, TP. Hồ Chí Minh') ON CONFLICT DO NOTHING;
 INSERT INTO student_profiles (id, phone, address) VALUES (34, NULL, '27 Hoàng Diệu, Phường 12, Quận 4, TP. Hồ Chí Minh') ON CONFLICT DO NOTHING;
 INSERT INTO student_profiles (id, phone, address) VALUES (35, NULL, '56 Trần Hưng Đạo, Phường 7, Quận 5, TP. Hồ Chí Minh') ON CONFLICT DO NOTHING;
+INSERT INTO student_profiles (id, phone, address) VALUES (3, 0912345003, '12 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh') ON CONFLICT DO NOTHING;
+INSERT INTO student_profiles (id, phone, address) VALUES (10, 0912345010, '34 Lê Duẩn, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh') ON CONFLICT DO NOTHING;
+INSERT INTO student_profiles (id, phone, address) VALUES (13, 0912345013, '56 Hai Bà Trưng, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh') ON CONFLICT DO NOTHING;
+INSERT INTO student_profiles (id, phone, address) VALUES (14, 0912345014, '78 Pasteur, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh') ON CONFLICT DO NOTHING;
+INSERT INTO student_profiles (id, phone, address) VALUES (36, 0912345036, '90 Nam Kỳ Khởi Nghĩa, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh') ON CONFLICT DO NOTHING;
 SELECT setval(pg_get_serial_sequence('student_profiles', 'id'), COALESCE((SELECT MAX(id) FROM student_profiles), 1));
 
 -- ------------------------------------------------------------
@@ -57,7 +63,7 @@ INSERT INTO tutor_profiles (id, base_salary, session_rate, bio) VALUES (32, 3000
 SELECT setval(pg_get_serial_sequence('tutor_profiles', 'id'), COALESCE((SELECT MAX(id) FROM tutor_profiles), 1));
 
 -- ------------------------------------------------------------
--- Table: tutor_availability (9 records)
+-- Table: tutor_availability (10 records)
 -- ------------------------------------------------------------
 INSERT INTO tutor_availability (id, tutor_id, available_date, start_time, end_time) VALUES (1, 25, '2026-11-03', '14:00:00', '17:00:00') ON CONFLICT DO NOTHING;
 INSERT INTO tutor_availability (id, tutor_id, available_date, start_time, end_time) VALUES (2, 26, '2026-11-04', '14:00:00', '17:00:00') ON CONFLICT DO NOTHING;
@@ -68,17 +74,20 @@ INSERT INTO tutor_availability (id, tutor_id, available_date, start_time, end_ti
 INSERT INTO tutor_availability (id, tutor_id, available_date, start_time, end_time) VALUES (7, 32, '2026-10-27', '14:00:00', '16:00:00') ON CONFLICT DO NOTHING;
 INSERT INTO tutor_availability (id, tutor_id, available_date, start_time, end_time) VALUES (8, 32, '2026-10-29', '14:00:00', '16:00:00') ON CONFLICT DO NOTHING;
 INSERT INTO tutor_availability (id, tutor_id, available_date, start_time, end_time) VALUES (9, 32, '2026-10-31', '14:00:00', '16:00:00') ON CONFLICT DO NOTHING;
+INSERT INTO tutor_availability (id, tutor_id, available_date, start_time, end_time) VALUES (10, 25, '2026-11-12', '12:30:00', '17:15:00') ON CONFLICT DO NOTHING;
 SELECT setval(pg_get_serial_sequence('tutor_availability', 'id'), COALESCE((SELECT MAX(id) FROM tutor_availability), 1));
 
 -- ------------------------------------------------------------
--- Table: wallets (6 records)
+-- Table: wallets (8 records)
 -- ------------------------------------------------------------
 INSERT INTO wallets (id, student_id, balance, created_at) VALUES (2, 29, 9000000, '2026-10-26 05:18:38.948823+00') ON CONFLICT DO NOTHING;
 INSERT INTO wallets (id, student_id, balance, created_at) VALUES (4, 10, 9000000, '2026-10-26 07:03:58.537976+00') ON CONFLICT DO NOTHING;
 INSERT INTO wallets (id, student_id, balance, created_at) VALUES (5, 33, 100000, '2026-10-26 08:34:44.439516+00') ON CONFLICT DO NOTHING;
 INSERT INTO wallets (id, student_id, balance, created_at) VALUES (1, 22, 3000000, '2026-10-26 02:46:55.528415+00') ON CONFLICT DO NOTHING;
-INSERT INTO wallets (id, student_id, balance, created_at) VALUES (3, 13, 1000000, '2026-10-26 07:00:05.191668+00') ON CONFLICT DO NOTHING;
+INSERT INTO wallets (id, student_id, balance, created_at) VALUES (3, 13, 5000000, '2026-10-26 07:00:05.191668+00') ON CONFLICT DO NOTHING;
 INSERT INTO wallets (id, student_id, balance, created_at) VALUES (6, 3, 9000000, '2026-10-26 14:59:36.049447+00') ON CONFLICT DO NOTHING;
+INSERT INTO wallets (id, student_id, balance, created_at) VALUES (7, 14, 5000000, '2026-10-26 08:00:00+00') ON CONFLICT DO NOTHING;
+INSERT INTO wallets (id, student_id, balance, created_at) VALUES (8, 36, 5000000, '2026-10-26 08:00:00+00') ON CONFLICT DO NOTHING;
 SELECT setval(pg_get_serial_sequence('wallets', 'id'), COALESCE((SELECT MAX(id) FROM wallets), 1));
 
 -- ------------------------------------------------------------
