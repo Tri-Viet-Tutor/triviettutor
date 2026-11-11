@@ -11,6 +11,7 @@ import { useUserDirectory } from "@/hooks/useAdminData";
 import { fetchRatingSummary, fetchTutorRatings } from "@/services/ratingService";
 import { displayCode } from "@/utils/classes";
 import { normalizeText } from "@/utils/text";
+import { Select } from "@/components/ui/Select";
 
 type Sort = "BEST" | "WORST" | "MOST";
 
@@ -100,7 +101,7 @@ export function AdminReviewsPage() {
                   className="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-[14px] outline-none focus:ring-0"
                 />
               </label>
-              <select
+              <Select
                 value={sort}
                 onChange={(event) => setSort(event.target.value as Sort)}
                 aria-label="Sắp xếp"
@@ -109,7 +110,7 @@ export function AdminReviewsPage() {
                 <option value="BEST">Điểm cao nhất</option>
                 <option value="WORST">Điểm thấp nhất</option>
                 <option value="MOST">Nhiều đánh giá nhất</option>
-              </select>
+              </Select>
             </div>
             {loading ? (
               <div className="p-4">

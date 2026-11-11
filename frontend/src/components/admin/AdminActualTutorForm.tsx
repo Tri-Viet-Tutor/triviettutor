@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ReasonForm } from "@/components/admin/ReasonForm";
+import { Select } from "@/components/ui/Select";
 import { AUTH_LABEL, PORTAL_INPUT } from "@/constants/classNames";
 import { useRefreshAdmin } from "@/hooks/useAdminData";
 import { portalKeys, useUserId } from "@/hooks/usePortalData";
@@ -47,7 +48,7 @@ export function AdminActualTutorForm({ session, tutors, onDone }: AdminActualTut
         <label htmlFor={`actual-tutor-${session.sessionId}`} className={`mb-1.5 ${AUTH_LABEL}`}>
           Gia sư thực dạy
         </label>
-        <select
+        <Select
           id={`actual-tutor-${session.sessionId}`}
           required
           value={tutorId}
@@ -60,7 +61,7 @@ export function AdminActualTutorForm({ session, tutors, onDone }: AdminActualTut
               {tutor.fullName} ({displayCode("tutor", tutor.id)})
             </option>
           ))}
-        </select>
+        </Select>
         <p className="mt-1.5 text-[13px] text-brand-muted">
           Xác nhận đã dạy của gia sư cũ sẽ bị bỏ; gia sư thực dạy cần xác nhận lại trong 24 giờ sau buổi học (quá hạn thì quản trị mở khóa
           và xác nhận thay).

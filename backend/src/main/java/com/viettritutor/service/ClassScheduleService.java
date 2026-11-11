@@ -39,7 +39,7 @@ public class ClassScheduleService {
     public void ensureGenerated(ClassGroup c) {
         requireConfigured(c);
         generator.ensureGenerated(new SessionGenerationSpec(c.getId(), c.getStartDate(), c.getTotalSessions(),
-                c.getSchedulePattern(), c.getTimeSlot(), c.getMeetingUrl()));
+                c.getSchedulePattern(), c.getTimeSlot(), c.getCourse().getDurationMinutes(), c.getMeetingUrl()));
     }
 
     /**
@@ -52,7 +52,7 @@ public class ClassScheduleService {
         List<Session> planned = new ArrayList<>();
         for (int index = 0; index < dates.size(); index++) {
             planned.add(Session.builder().classGroupId(c.getId()).sessionNumber(index + 1).sessionDate(dates.get(index))
-                    .startTime(c.getTimeSlot().getStartTime()).endTime(c.getTimeSlot().getEndTime())
+                    .startTime(c.getTimeSlot().getStartTime()).endTime(c.getTimeSlot().endTime(c.getCourse().getDurationMinutes()))
                     .status(SessionStatus.SCHEDULED).build());
         }
         return planned;
@@ -83,7 +83,7 @@ public class ClassScheduleService {
         }
         var dates = calculator.calculate(start, c.getSchedulePattern(), c.getTotalSessions());
         var proposed = dates.stream().map(d -> Session.builder().classGroupId(c.getId()).sessionDate(d)
-                .startTime(c.getTimeSlot().getStartTime()).endTime(c.getTimeSlot().getEndTime())
+                .startTime(c.getTimeSlot().getStartTime()).endTime(c.getTimeSlot().endTime(c.getCourse().getDurationMinutes()))
                 .status(SessionStatus.SCHEDULED).build()).toList();
         var excluded = saved.stream().map(Session::getId).collect(Collectors.toSet());
         for (Long id : roster.stream().map(LearningSchedule::getStudentId).distinct().toList()) {

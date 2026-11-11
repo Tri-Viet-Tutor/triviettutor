@@ -4,8 +4,9 @@ import { FilterTabs } from "@/components/dashboard/FilterTabs";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
 import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/PortalState";
 import { AttachmentField } from "@/components/ui/AttachmentField";
+import { AttachmentLink } from "@/components/ui/AttachmentLink";
+import { HomeworkQuestionList } from "@/components/tutor/HomeworkQuestions";
 import { Icon } from "@/components/ui/Icon";
-import { attachmentName } from "@/services/fileService";
 import { AUTH_ERROR, FOCUS_RING, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
 import type { StudentHomeworkResponse, SubmissionResponse } from "@/interfaces/api";
 import { listMyHomeworks, saveHomeworkDraft, startHomework, submitHomework } from "@/services/homeworkService";
@@ -118,15 +119,14 @@ function HomeworkCard({ item, course, open, onToggle }: { item: StudentHomeworkR
           <div>
             <p className="whitespace-pre-line text-[14px] leading-relaxed text-brand-ink">{homework.instructions}</p>
             {homework.resourceUrl && (
-              <a
-                href={homework.resourceUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-flex items-center gap-1 text-[13.5px] font-semibold text-brand-navy hover:text-brand-navyDeep"
-              >
-                <Icon name="attach_file" className="text-[17px]" />
-                {attachmentName(homework.resourceUrl)}
-              </a>
+              <div className="mt-2">
+                <AttachmentLink url={homework.resourceUrl} preview />
+              </div>
+            )}
+            {homework.questions && homework.questions.length > 0 && (
+              <div className="mt-3">
+                <HomeworkQuestionList questions={homework.questions} />
+              </div>
             )}
             <p className="mt-2 text-[12.5px] text-brand-muted">Điểm tối đa {homework.maxScore}</p>
           </div>
@@ -191,10 +191,9 @@ function WorkArea({ item, overdue }: { item: StudentHomeworkResponse; overdue: b
         {submission.feedback && <p className="mt-1 whitespace-pre-line text-[14px] text-emerald-900">Nhận xét: {submission.feedback}</p>}
         {submission.content && <p className="mt-2 whitespace-pre-line text-[13.5px] text-brand-ink">{submission.content}</p>}
         {submission.resourceUrl && (
-          <a href={submission.resourceUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-[13px] font-semibold text-brand-navy hover:text-brand-navyDeep">
-            <Icon name="attach_file" className="text-[16px]" />
-            {attachmentName(submission.resourceUrl)}
-          </a>
+          <div className="mt-1">
+            <AttachmentLink url={submission.resourceUrl} preview />
+          </div>
         )}
       </div>
     );

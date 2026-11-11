@@ -1,8 +1,10 @@
-import { useState, type FormEvent } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState, type FormEvent } from "react";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AttachmentField } from "@/components/ui/AttachmentField";
+import { AttachmentLink } from "@/components/ui/AttachmentLink";
+import { FilterTabs } from "@/components/dashboard/FilterTabs";
+import { draftQuestionsToRequest, HomeworkQuestionEditor, HomeworkQuestionList, type DraftQuestion } from "@/components/tutor/HomeworkQuestions";
 import { Icon } from "@/components/ui/Icon";
-import { attachmentName } from "@/services/fileService";
 import { AUTH_ERROR, FOCUS_RING, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
 import type { HomeworkResponse, SubmissionResponse } from "@/interfaces/api";
 import {
@@ -17,6 +19,9 @@ import { studentLabel } from "@/utils/sessions";
 import { DateField } from "@/components/ui/DateField";
 import { TimeField } from "@/components/ui/TimeField";
 import { toIsoDate } from "@/utils/date";
+
+type GradingFilter = "all" | "pending" | "done";
+type DueFilter = "all" | "overdue" | "open";
 
 const STATUS_STYLE: Record<HomeworkResponse["status"], { label: string; className: string }> = {
   DRAFT: { label: "Nháp", className: "bg-slate-100 text-slate-700" },
@@ -63,6 +68,32 @@ export function SessionHomework({ sessionId }: { sessionId: number }) {
   });
 
   const items = homeworks.data?.content ?? [];
+  const [gradingFilter, setGradingFilter] = useState<GradingFilter>("all");
+  const [dueFilter, setDueFilter] = useState<DueFilter>("all");
+
+  // Bài đã giao (PUBLISHED/CLOSED) mới có bài nộp — tải nhẹ, chỉ lấy bài SUBMITTED (chưa chấm) để biết lớp còn bài cần chấm hay không
+  const gradableItems = items.filter((homework) => homework.status !== "DRAFT");
+  const pendingQueries = useQueries({
+    queries: gradableItems.map((homework) => ({
+      queryKey: ["homework-submissions", homework.id, "SUBMITTED"],
+      queryFn: () => listSubmissions(homework.id, "SUBMITTED"),
+    })),
+  });
+  const pendingCountByHomework = useMemo(() => {
+    const map = new Map<number, number>();
+    gradableItems.forEach((homework, index) => map.set(homework.id, pendingQueries[index]?.data?.content.length ?? 0));
+    return map;
+  }, [gradableItems, pendingQueries]);
+
+  const now = Date.now();
+  const filteredItems = items.filter((homework) => {
+    if (dueFilter === "overdue" && new Date(homework.dueAt).getTime() > now) return false;
+    if (dueFilter === "open" && new Date(homework.dueAt).getTime() <= now) return false;
+    if (gradingFilter === "pending" && (pendingCountByHomework.get(homework.id) ?? 0) === 0) return false;
+    if (gradingFilter === "done" && homework.status === "DRAFT") return false;
+    if (gradingFilter === "done" && (pendingCountByHomework.get(homework.id) ?? 0) > 0) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-3">
@@ -75,6 +106,31 @@ export function SessionHomework({ sessionId }: { sessionId: number }) {
           </button>
         )}
       </div>
+
+      {items.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterTabs
+            label="Lọc theo trạng thái chấm điểm"
+            value={gradingFilter}
+            onChange={setGradingFilter}
+            tabs={[
+              { value: "all", label: "Tất cả" },
+              { value: "pending", label: "Còn bài chưa chấm" },
+              { value: "done", label: "Không còn bài chưa chấm" },
+            ]}
+          />
+          <FilterTabs
+            label="Lọc theo hạn nộp"
+            value={dueFilter}
+            onChange={setDueFilter}
+            tabs={[
+              { value: "all", label: "Mọi hạn nộp" },
+              { value: "open", label: "Còn hạn" },
+              { value: "overdue", label: "Quá hạn" },
+            ]}
+          />
+        </div>
+      )}
 
       {creating && (
         <HomeworkForm
@@ -89,11 +145,15 @@ export function SessionHomework({ sessionId }: { sessionId: number }) {
 
       {error && <p className={AUTH_ERROR}>{error}</p>}
       {homeworks.isError && <p className={AUTH_ERROR}>Không tải được bài tập.</p>}
+      {items.length > 0 && filteredItems.length === 0 && (
+        <p className="text-[13.5px] text-brand-muted">Không có bài tập nào khớp bộ lọc.</p>
+      )}
 
       <ul className="space-y-2">
-        {items.map((homework) => {
+        {filteredItems.map((homework) => {
           const style = STATUS_STYLE[homework.status];
           const open = openId === homework.id;
+          const pendingCount = pendingCountByHomework.get(homework.id) ?? 0;
           return (
             <li key={homework.id} className="rounded-xl border border-brand-sandLine bg-white">
               <div className="flex flex-wrap items-start gap-3 p-3">
@@ -101,10 +161,20 @@ export function SessionHomework({ sessionId }: { sessionId: number }) {
                   <p className="flex flex-wrap items-center gap-2">
                     <span className="text-[14.5px] font-semibold text-brand-ink">{homework.title}</span>
                     <span className={`rounded-full px-2 py-0.5 text-[11.5px] font-bold ${style.className}`}>{style.label}</span>
+                    {pendingCount > 0 && (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11.5px] font-bold text-amber-800">
+                        {pendingCount} bài chưa chấm
+                      </span>
+                    )}
                   </p>
                   <p className="mt-0.5 text-[12.5px] text-brand-muted">
                     Hạn nộp {dateTime(homework.dueAt)} - Điểm tối đa {homework.maxScore}
                   </p>
+                  {homework.resourceUrl && (
+                    <div className="mt-1">
+                      <AttachmentLink url={homework.resourceUrl} />
+                    </div>
+                  )}
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-1.5">
                   {homework.status === "DRAFT" && (
@@ -141,6 +211,11 @@ export function SessionHomework({ sessionId }: { sessionId: number }) {
               {open && (
                 <div className="border-t border-brand-sandLine bg-brand-sand/30 p-3">
                   <p className="mb-2 whitespace-pre-line text-[13px] text-brand-muted">{homework.instructions}</p>
+                  {homework.questions && homework.questions.length > 0 && (
+                    <div className="mb-3">
+                      <HomeworkQuestionList questions={homework.questions} />
+                    </div>
+                  )}
                   <SubmissionList homework={homework} />
                 </div>
               )}
@@ -157,6 +232,7 @@ function HomeworkForm({ sessionId, onCancel, onSaved }: { sessionId: number; onC
   const [title, setTitle] = useState("");
   const [instructions, setInstructions] = useState("");
   const [resourceUrl, setResourceUrl] = useState("");
+  const [questions, setQuestions] = useState<DraftQuestion[]>([]);
   const [due, setDue] = useState(defaultDue);
   const [maxScore, setMaxScore] = useState("10");
   const [publishNow, setPublishNow] = useState(true);
@@ -170,6 +246,7 @@ function HomeworkForm({ sessionId, onCancel, onSaved }: { sessionId: number; onC
         resourceUrl: resourceUrl.trim() || undefined,
         dueAt: new Date(due).toISOString(),
         maxScore: Number(maxScore),
+        questions: draftQuestionsToRequest(questions),
       });
       return publishNow ? changeHomeworkStatus(created.id, "PUBLISHED", created.version) : created;
     },
@@ -210,6 +287,7 @@ function HomeworkForm({ sessionId, onCancel, onSaved }: { sessionId: number; onC
         />
       </div>
       <AttachmentField id="hw-link" label="File / link tài liệu (không bắt buộc)" value={resourceUrl} onChange={setResourceUrl} />
+      <HomeworkQuestionEditor questions={questions} onChange={setQuestions} />
       <div className="grid gap-3 sm:grid-cols-[1fr_140px]">
         <div>
           <label htmlFor="hw-due" className={PORTAL_LABEL}>
@@ -313,15 +391,9 @@ function SubmissionRow({ submission, homework }: { submission: SubmissionRespons
       </div>
       {submission.content && <p className="mt-1.5 whitespace-pre-line text-[13.5px] text-brand-ink">{submission.content}</p>}
       {submission.resourceUrl && (
-        <a
-          href={submission.resourceUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-1 inline-flex items-center gap-1 text-[13px] font-semibold text-brand-navy hover:text-brand-navyDeep"
-        >
-          <Icon name="link" className="text-[16px]" />
-          {attachmentName(submission.resourceUrl)}
-        </a>
+        <div className="mt-1">
+          <AttachmentLink url={submission.resourceUrl} preview />
+        </div>
       )}
       {graded ? (
         <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-[13.5px] text-emerald-900">

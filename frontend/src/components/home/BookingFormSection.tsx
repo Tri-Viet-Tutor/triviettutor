@@ -4,6 +4,7 @@ import { Reveal } from "@/components/motion";
 import { Icon } from "@/components/ui/Icon";
 import { CONTAINER, FIELD, FIELD_LABEL, FOCUS_RING } from "@/constants/classNames";
 import { COURSES } from "@/constants/courses";
+import { Select } from "@/components/ui/Select";
 
 /** Đăng ký tư vấn: phiếu đăng ký (chưa nối API — nút gửi chưa gửi dữ liệu đi đâu). */
 export function BookingFormSection() {
@@ -57,23 +58,23 @@ export function BookingFormSection() {
                     <label htmlFor="booking-grade" className={FIELD_LABEL}>
                       Lớp học của con
                     </label>
-                    <select id="booking-grade" className={FIELD}>
+                    <Select id="booking-grade" className={FIELD}>
                       {/* Các lựa chọn chỉ để hiển thị — phiếu chưa gửi dữ liệu đi đâu */}
                       <option>Lớp 10</option>
                       <option>Lớp 11</option>
                       <option>Lớp 12</option>
                       <option>Luyện thi ĐGNL &amp; ĐH</option>
-                    </select>
+                    </Select>
                   </div>
                   <div>
                     <label htmlFor="booking-mode" className={FIELD_LABEL}>
                       Hình thức học
                     </label>
-                    <select id="booking-mode" className={FIELD}>
+                    <Select id="booking-mode" className={FIELD}>
                       <option>Lớp tại trung tâm (tối đa 8 học sinh)</option>
                       <option>Lớp trực tuyến (tối đa 8 học sinh)</option>
                       <option>Combo nhiều môn (Ưu đãi sâu)</option>
-                    </select>
+                    </Select>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -81,7 +82,7 @@ export function BookingFormSection() {
                     <label htmlFor="booking-subject" className={FIELD_LABEL}>
                       Môn học muốn đăng ký
                     </label>
-                    <select id="booking-subject" defaultValue="" className={FIELD}>
+                    <Select id="booking-subject" defaultValue="" className={FIELD}>
                       <option value="" disabled>
                         Chọn môn học
                       </option>
@@ -90,7 +91,7 @@ export function BookingFormSection() {
                           {course.subjectLabel}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                   <div>
                     <label htmlFor="booking-area" className={FIELD_LABEL}>

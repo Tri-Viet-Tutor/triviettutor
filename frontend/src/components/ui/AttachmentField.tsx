@@ -1,8 +1,10 @@
 import { useRef, useState } from "react";
+import { AttachmentLink } from "@/components/ui/AttachmentLink";
 import { Icon } from "@/components/ui/Icon";
 import { AUTH_ERROR, FOCUS_RING, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENT_BYTES, attachmentName, isUploadedFile, uploadAttachment } from "@/services/fileService";
 import { portalErrorMessage } from "@/utils/errors";
+import { attachmentKind } from "@/utils/attachments";
 
 /**
  * Đính kèm cho bài tập / bài nộp: tải tệp từ máy lên (PDF, Word, ảnh… tối đa 10 MB) hoặc dán link https.
@@ -71,7 +73,7 @@ export function AttachmentField({
             value={value}
             disabled={disabled}
             onChange={(event) => onChange(event.target.value)}
-            placeholder="Dán link https://… hoặc tải tệp lên"
+            placeholder="Dán link https://… (ảnh, video, YouTube…) hoặc tải tệp lên"
             className={`${PORTAL_INPUT} min-w-0 flex-1`}
           />
           {!disabled && (
@@ -96,7 +98,12 @@ export function AttachmentField({
           )}
         </div>
       )}
-      <p className="mt-1 text-[12px] text-brand-muted">PDF, Word, Excel, PowerPoint, ảnh, zip — tối đa 10 MB.</p>
+      {value && !isUploadedFile(value) && attachmentKind(value) !== "file" && (
+        <div className="mt-2">
+          <AttachmentLink url={value} preview />
+        </div>
+      )}
+      <p className="mt-1 text-[12px] text-brand-muted">PDF, Word, Excel, PowerPoint, ảnh, zip — tối đa 10 MB khi tải lên; dán link thì nhận cả ảnh, video và YouTube.</p>
       {error && <p className={AUTH_ERROR}>{error}</p>}
     </div>
   );

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ReasonForm } from "@/components/admin/ReasonForm";
 import { AttendanceEditor } from "@/components/dashboard/AttendanceEditor";
+import { Select } from "@/components/ui/Select";
 import { StatusChip } from "@/components/dashboard/StatusChip";
 import { AUTH_LABEL, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_TEXT_LINK } from "@/constants/classNames";
 import { ATTENDANCE_STATUS, ATTENDANCE_STATUS_ORDER } from "@/constants/labels";
@@ -111,7 +112,7 @@ export function AdminAttendancePanel({ session, now, nameOf }: AdminAttendancePa
                   <label htmlFor={`correct-status-${editing.studentId}`} className={`mb-1.5 ${AUTH_LABEL}`}>
                     Trạng thái
                   </label>
-                  <select
+                  <Select
                     id={`correct-status-${editing.studentId}`}
                     value={status}
                     onChange={(event) => setStatus(event.target.value as AttendanceStatus)}
@@ -122,7 +123,7 @@ export function AdminAttendancePanel({ session, now, nameOf }: AdminAttendancePa
                         {ATTENDANCE_STATUS[item].label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
                 <div>
                   <label htmlFor={`correct-note-${editing.studentId}`} className={`mb-1.5 ${AUTH_LABEL}`}>

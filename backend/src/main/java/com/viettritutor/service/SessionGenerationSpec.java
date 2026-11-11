@@ -11,6 +11,8 @@ public record SessionGenerationSpec(
         int totalSessions,
         SchedulePattern pattern,
         TimeSlot timeSlot,
+        /** CLS-01: course.durationMinutes (30-120) — each session's end time is this many minutes after the slot's start. */
+        int durationMinutes,
         String meetingUrl) {
 
     public SessionGenerationSpec {
@@ -22,6 +24,9 @@ public record SessionGenerationSpec(
         }
         if (totalSessions <= 0) {
             throw new IllegalArgumentException("totalSessions must be positive");
+        }
+        if (durationMinutes <= 0) {
+            throw new IllegalArgumentException("durationMinutes must be positive");
         }
     }
 }

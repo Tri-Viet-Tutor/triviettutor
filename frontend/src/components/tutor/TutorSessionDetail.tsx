@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AttendanceEditor } from "@/components/dashboard/AttendanceEditor";
 import { SessionHomework } from "@/components/tutor/SessionHomework";
+import { SessionMaterials } from "@/components/tutor/SessionMaterials";
 import { StatusChip } from "@/components/dashboard/StatusChip";
 import { Icon } from "@/components/ui/Icon";
-import { PORTAL_BTN_SECONDARY } from "@/constants/classNames";
+import { FOCUS_RING, PORTAL_BTN_SECONDARY } from "@/constants/classNames";
 import { ROUTES } from "@/constants/routes";
 import { formatClockTime, parseIsoDate, weekdayName } from "@/utils/date";
 import {
@@ -21,6 +23,8 @@ import {
 import type { TutorSessionDetailProps } from "@/interfaces/portal";
 import { displayCode } from "@/utils/classes";
 
+type DetailTab = "attendance" | "homework" | "materials";
+
 /**
  * Chi tiết một buổi dạy: ngày giờ, link lớp trực tuyến, điểm danh cả lớp (chỉ khi tôi là người dạy buổi đó)
  * lối xin nghỉ dạy và mục bài tập (giao, công bố, đóng, chấm bài nộp).
@@ -34,6 +38,14 @@ export function TutorSessionDetail({ session, now, tutorId, hasPendingLeave }: T
   const readOnlyNote = attendanceDeadlinePassed(session, now) ? "Đã quá 24 giờ sau buổi học nên không sửa được nữa." : undefined;
 
   const day = parseIsoDate(session.date);
+  const showTabs = isTeacher && session.status !== "CANCELLED";
+  const [tab, setTab] = useState<DetailTab>("attendance");
+
+  const tabs: { value: DetailTab; label: string; icon: string }[] = [
+    { value: "attendance", label: "Điểm danh", icon: "fact_check" },
+    { value: "homework", label: "Bài tập", icon: "assignment" },
+    { value: "materials", label: "Tài liệu", icon: "folder" },
+  ];
 
   return (
     <div className="space-y-5">
@@ -107,34 +119,45 @@ export function TutorSessionDetail({ session, now, tutorId, hasPendingLeave }: T
         </div>
       )}
 
-      {isTeacher && session.status !== "CANCELLED" && session.status !== "PENDING_RESCHEDULE" && (
-        <section aria-label="Điểm danh" className="rounded-2xl border border-brand-sandLine bg-brand-sand/30 p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-[16px] font-extrabold text-brand-navy">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
-              <Icon name="fact_check" className="text-[19px]" />
-            </span>
-            Điểm danh
-          </h3>
-          {started ? (
-            <AttendanceEditor sessionId={session.sessionId} editable={editable} readOnlyNote={readOnlyNote} />
-          ) : (
-            <p className="flex items-center gap-2 rounded-xl bg-white px-3.5 py-3 text-[14px] text-brand-muted">
-              <Icon name="hourglass_empty" className="text-[18px]" />
-              Buổi dạy chưa bắt đầu nên chưa điểm danh được.
-            </p>
-          )}
-        </section>
-      )}
+      {showTabs && (
+        <section className="rounded-2xl border border-brand-sandLine bg-brand-sand/30 p-4">
+          {/* Chi tiết buổi học: Điểm danh / Bài tập / Tài liệu */}
+          <div role="tablist" aria-label="Chi tiết buổi học" className="mb-4 flex flex-wrap gap-1.5 rounded-xl bg-white p-1 shadow-sm">
+            {tabs.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                role="tab"
+                aria-selected={tab === option.value}
+                onClick={() => setTab(option.value)}
+                className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-[13.5px] font-semibold transition-colors ${FOCUS_RING} ${
+                  tab === option.value ? "bg-brand-navy text-white shadow-sm" : "text-brand-muted hover:text-brand-navy"
+                }`}
+              >
+                <Icon name={option.icon} className="text-[17px]" />
+                {option.label}
+              </button>
+            ))}
+          </div>
 
-      {isTeacher && session.status !== "CANCELLED" && (
-        <section aria-label="Bài tập" className="rounded-2xl border border-brand-sandLine bg-brand-sand/30 p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-[16px] font-extrabold text-brand-navy">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-tint text-brand-navy">
-              <Icon name="assignment" className="text-[19px]" />
-            </span>
-            Bài tập
-          </h3>
-          <SessionHomework sessionId={session.sessionId} />
+          {tab === "attendance" &&
+            (session.status === "PENDING_RESCHEDULE" ? (
+              <p className="flex items-center gap-2 rounded-xl bg-white px-3.5 py-3 text-[14px] text-brand-muted">
+                <Icon name="event_busy" className="text-[18px]" />
+                Buổi đang chờ xếp lại lịch nên chưa điểm danh được.
+              </p>
+            ) : started ? (
+              <AttendanceEditor sessionId={session.sessionId} editable={editable} readOnlyNote={readOnlyNote} />
+            ) : (
+              <p className="flex items-center gap-2 rounded-xl bg-white px-3.5 py-3 text-[14px] text-brand-muted">
+                <Icon name="hourglass_empty" className="text-[18px]" />
+                Buổi dạy chưa bắt đầu nên chưa điểm danh được.
+              </p>
+            ))}
+
+          {tab === "homework" && <SessionHomework sessionId={session.sessionId} />}
+
+          {tab === "materials" && <SessionMaterials sessionId={session.sessionId} />}
         </section>
       )}
     </div>

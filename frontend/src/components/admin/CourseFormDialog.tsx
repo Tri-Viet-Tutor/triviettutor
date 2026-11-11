@@ -2,11 +2,15 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { Icon } from "@/components/ui/Icon";
+import { Combobox } from "@/components/ui/Combobox";
 import { AUTH_ERROR, FOCUS_RING, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
 import { GRADE_OPTIONS } from "@/constants/classOptions";
 import {
   COURSE_PRICE_TIERS,
   DEFAULT_DURATION_MINUTES,
+  DURATION_MAX,
+  DURATION_MIN,
+  DURATION_STEP,
   MIN_COURSE_PRICE,
   SUBJECT_OPTIONS,
   coursePricePerSession,
@@ -49,6 +53,8 @@ function validate(values: Values): { tab: Tab; message: string } | null {
   if (values.subject.trim().length > 100) return { tab: "general", message: "Tên môn học tối đa 100 ký tự." };
   if (!values.basePrice1on1 || Number(values.basePrice1on1) < MIN_COURSE_PRICE)
     return { tab: "pricing", message: `Học phí 1 kèm 1 mỗi buổi tối thiểu ${formatVnd(MIN_COURSE_PRICE)}.` };
+  if (values.durationMinutes < DURATION_MIN || values.durationMinutes > DURATION_MAX)
+    return { tab: "general", message: `Thời lượng mỗi buổi phải từ ${DURATION_MIN} đến ${DURATION_MAX} phút.` };
   return null;
 }
 
@@ -80,8 +86,7 @@ export function CourseFormDialog({ open, course, onClose, onSaved }: CourseFormD
             gradeLevel: course.gradeLevel,
             // Khóa cũ lưu giá cả khóa: quy về giá một buổi
             basePrice1on1: String(Math.round(coursePricePerSession(course))),
-            // Ca học cố định 2 tiếng: khóa cũ lưu số khác vẫn được lưu lại thành 120 để tạo lớp được
-            durationMinutes: DEFAULT_DURATION_MINUTES,
+            durationMinutes: course.durationMinutes,
             description: course.description ?? "",
           }
         : EMPTY,
@@ -125,7 +130,7 @@ export function CourseFormDialog({ open, course, onClose, onSaved }: CourseFormD
       onClose={onClose}
       title={editing ? "Sửa khóa học" : "Thêm khóa học"}
       description={course ? course.name : "Khóa học là khung chương trình; các lớp học được mở từ khóa."}
-      widthClassName="max-w-[640px]"
+      widthClassName="max-w-[760px]"
     >
       <form onSubmit={handleSubmit} noValidate>
         {/* Thanh tab */}
@@ -173,34 +178,21 @@ export function CourseFormDialog({ open, course, onClose, onSaved }: CourseFormD
                 Môn học
               </label>
               {/* Chọn môn có sẵn trong danh sách gợi ý hoặc gõ tên môn mới (backend tự tạo môn) */}
-              <input
+              <Combobox
                 id="course-subject"
-                list="course-subject-options"
-                value={subjectOptions.find((option) => option.value === values.subject)?.label ?? values.subject}
-                onChange={(event) => {
-                  const text = event.target.value;
-                  const match = subjectOptions.find(
-                    (option) =>
-                      option.label.toLowerCase() === text.trim().toLowerCase() || option.value.toLowerCase() === text.trim().toLowerCase(),
-                  );
-                  set("subject", match ? match.value : text);
-                }}
+                value={values.subject}
+                options={subjectOptions}
+                onChange={(value) => set("subject", value)}
                 placeholder="Chọn hoặc nhập môn học"
-                autoComplete="off"
                 className={`${PORTAL_INPUT} h-12 text-[15px]`}
               />
-              <datalist id="course-subject-options">
-                {subjectOptions.map((option) => (
-                  <option key={option.value} value={option.label} />
-                ))}
-              </datalist>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {subjectOptions.slice(0, 6).map((option) => (
                   <button
                     key={option.value}
                     type="button"
                     onClick={() => set("subject", option.value)}
-                    className={`rounded-full border px-3 py-1 text-[12.5px] font-semibold transition-colors ${
+                    className={`rounded-xl border px-3 py-1 text-[12.5px] font-semibold transition-colors ${
                       values.subject === option.value
                         ? "border-brand-navy bg-brand-navy text-white"
                         : "border-brand-sandLine bg-white text-brand-muted hover:border-brand-navy/40 hover:text-brand-navy"
@@ -212,34 +204,71 @@ export function CourseFormDialog({ open, course, onClose, onSaved }: CourseFormD
               </div>
             </div>
 
-            <fieldset>
-              <legend className={PORTAL_LABEL}>Khối lớp</legend>
-              <div role="radiogroup" aria-label="Khối lớp" className="flex flex-wrap gap-2">
-                {GRADE_OPTIONS.map((option) => (
-                  <ChoiceButton
-                    key={option.value}
-                    selected={values.gradeLevel === option.value}
-                    onClick={() => set("gradeLevel", option.value)}
-                  >
-                    {option.label}
-                  </ChoiceButton>
-                ))}
-              </div>
-            </fieldset>
-
-            <div>
-              <div>
-                <div>
-                  <span className={PORTAL_LABEL}>Thời lượng mỗi buổi</span>
-                  <div className="flex h-11 items-center justify-between rounded-xl border border-brand-sandLine bg-brand-sand/50 px-4">
-                    <span className="text-[16px] font-bold tabular-nums text-brand-ink">
-                      {DEFAULT_DURATION_MINUTES} <span className="text-[13.5px] font-normal text-brand-muted">phút</span>
-                    </span>
-                    <span className="text-[12.5px] text-brand-muted">Cố định theo ca học 2 tiếng</span>
-                  </div>
+            <div className="grid gap-6 sm:grid-cols-2">
+              <fieldset>
+                <legend className={PORTAL_LABEL}>Khối lớp</legend>
+                <div role="radiogroup" aria-label="Khối lớp" className="flex flex-wrap gap-2">
+                  {GRADE_OPTIONS.map((option) => (
+                    <ChoiceButton
+                      key={option.value}
+                      selected={values.gradeLevel === option.value}
+                      onClick={() => set("gradeLevel", option.value)}
+                    >
+                      {option.label}
+                    </ChoiceButton>
+                  ))}
                 </div>
+              </fieldset>
+
+              <div>
+                <label htmlFor="course-duration" className={PORTAL_LABEL}>
+                  Thời lượng mỗi buổi
+                </label>
+                <div className="flex max-w-[220px] items-stretch overflow-hidden rounded-xl border border-brand-sandLine bg-white shadow-sm">
+                  <button
+                    type="button"
+                    aria-label="Giảm 5 phút"
+                    disabled={values.durationMinutes <= DURATION_MIN}
+                    onClick={() => set("durationMinutes", Math.max(DURATION_MIN, (values.durationMinutes || DURATION_MIN) - DURATION_STEP))}
+                    className="flex w-11 shrink-0 items-center justify-center text-brand-muted transition hover:bg-brand-sand/60 hover:text-brand-ink disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    <Icon name="remove" className="text-[19px]" />
+                  </button>
+                  <div className="flex flex-1 items-center justify-center gap-1.5 border-x border-brand-sandLine px-2">
+                    <input
+                      id="course-duration"
+                      type="number"
+                      inputMode="numeric"
+                      min={DURATION_MIN}
+                      max={DURATION_MAX}
+                      step={DURATION_STEP}
+                      value={values.durationMinutes || ""}
+                      onChange={(event) => {
+                        const digits = event.target.value.replace(/\D/g, "").slice(0, 3);
+                        set("durationMinutes", digits ? Number(digits) : 0);
+                      }}
+                      onBlur={(event) => {
+                        const n = Number(event.target.value);
+                        if (n) set("durationMinutes", Math.min(DURATION_MAX, Math.max(DURATION_MIN, n)));
+                      }}
+                      className="w-12 appearance-none bg-transparent text-center text-[15px] font-semibold text-brand-ink outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    />
+                    <span className="text-[13.5px] font-medium text-brand-muted">phút</span>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Tăng 5 phút"
+                    disabled={values.durationMinutes >= DURATION_MAX}
+                    onClick={() => set("durationMinutes", Math.min(DURATION_MAX, (values.durationMinutes || DURATION_MIN) + DURATION_STEP))}
+                    className="flex w-11 shrink-0 items-center justify-center text-brand-muted transition hover:bg-brand-sand/60 hover:text-brand-ink disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    <Icon name="add" className="text-[19px]" />
+                  </button>
+                </div>
+                <p className="mt-2 text-[13px] text-brand-muted">
+                  Từ {DURATION_MIN} đến {DURATION_MAX} phút mỗi buổi. Số buổi đặt khi mở từng lớp.
+                </p>
               </div>
-              <p className="mt-2 text-[13px] text-brand-muted">Số buổi đặt khi mở từng lớp.</p>
             </div>
 
             <div>
@@ -375,7 +404,7 @@ function ChoiceButton({ selected, onClick, children }: { selected: boolean; onCl
       role="radio"
       aria-checked={selected}
       onClick={onClick}
-      className={`inline-flex h-10 items-center justify-center gap-2 rounded-full border px-4 text-[14px] font-semibold transition-colors ${FOCUS_RING} ${
+      className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-[14px] font-semibold transition-colors ${FOCUS_RING} ${
         selected
           ? "border-brand-navy bg-brand-navy text-white"
           : "border-brand-sandLine bg-white text-brand-muted hover:border-brand-navy/40 hover:text-brand-navy"

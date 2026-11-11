@@ -14,6 +14,8 @@ export interface DateFieldProps {
   onChange: (value: string) => void;
   min?: string;
   max?: string;
+  /** Khóa thêm những ngày không hợp lệ theo quy tắc riêng (ví dụ: không đúng thứ của lịch học đã chọn) */
+  disabledDate?: (iso: string) => boolean;
   /** Lớp của ô (thường là PORTAL_INPUT / AUTH_INPUT) */
   className?: string;
   placeholder?: string;
@@ -33,7 +35,19 @@ function display(iso: string): string {
  * Ô chọn ngày thay cho <input type="date"> của trình duyệt: lịch tháng tiếng Việt (tuần bắt đầu Thứ Hai),
  * ngày đang chọn tô navy, hôm nay viền cam, ngày ngoài min/max bị khóa; có nút "Hôm nay" và "Xóa".
  */
-export function DateField({ id, value, onChange, min, max, className = "", placeholder = "Chọn ngày", required, disabled, ...rest }: DateFieldProps) {
+export function DateField({
+  id,
+  value,
+  onChange,
+  min,
+  max,
+  disabledDate,
+  className = "",
+  placeholder = "Chọn ngày",
+  required,
+  disabled,
+  ...rest
+}: DateFieldProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const { open, setOpen, style } = usePopover(triggerRef, panelRef, PANEL_WIDTH, PANEL_HEIGHT);
@@ -42,7 +56,7 @@ export function DateField({ id, value, onChange, min, max, className = "", place
   const base = value ? parseIsoDate(value) : min && min > todayIso ? parseIsoDate(min) : today;
   const [month, setMonth] = useState(() => new Date(base.getFullYear(), base.getMonth(), 1));
 
-  const outOfRange = (iso: string) => (min !== undefined && iso < min) || (max !== undefined && iso > max);
+  const outOfRange = (iso: string) => (min !== undefined && iso < min) || (max !== undefined && iso > max) || Boolean(disabledDate?.(iso));
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
   const gridStart = addDays(first, -((first.getDay() + 6) % 7));
   const cells = Array.from({ length: 42 }, (_, index) => addDays(gridStart, index));

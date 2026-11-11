@@ -34,11 +34,14 @@ public class ClassService {
         Course course = courses.findForUpdate(request.getCourseId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.COURSE_NOT_FOUND));
         if (!course.isActive()) throw new BusinessException(ErrorCode.COURSE_INACTIVE);
-        // Existing SessionGenerator uses the center's fixed two-hour slots.
+        // CLS-01: course.durationMinutes no longer has to be 120 to open a class (see CourseRequest).
+        // Note: SessionGenerator still schedules every session using the class's fixed TimeSlot (always a
+        // two-hour window), so a non-120-minute course does not yet change the generated sessions' actual
+        // start/end time; that part of TimeSlot is unchanged by CLS-01.
         int totalSessions = request.getTotalSessions() != null ? request.getTotalSessions() : course.getTotalSessions();
-        if (course.getDurationMinutes() != 120 || totalSessions < 1 || totalSessions > 1000) {
+        if (totalSessions < 1 || totalSessions > 1000) {
             throw new BusinessException(ErrorCode.INVALID_CLASS_CONFIGURATION,
-                    "Classes require 120-minute sessions and at most 1000 sessions");
+                    "Class must have between 1 and 1000 sessions");
         }
         LocalDate deadline = schedule.validateDates(request.getStartDate(), request.getEnrollmentDeadline());
         ClassGroup c = ClassGroup.builder().course(course).classCode("PENDING-" + UUID.randomUUID())

@@ -24,6 +24,7 @@ import {
 import { useAuthStore } from "@/stores/authStore";
 import { formatVnd } from "@/utils/currency";
 import { Icon } from "@/components/ui/Icon";
+import { Select } from "@/components/ui/Select";
 import { walletService } from "@/services/walletService";
 import { walletError } from "@/utils/wallet";
 import { StarRating } from "@/components/ui/StarRating";
@@ -564,7 +565,7 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
               </label>
               <label className="text-[13px] font-semibold text-brand-ink">
                 Khối lớp
-                <select
+                <Select
                   className={PORTAL_INPUT}
                   value={grade}
                   onChange={(event) => {
@@ -579,11 +580,11 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
                       {value.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
               <label className="text-[13px] font-semibold text-brand-ink">
                 Hình thức
-                <select
+                <Select
                   className={PORTAL_INPUT}
                   value={mode}
                   onChange={(event) => {
@@ -598,7 +599,7 @@ function StudentPayment({ userId, shopTo }: StudentPaymentProps) {
                       {value.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
             </div>
           )}

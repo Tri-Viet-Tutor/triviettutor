@@ -8,7 +8,9 @@ import { PORTAL_CARD } from "@/constants/classNames";
 import { PAYROLL_STATUS } from "@/constants/labels";
 import { monthLabel } from "@/constants/management";
 import { useMyPayroll } from "@/hooks/useManagementData";
+import { useNow } from "@/hooks/useNow";
 import { formatVnd } from "@/utils/currency";
+import type { PayrollLineResponse } from "@/interfaces/api";
 
 /**
  * Thu nhập của gia sư theo từng tháng đã chốt: lương cứng, thù lao theo buổi hợp lệ, buổi bị hủy / được dạy thay / chưa chốt,
@@ -17,10 +19,21 @@ import { formatVnd } from "@/utils/currency";
  */
 export function TutorPayrollPage() {
   const payroll = useMyPayroll();
+  const now = useNow();
   // Tháng mới nhất lên đầu
   const lines = [...(payroll.data?.content ?? [])].sort((a, b) => b.year - a.year || b.month - a.month);
   const latest = lines[0];
   const yearTotal = latest ? lines.filter((line) => line.year === latest.year).reduce((sum, line) => sum + line.totalPay, 0) : 0;
+
+  // Các mốc thu nhập: Đã chốt (FINALIZED) coi là đã nhận; Tạm tính (DRAFT) của tháng đã qua là đang chờ trung tâm duyệt/chốt;
+  // Tạm tính của tháng đang chạy (tháng hiện tại) là số dự kiến, có thể còn đổi khi buổi dạy phát sinh thêm.
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const isPast = (line: PayrollLineResponse) => line.year < currentYear || (line.year === currentYear && line.month < currentMonth);
+  const isCurrent = (line: PayrollLineResponse) => line.year === currentYear && line.month === currentMonth;
+  const received = lines.filter((line) => line.status === "FINALIZED").reduce((sum, line) => sum + line.totalPay, 0);
+  const pendingApproval = lines.filter((line) => line.status === "DRAFT" && isPast(line)).reduce((sum, line) => sum + line.totalPay, 0);
+  const projected = lines.filter((line) => line.status === "DRAFT" && isCurrent(line)).reduce((sum, line) => sum + line.totalPay, 0);
 
   return (
     <div>
@@ -42,6 +55,13 @@ export function TutorPayrollPage() {
         />
       ) : (
         <>
+          {/* Các mốc thu nhập: đã nhận / đang chờ duyệt / dự kiến tháng này */}
+          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <StatTile icon="account_balance" tone="green" label="Đã nhận (các tháng đã chốt)" value={formatVnd(received)} />
+            <StatTile icon="hourglass_top" tone="orange" label="Đang chờ duyệt (đã qua tháng, chưa chốt)" value={formatVnd(pendingApproval)} />
+            <StatTile icon="query_stats" tone="navy" label="Dự kiến tháng này" value={formatVnd(projected)} />
+          </div>
+
           {/* Tháng gần nhất nổi bật */}
           <section className="relative mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-brand-navyDeep via-brand-navy to-[#1F63D8] p-6 text-white shadow-[0_24px_48px_-28px_rgba(8,42,102,0.9)] sm:p-8">
             <div

@@ -1122,6 +1122,26 @@ export interface CartOrderResponse {
 export type HomeworkStatus = "DRAFT" | "PUBLISHED" | "CLOSED";
 export type SubmissionStatus = "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED" | "GRADED";
 
+/** Ảnh hay video minh họa đính kèm một câu hỏi trong bài tập (HW-01) */
+export type QuestionMediaType = "IMAGE" | "VIDEO";
+
+/** dto.learning.HomeworkQuestionResponse — một câu hỏi trong bảng câu hỏi bài tập, có thể kèm ảnh/video minh họa */
+export interface HomeworkQuestionResponse {
+  id: number;
+  /** Thứ tự hiện trong bài, bắt đầu từ 0 */
+  order: number;
+  text: string;
+  mediaUrl: string | null;
+  mediaType: QuestionMediaType | null;
+}
+
+/** dto.learning.HomeworkQuestionRequest — gửi kèm khi tạo bài tập, mỗi phần tử là một câu hỏi */
+export interface HomeworkQuestionRequest {
+  text: string;
+  mediaUrl?: string;
+  mediaType?: QuestionMediaType;
+}
+
 /** dto.learning.HomeworkResponse */
 export interface HomeworkResponse {
   id: number;
@@ -1137,6 +1157,8 @@ export interface HomeworkResponse {
   createdAt?: IsoDateTime;
   publishedAt?: IsoDateTime | null;
   closedAt?: IsoDateTime | null;
+  /** Bảng câu hỏi của bài tập (HW-01); bài cũ chưa có câu hỏi nào thì rỗng hoặc vắng mặt */
+  questions?: HomeworkQuestionResponse[];
 }
 
 /** dto.learning.HomeworkRequest — POST /sessions/{sessionId}/homeworks (tạo ở trạng thái DRAFT) */
@@ -1144,6 +1166,8 @@ export interface HomeworkRequest {
   title: string;
   instructions: string;
   resourceUrl?: string;
+  /** Câu hỏi của bài tập, mỗi câu có thể kèm ảnh/video minh họa riêng (HW-01) */
+  questions?: HomeworkQuestionRequest[];
   /** Hạn nộp trong tương lai, ISO có múi giờ */
   dueAt: string;
   maxScore: number;

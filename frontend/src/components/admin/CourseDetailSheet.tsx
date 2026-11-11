@@ -111,8 +111,8 @@ function SheetBody({
             <p className="flex items-start gap-2 rounded-xl bg-amber-50 px-4 py-3 text-[13.5px] leading-relaxed text-amber-900">
               <Icon name="warning" className="mt-px text-[18px]" />
               <span>
-                Khóa đang để {course.durationMinutes} phút mỗi buổi nên chưa tạo lớp được (ca học cố định {DEFAULT_DURATION_MINUTES} phút).
-                Bấm <strong>Sửa thông tin</strong> rồi lưu lại để chuyển về {DEFAULT_DURATION_MINUTES} phút.
+                Khóa đang để {course.durationMinutes} phút mỗi buổi. Hệ thống đang hoàn thiện hỗ trợ ca học khác {DEFAULT_DURATION_MINUTES} phút
+                (CLS-01) — nếu tạo lớp báo lỗi vì thời lượng, bấm <strong>Sửa thông tin</strong> để tạm đổi về {DEFAULT_DURATION_MINUTES} phút.
               </span>
             </p>
           )}

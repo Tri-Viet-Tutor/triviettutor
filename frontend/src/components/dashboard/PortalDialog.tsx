@@ -30,10 +30,10 @@ export function PortalDialog({ open, title, description, onClose, children, widt
         // Bấm vào nền mờ (chính thẻ dialog) thì đóng
         if (event.target === ref.current) onClose();
       }}
-      className={`w-[calc(100%-2rem)] ${widthClassName} rounded-3xl border border-brand-sandLine bg-white p-0 text-brand-ink shadow-[0_30px_80px_-30px_rgba(8,42,102,0.6)] backdrop:bg-brand-navyDeep/40 backdrop:backdrop-blur-[2px]`}
+      className={`w-[calc(100%-2rem)] ${widthClassName} overflow-hidden rounded-2xl border border-brand-sandLine bg-white p-0 text-brand-ink shadow-[0_30px_80px_-30px_rgba(8,42,102,0.6)] backdrop:bg-brand-navyDeep/40 backdrop:backdrop-blur-[2px]`}
     >
       {open && (
-        <div className="max-h-[85vh] overflow-y-auto">
+        <div className="max-h-[92vh] overflow-y-auto">
           <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-brand-sandLine bg-white/95 px-6 pb-4 pt-5 backdrop-blur">
             <div>
               <h2 className="text-[19px] font-extrabold text-brand-navy">{title}</h2>

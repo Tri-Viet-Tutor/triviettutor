@@ -9,6 +9,7 @@ import { displayCode } from "@/utils/classes";
 import { addDays, formatDayMonth, startOfToday, startOfWeek, toIsoDate, weekdayName } from "@/utils/date";
 import { normalizeText } from "@/utils/text";
 import { TimeField } from "@/components/ui/TimeField";
+import { Select } from "@/components/ui/Select";
 
 const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
 const hhmm = (time: string) => time.slice(0, 5);
@@ -124,7 +125,7 @@ export function TutorBoard() {
         </label>
         <label>
           <span className="mb-1 block text-[12px] font-semibold text-brand-muted">Thứ</span>
-          <select
+          <Select
             value={day}
             onChange={(event) => setDay(Number(event.target.value))}
             className="h-10 rounded-xl border border-brand-sandLine bg-white pl-3 pr-8 text-[14px] font-semibold outline-none focus:border-brand-navy"
@@ -135,7 +136,7 @@ export function TutorBoard() {
                 {weekdayName(date)} {formatDayMonth(date)}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <div>
           <span className="mb-1 block text-[12px] font-semibold text-brand-muted">Rảnh trong khung giờ</span>

@@ -3,6 +3,7 @@ import { SESSION_STATUS } from "@/constants/labels";
 import type { SessionFiltersProps } from "@/interfaces/admin";
 import type { SessionStatus } from "@/interfaces/api";
 import { DateField } from "@/components/ui/DateField";
+import { Select } from "@/components/ui/Select";
 
 /** Mọi trạng thái buổi học, theo thứ tự khai báo nhãn */
 const STATUS_OPTIONS = Object.keys(SESSION_STATUS) as SessionStatus[];
@@ -43,7 +44,7 @@ export function SessionFilters({ values, tutors, onChange, onReset }: SessionFil
         <label htmlFor="filter-status" className={`mb-1.5 ${AUTH_LABEL}`}>
           Trạng thái
         </label>
-        <select
+        <Select
           id="filter-status"
           value={values.status}
           onChange={(event) => onChange({ status: event.target.value as SessionStatus | "" })}
@@ -55,13 +56,13 @@ export function SessionFilters({ values, tutors, onChange, onReset }: SessionFil
               {SESSION_STATUS[status].label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <div>
         <label htmlFor="filter-tutor" className={`mb-1.5 ${AUTH_LABEL}`}>
           Gia sư
         </label>
-        <select
+        <Select
           id="filter-tutor"
           value={values.tutorId}
           onChange={(event) => onChange({ tutorId: event.target.value })}
@@ -73,7 +74,7 @@ export function SessionFilters({ values, tutors, onChange, onReset }: SessionFil
               {tutor.fullName}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <div>
         <label htmlFor="filter-class" className={`mb-1.5 ${AUTH_LABEL}`}>
