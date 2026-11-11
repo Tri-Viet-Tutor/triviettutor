@@ -5,6 +5,62 @@
 
 SET session_replication_role = 'replica';
 
+-- ==============================================================================
+-- Truncate all sample and transactional tables before re-seeding
+-- Guarantees that any changes in this file completely overwrite old/stale data
+-- across all team members' local databases on every run without dropping Docker.
+-- ==============================================================================
+TRUNCATE TABLE
+    attendance_changes,
+    attendance_records,
+    attendance_roster,
+    cart_items,
+    carts,
+    class_changes,
+    class_conversions,
+    enrollments,
+    homework_answers,
+    homework_changes,
+    homework_questions,
+    homework_submissions,
+    submission_attachments,
+    submission_changes,
+    homeworks,
+    learning_files,
+    learning_schedules,
+    leave_requests,
+    notifications,
+    order_items,
+    order_request_keys,
+    orders,
+    password_reset_tokens,
+    payment_intents,
+    payment_operations,
+    payments,
+    payroll_disputes,
+    payroll_finalize_keys,
+    payroll_lines,
+    payroll_mutex,
+    payroll_periods,
+    refunds,
+    session_changes,
+    session_generation_locks,
+    sessions,
+    tutor_assignments,
+    tutor_availability,
+    tutor_reviews,
+    wallet_transactions,
+    wallet_topup_intents,
+    wallets,
+    student_profiles,
+    tutor_profiles,
+    email_verifications,
+    class_groups,
+    courses,
+    subjects,
+    users
+RESTART IDENTITY CASCADE;
+
 -- ------------------------------------------------------------
 -- Table: users (26 records)
 -- ------------------------------------------------------------
