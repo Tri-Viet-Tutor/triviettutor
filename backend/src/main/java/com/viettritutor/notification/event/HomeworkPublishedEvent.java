@@ -1,4 +1,4 @@
-package com.viettritutor.service;
+package com.viettritutor.notification.event;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

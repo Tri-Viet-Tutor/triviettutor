@@ -1,10 +1,10 @@
 package com.viettritutor.controller;
+import com.viettritutor.scheduler.SessionLifecycleJob;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettritutor.entity.Session;
 import com.viettritutor.enums.SessionStatus;
 import com.viettritutor.repository.SessionRepository;
-import com.viettritutor.service.SessionLifecycleJob;
 import com.viettritutor.entity.User;
 import com.viettritutor.repository.UserRepository;
 import com.viettritutor.repository.EmailVerificationRepository;

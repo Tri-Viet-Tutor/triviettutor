@@ -1,4 +1,6 @@
 package com.viettritutor;
+import com.viettritutor.scheduler.SessionLifecycleJob;
+import com.viettritutor.scheduler.AttendanceLockJob;
 import org.springframework.boot.*;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.*;
