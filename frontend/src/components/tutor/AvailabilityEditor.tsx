@@ -21,12 +21,8 @@ const PRESETS = TIME_SLOT_OPTIONS.map((slot) => {
 /** Giá trị của lựa chọn "Giờ khác…" */
 const CUSTOM = "CUSTOM";
 
-/** Lặp lại khung giờ cùng thứ trong bao nhiêu tuần */
-const REPEAT_OPTIONS = [
-  { weeks: 1, label: "Chỉ ngày này" },
-  { weeks: 4, label: "4 tuần liên tiếp" },
-  { weeks: 8, label: "8 tuần liên tiếp" },
-];
+/** Mỗi lần thêm luôn tạo đủ 4 ca (4 tuần liên tiếp), không cho chọn số tuần khác */
+const REPEAT_WEEKS = 4;
 
 /** "18:00:00" → "18:00" */
 const hhmm = (time: string) => time.slice(0, 5);
@@ -56,7 +52,6 @@ export function AvailabilityEditor({ saved, queryKey }: AvailabilityEditorProps)
   const [preset, setPreset] = useState(PRESETS[2]?.value ?? CUSTOM);
   const [start, setStart] = useState("18:00");
   const [end, setEnd] = useState("20:00");
-  const [repeatWeeks, setRepeatWeeks] = useState(1);
   const [formError, setFormError] = useState("");
   const [justSaved, setJustSaved] = useState(false);
 
@@ -87,7 +82,7 @@ export function AvailabilityEditor({ saved, queryKey }: AvailabilityEditorProps)
     if (startTime >= endTime) return setFormError("Giờ bắt đầu phải trước giờ kết thúc.");
 
     const first = parseIsoDate(date);
-    const added: AvailabilityResponse[] = Array.from({ length: repeatWeeks }, (_, week) => ({
+    const added: AvailabilityResponse[] = Array.from({ length: REPEAT_WEEKS }, (_, week) => ({
       availableDate: toIsoDate(addDays(first, week * 7)),
       startTime: `${startTime}:00`,
       endTime: `${endTime}:00`,
@@ -166,23 +161,7 @@ export function AvailabilityEditor({ saved, queryKey }: AvailabilityEditorProps)
             </div>
           </div>
         )}
-        <div>
-          <label htmlFor="availability-repeat" className={`mb-1.5 ${AUTH_LABEL}`}>
-            Lặp lại
-          </label>
-          <select
-            id="availability-repeat"
-            value={repeatWeeks}
-            onChange={(event) => setRepeatWeeks(Number(event.target.value))}
-            className={AUTH_INPUT}
-          >
-            {REPEAT_OPTIONS.map((option) => (
-              <option key={option.weeks} value={option.weeks}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <p className="text-[13px] text-brand-muted">Mỗi lần thêm sẽ tự áp dụng cho 4 tuần liên tiếp cùng thứ, cùng giờ.</p>
         {formError && (
           <p role="alert" className={AUTH_ERROR}>
             {formError}

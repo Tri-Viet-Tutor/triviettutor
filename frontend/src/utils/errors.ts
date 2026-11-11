@@ -88,6 +88,8 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   CLASS_NOT_FOUND: "Không tìm thấy lớp này.",
   CLASS_NOT_ASSIGNABLE: "Lớp này chưa sẵn sàng để phân công gia sư.",
   CLASS_TUTOR_REQUIRED: "Lớp chưa có gia sư. Hãy phân công gia sư trước khi mở đăng ký.",
+  INVALID_CLASS_CONFIGURATION: "Ngày khai giảng phải ở tương lai và hạn đăng ký phải trước ngày khai giảng. Hãy sửa lại ngày của lớp trước khi tiếp tục.",
+  COURSE_INACTIVE: "Khóa học này đang ngừng bán nên không thao tác được. Hãy mở bán lại khóa học trước.",
   CLASS_IN_USE: "Lớp đã có học viên, thanh toán hoặc buổi dạy nên không xóa được. Hãy hủy lớp thay vì xóa.",
   USER_IN_USE: "Tài khoản đã có lớp học, thanh toán, ví hoặc buổi dạy nên không xóa được.",
   COURSE_IN_USE: "Khóa đã có lớp hoặc đơn hàng nên không xóa được. Hãy chọn Ngừng bán thay vì xóa.",
