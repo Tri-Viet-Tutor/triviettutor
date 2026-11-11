@@ -39,6 +39,16 @@ export async function fetchTutorHomeworks(page = 0, size = 20): Promise<PageResp
   return unwrap(await api.get<ApiResponse<PageResponse<TutorHomeworkResponse>>>("/tutor/homeworks", { params: { page, size } }));
 }
 
+/** Mọi bài tập của gia sư (gộp các trang, 100 bài/lần) — dùng để nhóm theo lớp / buổi phía trình duyệt */
+export async function fetchAllTutorHomeworks(): Promise<TutorHomeworkResponse[]> {
+  const all: TutorHomeworkResponse[] = [];
+  for (let page = 0; ; page++) {
+    const result = await fetchTutorHomeworks(page, 100);
+    all.push(...result.content);
+    if (page + 1 >= result.totalPages || result.content.length === 0) return all;
+  }
+}
+
 /** POST /sessions/{sessionId}/homeworks — tạo bản nháp */
 export async function createHomework(sessionId: number, input: HomeworkInput): Promise<HomeworkResponse> {
   return unwrap(await api.post<ApiResponse<HomeworkResponse>>(`/sessions/${sessionId}/homeworks`, input));
