@@ -21,8 +21,8 @@ import java.time.LocalDateTime;
         name = "tutor_reviews",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_tutor_review_student_tutor",
-                        columnNames = {"student_id", "tutor_id"}
+                        name = "uk_tutor_review_student_class",
+                        columnNames = {"student_id", "class_group_id"}
                 )
         }
 )
@@ -44,6 +44,10 @@ public class TutorRating {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "tutor_id", nullable = false)
     private User tutor;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "class_group_id", nullable = false)
+    private ClassGroup classGroup;
 
     @DecimalMin("1.0")
     @DecimalMax("5.0")

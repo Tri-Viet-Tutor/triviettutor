@@ -108,6 +108,18 @@ export function TutorReviewsPage() {
                         {item.updatedAt && item.updatedAt !== item.createdAt ? " (đã sửa)" : ""}
                       </span>
                     </div>
+                      {/* Thông tin lớp học và môn học */}
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-brand-tint px-2.5 py-1 text-[12px] font-semibold text-brand-navy">
+                      <Icon name="menu_book" className="text-[14px]" />
+                        {item.classCode}
+                    </span>
+
+                          <span className="inline-flex items-center gap-1.5 rounded-lg bg-brand-sand px-2.5 py-1 text-[12px] font-medium text-brand-ink">
+                      <Icon name="school" className="text-[14px]" />
+                              {item.subjectName}
+                    </span>
+                      </div>
                     {item.comment?.trim() ? (
                       <p className="mt-3 rounded-xl bg-brand-sand/50 px-3.5 py-2.5 text-[14px] leading-relaxed text-brand-ink">“{item.comment}”</p>
                     ) : (
