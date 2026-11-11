@@ -7,6 +7,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,4 +22,16 @@ public interface ClassGroupRepository extends JpaRepository<ClassGroup, Long>, J
 
     @Query("select c.id from ClassGroup c where c.status = :status order by c.id")
     List<Long> findIdsByStatus(@Param("status") ClassStatus status);
+
+    @Query("""
+    select c.id
+    from ClassGroup c
+    where c.status = :status
+      and c.enrollmentDeadline < :today
+    order by c.id
+    """)
+    List<Long> findExpiredClassIds(
+            @Param("status") ClassStatus status,
+            @Param("today") LocalDate today
+    );
 }
