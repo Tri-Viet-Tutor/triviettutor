@@ -59,10 +59,15 @@ export function downloadQuestionTemplate(): void {
   const csv = TEMPLATE_ROWS.map((row) =>
     row.map((cell) => (/[",\r\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell)).join(","),
   ).join("\r\n");
-  const url = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
+  saveBlob(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }), "mau-cau-hoi.csv");
+}
+
+/** L\u01B0u m\u1ED9t Blob v\u1EC1 m\u00E1y v\u1EDBi t\u00EAn file cho tr\u01B0\u1EDBc (t\u1EA3i xu\u1ED1ng, kh\u00F4ng m\u1EDF trang m\u1EDBi) */
+export function saveBlob(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "mau-cau-hoi-trac-nghiem.csv";
+  link.download = fileName;
   document.body.appendChild(link);
   link.click();
   link.remove();

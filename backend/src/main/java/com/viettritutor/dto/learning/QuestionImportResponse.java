@@ -14,6 +14,11 @@ public record QuestionImportResponse(List<ImportedQuestion> questions, OffsetDat
     public record ImportedQuestion(QuestionType type, String prompt, List<String> options, Integer correctOption,
                                    BigDecimal points, boolean answerDetected) {}
 
-    /** row is the spreadsheet row number (the header is row 1). */
-    public record RowError(int row, String message) {}
+    /**
+     * row is the spreadsheet row number (the header is row 1). label names the place for people when rows are not
+     * spreadsheet rows, e.g. "Câu 3" for a Word file written as free text; null for spreadsheets and Word tables.
+     */
+    public record RowError(int row, String message, String label) {
+        public RowError(int row, String message) { this(row, message, null); }
+    }
 }

@@ -4,19 +4,34 @@ import { AuthNotice } from "@/components/auth/AuthNotice";
 import { Icon } from "@/components/ui/Icon";
 import { PORTAL_BTN_GHOST, PORTAL_BTN_SECONDARY } from "@/constants/classNames";
 import type { QuestionImportProps, QuestionImportResponse } from "@/interfaces/homework";
-import { importQuestions } from "@/services/homeworkService";
+import { fetchQuestionTemplate, importQuestions } from "@/services/homeworkService";
 import { portalErrorMessage } from "@/utils/errors";
-import { downloadQuestionTemplate, importedToDrafts } from "@/utils/questionImport";
+import { downloadQuestionTemplate, importedToDrafts, saveBlob } from "@/utils/questionImport";
 
 /** Số lỗi tối đa hiện ra (file lỗi nhiều thì chỉ cần sửa dần) */
 const MAX_SHOWN_ERRORS = 15;
 
+/** Các loại file mẫu: Word / Excel do backend tạo, CSV tạo ngay trên trình duyệt */
+const TEMPLATES = [
+  { format: "docx", label: "Mẫu Word (.docx)", hint: "Gõ như đề thi: Câu 1, A. B. C. D., Đáp án", icon: "description" },
+  { format: "xlsx", label: "Mẫu Excel (.xlsx)", hint: "Mỗi dòng một câu hỏi", icon: "table_view" },
+  { format: "csv", label: "Mẫu CSV (.csv)", hint: "Bảng tính dạng chữ, mở được bằng mọi phần mềm", icon: "csv" },
+] as const;
+
 /**
- * Nhập câu hỏi trắc nghiệm / tự luận từ file Excel hoặc CSV (HW-02). Backend chỉ đọc file, câu hỏi được đưa vào form
- * để gia sư xem lại rồi lưu như bình thường; cột publish_time điền vào giờ mở bài.
- * API: POST /homeworks/questions/import.
+ * Nhập câu hỏi trắc nghiệm / tự luận từ file Word, Excel hoặc CSV (HW-02). Backend chỉ đọc file, câu hỏi được đưa vào form
+ * để gia sư xem lại rồi lưu như bình thường; giờ mở bài trong file điền vào giờ mở bài.
+ * API: POST /homeworks/questions/import, GET /homeworks/questions/template/{xlsx|docx}.
  */
 export function QuestionImport({ hasQuestions, onImport }: QuestionImportProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const template = useMutation({
+    mutationFn: async (format: (typeof TEMPLATES)[number]["format"]) => {
+      if (format === "csv") return downloadQuestionTemplate();
+      saveBlob(await fetchQuestionTemplate(format), `mau-cau-hoi.${format}`);
+    },
+    onSuccess: () => setMenuOpen(false),
+  });
   // Kết quả đọc file đang chờ gia sư chọn thay thế / thêm vào cuối
   const [pending, setPending] = useState<QuestionImportResponse | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -49,10 +64,10 @@ export function QuestionImport({ hasQuestions, onImport }: QuestionImportProps) 
       <div className="flex flex-wrap items-center gap-2">
         <label className={`${PORTAL_BTN_SECONDARY} cursor-pointer ${read.isPending ? "pointer-events-none opacity-60" : ""}`}>
           <Icon name="upload_file" className="text-[18px]" />
-          {read.isPending ? "Đang đọc file…" : "Nhập từ Excel/CSV"}
+          {read.isPending ? "Đang đọc file…" : "Nhập từ Word / Excel"}
           <input
             type="file"
-            accept=".csv,.xlsx,.xls"
+            accept=".docx,.doc,.xlsx,.xls,.csv"
             className="sr-only"
             disabled={read.isPending}
             onChange={(event) => {
@@ -62,19 +77,70 @@ export function QuestionImport({ hasQuestions, onImport }: QuestionImportProps) 
             }}
           />
         </label>
-        <button type="button" className={PORTAL_BTN_GHOST} onClick={downloadQuestionTemplate}>
-          <Icon name="download" className="text-[18px]" />
-          Tải file mẫu
-        </button>
+        <div
+          className="relative"
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setMenuOpen(false);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setMenuOpen(false);
+          }}
+        >
+          <button
+            type="button"
+            className={PORTAL_BTN_GHOST}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <Icon name="download" className="text-[18px]" />
+            Tải file mẫu
+            <Icon name="expand_more" className={`text-[18px] transition-transform ${menuOpen ? "rotate-180" : ""}`} />
+          </button>
+          {menuOpen && (
+            <div
+              role="menu"
+              className="absolute left-0 top-full z-20 mt-1 w-72 rounded-xl border border-brand-sandLine bg-white p-1 shadow-[0_14px_34px_-18px_rgba(11,58,140,0.45)]"
+            >
+              {TEMPLATES.map((item) => (
+                <button
+                  key={item.format}
+                  type="button"
+                  role="menuitem"
+                  disabled={template.isPending}
+                  onClick={() => template.mutate(item.format)}
+                  className="flex w-full items-start gap-2.5 rounded-lg px-3 py-2 text-left transition-colors hover:bg-brand-tint disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-navy"
+                >
+                  <Icon name={item.icon} className="mt-0.5 text-[20px] text-brand-navy" />
+                  <span>
+                    <span className="block text-[14px] font-semibold text-brand-ink">
+                      {template.isPending && template.variables === item.format ? "Đang tải…" : item.label}
+                    </span>
+                    <span className="block text-[12.5px] text-brand-muted">{item.hint}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       <p className="mt-2 text-[13px] leading-relaxed text-brand-muted">
-        Mỗi dòng một câu: cau_hoi, loai, A–D, dap_an, diem, publish_time (giờ mở bài). Để trống dap_an nếu phương án là “Tất cả các đáp án
-        trên đều đúng”, hệ thống tự chọn phương án đó.
+        <strong className="font-semibold">Word:</strong> mỗi câu bắt đầu bằng “Câu 1:”, có thể ghi “(tự luận, 2 điểm)”; phương án “A. …”;
+        đáp án “Đáp án: B” hoặc đánh dấu “*B.”. <strong className="font-semibold">Excel/CSV:</strong> mỗi dòng một câu với các cột cau_hoi,
+        loai, A–D, dap_an, diem, publish_time. Để trống đáp án nếu có phương án “Tất cả các đáp án trên đều đúng”, hệ thống tự chọn phương
+        án đó.
       </p>
 
+      {template.error && (
+        <div className="mt-3">
+          <AuthNotice tone="error">{portalErrorMessage(template.error, "Chưa tải được file mẫu. Vui lòng thử lại.")}</AuthNotice>
+        </div>
+      )}
       {read.error && (
         <div className="mt-3">
-          <AuthNotice tone="error">{portalErrorMessage(read.error, "Không đọc được file. Hãy dùng file mẫu .csv hoặc .xlsx.")}</AuthNotice>
+          <AuthNotice tone="error">
+            {portalErrorMessage(read.error, "Không đọc được file. Hãy dùng file mẫu Word (.docx), Excel (.xlsx) hoặc .csv.")}
+          </AuthNotice>
         </div>
       )}
       {done && (
@@ -88,7 +154,7 @@ export function QuestionImport({ hasQuestions, onImport }: QuestionImportProps) 
           <ul className="mt-1 list-disc space-y-0.5 pl-5">
             {errors.slice(0, MAX_SHOWN_ERRORS).map((error) => (
               <li key={`${error.row}-${error.message}`}>
-                Dòng {error.row}: {error.message}
+                {error.label ?? `Dòng ${error.row}`}: {error.message}
               </li>
             ))}
           </ul>

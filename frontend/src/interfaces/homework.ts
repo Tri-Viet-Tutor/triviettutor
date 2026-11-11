@@ -38,8 +38,8 @@ export interface QuestionImportResponse {
   }[];
   /** Cột publish_time của file — dùng làm giờ mở bài */
   publishTime: IsoDateTime | null;
-  /** Lỗi theo từng dòng của file (dòng tiêu đề là dòng 1) */
-  errors: { row: number; message: string }[];
+  /** Lỗi theo từng dòng của file (dòng tiêu đề là dòng 1); file Word viết tự do có label kiểu "Câu 3" */
+  errors: { row: number; message: string; label?: string | null }[];
 }
 
 /** dto.learning.QuestionResponse — học viên không nhận `correctOption` */

@@ -23,7 +23,8 @@ import java.time.format.DateTimeParseException;
 import java.util.*;
 
 /**
- * HW-02: reads quiz questions from a .csv or .xlsx file (one question per row) without saving anything.
+ * HW-02: reads quiz questions from a .csv / .xlsx file (one question per row) or a Word file (.docx / .doc, see
+ * {@link WordQuestionReader}) without saving anything.
  * Columns are matched by header, with or without Vietnamese accents: cau_hoi, loai, A..J, dap_an, diem, publish_time.
  * Rule D: a multiple-choice row with an empty dap_an whose option reads "Tất cả các đáp án trên đều đúng"
  * gets that option as the correct answer.
@@ -45,16 +46,34 @@ public class HomeworkQuestionImportService {
             throw new BusinessException(ErrorCode.INVALID_QUESTION_IMPORT);
         String name = Optional.ofNullable(file.getOriginalFilename()).orElse("").toLowerCase(Locale.ROOT);
         List<List<Cell2>> rows;
+        List<String> labels = null;
         try {
             byte[] bytes = file.getBytes();
             if (name.endsWith(".csv")) rows = csvRows(decode(bytes));
             else if (name.endsWith(".xlsx") || name.endsWith(".xls")) rows = sheetRows(bytes);
-            else throw new BusinessException(ErrorCode.INVALID_QUESTION_IMPORT);
+            else if (name.endsWith(".docx") || name.endsWith(".doc")) {
+                WordQuestionReader.Result word = name.endsWith(".docx") ? WordQuestionReader.docx(bytes) : WordQuestionReader.doc(bytes);
+                if (word.labels() != null && word.rows().size() <= 1)
+                    throw new BusinessException(ErrorCode.INVALID_QUESTION_IMPORT,
+                            "Không thấy câu hỏi trong file Word. Mỗi câu bắt đầu bằng \"Câu 1:\", phương án \"A. …\", dòng \"Đáp án: B\" — xem file mẫu Word");
+                rows = word.rows();
+                labels = word.labels();
+            } else throw new BusinessException(ErrorCode.INVALID_QUESTION_IMPORT);
         } catch (IOException | RuntimeException ex) {
             if (ex instanceof BusinessException business) throw business;
-            throw new BusinessException(ErrorCode.INVALID_QUESTION_IMPORT, "Không đọc được file. Hãy dùng file mẫu .csv hoặc .xlsx");
+            throw new BusinessException(ErrorCode.INVALID_QUESTION_IMPORT, "Không đọc được file. Hãy dùng file mẫu Word (.docx), Excel (.xlsx) hoặc .csv");
         }
-        return parse(rows);
+        QuestionImportResponse result = parse(rows);
+        if (labels == null) return result;
+        List<String> rowLabels = labels;
+        List<RowError> errors = result.errors().stream()
+                .map(error -> new RowError(error.row(),
+                        error.message().startsWith("Thiếu đáp án đúng")
+                                ? "Thiếu đáp án đúng — thêm dòng \"Đáp án: B\" dưới câu, đánh dấu \"*B.\" hoặc thêm bảng đáp án (\"1C 2B …\") cuối file"
+                                : error.message(),
+                        error.row() - 1 < rowLabels.size() ? rowLabels.get(error.row() - 1) : null))
+                .toList();
+        return new QuestionImportResponse(result.questions(), result.publishTime(), errors);
     }
 
     /** A cell's text, plus its date value when the spreadsheet stored a real date. */
