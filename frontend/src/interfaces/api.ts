@@ -77,6 +77,8 @@ export type ErrorCode =
   | "SESSION_ALREADY_TAUGHT"
   | "MEETING_NOT_AVAILABLE"
   | "PAYROLL_FINALIZED"
+  | "PAYROLL_LINE_NOT_FOUND"
+  | "PAYROLL_ALREADY_DISPUTED"
   | "SESSION_STATE_CHANGED"
   | "SCHEDULE_CONFLICT"
   | "INVALID_AVAILABILITY"
@@ -166,6 +168,41 @@ export type ErrorCode =
   | "CLASS_PAYMENT_NOT_READY"
   | "INVALID_REFUND_PERCENTAGE"
   | "REFUND_ALREADY_SETTLED"
+  // Bài tập, bài làm, tệp đính kèm, thông báo
+  | "HOMEWORK_NOT_FOUND"
+  | "HOMEWORK_LOCKED"
+  | "HOMEWORK_PUBLISHED_EDIT_RESTRICTED"
+  | "HOMEWORK_DEADLINE_PASSED"
+  | "HOMEWORK_INVALID_DEADLINE"
+  | "HOMEWORK_NOT_ACCEPTING"
+  | "HOMEWORK_SESSION_CANCELLED"
+  | "HOMEWORK_NOT_OPEN"
+  | "HOMEWORK_INVALID_OPEN_TIME"
+  | "HOMEWORK_WEAK_PASSWORD"
+  | "HOMEWORK_WRONG_PASSWORD"
+  | "INVALID_HOMEWORK_QUESTION"
+  | "HOMEWORK_SCORE_MISMATCH"
+  | "QUIZ_TOTAL_TOO_HIGH"
+  | "INVALID_HOMEWORK_SCORE"
+  | "INVALID_RESOURCE_URL"
+  | "LEARNING_VERSION_CONFLICT"
+  | "SUBMISSION_NOT_FOUND"
+  | "SUBMISSION_NOT_STARTED"
+  | "SUBMISSION_LOCKED"
+  | "SUBMISSION_NOT_SUBMITTED"
+  | "EMPTY_SUBMISSION"
+  | "INVALID_ANSWER"
+  | "GRADE_SCORE_REQUIRED"
+  | "INVALID_ANSWER_SCORES"
+  | "ATTACHMENTS_NOT_ALLOWED"
+  | "INVALID_ATTACHMENT"
+  | "ATTACHMENT_TOO_LARGE"
+  | "ATTACHMENT_LIMIT_REACHED"
+  | "ATTACHMENT_NOT_FOUND"
+  | "NOTIFICATION_NOT_FOUND"
+  | "INVALID_FILE"
+  | "FILE_NOT_FOUND"
+  | "FILE_TOO_LARGE"
   // Không nằm trong enum ErrorCode nhưng backend vẫn trả về:
   | "VALIDATION_ERROR"
   | "CART_ITEM_NOT_FOUND"
@@ -982,7 +1019,7 @@ export interface EnrollmentsQuery {
 }
 
 /** Trạng thái bảng lương của một tháng */
-export type PayrollStatus = "DRAFT" | "FINALIZED";
+export type PayrollStatus = "DRAFT" | "FINALIZED" | "DISPUTED";
 
 /** dto.payroll.PayrollLineResponse — lương một gia sư trong một tháng */
 export interface PayrollLineResponse {
@@ -1005,6 +1042,9 @@ export interface PayrollLineResponse {
   totalPay: number;
   /** Đối soát từng buổi của tháng (backend luôn trả kèm) */
   reconciliation?: TeachingPeriodSummary | null;
+  /** Lý do và thời điểm gia sư khiếu nại phiếu lương (chỉ có khi status là DISPUTED) */
+  disputeReason?: string;
+  disputedAt?: IsoDateTime;
 }
 
 /** dto.attendance.TeachingSessionResponse — một buổi trong bảng đối soát lương */

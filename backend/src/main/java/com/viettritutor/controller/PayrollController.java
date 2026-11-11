@@ -3,6 +3,7 @@ import com.viettritutor.common.api.*;
 import com.viettritutor.dto.payroll.*;
 import com.viettritutor.entity.User;
 import com.viettritutor.security.CurrentUser;
+import com.viettritutor.service.PayrollDisputeService;
 import com.viettritutor.service.PayrollService;
 import io.swagger.v3.oas.annotations.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,12 +15,13 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name="Payroll",description="Monthly VND salary from verified completed teaching. Cancelled sessions are reconciliation only.")
 public class PayrollController {
     private final PayrollService payroll;
+    private final PayrollDisputeService disputes;
     @GetMapping("/admin/payroll/{year}/{month}") @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary="Preview or read monthly payroll",
             description="Read-only. Current baseSalary/rate for DRAFT; immutable snapshots for FINALIZED. Includes cancelled, substituted-out, unresolved sessions and blockingSessionIds.")
     public ApiResponse<PayrollResponse> get(@PathVariable int year,@PathVariable int month,
             @Parameter(hidden=true) @CurrentUser User actor) {
-        return ApiResponse.ok(payroll.get(year,month,actor));
+        return ApiResponse.ok(disputes.decorate(payroll.get(year,month,actor)));
     }
     @PostMapping("/admin/payroll/{year}/{month}/finalize") @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary="Finalize monthly payroll",
@@ -36,6 +38,6 @@ public class PayrollController {
     public ApiResponse<PageResponse<PayrollLineResponse>> mine(@RequestParam(required=false) Integer year,
             @RequestParam(required=false) Integer month,@RequestParam(defaultValue="0") int page,
             @RequestParam(defaultValue="20") int size,@Parameter(hidden=true) @CurrentUser User actor) {
-        return ApiResponse.ok(payroll.mine(year,month,page,size,actor));
+        return ApiResponse.ok(disputes.decorate(payroll.mine(year,month,page,size,actor),actor));
     }
 }

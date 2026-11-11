@@ -1,272 +1,180 @@
-import { useState } from "react";
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FilterTabs } from "@/components/dashboard/FilterTabs";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { type FormEvent, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { AuthNotice } from "@/components/auth/AuthNotice";
+import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
-import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/PortalState";
-import { AttachmentField } from "@/components/ui/AttachmentField";
-import { AttachmentLink } from "@/components/ui/AttachmentLink";
-import { HomeworkQuestionList } from "@/components/tutor/HomeworkQuestions";
+import { PortalError, PortalLoading } from "@/components/dashboard/PortalState";
+import { HomeworkInfo } from "@/components/homework/HomeworkInfo";
+import { QuizForm } from "@/components/homework/QuizForm";
+import { SubmissionResult } from "@/components/homework/SubmissionResult";
 import { Icon } from "@/components/ui/Icon";
-import { AUTH_ERROR, FOCUS_RING, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
-import type { StudentHomeworkResponse, SubmissionResponse } from "@/interfaces/api";
-import { listMyHomeworks, saveHomeworkDraft, startHomework, submitHomework } from "@/services/homeworkService";
-import { getTuitionClass } from "@/services/tuitionPaymentService";
-import { displayCode } from "@/utils/classes";
+import { PORTAL_BTN_ACCENT, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT, PORTAL_LABEL, PORTAL_MORE_LINK } from "@/constants/classNames";
+import { ROUTES } from "@/constants/routes";
+import { homeworkKeys, useHomework, useMySubmission } from "@/hooks/useHomeworkData";
+import { useNow } from "@/hooks/useNow";
+import { useUserId } from "@/hooks/usePortalData";
+import { startHomework } from "@/services/homeworkService";
 import { portalErrorMessage } from "@/utils/errors";
-
-type Tab = "TODO" | "SUBMITTED" | "GRADED";
-
-const dateTime = (iso: string) =>
-  new Date(iso).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" });
-
-const tabOf = (item: StudentHomeworkResponse): Tab =>
-  item.submission.status === "GRADED" ? "GRADED" : item.submission.status === "SUBMITTED" ? "SUBMITTED" : "TODO";
+import { acceptsWork, formatDateTime, homeworkPhase } from "@/utils/homework";
 
 /**
- * Bài tập của học viên (/student/homework): các bài gia sư đã giao ở những lớp đang học.
- * Chia Cần làm / Đã nộp / Đã chấm; bấm một bài để làm, lưu nháp, nộp, hoặc xem điểm và nhận xét.
+ * Trang làm một bài của học viên. Chưa bắt đầu: xem thông tin bài rồi bấm "Bắt đầu làm bài"
+ * (bài có mật khẩu thì nhập mật khẩu gia sư cung cấp). Đang làm: làm và nộp. Đã nộp: xem bài, điểm và nhận xét.
  */
 export function StudentHomeworkPage() {
-  const homeworks = useQuery({ queryKey: ["my-homeworks"], queryFn: () => listMyHomeworks() });
-  const [tab, setTab] = useState<Tab>("TODO");
-  const [openId, setOpenId] = useState<number | null>(null);
-  const all = homeworks.data?.content ?? [];
-  const shown = all.filter((item) => tabOf(item) === tab);
-
-  // Tên khóa của từng lớp
-  const classIds = [...new Set(all.map((item) => item.classGroupId))];
-  const classes = useQueries({
-    queries: classIds.map((id) => ({ queryKey: ["catalog-class", id], queryFn: () => getTuitionClass(id), staleTime: 5 * 60_000, retry: false })),
-  });
-  const courseName = (id: number) => classes[classIds.indexOf(id)]?.data?.courseName ?? `Lớp ${displayCode("class", id)}`;
-  const count = (value: Tab) => all.filter((item) => tabOf(item) === value).length;
-
-  return (
-    <div>
-      <PortalPageHeader icon="assignment" title="Bài tập" description="Bài gia sư giao cho các lớp bạn đang học." />
-      <div className="mb-4">
-        <FilterTabs
-          label="Trạng thái bài tập"
-          value={tab}
-          onChange={setTab}
-          tabs={[
-            { value: "TODO", label: "Cần làm", count: count("TODO") },
-            { value: "SUBMITTED", label: "Đã nộp", count: count("SUBMITTED") },
-            { value: "GRADED", label: "Đã chấm", count: count("GRADED") },
-          ]}
-        />
-      </div>
-
-      {homeworks.isPending ? (
-        <PortalLoading label="Đang tải bài tập" rows={3} />
-      ) : homeworks.isError ? (
-        <PortalError message="Không tải được bài tập." onRetry={() => void homeworks.refetch()} />
-      ) : shown.length === 0 ? (
-        <PortalEmpty
-          icon="assignment_turned_in"
-          title={tab === "TODO" ? "Không có bài cần làm." : tab === "SUBMITTED" ? "Chưa có bài chờ chấm." : "Chưa có bài được chấm."}
-          description="Bài tập gia sư giao sẽ hiện ở đây."
-        />
-      ) : (
-        <ul className="space-y-3">
-          {shown.map((item) => (
-            <HomeworkCard
-              key={item.homework.id}
-              item={item}
-              course={courseName(item.classGroupId)}
-              open={openId === item.homework.id}
-              onToggle={() => setOpenId(openId === item.homework.id ? null : item.homework.id)}
-            />
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function HomeworkCard({ item, course, open, onToggle }: { item: StudentHomeworkResponse; course: string; open: boolean; onToggle: () => void }) {
-  const { homework, submission } = item;
-  const overdue = new Date(homework.dueAt) <= new Date();
-  const status = submission.status;
-  const badge =
-    status === "GRADED"
-      ? { text: `${submission.score}/${homework.maxScore} điểm`, className: "bg-emerald-50 text-emerald-800" }
-      : status === "SUBMITTED"
-        ? { text: "Đã nộp", className: "bg-brand-tint text-brand-navy" }
-        : overdue
-          ? { text: "Quá hạn", className: "bg-red-50 text-red-700" }
-          : status === "IN_PROGRESS"
-            ? { text: "Đang làm", className: "bg-amber-50 text-amber-800" }
-            : { text: "Chưa làm", className: "bg-slate-100 text-slate-700" };
-
-  return (
-    <li className={`overflow-hidden ${PORTAL_CARD}`}>
-      <button type="button" onClick={onToggle} aria-expanded={open} className={`flex w-full items-start gap-3 p-4 text-left ${FOCUS_RING}`}>
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-tint text-brand-navy">
-          <Icon name="assignment" className="text-[21px]" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[15.5px] font-bold text-brand-ink">{homework.title}</span>
-          <span className="block truncate text-[13px] text-brand-muted">
-            {course} - Hạn nộp {dateTime(homework.dueAt)}
-          </span>
-        </span>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold ${badge.className}`}>{badge.text}</span>
-        <Icon name={open ? "expand_less" : "expand_more"} className="shrink-0 text-[22px] text-brand-muted" />
-      </button>
-      {open && (
-        <div className="space-y-4 border-t border-brand-sandLine px-4 py-4">
-          <div>
-            <p className="whitespace-pre-line text-[14px] leading-relaxed text-brand-ink">{homework.instructions}</p>
-            {homework.resourceUrl && (
-              <div className="mt-2">
-                <AttachmentLink url={homework.resourceUrl} preview />
-              </div>
-            )}
-            {homework.questions && homework.questions.length > 0 && (
-              <div className="mt-3">
-                <HomeworkQuestionList questions={homework.questions} />
-              </div>
-            )}
-            <p className="mt-2 text-[12.5px] text-brand-muted">Điểm tối đa {homework.maxScore}</p>
-          </div>
-          <WorkArea item={item} overdue={overdue} />
-        </div>
-      )}
-    </li>
-  );
-}
-
-/** Phần làm bài: bắt đầu → lưu nháp / nộp; đã chấm thì hiện điểm và nhận xét */
-function WorkArea({ item, overdue }: { item: StudentHomeworkResponse; overdue: boolean }) {
+  const homeworkId = Number(useParams().homeworkId);
+  const now = useNow();
+  const userId = useUserId();
   const queryClient = useQueryClient();
-  const { homework } = item;
-  const [submission, setSubmission] = useState<SubmissionResponse>(item.submission);
-  const [content, setContent] = useState(item.submission.content ?? "");
-  const [link, setLink] = useState(item.submission.resourceUrl ?? "");
-  const [notice, setNotice] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const accepting = homework.status === "PUBLISHED" && !overdue;
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["my-homeworks"] });
+  const homework = useHomework(homeworkId);
+  const mine = useMySubmission(homeworkId);
+  const [starting, setStarting] = useState(false);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [revising, setRevising] = useState(false);
 
-  const fail = (failure: unknown, fallback: string) => {
-    setNotice(null);
-    setError(portalErrorMessage(failure, fallback));
-  };
   const start = useMutation({
-    mutationFn: () => startHomework(homework.id),
-    onSuccess: (saved) => {
-      setSubmission(saved);
-      setError(null);
+    mutationFn: () => startHomework(homeworkId, password.trim() || undefined),
+    onSuccess: (submission) => {
+      setStarting(false);
+      queryClient.setQueryData(homeworkKeys.mine(userId, homeworkId), submission);
+      // Câu hỏi chỉ trả về sau khi đã bắt đầu
+      void queryClient.invalidateQueries({ queryKey: homeworkKeys.detail(userId, homeworkId) });
+      void queryClient.invalidateQueries({ queryKey: homeworkKeys.all(userId) });
     },
-    onError: (failure) => fail(failure, "Chưa bắt đầu được."),
-  });
-  const body = () => ({ content: content.trim() || undefined, resourceUrl: link.trim() || undefined, version: submission.version ?? 0 });
-  const draft = useMutation({
-    mutationFn: () => saveHomeworkDraft(homework.id, body()),
-    onSuccess: (saved) => {
-      setSubmission(saved);
-      setError(null);
-      setNotice("Đã lưu nháp.");
-    },
-    onError: (failure) => fail(failure, "Chưa lưu được nháp."),
-  });
-  const submit = useMutation({
-    mutationFn: () => submitHomework(homework.id, body()),
-    onSuccess: (saved) => {
-      setSubmission(saved);
-      setError(null);
-      setNotice("Đã nộp bài.");
-      void refresh();
-    },
-    onError: (failure) => fail(failure, "Chưa nộp được bài."),
   });
 
-  if (submission.status === "GRADED") {
+  if (homework.isPending || mine.isPending) return <PortalLoading label="Đang tải bài tập" />;
+  if (homework.isError || mine.isError)
     return (
-      <div className="rounded-xl bg-emerald-50 p-4">
-        <p className="text-[15px] font-bold text-emerald-900">
-          {submission.score}/{homework.maxScore} điểm
-        </p>
-        {submission.feedback && <p className="mt-1 whitespace-pre-line text-[14px] text-emerald-900">Nhận xét: {submission.feedback}</p>}
-        {submission.content && <p className="mt-2 whitespace-pre-line text-[13.5px] text-brand-ink">{submission.content}</p>}
-        {submission.resourceUrl && (
-          <div className="mt-1">
-            <AttachmentLink url={submission.resourceUrl} preview />
-          </div>
+      <PortalError
+        message={portalErrorMessage(homework.error ?? mine.error, "Chưa tải được bài tập.")}
+        onRetry={() => {
+          void homework.refetch();
+          void mine.refetch();
+        }}
+      />
+    );
+
+  const data = homework.data;
+  const submission = mine.data;
+  const canWork = acceptsWork(data, now);
+  const phase = homeworkPhase(data, now);
+
+  function handleStart(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    start.mutate();
+  }
+
+  return (
+    <>
+      <Link to={ROUTES.studentHomework} className={`mb-3 text-[14px] ${PORTAL_MORE_LINK}`}>
+        <Icon name="arrow_back" className="text-[18px]" />
+        Tất cả bài tập
+      </Link>
+      <PortalPageHeader icon="assignment" title={data.title} />
+
+      <div className="space-y-5">
+        <HomeworkInfo homework={data} now={now} />
+
+        {submission.status === "NOT_STARTED" && (
+          <section className={`flex flex-col items-start gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6 ${PORTAL_CARD}`}>
+            <p className="text-[14.5px] text-brand-ink">
+              {canWork
+                ? "Số lần làm bài: 1. Khi bắt đầu, bài làm được lưu lại để bạn làm tiếp nếu lỡ thoát ra."
+                : phase === "upcoming"
+                  ? `Bài mở lúc ${data.openAt ? formatDateTime(data.openAt) : ""}.`
+                  : "Bài không còn nhận bài làm."}
+            </p>
+            <button type="button" disabled={!canWork} onClick={() => setStarting(true)} className={PORTAL_BTN_ACCENT}>
+              <Icon name="play_arrow" className="text-[19px]" />
+              Bắt đầu làm bài
+            </button>
+          </section>
+        )}
+
+        {submission.status === "IN_PROGRESS" &&
+          (canWork ? (
+            // Câu hỏi chỉ có sau khi bắt đầu: chờ lượt tải lại xong rồi mới hiện form
+            data.questions !== undefined || !homework.isFetching ? (
+              <QuizForm key={submission.id} homework={data} submission={submission} />
+            ) : (
+              <PortalLoading label="Đang tải câu hỏi" />
+            )
+          ) : (
+            <AuthNotice tone="info">Bài không còn nhận bài làm nên bản lưu tạm của bạn không nộp được nữa.</AuthNotice>
+          ))}
+
+        {submission.status === "SUBMITTED" && revising && (
+          <QuizForm key={submission.id} homework={data} submission={submission} onDone={() => setRevising(false)} />
+        )}
+
+        {(submission.status === "GRADED" || (submission.status === "SUBMITTED" && !revising)) && (
+          <>
+            <SubmissionResult homework={data} submission={submission} />
+            {submission.status === "SUBMITTED" && phase === "open" && (
+              <div className="flex justify-end">
+                <button type="button" onClick={() => setRevising(true)} className={PORTAL_BTN_SECONDARY}>
+                  <Icon name="edit" className="text-[18px]" />
+                  Sửa và nộp lại
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
-    );
-  }
 
-  if (submission.status === "NOT_STARTED") {
-    return accepting ? (
-      <div>
-        <button type="button" onClick={() => start.mutate()} disabled={start.isPending} className={PORTAL_BTN_PRIMARY}>
-          <Icon name="edit" className="text-[18px]" />
-          {start.isPending ? "Đang mở…" : "Bắt đầu làm"}
-        </button>
-        {error && <p className={AUTH_ERROR}>{error}</p>}
-      </div>
-    ) : (
-      <p className="text-[13.5px] text-brand-muted">{overdue ? "Đã quá hạn nộp." : "Bài tập này không còn nhận bài."}</p>
-    );
-  }
-
-  const editable = accepting;
-  return (
-    <div className="space-y-3">
-      <div>
-        <label htmlFor={`hw-answer-${homework.id}`} className={PORTAL_LABEL}>
-          Bài làm
-        </label>
-        <textarea
-          id={`hw-answer-${homework.id}`}
-          rows={6}
-          value={content}
-          disabled={!editable}
-          onChange={(event) => setContent(event.target.value)}
-          className={`${PORTAL_INPUT} h-auto py-2 leading-relaxed`}
-          placeholder="Nhập bài làm của bạn"
-        />
-      </div>
-      <AttachmentField
-        id={`hw-link-${homework.id}`}
-        label="File / link bài làm (ảnh chụp, PDF, Word…)"
-        value={link}
-        onChange={setLink}
-        disabled={!editable}
-      />
-      {submission.status === "SUBMITTED" && (
-        <p className="text-[13px] text-brand-muted">
-          Đã nộp {submission.submittedAt ? dateTime(submission.submittedAt) : ""}. {editable ? "Bạn vẫn sửa và nộp lại được trước hạn." : ""}
-        </p>
-      )}
-      {notice && <p className="text-[13px] font-semibold text-emerald-700">{notice}</p>}
-      {error && <p className={AUTH_ERROR}>{error}</p>}
-      {editable && (
-        <div className="flex flex-wrap justify-end gap-2">
-          {submission.status === "IN_PROGRESS" && (
-            <button type="button" onClick={() => draft.mutate()} disabled={draft.isPending} className={PORTAL_BTN_SECONDARY}>
-              {draft.isPending ? "Đang lưu…" : "Lưu nháp"}
-            </button>
+      <PortalDialog open={starting} title="Bắt đầu làm bài" onClose={() => setStarting(false)} widthClassName="max-w-[480px]">
+        <form onSubmit={handleStart} className="space-y-4">
+          {data.passwordProtected && (
+            <div>
+              <h3 className="text-[17px] font-bold text-brand-navy">Mật khẩu</h3>
+              <p className="mt-1 text-[14.5px] text-brand-ink">Để làm bài này, bạn cần mật khẩu do gia sư cung cấp.</p>
+              <label htmlFor="hw-start-password" className={`mt-3 ${PORTAL_LABEL}`}>
+                Mật khẩu bài tập
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="hw-start-password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  autoFocus
+                  autoComplete="off"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className={PORTAL_INPUT}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-brand-orange hover:bg-brand-sand"
+                >
+                  <Icon name={showPassword ? "visibility_off" : "visibility"} className="text-[21px]" />
+                </button>
+              </div>
+            </div>
           )}
-          <button
-            type="button"
-            onClick={() => {
-              if (!content.trim() && !link.trim()) return setError("Hãy nhập bài làm hoặc dán link trước khi nộp.");
-              if (link.trim() && !/^(https:\/\/|\/api\/v1\/files\/)\S+$/.test(link.trim()))
-                return setError("Link phải bắt đầu bằng https://");
-              submit.mutate();
-            }}
-            disabled={submit.isPending}
-            className={PORTAL_BTN_PRIMARY}
-          >
-            <Icon name="send" className="text-[18px]" />
-            {submit.isPending ? "Đang nộp…" : submission.status === "SUBMITTED" ? "Nộp lại" : "Nộp bài"}
-          </button>
-        </div>
-      )}
-    </div>
+          <div className={data.passwordProtected ? "border-t border-brand-sandLine pt-4" : ""}>
+            <h3 className="text-[17px] font-bold text-brand-navy">Thời gian</h3>
+            <p className="mt-1 text-[14.5px] leading-relaxed text-brand-ink">
+              Hạn nộp: {formatDateTime(data.dueAt)}.{" "}
+              {data.allowLateSubmission ? "Nộp sau hạn vẫn được nhận nhưng sẽ bị ghi là nộp trễ." : "Sau hạn không nộp được nữa."} Bạn có
+              chắc muốn bắt đầu ngay?
+            </p>
+          </div>
+          {start.error && <AuthNotice tone="error">{portalErrorMessage(start.error, "Chưa bắt đầu được. Vui lòng thử lại.")}</AuthNotice>}
+          <div className="flex justify-end gap-2 border-t border-brand-sandLine pt-4">
+            <button type="button" onClick={() => setStarting(false)} className={PORTAL_BTN_SECONDARY}>
+              Hủy
+            </button>
+            <button type="submit" disabled={start.isPending} className={PORTAL_BTN_ACCENT}>
+              {start.isPending ? "Đang mở…" : "Bắt đầu làm bài"}
+            </button>
+          </div>
+        </form>
+      </PortalDialog>
+    </>
   );
 }

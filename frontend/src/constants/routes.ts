@@ -37,6 +37,7 @@ export const ROUTES = {
   adminClasses: "/admin/classes",
   adminPayroll: "/admin/payroll",
   adminReviews: "/admin/reviews",
+  adminSettings: "/admin/settings",
   /** Khu gia sư: tổng quan, lịch dạy + điểm danh, lịch rảnh, xin nghỉ, hồ sơ */
   tutor: "/tutor",
   tutorSessions: "/tutor/sessions",
@@ -46,6 +47,10 @@ export const ROUTES = {
   tutorAssignmentsCreate: "/tutor/sessions/:sessionId/assignments/new",
   /** Thu nhập theo tháng */
   tutorPayroll: "/tutor/payroll",
+  /** Bài tập / bài kiểm tra: danh sách, tạo mới (?buoi=<mã buổi>), soạn + chấm một bài */
+  tutorHomeworks: "/tutor/homeworks",
+  tutorHomeworkNew: "/tutor/homeworks/new",
+  tutorHomeworkDetail: "/tutor/homeworks/:homeworkId",
   tutorReviews: "/tutor/reviews",
   /** Khu học viên: tổng quan, lịch học, mua khóa học + thanh toán, xin nghỉ, hồ sơ */
   student: "/student",
@@ -61,6 +66,8 @@ export const ROUTES = {
   studentLeave: "/student/leave",
   /** Bài tập về nhà ở các lớp đang học: làm, lưu nháp, nộp và xem điểm */
   studentHomework: "/student/homework",
+  /** Làm một bài: nhập mật khẩu, làm, nộp, xem điểm và nhận xét */
+  studentHomeworkDetail: "/student/homework/:homeworkId",
   studentFeedback: "/student/feedback",
   /** Các lớp đã đóng học phí */
   studentEnrollments: "/student/classes",
@@ -69,6 +76,11 @@ export const ROUTES = {
   classroom: "/classroom/:sessionId",
   forbidden: "/403",
 } as const;
+
+/** Trang một bài tập của gia sư hoặc học viên */
+export function homeworkPath(homeworkId: number, role: "tutor" | "student"): string {
+  return (role === "tutor" ? ROUTES.tutorHomeworkDetail : ROUTES.studentHomeworkDetail).replace(":homeworkId", String(homeworkId));
+}
 
 export function courseDetailPath(slug: string, student = false): string {
   return (student ? ROUTES.studentCourseDetail : ROUTES.courseDetail).replace(":courseSlug", encodeURIComponent(slug));

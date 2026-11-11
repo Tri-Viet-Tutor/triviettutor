@@ -20,9 +20,10 @@ import java.util.*;
 public class GeminiClient {
     private static final Logger log = LoggerFactory.getLogger(GeminiClient.class);
     private final AssistantProperties properties;
+    private final AssistantSettingsService settings;
 
     public void requireConfigured() {
-        if (!properties.configured()) throw new BusinessException(ErrorCode.ASSISTANT_UNAVAILABLE);
+        if (settings.apiKey() == null) throw new BusinessException(ErrorCode.ASSISTANT_UNAVAILABLE);
     }
 
     public String generate(String systemPrompt, List<Turn> history, String message) {
@@ -62,7 +63,7 @@ public class GeminiClient {
         factory.setReadTimeout(properties.getTimeoutSeconds() * 1000);
         return RestClient.builder().requestFactory(factory).build().post()
                 .uri(properties.getGeminiApiUrl() + "/models/{model}:generateContent", properties.getGeminiModel())
-                .header("x-goog-api-key", properties.getGeminiApiKey())
+                .header("x-goog-api-key", settings.apiKey())
                 .contentType(MediaType.APPLICATION_JSON).body(body).retrieve().body(JsonNode.class);
     }
 

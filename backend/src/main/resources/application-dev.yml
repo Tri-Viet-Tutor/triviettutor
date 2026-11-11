@@ -10,9 +10,8 @@ spring:
     show-sql: true
   flyway:
     enabled: true
-    locations:
-      - classpath:db/migration
-      - classpath:data
+    # Set FLYWAY_LOCATIONS=classpath:db/migration in .env to stop re-seeding the classpath:data sample data
+    locations: ${FLYWAY_LOCATIONS:classpath:db/migration,classpath:data}
     baseline-on-migrate: true
     validate-on-migrate: false
   security:

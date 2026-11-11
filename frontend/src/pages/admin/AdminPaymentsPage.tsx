@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AuthNotice } from "@/components/auth/AuthNotice";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
 import { PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT } from "@/constants/classNames";
+import { TRANSACTION_STATUS, transactionStatus } from "@/constants/labels";
 import type { PaymentCardProps } from "@/interfaces/admin";
 import type { PaymentStatus } from "@/interfaces/api";
 import { getApiError } from "@/services/api";
@@ -11,13 +12,13 @@ import { formatVnd } from "@/utils/currency";
 import { displayCode } from "@/utils/classes";
 import { Select } from "@/components/ui/Select";
 
-/** Tên trạng thái giao dịch */
+/** Tên trạng thái giao dịch, theo nhãn chuẩn TRANSACTION_STATUS */
 const STATUSES: Record<PaymentStatus, string> = {
-  COMPLETED: "Đã thanh toán",
-  FAILED: "Thất bại",
-  REQUIRES_REFUND: "Cần hoàn tiền",
-  PARTIALLY_REFUNDED: "Hoàn một phần",
-  REFUNDED: "Đã hoàn tiền",
+  COMPLETED: transactionStatus("COMPLETED").label,
+  FAILED: transactionStatus("FAILED").label,
+  REQUIRES_REFUND: transactionStatus("REQUIRES_REFUND").label,
+  PARTIALLY_REFUNDED: transactionStatus("PARTIALLY_REFUNDED").label,
+  REFUNDED: transactionStatus("REFUNDED").label,
 };
 
 /** Trang Thanh toán của quản trị: xem giao dịch học phí theo trạng thái và hoàn tiền (GET /admin/payments). */
@@ -140,8 +141,12 @@ function PaymentCard({ payment, onUpdated }: PaymentCardProps) {
       {refund && (
         <p className="text-sm">
           Hoàn tiền {displayCode("refund", refund.refundId)}:{" "}
-          {refund.status === "COMPLETED" ? "Đã hoàn" : refund.status === "FAILED" ? "Bị từ chối" : "Chờ xác nhận"} -{" "}
-          {formatVnd(refund.amount)}
+          {refund.status === "COMPLETED"
+            ? TRANSACTION_STATUS.REFUNDED.label
+            : refund.status === "FAILED"
+              ? TRANSACTION_STATUS.FAILED.label
+              : "Đang xử lý"}{" "}
+          - {formatVnd(refund.amount)}
         </p>
       )}
       {message && <AuthNotice tone="info">{message}</AuthNotice>}

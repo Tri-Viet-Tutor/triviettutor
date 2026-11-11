@@ -2,15 +2,30 @@ import { PayrollReconciliation } from "@/components/dashboard/PayrollReconciliat
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
 import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/PortalState";
 import { StatTile } from "@/components/dashboard/StatTile";
+import { useState } from "react";
 import { StatusChip } from "@/components/dashboard/StatusChip";
+import { PayrollDispute } from "@/components/tutor/PayrollDispute";
 import { Icon } from "@/components/ui/Icon";
-import { PORTAL_CARD } from "@/constants/classNames";
+import { PORTAL_BTN_SECONDARY, PORTAL_CARD } from "@/constants/classNames";
 import { PAYROLL_STATUS } from "@/constants/labels";
 import { monthLabel } from "@/constants/management";
 import { useMyPayroll } from "@/hooks/useManagementData";
 import { useNow } from "@/hooks/useNow";
-import { formatVnd } from "@/utils/currency";
 import type { PayrollLineResponse } from "@/interfaces/api";
+import { fetchMyPayroll } from "@/services/managementService";
+import { formatVnd } from "@/utils/currency";
+import { downloadPayrollCsv } from "@/utils/payrollExport";
+
+/** Tải mọi tháng lương (mỗi lần tối đa 100 tháng) rồi xuất file CSV */
+async function exportAllMonths(): Promise<void> {
+  const all: PayrollLineResponse[] = [];
+  for (let page = 0, pages = 1; page < pages; page += 1) {
+    const result = await fetchMyPayroll({ page, size: 100 });
+    all.push(...result.content);
+    pages = result.totalPages;
+  }
+  downloadPayrollCsv(all, "bang-luong-cua-toi.csv");
+}
 
 /**
  * Thu nhập của gia sư theo từng tháng đã chốt: lương cứng, thù lao theo buổi hợp lệ, buổi bị hủy / được dạy thay / chưa chốt,
@@ -24,6 +39,8 @@ export function TutorPayrollPage() {
   const lines = [...(payroll.data?.content ?? [])].sort((a, b) => b.year - a.year || b.month - a.month);
   const latest = lines[0];
   const yearTotal = latest ? lines.filter((line) => line.year === latest.year).reduce((sum, line) => sum + line.totalPay, 0) : 0;
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(false);
 
   // Các mốc thu nhập: Đã chốt (FINALIZED) coi là đã nhận; Tạm tính (DRAFT) của tháng đã qua là đang chờ trung tâm duyệt/chốt;
   // Tạm tính của tháng đang chạy (tháng hiện tại) là số dự kiến, có thể còn đổi khi buổi dạy phát sinh thêm.
@@ -41,7 +58,31 @@ export function TutorPayrollPage() {
         icon="account_balance_wallet"
         title="Bảng lương của tôi"
         description="Lương cứng cộng thù lao cho mỗi buổi dạy hợp lệ. Bảng lương của một tháng hiện ở đây sau khi trung tâm chốt lương tháng đó."
+        action={
+          latest && (
+            <button
+              type="button"
+              disabled={exporting}
+              onClick={() => {
+                setExporting(true);
+                setExportError(false);
+                exportAllMonths()
+                  .catch(() => setExportError(true))
+                  .finally(() => setExporting(false));
+              }}
+              className={PORTAL_BTN_SECONDARY}
+            >
+              <Icon name="download" className="text-[19px]" />
+              {exporting ? "Đang xuất…" : "Xuất Excel (CSV)"}
+            </button>
+          )
+        }
       />
+      {exportError && (
+        <p role="alert" className="mb-4 text-[14px] font-medium text-red-700">
+          Chưa xuất được bảng lương. Vui lòng thử lại.
+        </p>
+      )}
 
       {payroll.isPending ? (
         <PortalLoading label="Đang tải bảng lương" rows={3} />
@@ -136,6 +177,7 @@ export function TutorPayrollPage() {
                       </StatusChip>
                     </div>
                   </div>
+                  <PayrollDispute line={line} />
                   <details className="mt-3 border-t border-brand-sandLine pt-3">
                     <summary className="cursor-pointer text-[13.5px] font-semibold text-brand-navy">Xem các buổi đã dạy</summary>
                     <div className="mt-2">

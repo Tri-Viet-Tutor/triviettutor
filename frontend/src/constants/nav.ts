@@ -15,6 +15,7 @@ export const ADMIN_NAV: PortalNavItem[] = [
   { to: ROUTES.adminPayments, label: "Thanh toán", icon: "payments", desktopOnly: true },
   { to: ROUTES.adminPayroll, label: "Bảng lương", icon: "account_balance_wallet", desktopOnly: true },
   { to: ROUTES.adminReviews, label: "Đánh giá gia sư", icon: "reviews", desktopOnly: true },
+  { to: ROUTES.adminSettings, label: "Cài đặt hệ thống", shortLabel: "Cài đặt", icon: "settings", desktopOnly: true },
 ];
 
 /** Các trang của khu học viên. Hồ sơ mở từ menu avatar trên thanh trên. */
@@ -33,6 +34,7 @@ export const STUDENT_NAV: PortalNavItem[] = [
 export const TUTOR_NAV: PortalNavItem[] = [
   { to: ROUTES.tutor, label: "Tổng quan", icon: "home", end: true },
   { to: ROUTES.tutorSessions, label: "Lịch dạy", icon: "calendar_month" },
+  { to: ROUTES.tutorHomeworks, label: "Bài tập", icon: "assignment" },
   { to: ROUTES.tutorAvailability, label: "Lịch rảnh", icon: "event_available" },
   { to: ROUTES.tutorLeave, label: "Xin nghỉ", icon: "event_busy" },
   { to: ROUTES.tutorPayroll, label: "Thu nhập", icon: "account_balance_wallet" },

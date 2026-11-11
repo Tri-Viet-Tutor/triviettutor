@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
 import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/PortalState";
+import { OrderHistory } from "@/components/student/OrderHistory";
 import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_CARD } from "@/constants/classNames";
 import { ROUTES } from "@/constants/routes";
@@ -112,6 +113,7 @@ export function StudentCartPage() {
       setError(null);
       setOrder(created);
       payKey.current = crypto.randomUUID();
+      void queryClient.invalidateQueries({ queryKey: ["me", userId, "orders"] });
     },
     onError: (failure) => {
       setError(errorText(failure, "Chưa đặt được đơn. Vui lòng thử lại."));
@@ -135,6 +137,7 @@ export function StudentCartPage() {
     onSettled: () => {
       setOrder(null);
       checkoutKey.current = null;
+      void queryClient.invalidateQueries({ queryKey: ["me", userId, "orders"] });
     },
   });
 
@@ -143,7 +146,7 @@ export function StudentCartPage() {
       <PortalPageHeader
         icon="shopping_cart"
         title="Giỏ hàng"
-        description="Kiểm tra lớp đã chọn cho từng môn rồi đặt đơn."
+        description="Kiểm tra lớp đã chọn cho từng môn rồi thanh toán học phí."
       />
 
       {error && (
@@ -171,7 +174,7 @@ export function StudentCartPage() {
         <PortalEmpty
           icon="shopping_cart"
           title="Giỏ hàng đang trống."
-          description="Thêm môn từ trang chi tiết khóa học, rồi quay lại đây để chọn lớp và đặt đơn."
+          description="Thêm môn từ trang chi tiết khóa học, rồi quay lại đây để chọn lớp và thanh toán học phí."
           action={
             <Link to={ROUTES.studentCatalog} className={PORTAL_BTN_PRIMARY}>
               Xem khóa học đang mở
@@ -306,14 +309,17 @@ export function StudentCartPage() {
               onClick={() => checkout.mutate()}
               className={`${PORTAL_BTN_PRIMARY} w-full`}
             >
-              {checkout.isPending ? "Đang đặt đơn…" : "Đặt đơn"}
+              {checkout.isPending ? "Đang xử lý…" : "Thanh toán học phí"}
             </button>
             <p className="text-[12.5px] leading-relaxed text-brand-muted">
-              {ready ? "Đóng đủ học phí khi đặt đơn. Lớp nhóm được hoàn 20–40% vào ví khi lớp chốt sĩ số." : "Chọn lớp cho tất cả các môn để đặt đơn."}
+              {ready
+                ? "Đóng đủ học phí khi thanh toán. Lớp nhóm được hoàn 20–40% vào ví khi lớp chốt sĩ số."
+                : "Chọn lớp cho tất cả các môn để thanh toán học phí."}
             </p>
           </aside>
         </div>
       )}
+      <OrderHistory />
     </div>
   );
 }
