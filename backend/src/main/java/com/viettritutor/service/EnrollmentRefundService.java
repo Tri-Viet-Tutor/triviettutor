@@ -30,9 +30,13 @@ public class EnrollmentRefundService {
     private final MockPaymentPolicy mockPolicy;
     private final OrderRefundSync orderRefunds;
     private final WalletService wallet;
-    private final UserRepository users;
-    private final ClassGroupRepository classGroups;
-    private final ApplicationEventPublisher eventPublisher;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private UserRepository users;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ClassGroupRepository classGroups;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public void cancel(Long enrollmentId, String reason, User student) {
@@ -115,19 +119,21 @@ public class EnrollmentRefundService {
         learning.deactivate(enrollment.getId(), LearningScheduleStatus.CANCELLED);
         orderRefunds.refresh(payment);
 
-        String className = classGroups.findById(enrollment.getClassGroupId())
-                .map(ClassGroup::getName).orElse("Lớp học #" + enrollment.getClassGroupId());
-        User student = users.findById(payment.getStudentId()).orElse(null);
-        if (student != null) {
-            eventPublisher.publishEvent(new ClassRefundEvent(
-                    student.getId(),
-                    student.getEmail(),
-                    student.getFullName(),
-                    className,
-                    amount,
-                    reason.trim(),
-                    walletPayment ? "Ví học viên" : "Hoàn tiền hệ thống"
-            ));
+        if (eventPublisher != null && users != null && classGroups != null) {
+            String className = classGroups.findById(enrollment.getClassGroupId())
+                    .map(ClassGroup::getClassCode).orElse("Lớp học #" + enrollment.getClassGroupId());
+            User student = users.findById(payment.getStudentId()).orElse(null);
+            if (student != null) {
+                eventPublisher.publishEvent(new ClassRefundEvent(
+                        student.getId(),
+                        student.getEmail(),
+                        student.getFullName(),
+                        className,
+                        amount,
+                        reason.trim(),
+                        walletPayment ? "Ví học viên" : "Hoàn tiền hệ thống"
+                ));
+            }
         }
 
         return refund;

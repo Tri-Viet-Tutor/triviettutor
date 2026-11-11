@@ -59,7 +59,7 @@ public class SessionReminderScheduler {
             try {
                 // 1. Thông tin lớp học
                 String className = classGroups.findById(session.getClassGroupId())
-                        .map(ClassGroup::getName)
+                        .map(ClassGroup::getClassCode)
                         .orElse("Lớp học #" + session.getClassGroupId());
 
                 // 2. Thông tin gia sư

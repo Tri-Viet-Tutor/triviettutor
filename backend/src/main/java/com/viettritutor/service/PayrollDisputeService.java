@@ -46,7 +46,9 @@ public class PayrollDisputeService {
     private final UserRepository users;
     private final PayrollDisputeMailer mailer;
     private final Clock clock;
-    private final ApplicationEventPublisher eventPublisher;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public PayrollLineResponse dispute(int year,int month,String reason,User actor) {
@@ -69,16 +71,18 @@ public class PayrollDisputeService {
         String total=line.getTotalPay().toPlainString();
         String text=saved.getReason();
 
-        eventPublisher.publishEvent(new PayrollDisputeEvent(
-                actor.getId(),
-                actor.getEmail(),
-                tutorName,
-                year,
-                month,
-                line.getTotalPay(),
-                text,
-                admins
-        ));
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new PayrollDisputeEvent(
+                    actor.getId(),
+                    actor.getEmail(),
+                    tutorName,
+                    year,
+                    month,
+                    line.getTotalPay(),
+                    text,
+                    admins
+            ));
+        }
 
         PayrollLineResponse mine=payroll.mine(year,month,0,1,actor).getContent().getFirst();
         return withDispute(mine,saved);

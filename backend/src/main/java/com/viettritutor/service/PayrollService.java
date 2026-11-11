@@ -34,7 +34,9 @@ public class PayrollService {
     private final ObjectMapper json;
     private final EntityManager entityManager;
     private final Clock clock;
-    private final ApplicationEventPublisher eventPublisher;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly=true)
     public PayrollResponse get(int year,int month,User actor) {
@@ -95,7 +97,9 @@ public class PayrollService {
                         l.getValidSessions()
                 ))
                 .toList();
-        eventPublisher.publishEvent(new PayrollFinalizedEvent(year, month, notices));
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new PayrollFinalizedEvent(year, month, notices));
+        }
 
         return snapshot(saved);
     }

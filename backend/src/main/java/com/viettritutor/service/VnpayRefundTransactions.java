@@ -29,9 +29,13 @@ public class VnpayRefundTransactions {
     private final WalletService wallet;
     private final EntityManager entityManager;
     private final Clock clock;
-    private final UserRepository users;
-    private final ClassGroupRepository classGroups;
-    private final ApplicationEventPublisher eventPublisher;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private UserRepository users;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ClassGroupRepository classGroups;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ApplicationEventPublisher eventPublisher;
 
     public record Request(Long refundId, String reference, String paymentReference, String providerNo,
                           BigDecimal amount, BigDecimal paidAmount, OffsetDateTime paymentCreatedAt,
@@ -140,19 +144,21 @@ public class VnpayRefundTransactions {
                 enrollment.setCancelledBy(refund.getActorId());
                 learning.deactivate(enrollment.getId(), LearningScheduleStatus.CANCELLED);
 
-                String className = classGroups.findById(enrollment.getClassGroupId())
-                        .map(ClassGroup::getName).orElse("Lớp học #" + enrollment.getClassGroupId());
-                User student = users.findById(payment.getStudentId()).orElse(null);
-                if (student != null) {
-                    eventPublisher.publishEvent(new ClassRefundEvent(
-                            student.getId(),
-                            student.getEmail(),
-                            student.getFullName(),
-                            className,
-                            refund.getAmount(),
-                            refund.getReason(),
-                            "Cổng thanh toán VNPay"
-                    ));
+                if (eventPublisher != null && users != null && classGroups != null) {
+                    String className = classGroups.findById(enrollment.getClassGroupId())
+                            .map(ClassGroup::getClassCode).orElse("Lớp học #" + enrollment.getClassGroupId());
+                    User student = users.findById(payment.getStudentId()).orElse(null);
+                    if (student != null) {
+                        eventPublisher.publishEvent(new ClassRefundEvent(
+                                student.getId(),
+                                student.getEmail(),
+                                student.getFullName(),
+                                className,
+                                refund.getAmount(),
+                                refund.getReason(),
+                                "Cổng thanh toán VNPay"
+                        ));
+                    }
                 }
             }
         } else if (("refund".equals(response.get("vnp_Command")) && Set.of("02", "03", "91", "95", "97").contains(code))
