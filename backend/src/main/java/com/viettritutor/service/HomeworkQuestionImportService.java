@@ -23,7 +23,8 @@ import java.time.format.DateTimeParseException;
 import java.util.*;
 
 /**
- * HW-02: reads quiz questions from a .csv or .xlsx file (one question per row) without saving anything.
+ * HW-02: reads quiz questions from a .csv / .xlsx file (one question per row) or a Word file (.docx / .doc, see
+ * {@link WordQuestionReader}) without saving anything.
  * Columns are matched by header, with or without Vietnamese accents: cau_hoi, loai, A..J, dap_an, diem, publish_time.
  * Rule D: a multiple-choice row with an empty dap_an whose option reads "Tất cả các đáp án trên đều đúng"
  * gets that option as the correct answer.
@@ -45,16 +46,34 @@ public class HomeworkQuestionImportService {
             throw new BusinessException(ErrorCode.INVALID_QUESTION_IMPORT);
         String name = Optional.ofNullable(file.getOriginalFilename()).orElse("").toLowerCase(Locale.ROOT);
         List<List<Cell2>> rows;
+        List<String> labels = null;
         try {
             byte[] bytes = file.getBytes();
             if (name.endsWith(".csv")) rows = csvRows(decode(bytes));
             else if (name.endsWith(".xlsx") || name.endsWith(".xls")) rows = sheetRows(bytes);
-            else throw new BusinessException(ErrorCode.INVALID_QUESTION_IMPORT);
+            else if (name.endsWith(".docx") || name.endsWith(".doc")) {
+                WordQuestionReader.Result word = name.endsWith(".docx") ? WordQuestionReader.docx(bytes) : WordQuestionReader.doc(bytes);
+                if (word.labels() != null && word.rows().size() <= 1)
+                    throw new BusinessException(ErrorCode.INVALID_QUESTION_IMPORT,
+                            "Không thấy câu hỏi trong file Word. Mỗi câu bắt đầu bằng \"Câu 1:\", phương án \"A. …\", dòng \"Đáp án: B\" — xem file mẫu Word");
+                rows = word.rows();
+                labels = word.labels();
+            } else throw new BusinessException(ErrorCode.INVALID_QUESTION_IMPORT);
         } catch (IOException | RuntimeException ex) {
             if (ex instanceof BusinessException business) throw business;
-            throw new BusinessException(ErrorCode.INVALID_QUESTION_IMPORT, "Không đọc được file. Hãy dùng file mẫu .csv hoặc .xlsx");
+            throw new BusinessException(ErrorCode.INVALID_QUESTION_IMPORT, "Không đọc được file. Hãy dùng file mẫu Word (.docx), Excel (.xlsx) hoặc .csv");
         }
-        return parse(rows);
+        QuestionImportResponse result = parse(rows);
+        if (labels == null) return result;
+        List<String> rowLabels = labels;
+        List<RowError> errors = result.errors().stream()
+                .map(error -> new RowError(error.row(),
+                        error.message().startsWith("Thiếu đáp án đúng")
+                                ? "Thiếu đáp án đúng — thêm dòng \"Đáp án: B\" dưới câu, đánh dấu \"*B.\" hoặc thêm bảng đáp án (\"1C 2B …\") cuối file"
+                                : error.message(),
+                        error.row() - 1 < rowLabels.size() ? rowLabels.get(error.row() - 1) : null))
+                .toList();
+        return new QuestionImportResponse(result.questions(), result.publishTime(), errors);
     }
 
     /** A cell's text, plus its date value when the spreadsheet stored a real date. */
@@ -138,12 +157,30 @@ public class HomeworkQuestionImportService {
             if (allIndex < 0) throw new IllegalArgumentException("Đáp án là \"tất cả\" nhưng không có phương án \"Tất cả các đáp án trên đều đúng\"");
             return new ImportedQuestion(type, prompt, options, allIndex, points, false);
         }
-        int letter = a.length() == 1 ? LETTERS.indexOf(Character.toUpperCase(a.charAt(0)))
-                : a.matches("\\d{1,2}") ? Integer.parseInt(a) - 1 : -1;
-        if (letter < 0 || letter >= LETTERS.length()) throw new IllegalArgumentException("Đáp án \"" + answer + "\" phải là một chữ A–J");
-        Integer index = letterToIndex.get(letter);
-        if (index == null) throw new IllegalArgumentException("Đáp án " + LETTERS.charAt(letter) + " trỏ tới phương án đang để trống");
-        return new ImportedQuestion(type, prompt, options, index, points, false);
+        List<Integer> letters = answerLetters(a);
+        if (letters == null) throw new IllegalArgumentException("Đáp án \"" + answer + "\" phải là chữ cái A–J, nhiều đáp án ghi \"A, C\"");
+        TreeSet<Integer> indexes = new TreeSet<>();
+        for (int letter : letters) {
+            Integer index = letterToIndex.get(letter);
+            if (index == null) throw new IllegalArgumentException("Đáp án " + LETTERS.charAt(letter) + " trỏ tới phương án đang để trống");
+            indexes.add(index);
+        }
+        return new ImportedQuestion(type, prompt, options, indexes.first(), List.copyOf(indexes), points, false);
+    }
+
+    /**
+     * Answer text (already plain) → letter positions: "b", "2", "a c", "a, c", "a va c", "ac". Null when it is none of these.
+     */
+    static List<Integer> answerLetters(String plainAnswer) {
+        String a = plainAnswer.replaceAll("\\b(va|and)\\b", " ").replaceAll("[\\s_]+", " ").trim();
+        if (a.matches("\\d{1,2}")) {
+            int n = Integer.parseInt(a) - 1;
+            return n >= 0 && n < LETTERS.length() ? List.of(n) : null;
+        }
+        String compact = a.replace(" ", "");
+        if (!compact.matches("[a-j]{1,10}") || (a.contains(" ") && !a.matches("[a-j]( [a-j])+"))) return null;
+        List<Integer> letters = compact.chars().map(ch -> LETTERS.indexOf(Character.toUpperCase(ch))).distinct().boxed().toList();
+        return letters;
     }
 
     /** Index of the "all of the above" option, preferring D; -1 when there is none. */

@@ -20,8 +20,10 @@ export interface QuestionInput {
   prompt: string;
   /** Chỉ câu trắc nghiệm: 2–10 phương án */
   options?: string[];
-  /** Chỉ câu trắc nghiệm: vị trí đáp án đúng (từ 0) */
+  /** Chỉ câu trắc nghiệm: vị trí đáp án đúng (từ 0); câu nhiều đáp án gửi đáp án đầu tiên */
   correctOption?: number;
+  /** Chỉ câu trắc nghiệm nhiều đáp án: mọi vị trí đúng, học viên phải chọn đủ và đúng mới có điểm */
+  correctOptions?: number[];
   points: number;
 }
 
@@ -32,14 +34,16 @@ export interface QuestionImportResponse {
     prompt: string;
     options: string[] | null;
     correctOption: number | null;
+    /** Mọi đáp án đúng (một hoặc nhiều) */
+    correctOptions: number[] | null;
     points: number;
     /** Đáp án được tự nhận là "Tất cả các đáp án trên đều đúng" vì cột đáp án để trống */
     answerDetected: boolean;
   }[];
   /** Cột publish_time của file — dùng làm giờ mở bài */
   publishTime: IsoDateTime | null;
-  /** Lỗi theo từng dòng của file (dòng tiêu đề là dòng 1) */
-  errors: { row: number; message: string }[];
+  /** Lỗi theo từng dòng của file (dòng tiêu đề là dòng 1); file Word viết tự do có label kiểu "Câu 3" */
+  errors: { row: number; message: string; label?: string | null }[];
 }
 
 /** dto.learning.QuestionResponse — học viên không nhận `correctOption` */
@@ -50,6 +54,10 @@ export interface QuestionResponse {
   prompt: string;
   options?: string[];
   correctOption?: number;
+  /** Chỉ gia sư: mọi đáp án đúng */
+  correctOptions?: number[];
+  /** Câu trắc nghiệm: số đáp án cần chọn (1 = chọn một) */
+  selectCount?: number;
   points: number;
 }
 
@@ -103,6 +111,8 @@ export interface HomeworkResponse {
 export interface AnswerInput {
   questionId: number;
   selectedOption?: number;
+  /** Các phương án đã chọn (câu nhiều đáp án) */
+  selectedOptions?: number[];
   textAnswer?: string;
 }
 
@@ -110,6 +120,8 @@ export interface AnswerInput {
 export interface AnswerResponse {
   questionId: number;
   selectedOption?: number;
+  /** Mọi phương án đã chọn (cả khi chỉ chọn một) */
+  selectedOptions?: number[];
   textAnswer?: string;
   score?: number;
 }
@@ -214,7 +226,10 @@ export interface QuestionDraft {
   type: QuestionType;
   prompt: string;
   options: string[];
-  correctOption: number;
+  /** Các phương án đúng (vị trí từ 0) */
+  correctOptions: number[];
+  /** Bật "Nhiều đáp án đúng": học viên phải chọn đủ và đúng mọi đáp án */
+  multiple: boolean;
   points: string;
 }
 

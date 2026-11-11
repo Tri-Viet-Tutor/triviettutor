@@ -11,7 +11,7 @@ import { useNow } from "@/hooks/useNow";
 import { useUserId } from "@/hooks/usePortalData";
 import { removeAttachment, saveDraft, submitHomework, uploadAttachment } from "@/services/homeworkService";
 import { portalErrorMessage } from "@/utils/errors";
-import { formatDuration, formatScore, prepareUpload } from "@/utils/homework";
+import { formatDuration, formatScore, pickedOptions, prepareUpload } from "@/utils/homework";
 import type { AnswerInput, AttachmentResponse, QuizFormProps, SubmissionInput, SubmissionResponse } from "@/interfaces/homework";
 
 const OPTION_LETTERS = "ABCDEFGHIJ";
@@ -31,7 +31,9 @@ export function QuizForm({ homework, submission, onDone }: QuizFormProps) {
   const resubmitting = submission.status === "SUBMITTED";
 
   const [answers, setAnswers] = useState<Record<number, AnswerInput>>(() =>
-    Object.fromEntries((submission.answers ?? []).map((answer) => [answer.questionId, answer])),
+    Object.fromEntries(
+      (submission.answers ?? []).map((answer) => [answer.questionId, { ...answer, selectedOptions: pickedOptions(answer) }]),
+    ),
   );
   const [content, setContent] = useState(submission.content ?? "");
   const [resourceUrl, setResourceUrl] = useState(submission.resourceUrl ?? "");
@@ -45,7 +47,7 @@ export function QuizForm({ homework, submission, onDone }: QuizFormProps) {
   const overdueSeconds = Math.floor((now.getTime() - new Date(homework.dueAt).getTime()) / 1000);
   const unanswered = questions.filter((question) => {
     const answer = answers[question.id];
-    return question.type === "MULTIPLE_CHOICE" ? answer?.selectedOption === undefined : !answer?.textAnswer?.trim();
+    return question.type === "MULTIPLE_CHOICE" ? pickedOptions(answer).length === 0 : !answer?.textAnswer?.trim();
   }).length;
 
   /** Dữ liệu gửi backend cho cả lưu tạm lẫn nộp */
@@ -55,11 +57,15 @@ export function QuizForm({ homework, submission, onDone }: QuizFormProps) {
       content: content.trim() || undefined,
       resourceUrl: resourceUrl.trim() || undefined,
       answers: questions.length
-        ? questions.map((question) => ({
-            questionId: question.id,
-            selectedOption: answers[question.id]?.selectedOption,
-            textAnswer: answers[question.id]?.textAnswer?.trim() || undefined,
-          }))
+        ? questions.map((question) => {
+            const picks = pickedOptions(answers[question.id]);
+            return {
+              questionId: question.id,
+              selectedOption: picks[0],
+              selectedOptions: picks.length ? picks : undefined,
+              textAnswer: answers[question.id]?.textAnswer?.trim() || undefined,
+            };
+          })
         : undefined,
     };
   }
@@ -123,30 +129,60 @@ export function QuizForm({ homework, submission, onDone }: QuizFormProps) {
               </p>
               {question.type === "MULTIPLE_CHOICE" ? (
                 <fieldset className="mt-3 space-y-2">
-                  <legend className="sr-only">Chọn một đáp án cho câu {index + 1}</legend>
-                  {question.options?.map((option, optionIndex) => {
-                    const checked = answers[question.id]?.selectedOption === optionIndex;
+                  {(() => {
+                    const selectCount = question.selectCount ?? 1;
+                    const picks = pickedOptions(answers[question.id]);
                     return (
-                      <label
-                        key={optionIndex}
-                        className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-2.5 text-[14.5px] transition-colors ${
-                          checked ? "border-brand-navy bg-brand-tint" : "border-brand-sandLine bg-white hover:border-brand-navy/40"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name={`q-${question.id}`}
-                          checked={checked}
-                          onChange={() => setAnswer(question.id, { selectedOption: optionIndex })}
-                          className="mt-1 h-4 w-4 shrink-0 accent-brand-navy"
-                        />
-                        <span>
-                          <b className="mr-1">{OPTION_LETTERS[optionIndex]}.</b>
-                          {option}
-                        </span>
-                      </label>
+                      <>
+                        <legend className={selectCount > 1 ? "mb-1" : "sr-only"}>
+                          {selectCount > 1 ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[13px] font-semibold text-amber-800 ring-1 ring-amber-200">
+                              <Icon name="checklist" className="text-[16px]" />
+                              Chọn {selectCount} đáp án · đã chọn {picks.length}/{selectCount}
+                            </span>
+                          ) : (
+                            `Chọn một đáp án cho câu ${index + 1}`
+                          )}
+                        </legend>
+                        {question.options?.map((option, optionIndex) => {
+                          const checked = picks.includes(optionIndex);
+                          // Câu nhiều đáp án: chọn đủ số rồi thì khóa các phương án còn lại (bỏ chọn bớt để đổi)
+                          const full = selectCount > 1 && !checked && picks.length >= selectCount;
+                          return (
+                            <label
+                              key={optionIndex}
+                              className={`flex items-start gap-3 rounded-xl border px-3.5 py-2.5 text-[14.5px] transition-colors ${
+                                checked ? "border-brand-navy bg-brand-tint" : "border-brand-sandLine bg-white hover:border-brand-navy/40"
+                              } ${full ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+                            >
+                              <input
+                                type={selectCount > 1 ? "checkbox" : "radio"}
+                                name={`q-${question.id}`}
+                                checked={checked}
+                                disabled={full}
+                                onChange={() =>
+                                  setAnswer(question.id, {
+                                    selectedOptions:
+                                      selectCount > 1
+                                        ? checked
+                                          ? picks.filter((i) => i !== optionIndex)
+                                          : [...picks, optionIndex].sort((a, b) => a - b)
+                                        : [optionIndex],
+                                    selectedOption: undefined,
+                                  })
+                                }
+                                className="mt-1 h-4 w-4 shrink-0 accent-brand-navy"
+                              />
+                              <span>
+                                <b className="mr-1">{OPTION_LETTERS[optionIndex]}.</b>
+                                {option}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </>
                     );
-                  })}
+                  })()}
                 </fieldset>
               ) : (
                 <textarea

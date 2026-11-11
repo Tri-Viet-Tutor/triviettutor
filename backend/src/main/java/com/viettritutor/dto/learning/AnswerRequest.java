@@ -9,6 +9,9 @@ public class AnswerRequest {
     private Long questionId;
     @PositiveOrZero
     private Integer selectedOption;
+    /** Several picks on a multi-answer question; when given, selectedOption is ignored or must be its first index. */
+    @Size(max = 10)
+    private java.util.List<@NotNull @PositiveOrZero Integer> selectedOptions;
     @Size(max = 20000)
     private String textAnswer;
     @JsonAnySetter

@@ -206,4 +206,222 @@ class HomeworkQuestionImportServiceTest {
         assertThat(HomeworkQuestionImportService.allCorrectIndex(List.of("a", "b", "c", "Tất cả đều đúng", "Tất cả các đáp án trên"))).isEqualTo(3);
         assertThat(HomeworkQuestionImportService.allCorrectIndex(List.of("a", "b"))).isEqualTo(-1);
     }
+
+    // ── Word ────────────────────────────────────────────────────────────────
+
+    private static MockMultipartFile docx(String name, String... paragraphs) throws Exception {
+        try (org.apache.poi.xwpf.usermodel.XWPFDocument doc = new org.apache.poi.xwpf.usermodel.XWPFDocument();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            for (String text : paragraphs) doc.createParagraph().createRun().setText(text);
+            doc.write(out);
+            return new MockMultipartFile("file", name, "application/octet-stream", out.toByteArray());
+        }
+    }
+
+    @Test
+    @DisplayName("Word free text: 'Câu n', options on one or many lines, '*' or 'Đáp án' marks the answer, brackets give type and points")
+    void docx_freeText() throws Exception {
+        QuestionImportResponse result = service.read(docx("de.docx",
+                "ĐỀ KIỂM TRA 15 PHÚT",
+                "Giờ mở bài: 2026-11-20 19:30",
+                "Câu 1 (1,5 điểm): 2 + 2 = ?",
+                "A. 3    B. 4    C. 5",
+                "Đáp án: B",
+                "Câu 2. Số nào là số chẵn?",
+                "A. 2",
+                "B. 4",
+                "*C. 6",
+                "Câu 3 (tự luận, 2đ): Trình bày cách giải",
+                "a) Phương trình bậc nhất",
+                "Câu 4: Chọn đúng",
+                "A. x",
+                "B. y",
+                "C. z",
+                "D. Tất cả các đáp án trên đều đúng"));
+
+        assertThat(result.errors()).isEmpty();
+        assertThat(result.questions()).hasSize(4);
+        ImportedQuestion q1 = result.questions().get(0);
+        assertThat(q1.prompt()).isEqualTo("2 + 2 = ?");
+        assertThat(q1.options()).containsExactly("3", "4", "5");
+        assertThat(q1.correctOption()).isEqualTo(1);
+        assertThat(q1.points()).isEqualByComparingTo("1.5");
+        assertThat(result.questions().get(1).correctOption()).isEqualTo(2);
+        ImportedQuestion essay = result.questions().get(2);
+        assertThat(essay.type()).isEqualTo(QuestionType.ESSAY);
+        assertThat(essay.prompt()).isEqualTo("Trình bày cách giải\na) Phương trình bậc nhất");
+        assertThat(essay.points()).isEqualByComparingTo("2");
+        assertThat(result.questions().get(3).correctOption()).isEqualTo(3);
+        assertThat(result.questions().get(3).answerDetected()).isTrue();
+        assertThat(result.publishTime()).isEqualTo(OffsetDateTime.parse("2026-11-20T19:30+07:00"));
+    }
+
+    @Test
+    @DisplayName("Word free text: errors name the question ('Câu 2'), not a row number")
+    void docx_errorLabels() throws Exception {
+        QuestionImportResponse result = service.read(docx("de.docx",
+                "Câu 1: ok?", "A. có", "B. không", "Đáp án: A",
+                "Câu 2: thiếu đáp án", "A. một", "B. hai"));
+
+        assertThat(result.errors()).singleElement().satisfies(error -> {
+            assertThat(error.label()).isEqualTo("Câu 2");
+            assertThat(error.message()).contains("đáp án");
+        });
+    }
+
+    @Test
+    @DisplayName("Word table with the spreadsheet header is read like a spreadsheet")
+    void docx_table() throws Exception {
+        byte[] bytes;
+        try (org.apache.poi.xwpf.usermodel.XWPFDocument doc = new org.apache.poi.xwpf.usermodel.XWPFDocument();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            doc.createParagraph().createRun().setText("Bảng câu hỏi");
+            org.apache.poi.xwpf.usermodel.XWPFTable table = doc.createTable(2, 5);
+            String[][] cells = {{"cau_hoi", "A", "B", "dap_an", "diem"}, {"1 + 1 = ?", "1", "2", "B", "3"}};
+            for (int r = 0; r < 2; r++) for (int c = 0; c < 5; c++) table.getRow(r).getCell(c).setText(cells[r][c]);
+            doc.write(out);
+            bytes = out.toByteArray();
+        }
+
+        QuestionImportResponse result = service.read(new MockMultipartFile("file", "bang.docx", "application/octet-stream", bytes));
+
+        assertThat(result.errors()).isEmpty();
+        assertThat(result.questions()).singleElement().satisfies(q -> {
+            assertThat(q.options()).containsExactly("1", "2");
+            assertThat(q.correctOption()).isEqualTo(1);
+            assertThat(q.points()).isEqualByComparingTo("3");
+        });
+    }
+
+    @Test
+    @DisplayName("A Word file without any 'Câu n' is rejected with a hint")
+    void docx_noQuestions() throws Exception {
+        MockMultipartFile file = docx("trong.docx", "Chỉ có tiêu đề");
+        assertThatThrownBy(() -> service.read(file)).isInstanceOf(BusinessException.class).hasMessageContaining("Câu 1");
+    }
+
+    @Test
+    @DisplayName("The downloadable Excel and Word templates read back without errors")
+    void templates_roundTrip() {
+        HomeworkQuestionTemplateService templates = new HomeworkQuestionTemplateService();
+        QuestionImportResponse xlsx = service.read(new MockMultipartFile("file", "mau.xlsx", "application/octet-stream", templates.xlsx()));
+        QuestionImportResponse docx = service.read(new MockMultipartFile("file", "mau.docx", "application/octet-stream", templates.docx()));
+
+        for (QuestionImportResponse result : List.of(xlsx, docx)) {
+            assertThat(result.errors()).isEmpty();
+            assertThat(result.questions()).hasSize(4);
+            assertThat(result.questions().get(0).correctOption()).isEqualTo(1);
+            assertThat(result.questions().get(1).answerDetected()).isTrue();
+            assertThat(result.questions().get(2).type()).isEqualTo(QuestionType.ESSAY);
+            assertThat(result.questions().get(3).correctOptions()).containsExactly(0, 2);
+            assertThat(result.publishTime()).isEqualTo(OffsetDateTime.parse("2026-12-01T19:30+07:00"));
+        }
+    }
+
+    @Test
+    @DisplayName("Word exam download: headings, options side by side, answer key table + '1C 2D' line at the end, parts restart numbering")
+    void docx_examWithAnswerKey() throws Exception {
+        byte[] bytes;
+        try (org.apache.poi.xwpf.usermodel.XWPFDocument doc = new org.apache.poi.xwpf.usermodel.XWPFDocument();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            for (String text : List.of(
+                    "BÀI TẬP ĐIỆN TRƯỜNG. CƯỜNG ĐỘ ĐIỆN TRƯỜNG CÓ ĐÁP ÁN",
+                    "PHẦN A. TRẮC NGHIỆM ĐỊNH TÍNH",
+                    "Câu 1.  Điện trường là",
+                    "A. môi trường không khí quanh điện tích.",
+                    "B. môi trường chứa các điện tích.",
+                    "C. môi trường bao quanh điện tích, gắn với điện tích và tác dụng lực điện lên các điện tích khác đặt trong nó.",
+                    "D. môi trường dẫn điện.",
+                    "Câu 2. Cường độ điện trường là đại lượng",
+                    "A. véctơ\tB. vô hướng, có giá trị dương.",
+                    "C. vô hướng, có giá trị dương hoặc âm.\tD. vectơ, có chiều luôn hướng vào điện tích.",
+                    "PHẦN B. TRẮC NGHIỆM ĐỊNH LƯỢNG",
+                    "Câu 1. Một điện tích q = 1 µC đặt trong chân không. Cường độ điện trường tại điểm cách nó 1 m là",
+                    "A. 9000 V/m\tB. 900 V/m\tC. 90 V/m\tD. 9 V/m",
+                    "ĐÁP ÁN")) {
+                doc.createParagraph().createRun().setText(text);
+            }
+            org.apache.poi.xwpf.usermodel.XWPFTable key = doc.createTable(2, 3);
+            String[][] cells = {{"Câu", "1", "2"}, {"Đáp án", "C", "A"}};
+            for (int r = 0; r < 2; r++) for (int c = 0; c < 3; c++) key.getRow(r).getCell(c).setText(cells[r][c]);
+            doc.createParagraph().createRun().setText("1A");
+            doc.createParagraph().createRun().setText("Câu 1. Hướng dẫn: E = k|q|/r² = 9.10^9 . 10^-6 / 1 = 9000 V/m, I = 2 A. Chọn A");
+            doc.write(out);
+            bytes = out.toByteArray();
+        }
+
+        QuestionImportResponse result = service.read(new MockMultipartFile("file", "de.docx", "application/octet-stream", bytes));
+
+        assertThat(result.errors()).isEmpty();
+        assertThat(result.questions()).hasSize(3);
+        assertThat(result.questions().get(0).options()).hasSize(4);
+        assertThat(result.questions().get(0).options().get(3)).isEqualTo("môi trường dẫn điện.");
+        assertThat(result.questions().get(0).correctOption()).isEqualTo(2);
+        assertThat(result.questions().get(1).options()).containsExactly("véctơ", "vô hướng, có giá trị dương.",
+                "vô hướng, có giá trị dương hoặc âm.", "vectơ, có chiều luôn hướng vào điện tích.");
+        assertThat(result.questions().get(1).correctOption()).isZero();
+        assertThat(result.questions().get(2).correctOption()).isZero();
+    }
+
+    @Test
+    @DisplayName("Word: a red or underlined option letter marks the answer")
+    void docx_markedOption() throws Exception {
+        byte[] bytes;
+        try (org.apache.poi.xwpf.usermodel.XWPFDocument doc = new org.apache.poi.xwpf.usermodel.XWPFDocument();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            doc.createParagraph().createRun().setText("Câu 1. 1 + 1 = ?");
+            doc.createParagraph().createRun().setText("A. 1");
+            org.apache.poi.xwpf.usermodel.XWPFParagraph p = doc.createParagraph();
+            org.apache.poi.xwpf.usermodel.XWPFRun letter = p.createRun();
+            letter.setText("B.");
+            letter.setColor("FF0000");
+            p.createRun().setText(" 2");
+            doc.write(out);
+            bytes = out.toByteArray();
+        }
+        QuestionImportResponse result = service.read(new MockMultipartFile("file", "de.docx", "application/octet-stream", bytes));
+        assertThat(result.errors()).isEmpty();
+        assertThat(result.questions().get(0).options()).containsExactly("1", "2");
+        assertThat(result.questions().get(0).correctOption()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Word without answers: the error names the question and says how to add one")
+    void docx_missingAnswerHint() throws Exception {
+        QuestionImportResponse result = service.read(docx("de.docx", "Câu 1. Hỏi?", "A. x", "B. y"));
+        assertThat(result.errors()).singleElement().satisfies(error -> {
+            assertThat(error.label()).isEqualTo("Câu 1");
+            assertThat(error.message()).contains("bảng đáp án");
+        });
+    }
+
+    @Test
+    @DisplayName("Multi-answer: 'A, C' / 'AC' / 'A và C' in a sheet, several '*' marks or 'Đáp án: B, D' in Word, '3AC' in a key")
+    void multipleCorrectOptions() throws Exception {
+        QuestionImportResponse sheet = service.read(csv("""
+                cau_hoi,A,B,C,D,dap_an
+                Q1,a,b,c,d,"A, C"
+                Q2,a,b,c,d,BD
+                Q3,a,b,c,d,A và D
+                Q4,a,b,c,d,A
+                Q5,a,b,c,d,A1
+                """));
+        assertThat(sheet.questions()).hasSize(4);
+        assertThat(sheet.questions().get(0).correctOptions()).containsExactly(0, 2);
+        assertThat(sheet.questions().get(0).correctOption()).isZero();
+        assertThat(sheet.questions().get(1).correctOptions()).containsExactly(1, 3);
+        assertThat(sheet.questions().get(2).correctOptions()).containsExactly(0, 3);
+        assertThat(sheet.questions().get(3).correctOptions()).containsExactly(0);
+        assertThat(sheet.errors()).singleElement().satisfies(error -> assertThat(error.row()).isEqualTo(6));
+
+        QuestionImportResponse word = service.read(docx("de.docx",
+                "Câu 1: Chọn hai", "*A. x", "B. y", "*C. z",
+                "Câu 2: Chọn hai", "A. x    B. y    C. z    D. t", "Đáp án: B, D",
+                "Câu 3: Chọn hai", "A. x", "B. y", "C. z",
+                "ĐÁP ÁN", "3AC"));
+        assertThat(word.errors()).isEmpty();
+        assertThat(word.questions().get(0).correctOptions()).containsExactly(0, 2);
+        assertThat(word.questions().get(1).correctOptions()).containsExactly(1, 3);
+        assertThat(word.questions().get(2).correctOptions()).containsExactly(0, 2);
+    }
 }

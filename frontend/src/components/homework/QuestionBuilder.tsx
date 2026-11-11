@@ -1,6 +1,6 @@
 import { Icon } from "@/components/ui/Icon";
 import { PORTAL_BTN_GHOST, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
-import { newQuestionDraft, totalPoints } from "@/utils/homework";
+import { MAX_QUIZ_TOTAL, distributePoints, newQuestionDraft, totalPoints } from "@/utils/homework";
 import { ALL_CORRECT_TEXT, withAllCorrectD } from "@/utils/questionImport";
 import type { QuestionBuilderProps, QuestionDraft } from "@/interfaces/homework";
 
@@ -8,7 +8,8 @@ const MAX_OPTIONS = 10;
 const OPTION_LETTERS = "ABCDEFGHIJ";
 
 /**
- * Soạn danh sách câu hỏi: trắc nghiệm (chọn một đáp án đúng, hệ thống tự chấm) hoặc tự luận
+ * Soạn danh sách câu hỏi: trắc nghiệm (một hoặc nhiều đáp án đúng, hệ thống tự chấm — câu nhiều đáp án phải chọn
+ * đủ và đúng mới có điểm) hoặc tự luận
  * (học viên viết / chụp ảnh bài làm, gia sư chấm). Bài đã công bố thì chỉ xem.
  */
 export function QuestionBuilder({ questions, onChange, readOnly = false }: QuestionBuilderProps) {
@@ -32,7 +33,12 @@ export function QuestionBuilder({ questions, onChange, readOnly = false }: Quest
             <li key={question.key} className="rounded-2xl border border-brand-sandLine bg-brand-sand/40 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-[14.5px] font-bold text-brand-navy">
-                  Câu {index + 1} · {question.type === "MULTIPLE_CHOICE" ? "Trắc nghiệm" : "Tự luận"}
+                  Câu {index + 1} ·{" "}
+                  {question.type === "ESSAY"
+                    ? "Tự luận"
+                    : question.multiple
+                      ? `Trắc nghiệm nhiều đáp án (chọn ${question.correctOptions.length})`
+                      : "Trắc nghiệm"}
                 </p>
                 {!readOnly && (
                   <div className="flex items-center">
@@ -100,54 +106,86 @@ export function QuestionBuilder({ questions, onChange, readOnly = false }: Quest
               </div>
 
               {question.type === "MULTIPLE_CHOICE" && (
-                <fieldset className="mt-3">
-                  <legend className={PORTAL_LABEL}>Phương án (chọn nút tròn ở đáp án đúng)</legend>
+                <fieldset className="mt-3" aria-label={`Phương án câu ${index + 1}`}>
+                  <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                    <p className={`${PORTAL_LABEL} mb-0`}>
+                      {question.multiple
+                        ? "Phương án (tích mọi đáp án đúng — học viên phải chọn đủ và đúng mới có điểm)"
+                        : "Phương án (chọn nút tròn ở đáp án đúng)"}
+                    </p>
+                    <label className="flex cursor-pointer items-center gap-2 text-[13.5px] font-semibold text-brand-navy">
+                      <input
+                        type="checkbox"
+                        checked={question.multiple}
+                        disabled={readOnly}
+                        onChange={(event) =>
+                          patch(index, {
+                            multiple: event.target.checked,
+                            // Tắt nhiều đáp án: giữ lại đáp án đúng đầu tiên
+                            correctOptions: event.target.checked ? question.correctOptions : question.correctOptions.slice(0, 1),
+                          })
+                        }
+                        className="h-4 w-4 accent-brand-navy"
+                      />
+                      Nhiều đáp án đúng
+                    </label>
+                  </div>
                   <ul className="space-y-2">
-                    {question.options.map((option, optionIndex) => (
-                      <li key={optionIndex} className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name={`${question.key}-correct`}
-                          checked={question.correctOption === optionIndex}
-                          disabled={readOnly}
-                          onChange={() => patch(index, { correctOption: optionIndex })}
-                          aria-label={`Đáp án đúng là ${OPTION_LETTERS[optionIndex]}`}
-                          className="h-4 w-4 shrink-0 accent-emerald-600"
-                        />
-                        <span className="w-5 shrink-0 text-[14px] font-bold text-brand-muted">{OPTION_LETTERS[optionIndex]}.</span>
-                        <input
-                          type="text"
-                          maxLength={1000}
-                          readOnly={readOnly}
-                          value={option}
-                          placeholder={`Phương án ${OPTION_LETTERS[optionIndex]}`}
-                          onChange={(event) =>
-                            patch(index, { options: question.options.map((text, i) => (i === optionIndex ? event.target.value : text)) })
-                          }
-                          className={`${PORTAL_INPUT} ${question.correctOption === optionIndex ? "border-emerald-500" : ""}`}
-                        />
-                        {!readOnly && question.options.length > 2 && (
-                          <button
-                            type="button"
-                            className={PORTAL_BTN_GHOST}
-                            aria-label={`Xóa phương án ${OPTION_LETTERS[optionIndex]}`}
-                            onClick={() =>
+                    {question.options.map((option, optionIndex) => {
+                      const isCorrect = question.correctOptions.includes(optionIndex);
+                      return (
+                        <li key={optionIndex} className="flex items-center gap-2">
+                          <input
+                            type={question.multiple ? "checkbox" : "radio"}
+                            name={`${question.key}-correct`}
+                            checked={isCorrect}
+                            disabled={readOnly}
+                            onChange={() =>
                               patch(index, {
-                                options: question.options.filter((_, i) => i !== optionIndex),
-                                correctOption:
-                                  question.correctOption === optionIndex
-                                    ? 0
-                                    : question.correctOption > optionIndex
-                                      ? question.correctOption - 1
-                                      : question.correctOption,
+                                correctOptions: question.multiple
+                                  ? isCorrect
+                                    ? question.correctOptions.filter((i) => i !== optionIndex)
+                                    : [...question.correctOptions, optionIndex].sort((a, b) => a - b)
+                                  : [optionIndex],
                               })
                             }
-                          >
-                            <Icon name="close" className="text-[18px]" />
-                          </button>
-                        )}
-                      </li>
-                    ))}
+                            aria-label={`Đáp án đúng là ${OPTION_LETTERS[optionIndex]}`}
+                            className="h-4 w-4 shrink-0 accent-emerald-600"
+                          />
+                          <span className="w-5 shrink-0 text-[14px] font-bold text-brand-muted">{OPTION_LETTERS[optionIndex]}.</span>
+                          <input
+                            type="text"
+                            maxLength={1000}
+                            readOnly={readOnly}
+                            value={option}
+                            placeholder={`Phương án ${OPTION_LETTERS[optionIndex]}`}
+                            onChange={(event) =>
+                              patch(index, { options: question.options.map((text, i) => (i === optionIndex ? event.target.value : text)) })
+                            }
+                            className={`${PORTAL_INPUT} ${isCorrect ? "border-emerald-500" : ""}`}
+                          />
+                          {!readOnly && question.options.length > 2 && (
+                            <button
+                              type="button"
+                              className={PORTAL_BTN_GHOST}
+                              aria-label={`Xóa phương án ${OPTION_LETTERS[optionIndex]}`}
+                              onClick={() => {
+                                // Bỏ phương án bị xóa khỏi đáp án đúng, dời các đáp án phía sau lên một vị trí
+                                const shifted = question.correctOptions
+                                  .filter((i) => i !== optionIndex)
+                                  .map((i) => (i > optionIndex ? i - 1 : i));
+                                patch(index, {
+                                  options: question.options.filter((_, i) => i !== optionIndex),
+                                  correctOptions: shifted.length || question.multiple ? shifted : [0],
+                                });
+                              }}
+                            >
+                              <Icon name="close" className="text-[18px]" />
+                            </button>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                   {!readOnly && question.options.length < MAX_OPTIONS && (
                     <button
@@ -196,7 +234,20 @@ export function QuestionBuilder({ questions, onChange, readOnly = false }: Quest
           </button>
         </div>
       )}
-      {questions.length > 0 && <p className="mt-3 text-[14px] font-semibold text-brand-navy">Tổng điểm: {totalPoints(questions)}</p>}
+      {questions.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <p className={`text-[14px] font-semibold ${totalPoints(questions) > MAX_QUIZ_TOTAL ? "text-red-700" : "text-brand-navy"}`}>
+            Tổng điểm: {totalPoints(questions)} / {MAX_QUIZ_TOTAL}
+            {totalPoints(questions) > MAX_QUIZ_TOTAL && " — vượt quá, tối đa 10 điểm"}
+          </p>
+          {!readOnly && totalPoints(questions) !== MAX_QUIZ_TOTAL && (
+            <button type="button" className={PORTAL_BTN_GHOST} onClick={() => onChange(distributePoints(questions))}>
+              <Icon name="balance" className="text-[18px]" />
+              Chia đều {MAX_QUIZ_TOTAL} điểm
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -32,18 +32,22 @@ export function withAllCorrectD(draft: QuestionDraft): QuestionDraft {
   while (options.length < 3) options.push("");
   if (options.length === 3 || !options[3].trim()) options[3] = ALL_CORRECT_TEXT;
   else if (!isAllCorrect(options[3])) options.splice(3, 0, ALL_CORRECT_TEXT);
-  return { ...draft, options: options.slice(0, 10), correctOption: 3 };
+  return { ...draft, options: options.slice(0, 10), correctOptions: [3], multiple: false };
 }
 
 /** Câu hỏi backend đọc từ file → câu hỏi đang soạn trong form */
 export function importedToDrafts(questions: QuestionImportResponse["questions"]): QuestionDraft[] {
-  return questions.map((question) => ({
-    ...newQuestionDraft(question.type),
-    prompt: question.prompt,
-    options: question.type === "MULTIPLE_CHOICE" ? (question.options ?? []) : [],
-    correctOption: question.correctOption ?? 0,
-    points: String(question.points),
-  }));
+  return questions.map((question) => {
+    const correct = question.correctOptions ?? (question.correctOption !== null ? [question.correctOption] : [0]);
+    return {
+      ...newQuestionDraft(question.type),
+      prompt: question.prompt,
+      options: question.type === "MULTIPLE_CHOICE" ? (question.options ?? []) : [],
+      correctOptions: correct,
+      multiple: correct.length > 1,
+      points: String(question.points),
+    };
+  });
 }
 
 /** Nội dung file mẫu: dòng tiêu đề + ví dụ (có câu D tự nhận đáp án và câu tự luận) */
@@ -52,6 +56,7 @@ const TEMPLATE_ROWS = [
   ["2 + 3 bằng bao nhiêu?", "trắc nghiệm", "4", "5", "6", "7", "B", "1", "2026-12-01 19:30"],
   ["Số nào là số chẵn?", "trắc nghiệm", "2", "4", "6", ALL_CORRECT_TEXT, "", "1", ""],
   ["Trình bày cách giải phương trình bậc nhất.", "tự luận", "", "", "", "", "", "2", ""],
+  ["Những số nào là số nguyên tố? (chọn 2 đáp án)", "trắc nghiệm", "2", "4", "3", "9", "A, C", "1", ""],
 ];
 
 /** Tải file mẫu CSV (BOM UTF-8 để Excel hiện đúng tiếng Việt) */
@@ -59,10 +64,15 @@ export function downloadQuestionTemplate(): void {
   const csv = TEMPLATE_ROWS.map((row) =>
     row.map((cell) => (/[",\r\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell)).join(","),
   ).join("\r\n");
-  const url = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
+  saveBlob(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }), "mau-cau-hoi.csv");
+}
+
+/** L\u01B0u m\u1ED9t Blob v\u1EC1 m\u00E1y v\u1EDBi t\u00EAn file cho tr\u01B0\u1EDBc (t\u1EA3i xu\u1ED1ng, kh\u00F4ng m\u1EDF trang m\u1EDBi) */
+export function saveBlob(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "mau-cau-hoi-trac-nghiem.csv";
+  link.download = fileName;
   document.body.appendChild(link);
   link.click();
   link.remove();

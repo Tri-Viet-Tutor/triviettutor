@@ -83,6 +83,12 @@ export async function fetchHomework(homeworkId: number): Promise<HomeworkRespons
   return unwrap(await api.get<ApiResponse<HomeworkResponse>>(`/homeworks/${homeworkId}`));
 }
 
+/** GET /homeworks/questions/template/{format} — file mẫu câu hỏi Excel / Word (có JWT) */
+export async function fetchQuestionTemplate(format: "xlsx" | "docx"): Promise<Blob> {
+  const { data } = await api.get<Blob>(`/homeworks/questions/template/${format}`, { responseType: "blob" });
+  return data;
+}
+
 /** GET /submission-attachments/{id} — tải tệp bài làm (có JWT) để hiển thị */
 export async function fetchAttachmentBlob(attachmentId: number): Promise<Blob> {
   const { data } = await api.get<Blob>(`/submission-attachments/${attachmentId}`, { responseType: "blob" });

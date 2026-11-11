@@ -59,20 +59,25 @@ export function newQuestionDraft(type: QuestionDraft["type"]): QuestionDraft {
     type,
     prompt: "",
     options: type === "MULTIPLE_CHOICE" ? ["", "", "", ""] : [],
-    correctOption: 0,
+    correctOptions: [0],
+    multiple: false,
     points: "1",
   };
 }
 
 /** Câu hỏi đã lưu → câu hỏi đang soạn */
 export function toQuestionDrafts(questions: QuestionResponse[] = []): QuestionDraft[] {
-  return questions.map((question) => ({
-    ...newQuestionDraft(question.type),
-    prompt: question.prompt,
-    options: question.options ?? [],
-    correctOption: question.correctOption ?? 0,
-    points: String(question.points),
-  }));
+  return questions.map((question) => {
+    const correct = question.correctOptions ?? (question.correctOption !== undefined ? [question.correctOption] : [0]);
+    return {
+      ...newQuestionDraft(question.type),
+      prompt: question.prompt,
+      options: question.options ?? [],
+      correctOptions: correct,
+      multiple: correct.length > 1,
+      points: String(question.points),
+    };
+  });
 }
 
 /** Câu hỏi đang soạn → dữ liệu gửi backend (bỏ các phương án để trống, dời đáp án đúng theo) */
@@ -81,17 +86,43 @@ export function toQuestionInputs(drafts: QuestionDraft[]): QuestionInput[] {
     const points = Number(draft.points);
     if (draft.type === "ESSAY") return { type: "ESSAY", prompt: draft.prompt.trim(), points };
     const kept = draft.options.map((text, index) => ({ text: text.trim(), index })).filter((option) => option.text);
+    const correct = kept
+      .map((option, newIndex) => (draft.correctOptions.includes(option.index) ? newIndex : -1))
+      .filter((index) => index >= 0);
+    const correctOptions = correct.length ? correct : [0];
     return {
       type: "MULTIPLE_CHOICE",
       prompt: draft.prompt.trim(),
       options: kept.map((option) => option.text),
-      correctOption: Math.max(
-        0,
-        kept.findIndex((option) => option.index === draft.correctOption),
-      ),
+      correctOption: correctOptions[0],
+      ...(correctOptions.length > 1 ? { correctOptions } : {}),
       points,
     };
   });
+}
+
+/** Các phương án học viên đã chọn (bài làm cũ chỉ có selectedOption) */
+export function pickedOptions(answer?: { selectedOption?: number; selectedOptions?: number[] }): number[] {
+  if (answer?.selectedOptions?.length) return [...answer.selectedOptions].sort((a, b) => a - b);
+  return answer?.selectedOption !== undefined ? [answer.selectedOption] : [];
+}
+
+/** Các đáp án đúng của câu (gia sư mới nhận được) */
+export function correctOptionsOf(question: QuestionResponse): number[] {
+  if (question.correctOptions?.length) return [...question.correctOptions].sort((a, b) => a - b);
+  return question.correctOption !== undefined ? [question.correctOption] : [];
+}
+
+/** Hai tập phương án giống hệt nhau (đã sắp xếp) */
+export function sameOptions(a: number[], b: number[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+const LETTERS = "ABCDEFGHIJ";
+
+/** [0, 2] → "A, C" */
+export function optionLetters(indexes: number[]): string {
+  return indexes.map((index) => LETTERS[index]).join(", ");
 }
 
 /** Lỗi đầu tiên của bộ câu hỏi (để báo trước khi gửi), hoặc null nếu hợp lệ */
@@ -104,10 +135,31 @@ export function questionDraftError(drafts: QuestionDraft[]): string | null {
     if (draft.type === "MULTIPLE_CHOICE") {
       const filled = draft.options.filter((option) => option.trim()).length;
       if (filled < 2) return `${label}: cần ít nhất 2 phương án.`;
-      if (!draft.options[draft.correctOption]?.trim()) return `${label}: hãy chọn đáp án đúng là một phương án có nội dung.`;
+      const correct = draft.correctOptions.filter((index) => draft.options[index]?.trim());
+      if (correct.length !== draft.correctOptions.length || correct.length === 0)
+        return `${label}: hãy chọn đáp án đúng là phương án có nội dung.`;
+      if (draft.multiple && correct.length < 2) return `${label}: câu nhiều đáp án cần chọn ít nhất 2 đáp án đúng.`;
     }
   }
+  const total = totalPoints(drafts);
+  if (total > MAX_QUIZ_TOTAL)
+    return `Tổng điểm các câu đang là ${total}, tối đa ${MAX_QUIZ_TOTAL}. Bấm “Chia đều ${MAX_QUIZ_TOTAL} điểm” hoặc giảm điểm từng câu.`;
   return null;
+}
+
+/** Bài có câu hỏi chấm theo thang 10: tổng điểm các câu tối đa 10 (backend cũng chặn) */
+export const MAX_QUIZ_TOTAL = 10;
+
+/**
+ * Chia đều `total` điểm cho các câu, tính theo phần trăm điểm (0,01) để tổng đúng bằng `total`:
+ * 61 câu → 37 câu 0,16 điểm và 24 câu 0,17 điểm (các câu đầu nhận phần dư).
+ */
+export function distributePoints<T extends { points: string }>(drafts: T[], total = MAX_QUIZ_TOTAL): T[] {
+  if (drafts.length === 0) return drafts;
+  const cents = Math.round(total * 100);
+  const base = Math.floor(cents / drafts.length);
+  const extra = cents - base * drafts.length;
+  return drafts.map((draft, index) => ({ ...draft, points: String((base + (index < extra ? 1 : 0)) / 100) }));
 }
 
 /** Tổng điểm các câu (làm tròn 2 chữ số như backend) */
