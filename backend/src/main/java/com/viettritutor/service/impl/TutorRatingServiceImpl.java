@@ -24,6 +24,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -59,11 +60,6 @@ public class TutorRatingServiceImpl implements TutorRatingService {
             throw new BusinessException(ErrorCode.CLASS_NOT_FOUND);
         }
 
-        if (tutorRatingRepository.existsByStudent_IdAndClassGroup_Id(
-                student.getId(), classGroupId)) {
-            throw new BusinessException(ErrorCode.RATING_ALREADY_EXISTS);
-        }
-
         ClassGroup classGroup = classGroupRepository.findById(classGroupId).orElse(null);
 
         // Only students actually taught by this tutor may rate: an ACTIVE enrollment in a
@@ -77,6 +73,20 @@ public class TutorRatingServiceImpl implements TutorRatingService {
         );
         if (!taught) {
             throw new BusinessException(ErrorCode.RATING_NOT_ELIGIBLE);
+        }
+
+        // Idempotent upsert: if the student already rated this class, update the existing review
+        Optional<TutorRating> existingRating = tutorRatingRepository.findByStudent_IdAndClassGroup_Id(
+                student.getId(), classGroupId);
+        if (existingRating.isPresent()) {
+            TutorRating existing = existingRating.get();
+            existing.setRating(request.rating());
+            existing.setComment(request.comment());
+            existing.setUpdatedAt(LocalDateTime.now());
+            if (existing.getClassGroup() == null && classGroup != null) {
+                existing.setClassGroup(classGroup);
+            }
+            return toResponse(tutorRatingRepository.save(existing));
         }
 
         LocalDateTime now = LocalDateTime.now();

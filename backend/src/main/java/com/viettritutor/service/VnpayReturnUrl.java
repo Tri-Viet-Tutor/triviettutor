@@ -15,11 +15,13 @@ public class VnpayReturnUrl {
     private final VnpayProperties properties;
 
     public VnpayReturnUrl(@Value("${app.cors.allowed-origins}") String allowed,
-                          @Value("${app.frontend-url}") String frontend, VnpayProperties properties) {
+            @Value("${app.frontend-url}") String frontend, VnpayProperties properties) {
         this.properties = properties;
         this.fallback = origin(frontend);
         this.origins = new HashSet<>();
-        for (String value : allowed.split(",")) if (!value.isBlank()) origins.add(origin(value.trim()));
+        for (String value : allowed.split(","))
+            if (!value.isBlank())
+                origins.add(origin(value.trim()));
         origins.add(fallback);
     }
 

@@ -1,7 +1,6 @@
 package com.viettritutor.repository;
 
 import com.viettritutor.entity.TutorRating;
-import jakarta.validation.constraints.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -40,6 +39,4 @@ public interface TutorRatingRepository
     );
 
     long countByTutor_Id(Long tutorId);
-
-    boolean existsByStudent_IdAndClassGroup_Id(Long id, @NotNull Long aLong);
 }

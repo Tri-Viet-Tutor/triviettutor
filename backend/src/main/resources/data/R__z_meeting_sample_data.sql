@@ -397,13 +397,6 @@ INSERT INTO tutor_reviews (id, student_id, tutor_id, rating, comment, created_at
 INSERT INTO tutor_reviews (id, student_id, tutor_id, rating, comment, created_at, updated_at) VALUES (77, 29, 27, 5.0, 'Gia sư hướng dẫn phương pháp giải bài tập rất nhanh.', '2026-11-02 21:00:00+07', '2026-11-02 21:00:00+07') ON CONFLICT DO NOTHING;
 INSERT INTO tutor_reviews (id, student_id, tutor_id, rating, comment, created_at, updated_at) VALUES (78, 13, 31, 4.5, 'Em đã hiểu rõ phần kiến thức hổng sau buổi học này.', '2026-11-01 21:00:00+07', '2026-11-01 21:00:00+07') ON CONFLICT DO NOTHING;
 INSERT INTO tutor_reviews (id, student_id, tutor_id, rating, comment, created_at, updated_at) VALUES (79, 22, 32, 5.0, 'Giáo viên nhiệt tình, tương tác tốt qua LiveKit video call.', '2026-10-31 21:00:00+07', '2026-10-31 21:00:00+07') ON CONFLICT DO NOTHING;
-UPDATE tutor_reviews r
-SET class_group_id = COALESCE(
-    (SELECT a.class_group_id FROM tutor_assignments a WHERE a.tutor_id = r.tutor_id LIMIT 1),
-    (SELECT e.class_group_id FROM enrollments e WHERE e.student_id = r.student_id LIMIT 1),
-    20
-)
-WHERE r.class_group_id IS NULL;
 SELECT setval(pg_get_serial_sequence('tutor_reviews', 'id'), COALESCE((SELECT MAX(id) FROM tutor_reviews), 1));
 
 SET session_replication_role = 'origin';
