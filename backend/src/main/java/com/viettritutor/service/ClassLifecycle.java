@@ -6,4 +6,7 @@ package com.viettritutor.service;
  */
 public interface ClassLifecycle {
     void markCompleted(Long classGroupId);
+
+    /** True when every original session is completed, or cancelled and replaced by a completed makeup. */
+    boolean allObligationsCompleted(Long classGroupId);
 }
