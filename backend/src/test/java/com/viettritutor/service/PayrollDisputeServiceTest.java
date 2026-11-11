@@ -1,4 +1,5 @@
 package com.viettritutor.service;
+import com.viettritutor.service.impl.PayrollDisputeServiceImpl;
 
 import com.viettritutor.common.api.PageResponse;
 import com.viettritutor.common.exception.BusinessException;
@@ -52,7 +53,7 @@ class PayrollDisputeServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new PayrollDisputeService(disputes, lines, payroll, users, mailer, CLOCK);
+        service = new PayrollDisputeServiceImpl(disputes, lines, payroll, users, mailer, CLOCK);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "eventPublisher", eventPublisher);
         tutor = User.builder().id(10L).fullName("Tutor One").role("ROLE_TUTOR").build();
         TransactionSynchronizationManager.initSynchronization();
