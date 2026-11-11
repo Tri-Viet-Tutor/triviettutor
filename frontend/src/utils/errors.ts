@@ -79,6 +79,8 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   ATTENDANCE_SESSION_NOT_ENDED: "Buổi học chưa kết thúc nên chưa chốt điểm danh được.",
   ATTENDANCE_NOT_FOUND: "Không tìm thấy bản ghi điểm danh.",
   PAYROLL_FINALIZED: "Buổi này đã nằm trong bảng lương đã chốt nên không sửa được.",
+  PAYROLL_LINE_NOT_FOUND: "Tháng này chưa có phiếu lương đã chốt để khiếu nại.",
+  PAYROLL_ALREADY_DISPUTED: "Phiếu lương này đã được gửi khiếu nại trước đó.",
   // Bài tập, bài làm
   HOMEWORK_NOT_FOUND: "Không tìm thấy bài tập này.",
   HOMEWORK_LOCKED: "Bài tập đã đóng nên không sửa hay mở lại được.",

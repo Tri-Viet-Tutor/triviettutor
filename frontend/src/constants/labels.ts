@@ -102,10 +102,39 @@ export const ENROLLMENT_STATUS: Record<EnrollmentStatus, StatusStyle> = {
   REFUNDED: { label: "Đã hoàn tiền", tone: "amber", icon: "currency_exchange" },
 };
 
+/** Nhãn chuẩn của trạng thái giao dịch học phí (PAY-01) */
+export const TRANSACTION_STATUS = {
+  SUCCESS: { label: "Thành công", tone: "green", icon: "check_circle" },
+  PENDING: { label: "Đang xử lý / Giữ chỗ", tone: "amber", icon: "hourglass_top" },
+  FAILED: { label: "Thất bại", tone: "red", icon: "cancel" },
+  REFUNDED: { label: "Đã hoàn tiền", tone: "slate", icon: "currency_exchange" },
+} satisfies Record<string, StatusStyle>;
+
+/** Trạng thái ngoài 4 nhãn chuẩn mà backend vẫn có thể trả về */
+const OTHER_TRANSACTION_STATUS: Record<string, StatusStyle> = {
+  PARTIALLY_REFUNDED: { label: "Hoàn một phần", tone: "amber", icon: "currency_exchange" },
+  REQUIRES_REFUND: { label: "Cần hoàn tiền", tone: "red", icon: "warning" },
+  EXPIRED: { label: "Hết hạn giữ chỗ", tone: "slate", icon: "timer_off" },
+  CANCELLED: { label: "Đã hủy", tone: "slate", icon: "block" },
+};
+
+/**
+ * Nhãn của một trạng thái giao dịch backend (đơn học phí, thanh toán, yêu cầu thanh toán):
+ * COMPLETED / PAID là "Thành công", PENDING / PENDING_PAYMENT là "Đang xử lý / Giữ chỗ".
+ */
+export function transactionStatus(status: string): StatusStyle {
+  if (status === "SUCCESS" || status === "COMPLETED" || status === "PAID") return TRANSACTION_STATUS.SUCCESS;
+  if (status === "PENDING" || status === "PENDING_PAYMENT") return TRANSACTION_STATUS.PENDING;
+  if (status === "FAILED") return TRANSACTION_STATUS.FAILED;
+  if (status === "REFUNDED") return TRANSACTION_STATUS.REFUNDED;
+  return OTHER_TRANSACTION_STATUS[status] ?? { label: status, tone: "slate", icon: "help" };
+}
+
 /** Trạng thái bảng lương tháng */
 export const PAYROLL_STATUS: Record<PayrollStatus, StatusStyle> = {
   DRAFT: { label: "Tạm tính", tone: "amber", icon: "pending" },
   FINALIZED: { label: "Đã chốt", tone: "green", icon: "lock" },
+  DISPUTED: { label: "Đang khiếu nại", tone: "red", icon: "report" },
 };
 
 /** Trạng thái bài tập (phía gia sư) */

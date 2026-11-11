@@ -15,6 +15,7 @@ export const ADMIN_NAV: PortalNavItem[] = [
   { to: ROUTES.adminPayments, label: "Thanh toán", icon: "payments", desktopOnly: true },
   { to: ROUTES.adminPayroll, label: "Bảng lương", icon: "account_balance_wallet", desktopOnly: true },
   { to: ROUTES.adminReviews, label: "Đánh giá gia sư", icon: "reviews", desktopOnly: true },
+  { to: ROUTES.adminSettings, label: "Cài đặt hệ thống", shortLabel: "Cài đặt", icon: "settings", desktopOnly: true },
 ];
 
 /** Các trang của khu học viên. Hồ sơ mở từ menu avatar trên thanh trên. */

@@ -25,6 +25,23 @@ export interface QuestionInput {
   points: number;
 }
 
+/** dto.learning.QuestionImportResponse — POST /homeworks/questions/import (HW-02), backend không lưu gì */
+export interface QuestionImportResponse {
+  questions: {
+    type: QuestionType;
+    prompt: string;
+    options: string[] | null;
+    correctOption: number | null;
+    points: number;
+    /** Đáp án được tự nhận là "Tất cả các đáp án trên đều đúng" vì cột đáp án để trống */
+    answerDetected: boolean;
+  }[];
+  /** Cột publish_time của file — dùng làm giờ mở bài */
+  publishTime: IsoDateTime | null;
+  /** Lỗi theo từng dòng của file (dòng tiêu đề là dòng 1) */
+  errors: { row: number; message: string }[];
+}
+
 /** dto.learning.QuestionResponse — học viên không nhận `correctOption` */
 export interface QuestionResponse {
   id: number;
@@ -206,6 +223,14 @@ export interface QuestionBuilderProps {
   onChange: (questions: QuestionDraft[]) => void;
   /** Bài đã công bố: câu hỏi chỉ xem, không sửa */
   readOnly?: boolean;
+}
+
+/** Props của QuestionImport */
+export interface QuestionImportProps {
+  /** Đang có câu hỏi trong form: hỏi thay thế hay thêm vào cuối */
+  hasQuestions: boolean;
+  /** Đưa câu hỏi đọc từ file vào form; publishTime có thì điền làm giờ mở bài */
+  onImport: (questions: QuestionDraft[], publishTime: IsoDateTime | null, mode: "replace" | "append") => void;
 }
 
 export interface HomeworkEditorProps {

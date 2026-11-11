@@ -5,7 +5,7 @@ import com.viettritutor.enums.PayrollStatus;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-@Getter @Builder @JsonInclude(JsonInclude.Include.NON_NULL)
+@Getter @Builder(toBuilder=true) @JsonInclude(JsonInclude.Include.NON_NULL)
 public class PayrollLineResponse {
     private Long tutorId;
     private String tutorName;
@@ -22,4 +22,7 @@ public class PayrollLineResponse {
     private BigDecimal sessionPay;
     private BigDecimal totalPay;
     private TeachingPeriodSummary reconciliation;
+    /** PAYR-02: set only while the tutor's complaint about this payslip exists. */
+    private String disputeReason;
+    private OffsetDateTime disputedAt;
 }

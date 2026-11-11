@@ -18,6 +18,7 @@ import { finalizePayroll } from "@/services/managementService";
 import { formatVnd } from "@/utils/currency";
 import { portalErrorMessage } from "@/utils/errors";
 import { displayCode } from "@/utils/classes";
+import { downloadPayrollCsv } from "@/utils/payrollExport";
 
 /** Tháng trước của (năm, tháng) */
 function shiftMonth(year: number, month: number, delta: number) {
@@ -128,6 +129,16 @@ export function AdminPayrollPage() {
             Đã chốt lúc {new Date(data.finalizedAt).toLocaleString("vi-VN")}
           </p>
         )}
+        {data && data.lines.length > 0 && (
+          <button
+            type="button"
+            onClick={() => downloadPayrollCsv(data.lines, `bang-luong-${data.year}-${String(data.month).padStart(2, "0")}.csv`)}
+            className={PORTAL_BTN_SECONDARY}
+          >
+            <Icon name="download" className="text-[19px]" />
+            Xuất Excel (CSV)
+          </button>
+        )}
       </div>
 
       {payroll.isPending ? (
@@ -198,6 +209,14 @@ export function AdminPayrollPage() {
                           <td className="px-5 py-3.5">
                             <p className="font-semibold text-brand-ink">{line.tutorName}</p>
                             <p className="text-[12.5px] text-brand-muted">Mã {displayCode("tutor", line.tutorId)}</p>
+                            {line.status === "DISPUTED" && (
+                              <div className="mt-1.5 max-w-[260px] space-y-1">
+                                <StatusChip tone={PAYROLL_STATUS.DISPUTED.tone} icon={PAYROLL_STATUS.DISPUTED.icon}>
+                                  {PAYROLL_STATUS.DISPUTED.label}
+                                </StatusChip>
+                                <p className="whitespace-pre-line break-words text-[12.5px] text-red-800">{line.disputeReason}</p>
+                              </div>
+                            )}
                             <button
                               type="button"
                               aria-expanded={expanded === line.tutorId}

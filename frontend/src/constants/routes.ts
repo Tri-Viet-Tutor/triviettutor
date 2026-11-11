@@ -37,6 +37,7 @@ export const ROUTES = {
   adminClasses: "/admin/classes",
   adminPayroll: "/admin/payroll",
   adminReviews: "/admin/reviews",
+  adminSettings: "/admin/settings",
   /** Khu gia sư: tổng quan, lịch dạy + điểm danh, lịch rảnh, xin nghỉ, hồ sơ */
   tutor: "/tutor",
   tutorSessions: "/tutor/sessions",

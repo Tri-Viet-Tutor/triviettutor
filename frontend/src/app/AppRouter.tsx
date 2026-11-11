@@ -48,6 +48,7 @@ import { AdminPaymentsPage } from "@/pages/admin/AdminPaymentsPage";
 import { AdminCoursesPage } from "@/pages/admin/AdminCoursesPage";
 import { AdminClassesPage } from "@/pages/admin/AdminClassesPage";
 import { AdminPayrollPage } from "@/pages/admin/AdminPayrollPage";
+import { AdminSettingsPage } from "@/pages/admin/AdminSettingsPage";
 import { AdminReviewsPage } from "@/pages/admin/AdminReviewsPage";
 
 // Trang gia sư
@@ -125,6 +126,7 @@ export function AppRouter() {
               <Route path={ROUTES.adminClasses} element={<AdminClassesPage />} />
               <Route path={ROUTES.adminPayroll} element={<AdminPayrollPage />} />
               <Route path={ROUTES.adminReviews} element={<AdminReviewsPage />} />
+              <Route path={ROUTES.adminSettings} element={<AdminSettingsPage />} />
               <Route path={ROUTES.adminProfile} element={<ProfilePage />} />
             </Route>
           </Route>
