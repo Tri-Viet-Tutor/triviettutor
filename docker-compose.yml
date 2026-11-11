@@ -35,6 +35,8 @@ services:
     env_file:
       - .env
     environment:
+      SYSTEM_ADMIN_ID: ${SYSTEM_ADMIN_ID:-}
+      APP_CLASS_CANCELLATION_CRON: "0 */1 * * * *"
       SPRING_PROFILES_ACTIVE: ${APP_PROFILE:-dev}
       APP_PROFILE: ${APP_PROFILE:-dev}
       PORT: ${BACKEND_PORT:-8080}
