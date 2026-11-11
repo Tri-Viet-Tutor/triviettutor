@@ -179,6 +179,7 @@ public enum ErrorCode {
     HOMEWORK_WRONG_PASSWORD (HttpStatus.FORBIDDEN, "The homework password is incorrect"),
     INVALID_HOMEWORK_QUESTION (HttpStatus.BAD_REQUEST, "Multiple-choice questions need 2-10 options and a valid correct option; essay questions take neither"),
     HOMEWORK_SCORE_MISMATCH (HttpStatus.BAD_REQUEST, "maxScore must equal the sum of the question points"),
+    QUIZ_TOTAL_TOO_HIGH (HttpStatus.BAD_REQUEST, "The question points must add up to at most 10"),
     INVALID_QUESTION_IMPORT (HttpStatus.BAD_REQUEST, "Upload a .csv, .xlsx, .doc or .docx question file of at most 2 MB"),
     INVALID_ANSWER (HttpStatus.BAD_REQUEST, "Each answer must match one question of this homework and its type"),
     GRADE_SCORE_REQUIRED (HttpStatus.BAD_REQUEST, "A score is required"),

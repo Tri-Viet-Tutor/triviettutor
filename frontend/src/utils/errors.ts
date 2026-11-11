@@ -96,6 +96,7 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   HOMEWORK_WRONG_PASSWORD: "Mật khẩu không đúng. Hãy hỏi lại gia sư.",
   INVALID_HOMEWORK_QUESTION: "Câu trắc nghiệm cần 2–10 phương án và một đáp án đúng.",
   HOMEWORK_SCORE_MISMATCH: "Điểm tối đa phải bằng tổng điểm các câu hỏi.",
+  QUIZ_TOTAL_TOO_HIGH: "Tổng điểm các câu hỏi tối đa là 10. Bấm “Chia đều 10 điểm” để chia lại.",
   INVALID_HOMEWORK_SCORE: "Điểm không được vượt quá điểm tối đa.",
   INVALID_RESOURCE_URL: "Link tài liệu phải là đường dẫn https hợp lệ.",
   LEARNING_VERSION_CONFLICT: "Dữ liệu vừa được thay đổi ở nơi khác. Hãy tải lại trang rồi thử lại.",

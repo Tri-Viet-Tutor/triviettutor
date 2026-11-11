@@ -141,7 +141,25 @@ export function questionDraftError(drafts: QuestionDraft[]): string | null {
       if (draft.multiple && correct.length < 2) return `${label}: câu nhiều đáp án cần chọn ít nhất 2 đáp án đúng.`;
     }
   }
+  const total = totalPoints(drafts);
+  if (total > MAX_QUIZ_TOTAL)
+    return `Tổng điểm các câu đang là ${total}, tối đa ${MAX_QUIZ_TOTAL}. Bấm “Chia đều ${MAX_QUIZ_TOTAL} điểm” hoặc giảm điểm từng câu.`;
   return null;
+}
+
+/** Bài có câu hỏi chấm theo thang 10: tổng điểm các câu tối đa 10 (backend cũng chặn) */
+export const MAX_QUIZ_TOTAL = 10;
+
+/**
+ * Chia đều `total` điểm cho các câu, tính theo phần trăm điểm (0,01) để tổng đúng bằng `total`:
+ * 61 câu → 37 câu 0,16 điểm và 24 câu 0,17 điểm (các câu đầu nhận phần dư).
+ */
+export function distributePoints<T extends { points: string }>(drafts: T[], total = MAX_QUIZ_TOTAL): T[] {
+  if (drafts.length === 0) return drafts;
+  const cents = Math.round(total * 100);
+  const base = Math.floor(cents / drafts.length);
+  const extra = cents - base * drafts.length;
+  return drafts.map((draft, index) => ({ ...draft, points: String((base + (index < extra ? 1 : 0)) / 100) }));
 }
 
 /** Tổng điểm các câu (làm tròn 2 chữ số như backend) */

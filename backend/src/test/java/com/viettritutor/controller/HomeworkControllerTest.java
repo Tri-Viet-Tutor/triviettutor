@@ -625,6 +625,19 @@ class HomeworkControllerTest {
         assertEquals(3,graded.path("answers").get(0).path("score").asInt());
     }
 
+    @Test void questionPointsAddUpToAtMostTen() throws Exception {
+        var tooMuch=json.readTree(call("POST",sessionPath(),quizBody(List.of(mc("Q1",0,6),mc("Q2",1,5)),11),t)
+                .andExpect(status().isBadRequest()).andReturn().getResponse().getContentAsString());
+        assertEquals("QUIZ_TOTAL_TOO_HIGH",tooMuch.path("errorCode").asText());
+        // Exactly 10 (fractional points included) and less than 10 are fine; free homework keeps any maxScore
+        var tenths=new java.util.ArrayList<Map<String,Object>>();
+        for(int i=0;i<3;i++) tenths.add(Map.of("type","ESSAY","prompt","E"+i,"points",new BigDecimal("3.34")));
+        tenths.set(2,Map.of("type","ESSAY","prompt","E2","points",new BigDecimal("3.32")));
+        data(call("POST",sessionPath(),quizBody(tenths,10),t),201);
+        data(call("POST",sessionPath(),quizBody(List.of(mc("Q",0,4)),4),t),201);
+        var free=body();free.put("maxScore",100);data(call("POST",sessionPath(),free,t),201);
+    }
+
     @Test void multiAnswerPartialPickScoresZero() throws Exception {
         var multi=Map.<String,Object>of("type","MULTIPLE_CHOICE","prompt","Q","options",List.of("A","B","C"),
                 "correctOptions",List.of(0,1),"points",2);

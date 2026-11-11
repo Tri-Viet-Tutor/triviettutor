@@ -73,6 +73,13 @@ public class HomeworkQuestionService {
             throw new BusinessException(ErrorCode.HOMEWORK_SCORE_MISMATCH);
     }
 
+    /** Quizzes are marked on the 10-point scale: the questions may add up to at most 10. */
+    public static final BigDecimal MAX_QUIZ_TOTAL = BigDecimal.TEN;
+
+    public void requireCap(List<HomeworkQuestion> list) {
+        if (total(list).compareTo(MAX_QUIZ_TOTAL) > 0) throw new BusinessException(ErrorCode.QUIZ_TOTAL_TOO_HIGH);
+    }
+
     public BigDecimal total(List<HomeworkQuestion> list) {
         return list.stream().map(HomeworkQuestion::getPoints).reduce(BigDecimal.ZERO, BigDecimal::add);
     }

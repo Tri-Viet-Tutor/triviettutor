@@ -38,6 +38,7 @@ public class HomeworkService {
         access.requireSessionOpen(s);
         access.requireFuture(input.getDueAt());
         var drafts = input.getQuestions() == null ? List.<HomeworkQuestion>of() : questions.build(input.getQuestions());
+        questions.requireCap(drafts);
         questions.requireTotal(drafts, input.getMaxScore());
         Homework h = Homework.builder().sessionId(sessionId).status(HomeworkStatus.DRAFT)
                 .allowLateSubmission(!Boolean.FALSE.equals(input.getAllowLateSubmission()))
@@ -62,6 +63,8 @@ public class HomeworkService {
         String url = access.resourceUrl(input.getResourceUrl());
         var current = questions.of(id);
         var drafts = input.getQuestions() == null ? null : questions.build(input.getQuestions());
+        // Only a new question set is capped, so a homework saved before the cap stays editable
+        if (drafts != null) questions.requireCap(drafts);
         questions.requireTotal(drafts == null ? current : drafts, input.getMaxScore());
         // Once published, students may already be working: content and answer key are frozen and
         // the window can only grow. The password and late policy stay adjustable.

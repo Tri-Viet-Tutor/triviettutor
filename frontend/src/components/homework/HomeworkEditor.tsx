@@ -8,7 +8,16 @@ import { PORTAL_BTN_ACCENT, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT, POR
 import { useMySessions, useUserId } from "@/hooks/usePortalData";
 import { createHomework, updateHomework } from "@/services/homeworkService";
 import { portalErrorMessage } from "@/utils/errors";
-import { fromLocalInput, questionDraftError, toLocalInput, toQuestionDrafts, toQuestionInputs, totalPoints } from "@/utils/homework";
+import {
+  MAX_QUIZ_TOTAL,
+  distributePoints,
+  fromLocalInput,
+  questionDraftError,
+  toLocalInput,
+  toQuestionDrafts,
+  toQuestionInputs,
+  totalPoints,
+} from "@/utils/homework";
 import { sessionOptionLabel, teacherOf } from "@/utils/sessions";
 import type { HomeworkEditorProps, HomeworkInput, QuestionDraft } from "@/interfaces/homework";
 
@@ -246,7 +255,9 @@ export function HomeworkEditor({ homework, initialSessionId, onSaved, onCancel }
           <QuestionImport
             hasQuestions={questions.length > 0}
             onImport={(imported, publishTime, mode) => {
-              setQuestions(mode === "append" ? [...questions, ...imported] : imported);
+              const next = mode === "append" ? [...questions, ...imported] : imported;
+              // Đề tải về thường mỗi câu 1 điểm (61 câu = 61 điểm): vượt thang 10 thì chia đều lại 10 điểm
+              setQuestions(totalPoints(next) > MAX_QUIZ_TOTAL ? distributePoints(next) : next);
               // publish_time của file là giờ mở bài
               if (publishTime) setOpenAt(toLocalInput(publishTime));
             }}

@@ -1,6 +1,6 @@
 import { Icon } from "@/components/ui/Icon";
 import { PORTAL_BTN_GHOST, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
-import { newQuestionDraft, totalPoints } from "@/utils/homework";
+import { MAX_QUIZ_TOTAL, distributePoints, newQuestionDraft, totalPoints } from "@/utils/homework";
 import { ALL_CORRECT_TEXT, withAllCorrectD } from "@/utils/questionImport";
 import type { QuestionBuilderProps, QuestionDraft } from "@/interfaces/homework";
 
@@ -234,7 +234,20 @@ export function QuestionBuilder({ questions, onChange, readOnly = false }: Quest
           </button>
         </div>
       )}
-      {questions.length > 0 && <p className="mt-3 text-[14px] font-semibold text-brand-navy">Tổng điểm: {totalPoints(questions)}</p>}
+      {questions.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <p className={`text-[14px] font-semibold ${totalPoints(questions) > MAX_QUIZ_TOTAL ? "text-red-700" : "text-brand-navy"}`}>
+            Tổng điểm: {totalPoints(questions)} / {MAX_QUIZ_TOTAL}
+            {totalPoints(questions) > MAX_QUIZ_TOTAL && " — vượt quá, tối đa 10 điểm"}
+          </p>
+          {!readOnly && totalPoints(questions) !== MAX_QUIZ_TOTAL && (
+            <button type="button" className={PORTAL_BTN_GHOST} onClick={() => onChange(distributePoints(questions))}>
+              <Icon name="balance" className="text-[18px]" />
+              Chia đều {MAX_QUIZ_TOTAL} điểm
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
