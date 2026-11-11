@@ -17,6 +17,8 @@ import type {
   PayrollResponse,
   ReopenClassRequest,
   TutorPayrollQuery,
+    AvailableTutorResponse,
+    TutorScheduleAvailabilityRequest,
 } from "@/interfaces/api";
 import { api, unwrap } from "@/services/api";
 
@@ -26,6 +28,19 @@ import { api, unwrap } from "@/services/api";
  */
 
 // ── Khóa học (ROLE_ADMIN) ────────────────────────────────────────────────────
+/**
+ * POST /admin/tutors/available — tìm gia sư không bị trùng lịch dự kiến
+ */
+export async function getAvailableTutorsForSchedule(
+    request: TutorScheduleAvailabilityRequest,
+): Promise<AvailableTutorResponse[]> {
+    return unwrap(
+        await api.post<ApiResponse<AvailableTutorResponse[]>>(
+            "/admin/tutors/available",
+            request,
+        ),
+    );
+}
 
 /** GET /admin/courses — danh sách khóa học, lọc theo môn / khối / đang bán */
 export async function fetchAdminCourses(query: AdminCoursesQuery = {}): Promise<PageResponse<CourseResponse>> {
