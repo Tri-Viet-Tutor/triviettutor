@@ -1,5 +1,5 @@
 import { api } from "@/services/api";
-import type { ApiResponse, CartCheckoutRequest, CartResponse, CartOrderResponse } from "@/interfaces/api";
+import type { ApiResponse, CartCheckoutRequest, CartResponse, CartOrderResponse, PageResponse } from "@/interfaces/api";
 
 /*
  * Giỏ hàng và đơn nhiều lớp của học viên (backend: CartController, OrderController).
@@ -52,4 +52,9 @@ export async function cancelOrder(orderId: number, reason: string, key: string):
   return unwrap(
     (await api.post<ApiResponse<CartOrderResponse>>(`/orders/${orderId}/cancel`, { reason }, { headers: { "Idempotency-Key": key } })).data,
   );
+}
+
+/** GET /orders/my — lịch sử đơn học phí của tôi, mới nhất trước */
+export async function listMyOrders(page: number, size = 10): Promise<PageResponse<CartOrderResponse>> {
+  return unwrap((await api.get<ApiResponse<PageResponse<CartOrderResponse>>>("/orders/my", { params: { page, size } })).data);
 }

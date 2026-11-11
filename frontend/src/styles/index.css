@@ -503,3 +503,15 @@
     opacity: 1;
   }
 }
+
+/* Ẩn thanh cuộn trên toàn trang theo yêu cầu khách hàng — vùng nội dung vẫn cuộn được
+ * bình thường (lăn chuột, vuốt cảm ứng, kéo bằng bàn phím), chỉ là không hiện thanh cuộn. */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Edge cũ / IE */
+}
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge mới */
+  width: 0;
+  height: 0;
+}

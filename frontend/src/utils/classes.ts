@@ -143,6 +143,26 @@ const PATTERN_DAYS: Record<string, number[]> = {
   SAT_SUN: [6, 0],
 };
 
+/** Tên các thứ của mẫu lịch, dùng để báo lỗi khi ngày chọn không khớp */
+const PATTERN_WEEKDAY_LABEL: Record<string, string> = {
+  MON_WED_FRI: "Thứ 2, 4 hoặc 6",
+  TUE_THU_SAT: "Thứ 3, 5 hoặc 7",
+  SAT_SUN: "Thứ 7 hoặc Chủ nhật",
+};
+
+/** Ngày (chuỗi "YYYY-MM-DD") có rơi đúng vào một trong các thứ của mẫu lịch không */
+export function weekdayMatchesPattern(dateIso: string, pattern: string): boolean {
+  const days = PATTERN_DAYS[pattern];
+  if (!days || !dateIso) return true;
+  const [y, m, d] = dateIso.split("-").map(Number);
+  return days.includes(new Date(y, m - 1, d).getDay());
+}
+
+/** Câu mô tả các thứ hợp lệ của một mẫu lịch, dùng trong thông báo lỗi/gợi ý */
+export function patternWeekdayLabel(pattern: string): string {
+  return PATTERN_WEEKDAY_LABEL[pattern] ?? "đúng lịch học";
+}
+
 /**
  * Ngày học dự kiến của buổi cuối: đếm các ngày đúng mẫu lịch kể từ ngày khai giảng (cùng cách backend sinh buổi).
  * Không tính buổi bù phát sinh sau; lịch thật xem trong chi tiết lớp.

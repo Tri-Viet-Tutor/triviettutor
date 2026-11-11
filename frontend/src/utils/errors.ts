@@ -79,6 +79,8 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   ATTENDANCE_SESSION_NOT_ENDED: "Buổi học chưa kết thúc nên chưa chốt điểm danh được.",
   ATTENDANCE_NOT_FOUND: "Không tìm thấy bản ghi điểm danh.",
   PAYROLL_FINALIZED: "Buổi này đã nằm trong bảng lương đã chốt nên không sửa được.",
+  PAYROLL_LINE_NOT_FOUND: "Tháng này chưa có phiếu lương đã chốt để khiếu nại.",
+  PAYROLL_ALREADY_DISPUTED: "Phiếu lương này đã được gửi khiếu nại trước đó.",
   // Bài tập, bài làm
   HOMEWORK_NOT_FOUND: "Không tìm thấy bài tập này.",
   HOMEWORK_LOCKED: "Bài tập đã đóng nên không sửa hay mở lại được.",
@@ -120,6 +122,8 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   CLASS_NOT_FOUND: "Không tìm thấy lớp này.",
   CLASS_NOT_ASSIGNABLE: "Lớp này chưa sẵn sàng để phân công gia sư.",
   CLASS_TUTOR_REQUIRED: "Lớp chưa có gia sư. Hãy phân công gia sư trước khi mở đăng ký.",
+  INVALID_CLASS_CONFIGURATION: "Ngày khai giảng phải ở tương lai và hạn đăng ký phải trước ngày khai giảng. Hãy sửa lại ngày của lớp trước khi tiếp tục.",
+  COURSE_INACTIVE: "Khóa học này đang ngừng bán nên không thao tác được. Hãy mở bán lại khóa học trước.",
   CLASS_IN_USE: "Lớp đã có học viên, thanh toán hoặc buổi dạy nên không xóa được. Hãy hủy lớp thay vì xóa.",
   USER_IN_USE: "Tài khoản đã có lớp học, thanh toán, ví hoặc buổi dạy nên không xóa được.",
   COURSE_IN_USE: "Khóa đã có lớp hoặc đơn hàng nên không xóa được. Hãy chọn Ngừng bán thay vì xóa.",

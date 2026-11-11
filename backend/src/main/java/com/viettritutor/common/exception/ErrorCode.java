@@ -72,6 +72,8 @@ public enum ErrorCode {
     PAYROLL_UNRESOLVED_SESSIONS (HttpStatus.UNPROCESSABLE_ENTITY, "Resolve teaching sessions before finalizing payroll"),
     INVALID_PAYROLL_SALARY (HttpStatus.UNPROCESSABLE_ENTITY, "Tutor salary and session rate must be configured and non-negative"),
     PAYROLL_FINALIZED         (HttpStatus.UNPROCESSABLE_ENTITY, "This session belongs to finalized payroll"),
+    PAYROLL_LINE_NOT_FOUND    (HttpStatus.NOT_FOUND, "No finalized payslip for this month"),
+    PAYROLL_ALREADY_DISPUTED  (HttpStatus.CONFLICT, "This payslip already has a complaint"),
     SESSION_STATE_CHANGED     (HttpStatus.CONFLICT, "The session changed concurrently; retry the operation"),
 
     // ── Schedule / Assignment (BR-03) ──────────────────────────────────────────
@@ -177,6 +179,7 @@ public enum ErrorCode {
     HOMEWORK_WRONG_PASSWORD (HttpStatus.FORBIDDEN, "The homework password is incorrect"),
     INVALID_HOMEWORK_QUESTION (HttpStatus.BAD_REQUEST, "Multiple-choice questions need 2-10 options and a valid correct option; essay questions take neither"),
     HOMEWORK_SCORE_MISMATCH (HttpStatus.BAD_REQUEST, "maxScore must equal the sum of the question points"),
+    INVALID_QUESTION_IMPORT (HttpStatus.BAD_REQUEST, "Upload a .csv or .xlsx question file of at most 2 MB with a question column"),
     INVALID_ANSWER (HttpStatus.BAD_REQUEST, "Each answer must match one question of this homework and its type"),
     GRADE_SCORE_REQUIRED (HttpStatus.BAD_REQUEST, "A score is required"),
     INVALID_ANSWER_SCORES (HttpStatus.BAD_REQUEST, "Score every essay question within its points, and nothing else"),

@@ -148,7 +148,7 @@ export function ClassStatusDialog({ classItem, mode, onClose, onSaved }: ClassSt
             </p>
           )}
 
-          <div className="flex justify-end gap-2 border-t border-brand-sandLine pt-4">
+          <div className="sticky bottom-0 -mx-6 -mb-6 flex justify-end gap-2 border-t border-brand-sandLine bg-white/95 px-6 py-4 backdrop-blur">
             <button type="button" onClick={onClose} className={PORTAL_BTN_SECONDARY}>
               Đóng
             </button>

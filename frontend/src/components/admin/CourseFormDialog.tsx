@@ -346,7 +346,7 @@ export function CourseFormDialog({ open, course, onClose, onSaved }: CourseFormD
           </p>
         )}
 
-        <div className="mt-8 flex items-center justify-between gap-2 border-t border-brand-sandLine pt-4">
+        <div className="sticky bottom-0 -mx-6 -mb-6 mt-8 flex items-center justify-between gap-2 border-t border-brand-sandLine bg-white/95 px-6 py-4 backdrop-blur">
           <button type="button" onClick={onClose} className={PORTAL_BTN_SECONDARY}>
             Hủy
           </button>

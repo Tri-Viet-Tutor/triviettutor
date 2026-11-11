@@ -1,6 +1,7 @@
 import { Icon } from "@/components/ui/Icon";
 import { PORTAL_BTN_GHOST, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
 import { newQuestionDraft, totalPoints } from "@/utils/homework";
+import { ALL_CORRECT_TEXT, withAllCorrectD } from "@/utils/questionImport";
 import type { QuestionBuilderProps, QuestionDraft } from "@/interfaces/homework";
 
 const MAX_OPTIONS = 10;
@@ -156,6 +157,15 @@ export function QuestionBuilder({ questions, onChange, readOnly = false }: Quest
                     >
                       <Icon name="add" className="text-[18px]" />
                       Thêm phương án
+                    </button>
+                  )}
+                  {!readOnly && question.options.length < MAX_OPTIONS && (
+                    <button
+                      type="button"
+                      className={`mt-2 ${PORTAL_BTN_GHOST}`}
+                      onClick={() => onChange(questions.map((q, i) => (i === index ? withAllCorrectD(q) : q)))}
+                    >
+                      <Icon name="done_all" className="text-[18px]" />D = “{ALL_CORRECT_TEXT}”
                     </button>
                   )}
                 </fieldset>

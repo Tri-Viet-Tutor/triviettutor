@@ -7,14 +7,14 @@ import {
   fetchNotifications,
   fetchStudentHomeworks,
   fetchSubmissions,
-  fetchTutorHomeworks,
+  fetchAllTutorHomeworks,
   fetchUnreadCount,
 } from "@/services/homeworkService";
 
 /** Khóa cache của bài tập và thông báo, gắn với mã người dùng như portalKeys */
 export const homeworkKeys = {
   all: (userId: number | undefined) => ["homework", userId] as const,
-  tutorList: (userId: number | undefined, page: number) => ["homework", userId, "tutor", page] as const,
+  tutorList: (userId: number | undefined) => ["homework", userId, "tutor"] as const,
   studentList: (userId: number | undefined, query: StudentHomeworksQuery) => ["homework", userId, "student", query] as const,
   detail: (userId: number | undefined, homeworkId: number) => ["homework", userId, "detail", homeworkId] as const,
   mine: (userId: number | undefined, homeworkId: number) => ["homework", userId, "mine", homeworkId] as const,
@@ -22,10 +22,10 @@ export const homeworkKeys = {
   notifications: (userId: number | undefined) => ["notifications", userId] as const,
 };
 
-/** Bài tập của các buổi tôi đang dạy */
-export function useTutorHomeworks(page: number) {
+/** Toàn bộ bài tập của các buổi tôi đang dạy (gộp mọi trang để nhóm theo lớp / buổi) */
+export function useTutorHomeworks() {
   const userId = useUserId();
-  return useQuery({ queryKey: homeworkKeys.tutorList(userId, page), queryFn: () => fetchTutorHomeworks(page) });
+  return useQuery({ queryKey: homeworkKeys.tutorList(userId), queryFn: fetchAllTutorHomeworks });
 }
 
 /** Bài tập của các lớp tôi đang học */
