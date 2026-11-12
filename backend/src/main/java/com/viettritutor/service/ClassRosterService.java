@@ -35,7 +35,7 @@ public class ClassRosterService {
         boolean isTutor = "ROLE_TUTOR".equals(actor.getRole());
 
         if (isTutor) {
-            boolean assigned = tutorAssignmentRepository.findByClassGroupIdAndStatus(classGroupId, AssignmentStatus.ASSIGNED)
+            boolean assigned = tutorAssignmentRepository.findByClassGroupIdAndStatus(classGroupId, AssignmentStatus.ACTIVE)
                     .map(a -> a.getTutorId().equals(actor.getId()))
                     .orElse(false);
 
@@ -91,7 +91,7 @@ public class ClassRosterService {
             );
         }).toList();
 
-        String courseName = classGroup.getCourse() != null ? classGroup.getCourse().getTitle() : ("Lớp " + classGroup.getClassCode());
+        String courseName = classGroup.getCourse() != null ? classGroup.getCourse().getName() : ("Lớp " + classGroup.getClassCode());
 
         return new ClassRosterResponse(
                 classGroup.getId(),
@@ -118,7 +118,7 @@ public class ClassRosterService {
             boolean isTeacher = actor.getId().equals(session.getActualTutorId()) ||
                     actor.getId().equals(session.getScheduledTutorId());
             if (!isTeacher) {
-                boolean isClassTutor = tutorAssignmentRepository.findByClassGroupIdAndStatus(classGroupId, AssignmentStatus.ASSIGNED)
+                boolean isClassTutor = tutorAssignmentRepository.findByClassGroupIdAndStatus(classGroupId, AssignmentStatus.ACTIVE)
                         .map(a -> a.getTutorId().equals(actor.getId()))
                         .orElse(false);
                 if (!isClassTutor) {
@@ -158,7 +158,7 @@ public class ClassRosterService {
             }
         }
 
-        String courseTitle = classGroup.getCourse() != null ? classGroup.getCourse().getTitle() : ("Lớp " + classGroup.getClassCode());
+        String courseTitle = classGroup.getCourse() != null ? classGroup.getCourse().getName() : ("Lớp " + classGroup.getClassCode());
 
         SessionRosterTutor tutorObj = tutorId != null ? new SessionRosterTutor(tutorId, tutorName) : null;
 
