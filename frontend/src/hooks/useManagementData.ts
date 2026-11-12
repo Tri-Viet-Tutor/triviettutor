@@ -9,6 +9,7 @@ import {
   fetchClassEnrollments,
   fetchMyEnrollments,
   fetchMyPayroll,
+  fetchMyPayrollEstimate,
   fetchPayroll,
 } from "@/services/managementService";
 import { useUserId } from "@/hooks/usePortalData";
@@ -23,6 +24,7 @@ export const managementKeys = {
   classEnrollments: (classId: number) => ["admin", "class-enrollments", classId] as const,
   payroll: (year: number, month: number) => ["admin", "payroll", year, month] as const,
   myPayroll: (userId: number | undefined, query: TutorPayrollQuery) => ["me", userId, "payroll", query] as const,
+  myPayrollEstimate: (userId: number | undefined) => ["me", userId, "payroll", "estimate"] as const,
   myEnrollments: (userId: number | undefined, query: EnrollmentsQuery) => ["me", userId, "enrollments", query] as const,
 };
 
@@ -78,6 +80,12 @@ export function usePayroll(year: number, month: number) {
 export function useMyPayroll(query: TutorPayrollQuery = { size: 24 }) {
   const userId = useUserId();
   return useQuery({ queryKey: managementKeys.myPayroll(userId, query), queryFn: () => fetchMyPayroll(query) });
+}
+
+/** Tạm tính lương các tháng trung tâm chưa chốt (gia sư) */
+export function useMyPayrollEstimate() {
+  const userId = useUserId();
+  return useQuery({ queryKey: managementKeys.myPayrollEstimate(userId), queryFn: fetchMyPayrollEstimate });
 }
 
 /** Các lớp tôi đã ghi danh (học viên) */

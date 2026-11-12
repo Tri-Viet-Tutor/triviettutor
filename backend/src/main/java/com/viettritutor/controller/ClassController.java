@@ -28,7 +28,7 @@ public class ClassController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create a draft class", description = "Uses the course session count and fixed 120-minute slots. Default enrollment deadline is three days before start.")
+    @Operation(summary = "Create a draft class", description = "Uses the course session count and the course duration (30-120 minutes per session). Default enrollment deadline is three days before start.")
     public ResponseEntity<ApiResponse<ClassResponse>> create(@Valid @RequestBody CreateClassRequest request,
 
                                                               @Parameter(hidden = true)

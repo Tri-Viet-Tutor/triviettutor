@@ -163,7 +163,7 @@ class CourseControllerTest {
                 {"basePrice1on1", "1000000000000000"}, {"totalSessions", 0}, {"totalSessions", -1},
                 {"totalSessions", 1.5}, {"totalSessions", 2147483648L},
                 {"durationMinutes", 0}, {"durationMinutes", -1}, {"durationMinutes", 1.5},
-                {"basePrice1on1", 99999}, {"totalSessions", 201}, {"durationMinutes", 90}, {"durationMinutes", 150},
+                {"basePrice1on1", 99999}, {"totalSessions", 201}, {"durationMinutes", 29}, {"durationMinutes", 150},
                 {"description", "a".repeat(10001)}, {"active", false}, {"id", 99}
         };
         for (Object[] pair : values) {

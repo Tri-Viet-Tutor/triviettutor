@@ -7,7 +7,7 @@ import { ENROLLMENT_DEADLINE_DAYS } from "@/constants/classOptions";
 import { ENROLLMENT_WINDOWS } from "@/constants/pricing";
 import { useInView } from "@/hooks/useInView";
 import type { EnrollmentStatus } from "@/interfaces/pricing";
-import { diffDays, formatDayMonth, startOfToday } from "@/utils/date";
+import { diffDays, formatDate, formatDayMonth, startOfToday } from "@/utils/date";
 import { enrollmentStatus, enrollmentStatusLabel } from "@/utils/pricing";
 
 /** Hai cột dùng chung cho hàng trục ngày và từng hàng khóa học (từ màn hình lớn) */
@@ -121,17 +121,17 @@ export function EnrollmentScheduleSection() {
                       <div className="flex items-center gap-1.5">
                         <span aria-hidden="true" className="h-2 w-2 rounded-full bg-brand-orange" />
                         <dt className="text-brand-muted">Mở đăng ký</dt>
-                        <dd className="font-bold text-brand-ink">{formatDayMonth(item.opens)}</dd>
+                        <dd className="font-bold text-brand-ink">{formatDate(item.opens)}</dd>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span aria-hidden="true" className="h-2 w-2 rounded-full bg-brand-orangeHover" />
                         <dt className="text-brand-muted">Chốt đăng ký</dt>
-                        <dd className="font-bold text-brand-ink">{formatDayMonth(item.deadline)}</dd>
+                        <dd className="font-bold text-brand-ink">{formatDate(item.deadline)}</dd>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Icon name="flag" className="text-[16px] text-brand-navy" />
                         <dt className="text-brand-muted">Khai giảng</dt>
-                        <dd className="font-bold text-brand-ink">{formatDayMonth(item.starts)}</dd>
+                        <dd className="font-bold text-brand-ink">{formatDate(item.starts)}</dd>
                       </div>
                     </dl>
                   </div>

@@ -194,7 +194,11 @@ public class ClassQueryService {
                             : java.math.BigDecimal.valueOf(average).setScale(2, java.math.RoundingMode.HALF_UP))
                     .tutorRatingCount(ratings.countByTutor_Id(a.getTutorId()));
         });
-        if (c.getTimeSlot() != null) builder.timeSlotLabel(c.getTimeSlot().getStartTime() + " - " + c.getTimeSlot().getEndTime());
+        if (c.getTimeSlot() != null) {
+            // CLS-01: nhãn ca học hiển thị đúng giờ kết thúc thật theo durationMinutes của khóa, không còn cố định 2 tiếng
+            LocalTime end = c.getCourse() != null ? c.getTimeSlot().endTime(c.getCourse().getDurationMinutes()) : c.getTimeSlot().getEndTime();
+            builder.timeSlotLabel(c.getTimeSlot().getStartTime() + " - " + end);
+        }
         if (c.getCourse() != null) {
             Course course = c.getCourse();
             builder.courseId(course.getId()).courseName(course.getName()).subject(course.getSubject()).subjectId(course.getSubjectId())

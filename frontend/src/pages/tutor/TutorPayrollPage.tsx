@@ -9,7 +9,8 @@ import { Icon } from "@/components/ui/Icon";
 import { PORTAL_BTN_SECONDARY, PORTAL_CARD } from "@/constants/classNames";
 import { PAYROLL_STATUS } from "@/constants/labels";
 import { monthLabel } from "@/constants/management";
-import { useMyPayroll } from "@/hooks/useManagementData";
+import { useMyPayroll, useMyPayrollEstimate } from "@/hooks/useManagementData";
+import { useNow } from "@/hooks/useNow";
 import type { PayrollLineResponse } from "@/interfaces/api";
 import { fetchMyPayroll } from "@/services/managementService";
 import { formatVnd } from "@/utils/currency";
@@ -33,12 +34,26 @@ async function exportAllMonths(): Promise<void> {
  */
 export function TutorPayrollPage() {
   const payroll = useMyPayroll();
+  // GET /tutor/payroll chỉ trả tháng đã chốt, nên số "đang chờ duyệt" và "dự kiến" phải lấy từ bản tạm tính
+  const estimate = useMyPayrollEstimate();
+  const now = useNow();
   // Tháng mới nhất lên đầu
   const lines = [...(payroll.data?.content ?? [])].sort((a, b) => b.year - a.year || b.month - a.month);
   const latest = lines[0];
   const yearTotal = latest ? lines.filter((line) => line.year === latest.year).reduce((sum, line) => sum + line.totalPay, 0) : 0;
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);
+
+  // Các mốc thu nhập: Đã chốt (FINALIZED) coi là đã nhận; Tạm tính (DRAFT) của tháng đã qua là đang chờ trung tâm duyệt/chốt;
+  // Tạm tính của tháng đang chạy (tháng hiện tại) là số dự kiến, có thể còn đổi khi buổi dạy phát sinh thêm.
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const isPast = (line: PayrollLineResponse) => line.year < currentYear || (line.year === currentYear && line.month < currentMonth);
+  const isCurrent = (line: PayrollLineResponse) => line.year === currentYear && line.month === currentMonth;
+  const estimateLines = estimate.data ?? [];
+  const received = lines.filter((line) => line.status === "FINALIZED").reduce((sum, line) => sum + line.totalPay, 0);
+  const pendingApproval = estimateLines.filter(isPast).reduce((sum, line) => sum + line.totalPay, 0);
+  const projected = estimateLines.filter(isCurrent).reduce((sum, line) => sum + line.totalPay, 0);
 
   return (
     <div>
@@ -72,6 +87,26 @@ export function TutorPayrollPage() {
         </p>
       )}
 
+      {/* Các mốc thu nhập: đã nhận / đang chờ duyệt / dự kiến tháng này.
+          Hiện cả khi chưa có tháng nào được chốt, vì lúc đó "dự kiến tháng này" mới là số gia sư cần nhất. */}
+      {(latest || estimateLines.length > 0) && (
+        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <StatTile icon="account_balance" tone="green" label="Đã nhận (các tháng đã chốt)" value={formatVnd(received)} />
+          <StatTile
+            icon="hourglass_top"
+            tone="orange"
+            label="Đang chờ duyệt (đã qua tháng, chưa chốt)"
+            value={estimate.isPending ? "…" : formatVnd(pendingApproval)}
+          />
+          <StatTile
+            icon="query_stats"
+            tone="navy"
+            label="Dự kiến tháng này"
+            value={estimate.isPending ? "…" : formatVnd(projected)}
+          />
+        </div>
+      )}
+
       {payroll.isPending ? (
         <PortalLoading label="Đang tải bảng lương" rows={3} />
       ) : payroll.isError ? (
@@ -79,8 +114,8 @@ export function TutorPayrollPage() {
       ) : !latest ? (
         <PortalEmpty
           icon="receipt_long"
-          title="Chưa có bảng lương."
-          description="Bảng lương xuất hiện sau tháng đầu tiên bạn có buổi dạy."
+          title="Chưa có bảng lương nào được chốt."
+          description="Phiếu lương của một tháng hiện ở đây sau khi trung tâm chốt lương tháng đó."
         />
       ) : (
         <>

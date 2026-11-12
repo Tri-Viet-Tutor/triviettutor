@@ -1,5 +1,6 @@
 package com.viettritutor.entity;
 
+import com.viettritutor.enums.QuestionMediaType;
 import com.viettritutor.enums.QuestionType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -41,4 +42,12 @@ public class HomeworkQuestion {
     }
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal points;
+
+    /** Link ảnh/video minh họa; ảnh là link tải của /api/v1/files, video là link ngoài. Null khi câu hỏi không kèm gì. */
+    @Column(name = "media_url", columnDefinition = "text")
+    private String mediaUrl;
+    /** Đi kèm mediaUrl, cùng có hoặc cùng null (ràng buộc homework_questions_media_pair). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "media_type", length = 10)
+    private QuestionMediaType mediaType;
 }

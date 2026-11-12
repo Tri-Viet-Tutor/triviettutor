@@ -38,6 +38,9 @@ public class PayrollService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private ApplicationEventPublisher eventPublisher;
 
+    /** PAYR-02: số tháng nhìn lại khi tạm tính; trung tâm chốt lương theo tháng nên thực tế chỉ treo một hai tháng. */
+    private static final int ESTIMATE_MONTHS = 6;
+
     @Transactional(readOnly=true)
     public PayrollResponse get(int year,int month,User actor) {
         requireRole(actor,"ROLE_ADMIN");
@@ -114,6 +117,33 @@ public class PayrollService {
         Map<Long,PayrollPeriod> periodMap=periods.findAllById(found.stream().map(PayrollLine::getPeriodId).distinct().toList())
                 .stream().collect(Collectors.toMap(PayrollPeriod::getId,p->p));
         return PageResponse.from(found.map(line -> response(line,periodMap.get(line.getPeriodId()))));
+    }
+
+    /**
+     * PAYR-02: các tháng của chính gia sư mà trung tâm chưa chốt lương, tính tạm theo buổi đã dạy xong.
+     * Tháng đã chốt không trả ở đây vì đã nằm trong GET /tutor/payroll. Chưa khai báo lương cứng hoặc
+     * đơn giá buổi thì trả rỗng: dashboard chỉ thiếu số tạm tính chứ không vỡ.
+     */
+    @Transactional(readOnly=true)
+    public List<PayrollLineResponse> myEstimate(User actor) {
+        requireRole(actor,"ROLE_TUTOR");
+        TutorProfile profile=profiles.findById(actor.getId()).orElse(null);
+        if(profile==null || profile.getBaseSalary()==null || profile.getSessionRate()==null
+                || profile.getBaseSalary().signum()<0 || profile.getSessionRate().signum()<0) return List.of();
+        YearMonth current=YearMonth.now(clock);
+        List<PayrollLineResponse> result=new ArrayList<>();
+        for(int back=0;back<ESTIMATE_MONTHS;back++) {
+            YearMonth month=current.minusMonths(back);
+            // Tháng đã chốt thì đã có phiếu lương thật; tháng trước khi gia sư vào làm thì không tính lương cứng
+            if(periods.findByYearAndMonth(month.getYear(),month.getMonthValue()).isPresent()) continue;
+            if(!profile.getUser().getCreatedAt().isBefore(month.plusMonths(1).atDay(1).atStartOfDay())) continue;
+            var summary=teaching.periodSummary(profile.getId(),month);
+            BigDecimal sessionPay=profile.getSessionRate().multiply(BigDecimal.valueOf(summary.completed().size()));
+            result.add(lineBuilder(profile.getId(),profile.getUser().getFullName(),month,PayrollStatus.DRAFT,null,
+                    profile.getBaseSalary(),profile.getSessionRate(),sessionPay,
+                    profile.getBaseSalary().add(sessionPay),summary).build());
+        }
+        return List.copyOf(result);
     }
 
     /** Disabled tutors keep base salary for past and current periods; see TutorProfileRepository.PAYROLL_ELIGIBLE. */

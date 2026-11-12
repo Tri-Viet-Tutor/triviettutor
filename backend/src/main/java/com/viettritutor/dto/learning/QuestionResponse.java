@@ -2,6 +2,7 @@ package com.viettritutor.dto.learning;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.viettritutor.entity.HomeworkQuestion;
+import com.viettritutor.enums.QuestionMediaType;
 import com.viettritutor.enums.QuestionType;
 import lombok.*;
 import java.math.BigDecimal;
@@ -23,6 +24,9 @@ public class QuestionResponse {
     /** Multiple choice: how many options to pick (1 = single answer); shown to students as "Chọn 2 đáp án". */
     private Integer selectCount;
     private BigDecimal points;
+    /** Link ảnh/video minh họa của câu hỏi; null khi không kèm gì. Học viên cũng nhận được. */
+    private String mediaUrl;
+    private QuestionMediaType mediaType;
 
     public static QuestionResponse from(HomeworkQuestion q, List<String> options, boolean staff) {
         boolean choice = q.getType() == QuestionType.MULTIPLE_CHOICE;
@@ -30,6 +34,6 @@ public class QuestionResponse {
                 .prompt(q.getPrompt()).options(options).correctOption(staff ? q.getCorrectOption() : null)
                 .correctOptions(staff && choice ? q.correctSet() : null)
                 .selectCount(choice ? q.correctSet().size() : null)
-                .points(q.getPoints()).build();
+                .points(q.getPoints()).mediaUrl(q.getMediaUrl()).mediaType(q.getMediaType()).build();
     }
 }

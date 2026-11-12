@@ -10,6 +10,7 @@ import { submitLeaveRequest } from "@/services/portalService";
 import { portalErrorMessage } from "@/utils/errors";
 import { isLateNotice, sessionOptionLabel } from "@/utils/sessions";
 import type { LeaveRequestFormProps } from "@/interfaces/portal";
+import { Select } from "@/components/ui/Select";
 
 /** Giới hạn của LeaveRequestInput.reason ở backend */
 const REASON_MAX = 1000;
@@ -69,7 +70,7 @@ export function LeaveRequestForm({ sessions, initialSessionId, now, role = "stud
             <label htmlFor="leave-session" className={`mb-1.5 ${AUTH_LABEL}`}>
               {isTutor ? "Buổi muốn nghỉ dạy" : "Buổi muốn nghỉ"}
             </label>
-            <select
+            <Select
               id="leave-session"
               required
               value={sessionId}
@@ -86,7 +87,7 @@ export function LeaveRequestForm({ sessions, initialSessionId, now, role = "stud
                   {sessionOptionLabel(session)}
                 </option>
               ))}
-            </select>
+            </Select>
             {selected && isLateNotice(selected, now) && (
               <p className="mt-1.5 text-[13.5px] font-medium text-amber-800">
                 Buổi này còn chưa tới {LATE_NOTICE_HOURS} giờ nữa là học, đơn sẽ bị ghi là báo trễ.

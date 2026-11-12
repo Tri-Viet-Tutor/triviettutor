@@ -128,6 +128,8 @@ const PORTAL_ERROR_TEXT: Partial<Record<ErrorCode, string>> = {
   CLASS_IN_USE: "Lớp đã có học viên, thanh toán hoặc buổi dạy nên không xóa được. Hãy hủy lớp thay vì xóa.",
   USER_IN_USE: "Tài khoản đã có lớp học, thanh toán, ví hoặc buổi dạy nên không xóa được.",
   COURSE_IN_USE: "Khóa đã có lớp hoặc đơn hàng nên không xóa được. Hãy chọn Ngừng bán thay vì xóa.",
+  COURSE_DURATION_LOCKED:
+    "Khóa này đã có lớp xếp buổi nên không đổi được thời lượng mỗi buổi. Muốn dạy thời lượng khác thì tạo khóa mới.",
   CLASS_ALREADY_ASSIGNED: "Lớp này đã có gia sư chính.",
   ASSIGNMENT_NOT_FOUND: "Lớp này chưa có gia sư nào được phân công.",
   TUTOR_ALREADY_ASSIGNED: "Gia sư này đang dạy lớp / buổi này rồi.",

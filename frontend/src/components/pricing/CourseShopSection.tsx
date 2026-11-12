@@ -15,6 +15,7 @@ import type { ClassShopFilters, ClassShopSort, CourseShopSectionProps } from "@/
 import { listCatalogCourses, listTuitionClasses } from "@/services/tuitionPaymentService";
 import { useAuthStore } from "@/stores/authStore";
 import { normalizeText } from "@/utils/text";
+import { Select } from "@/components/ui/Select";
 
 /** Số lớp hiện mỗi lần; còn nữa thì có nút "Xem thêm" */
 const PAGE_SIZE = 6;
@@ -231,31 +232,31 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
             </div>
             <label className="mt-5 block text-[13.5px] font-semibold text-brand-ink">
               Môn học
-              <select value={filters.subject} onChange={(event) => updateFilters({ subject: event.target.value })} className={SELECT}>
+              <Select value={filters.subject} onChange={(event) => updateFilters({ subject: event.target.value })} className={SELECT}>
                 <option value="">Tất cả môn</option>
                 {subjects.map((subject) => (
                   <option key={subject} value={subject}>
                     {subject}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             {tutors.length > 0 && (
               <label className="mt-5 block text-[13.5px] font-semibold text-brand-ink">
                 Gia sư
-                <select value={filters.tutor} onChange={(event) => updateFilters({ tutor: event.target.value })} className={SELECT}>
+                <Select value={filters.tutor} onChange={(event) => updateFilters({ tutor: event.target.value })} className={SELECT}>
                   <option value="">Tất cả thầy cô</option>
                   {tutors.map((tutor) => (
                     <option key={tutor.id} value={String(tutor.id)}>
                       {tutor.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
             )}
             <label className="mt-5 block text-[13.5px] font-semibold text-brand-ink">
               Khối lớp
-              <select
+              <Select
                 value={filters.grade}
                 onChange={(event) => updateFilters({ grade: event.target.value as GradeLevel | "" })}
                 className={SELECT}
@@ -266,11 +267,11 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
                     {option.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="mt-5 block text-[13.5px] font-semibold text-brand-ink">
               Hình thức
-              <select
+              <Select
                 value={filters.mode}
                 onChange={(event) => updateFilters({ mode: event.target.value as DeliveryMode | "" })}
                 className={SELECT}
@@ -281,11 +282,11 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
                     {option.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="mt-5 block text-[13.5px] font-semibold text-brand-ink">
               Học thứ mấy
-              <select
+              <Select
                 value={filters.schedule}
                 onChange={(event) => updateFilters({ schedule: event.target.value as SchedulePattern | "" })}
                 className={SELECT}
@@ -296,7 +297,7 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
                     {option.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           </aside>
 
@@ -338,7 +339,7 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
                 </p>
                 <label className="flex items-center gap-2.5 text-[14px] text-brand-muted">
                   Sắp xếp
-                  <select
+                  <Select
                     value={sort}
                     onChange={(event) => setSort(event.target.value as ClassShopSort)}
                     className="h-10 rounded-md border border-slate-300 bg-white pl-3 pr-9 text-[14.5px] font-semibold text-brand-ink outline-none focus:border-brand-navy focus:ring-1 focus:ring-brand-navy"
@@ -348,7 +349,7 @@ export function CourseShopSection({ variant = "public" }: CourseShopSectionProps
                         {option.label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
               </div>
 

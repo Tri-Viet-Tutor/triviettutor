@@ -4,6 +4,7 @@ import { AuthNotice } from "@/components/auth/AuthNotice";
 import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { AttachmentList } from "@/components/homework/AttachmentList";
 import { AttachmentField } from "@/components/ui/AttachmentField";
+import { QuestionMedia } from "@/components/homework/QuestionMedia";
 import { Icon } from "@/components/ui/Icon";
 import { PORTAL_BTN_ACCENT, PORTAL_BTN_SECONDARY, PORTAL_CARD, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
 import { homeworkKeys } from "@/hooks/useHomeworkData";
@@ -127,6 +128,7 @@ export function QuizForm({ homework, submission, onDone }: QuizFormProps) {
                 Câu {index + 1}. <span className="whitespace-pre-line font-normal">{question.prompt}</span>{" "}
                 <span className="text-[13.5px] text-brand-muted">({formatScore(question.points)} điểm)</span>
               </p>
+              <QuestionMedia question={question} index={index} />
               {question.type === "MULTIPLE_CHOICE" ? (
                 <fieldset className="mt-3 space-y-2">
                   {(() => {

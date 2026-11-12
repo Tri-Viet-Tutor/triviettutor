@@ -42,11 +42,12 @@ public class CourseRequest {
     private Integer totalSessions;
 
     @NotNull
-    @Min(value = 120, message = "must be 120: classes use fixed two-hour time slots")
-    @Max(value = 120, message = "must be 120: classes use fixed two-hour time slots")
-    @Schema(example = "120", defaultValue = "120", allowableValues = "120",
-            description = "Session length in minutes. Fixed at 120 because every class time slot is two hours; "
-                    + "class creation rejects any other value.")
+    @Min(value = 30, message = "must be between 30 and 120 minutes")
+    @Max(value = 120, message = "must be between 30 and 120 minutes")
+    @Schema(example = "120", defaultValue = "120", minimum = "30", maximum = "120",
+            description = "Session length in minutes (30-120). Generated sessions start at the class's TimeSlot "
+                    + "start time and end this many minutes later, so a 90-minute course really produces "
+                    + "90-minute sessions.")
     @JsonDeserialize(using = WholeNumberDeserializer.class)
     private Integer durationMinutes = 120;
 

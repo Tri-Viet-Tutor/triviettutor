@@ -11,6 +11,7 @@ import { CONTACT_EMAIL } from "@/constants/contact";
 import { COURSES } from "@/constants/courses";
 import { buildConsultMailto } from "@/utils/contact";
 import type { ConsultLetterFormValues } from "@/interfaces/contact";
+import { Select } from "@/components/ui/Select";
 
 /** Kiểm tra thư đăng ký: số điện thoại VN (0… hoặc +84…), email không bắt buộc */
 const letterSchema = z.object({
@@ -156,37 +157,37 @@ export function ConsultLetterForm() {
               <label htmlFor="letter-subject" className={FIELD_LABEL}>
                 Môn học
               </label>
-              <select id="letter-subject" className={FIELD} {...register("subject")}>
+              <Select id="letter-subject" className={FIELD} {...register("subject")}>
                 {COURSES.map((course) => (
                   <option key={course.id} value={course.subject}>
                     {course.subjectLabel}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label htmlFor="letter-grade" className={FIELD_LABEL}>
                 Khối lớp
               </label>
-              <select id="letter-grade" className={FIELD} {...register("gradeLevel")}>
+              <Select id="letter-grade" className={FIELD} {...register("gradeLevel")}>
                 {GRADE_OPTIONS.map((grade) => (
                   <option key={grade.value} value={grade.value}>
                     {grade.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label htmlFor="letter-mode" className={FIELD_LABEL}>
                 Hình thức học
               </label>
-              <select id="letter-mode" className={FIELD} {...register("deliveryMode")}>
+              <Select id="letter-mode" className={FIELD} {...register("deliveryMode")}>
                 {DELIVERY_MODE_OPTIONS.map((mode) => (
                   <option key={mode.value} value={mode.value}>
                     {mode.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
 

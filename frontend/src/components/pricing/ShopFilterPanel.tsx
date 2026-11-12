@@ -3,6 +3,7 @@ import { ENROLLMENT_FILTER_OPTIONS, FEE_RANGE, SHOP_SUBJECTS } from "@/constants
 import type { SchedulePattern } from "@/interfaces/api";
 import type { ShopFilterPanelProps } from "@/interfaces/pricing";
 import { formatVnd } from "@/utils/currency";
+import { Select } from "@/components/ui/Select";
 
 /** Ô chọn sổ xuống của bộ lọc */
 const SELECT =
@@ -40,14 +41,14 @@ export function ShopFilterPanel({
         <label htmlFor="shop-subject" className="text-[13.5px] font-semibold text-brand-ink">
           Môn học
         </label>
-        <select id="shop-subject" value={subject} onChange={(event) => onSubjectChange(event.target.value)} className={SELECT}>
+        <Select id="shop-subject" value={subject} onChange={(event) => onSubjectChange(event.target.value)} className={SELECT}>
           <option value="">Tất cả môn</option>
           {SHOP_SUBJECTS.map((item) => (
             <option key={item.subject} value={item.subject}>
               {item.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       <fieldset className="mt-6">
@@ -81,7 +82,7 @@ export function ShopFilterPanel({
         <label htmlFor="shop-schedule" className="text-[13.5px] font-semibold text-brand-ink">
           Học thứ mấy
         </label>
-        <select
+        <Select
           id="shop-schedule"
           value={schedule}
           onChange={(event) => onScheduleChange(event.target.value as SchedulePattern | "")}
@@ -93,7 +94,7 @@ export function ShopFilterPanel({
               {option.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {/* Chỉ hiện thanh trượt khi các khóa có mức phí khác nhau */}

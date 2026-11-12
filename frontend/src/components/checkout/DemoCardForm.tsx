@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from "react";
 import { OtpInput } from "@/components/auth/OtpInput";
 import { Icon } from "@/components/ui/Icon";
+import { Select } from "@/components/ui/Select";
 import { DEMO_TEST_CARD } from "@/constants/checkout";
 import {
   AUTH_ERROR,
@@ -145,9 +146,9 @@ export function DemoCardForm({ isConfirming, onPaid }: DemoCardFormProps) {
         <label htmlFor="card-bank" className={`mb-1.5 ${AUTH_LABEL}`}>
           Ngân hàng
         </label>
-        <select id="card-bank" value={card.bank} onChange={(event) => update({ bank: event.target.value })} className={AUTH_INPUT}>
+        <Select id="card-bank" value={card.bank} onChange={(event) => update({ bank: event.target.value })} className={AUTH_INPUT}>
           <option value={DEMO_TEST_CARD.bank}>{DEMO_TEST_CARD.bank}</option>
-        </select>
+        </Select>
       </div>
 
       <div>

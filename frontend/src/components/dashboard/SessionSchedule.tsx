@@ -44,6 +44,8 @@ export function SessionSchedule({
   emptyAction,
   renderDetail,
   renderBadge,
+  classGroupId,
+  headerExtra,
 }: SessionScheduleProps) {
   const sessionsQuery = useMySessions();
   const leaveQuery = useMyLeaveRequests({ page: 0, size: 100 });
@@ -56,7 +58,12 @@ export function SessionSchedule({
   const [openId, setOpenId] = useState<number | null>(null);
   const [visible, setVisible] = useState(PAGE_SIZE);
 
-  const sessions = useMemo(() => sessionsQuery.data ?? [], [sessionsQuery.data]);
+  const allSessions = useMemo(() => sessionsQuery.data ?? [], [sessionsQuery.data]);
+  // Tầng "Danh sách buổi học" của một lớp cụ thể: chỉ giữ buổi của lớp đó
+  const sessions = useMemo(
+    () => (classGroupId ? allSessions.filter((session) => session.classGroupId === classGroupId) : allSessions),
+    [allSessions, classGroupId],
+  );
   const leaveRequests = leaveQuery.data?.content ?? [];
   const { upcoming, past } = splitSessions(sessions, now);
   const list = tab === "upcoming" ? upcoming : past;
@@ -95,7 +102,12 @@ export function SessionSchedule({
       <PortalPageHeader
         icon="calendar_month"
         title={title}
-        action={sessions.length > 0 && <FilterTabs label="Lọc buổi" tabs={tabs} value={tab} onChange={changeTab} />}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            {headerExtra}
+            {sessions.length > 0 && <FilterTabs label="Lọc buổi" tabs={tabs} value={tab} onChange={changeTab} />}
+          </div>
+        }
       />
 
       {sessionsQuery.isPending ? (

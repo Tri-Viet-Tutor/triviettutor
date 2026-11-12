@@ -10,6 +10,7 @@ import { getApiError } from "@/services/api";
 import { listPayments, refundPayment, updateRefund } from "@/services/tuitionPaymentService";
 import { formatVnd } from "@/utils/currency";
 import { displayCode } from "@/utils/classes";
+import { Select } from "@/components/ui/Select";
 
 /** Tên trạng thái giao dịch, theo nhãn chuẩn TRANSACTION_STATUS */
 const STATUSES: Record<PaymentStatus, string> = {
@@ -35,7 +36,7 @@ export function AdminPaymentsPage() {
       />
       <label className="block max-w-sm text-sm">
         Trạng thái
-        <select
+        <Select
           className={PORTAL_INPUT}
           value={status}
           onChange={(event) => {
@@ -49,7 +50,7 @@ export function AdminPaymentsPage() {
               {label}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       {payments.isPending && <p>Đang tải giao dịch…</p>}
       {payments.isError && (

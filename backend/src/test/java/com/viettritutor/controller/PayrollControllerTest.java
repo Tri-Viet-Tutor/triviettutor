@@ -251,7 +251,7 @@ class PayrollControllerTest {
         call("PATCH","/admin/sessions/"+id+"/attendance/"+record.getId(),Map.of("status","ABSENT","reason","Correction"),admin,null)
                 .andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.errorCode").value("PAYROLL_FINALIZED"));
         var exception=assertThrows(com.viettritutor.common.exception.BusinessException.class,
-                ()->generator.ensureGenerated(new SessionGenerationSpec(999999L,f.month().atDay(1),1,SchedulePattern.MON_WED_FRI,TimeSlot.SLOT_MORNING,null)));
+                ()->generator.ensureGenerated(new SessionGenerationSpec(999999L,f.month().atDay(1),1,SchedulePattern.MON_WED_FRI,TimeSlot.SLOT_MORNING,120,null)));
         assertEquals(com.viettritutor.common.exception.ErrorCode.PAYROLL_FINALIZED,exception.getErrorCode());
     }
     @Test void historyIsPaginatedAndNewestFirst()throws Exception{

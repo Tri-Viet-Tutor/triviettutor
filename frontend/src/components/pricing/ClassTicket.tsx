@@ -5,8 +5,8 @@ import { FOCUS_RING } from "@/constants/classNames";
 import { DELIVERY_MODE_OPTIONS, GRADE_OPTIONS, SCHEDULE_PATTERN_OPTIONS } from "@/constants/classOptions";
 import type { ClassTicketProps } from "@/interfaces/pricing";
 import { formatVnd } from "@/utils/currency";
-import { formatDayMonth, parseIsoDate } from "@/utils/date";
-import { discountForSize } from "@/utils/classes";
+import { formatDate, parseIsoDate } from "@/utils/date";
+import { discountForSize, estimatedEndDate } from "@/utils/classes";
 
 /** Màu cuống vé, xoay vòng theo vị trí lớp trong danh sách */
 const STUB_TONES = [
@@ -42,6 +42,8 @@ export function ClassTicket({
   const isGroup = item.classType !== "ONE_ON_ONE";
   const refundNow = isGroup ? discountForSize(item.classType, item.currentStudents + 1) : 0;
   const soldOut = item.spotsLeft < 1;
+  // Buổi cuối theo lịch, chưa tính buổi bù nếu lớp phải nghỉ giữa chừng
+  const endDate = estimatedEndDate(item.startDate, item.schedulePattern, item.totalSessions);
 
   return (
     <article className="relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_22px_44px_-36px_rgba(8,42,102,0.5)] md:flex-row">
@@ -50,16 +52,7 @@ export function ClassTicket({
       </div>
 
       <div className="min-w-0 flex-1 px-5 py-5 sm:px-6">
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[13.5px] text-brand-muted">
-          {grade}
-          <span aria-hidden="true">/</span>
-          Khai giảng {formatDayMonth(parseIsoDate(item.startDate))}
-          {item.enrollmentDeadline && (
-            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[12px] font-semibold text-emerald-800">
-              Chốt đăng ký {formatDayMonth(parseIsoDate(item.enrollmentDeadline))}
-            </span>
-          )}
-        </p>
+        <p className="text-[13.5px] text-brand-muted">{grade}</p>
         <h3 className="mt-1.5 text-[20px] font-bold leading-tight text-brand-navy">{item.courseName}</h3>
         <p className="mt-1 text-[13.5px] text-brand-muted">Mã lớp {item.classCode}</p>
         {item.tutorName && (
@@ -97,6 +90,24 @@ export function ClassTicket({
             <Icon name="event_repeat" className="text-[17px] text-brand-navy" />
             {item.totalSessions} buổi
           </li>
+          <li className="flex items-center gap-1.5">
+            <Icon name="flag" className="text-[17px] text-brand-navy" />
+            Khai giảng <strong className="font-semibold">{formatDate(parseIsoDate(item.startDate))}</strong>
+          </li>
+          {endDate && (
+            <li className="flex items-center gap-1.5" title="Tính theo lịch học, chưa gồm buổi bù nếu lớp nghỉ giữa chừng">
+              <Icon name="sports_score" className="text-[17px] text-brand-navy" />
+              Dự kiến hết <strong className="font-semibold">{formatDate(parseIsoDate(endDate))}</strong>
+            </li>
+          )}
+          {item.enrollmentDeadline && (
+            <li>
+              <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[12.5px] font-semibold text-emerald-800">
+                <Icon name="event_available" className="text-[15px]" />
+                Chốt đăng ký {formatDate(parseIsoDate(item.enrollmentDeadline))}
+              </span>
+            </li>
+          )}
           {mode && (
             <li className="flex items-center gap-1.5">
               <Icon name={item.deliveryMode === "ONLINE" ? "videocam" : "location_on"} className="text-[17px] text-brand-navy" />

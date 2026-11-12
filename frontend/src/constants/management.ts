@@ -23,6 +23,14 @@ export const SUBJECT_OPTIONS: { value: string; label: string; icon: string }[] =
 /** Thời lượng mặc định mỗi buổi khi tạo khóa (phút) */
 export const DEFAULT_DURATION_MINUTES = 120;
 
+/**
+ * Giới hạn thời lượng mỗi buổi khi tạo khóa học (phút), khớp @Min/@Max của CourseRequest bên backend.
+ * Buổi học bắt đầu đúng giờ của ca và kết thúc sau đúng số phút này.
+ */
+export const DURATION_MIN = 30;
+export const DURATION_MAX = 120;
+export const DURATION_STEP = 5;
+
 /** Số buổi mặc định của một khóa khi tạo mới */
 export const DEFAULT_TOTAL_SESSIONS = 24;
 

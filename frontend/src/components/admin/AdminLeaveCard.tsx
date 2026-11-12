@@ -14,6 +14,7 @@ import { formatClockTime, formatDate, parseIsoDate } from "@/utils/date";
 import { formatLongDate, formatTimeRange, teacherOf } from "@/utils/sessions";
 import type { AdminLeaveCardProps, LeaveCardAction } from "@/interfaces/admin";
 import { displayCode } from "@/utils/classes";
+import { Select } from "@/components/ui/Select";
 
 export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
   const refresh = useRefreshAdmin();
@@ -221,7 +222,7 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
                 <label htmlFor={`substitute-tutor-${request.leaveRequestId}`} className={`mb-1.5 ${AUTH_LABEL}`}>
                   Gia sư dạy thay
                 </label>
-                <select
+                <Select
                   id={`substitute-tutor-${request.leaveRequestId}`}
                   required
                   value={substituteId}
@@ -234,7 +235,7 @@ export function AdminLeaveCard({ request }: AdminLeaveCardProps) {
                       {tutor.fullName}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </ReasonForm>
           )}

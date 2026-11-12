@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { CourseClassesPanel } from "@/components/admin/CourseClassesPanel";
 import { Icon } from "@/components/ui/Icon";
 import { FOCUS_RING } from "@/constants/classNames";
-import { DEFAULT_DURATION_MINUTES, coursePriceTiers, gradeLabel, subjectLabel } from "@/constants/management";
+import { coursePriceTiers, gradeLabel, subjectLabel } from "@/constants/management";
 import { CourseCover } from "@/components/admin/CourseCover";
 import type { CourseDetailSheetProps } from "@/interfaces/admin";
 import type { CourseResponse } from "@/interfaces/api";
@@ -105,16 +105,6 @@ function SheetBody({
         <div className="space-y-6 px-6 py-6">
           {course.description && (
             <p className="max-w-[60ch] whitespace-pre-line text-[14.5px] leading-[1.7] text-brand-ink/80">{course.description}</p>
-          )}
-
-          {course.durationMinutes !== DEFAULT_DURATION_MINUTES && (
-            <p className="flex items-start gap-2 rounded-xl bg-amber-50 px-4 py-3 text-[13.5px] leading-relaxed text-amber-900">
-              <Icon name="warning" className="mt-px text-[18px]" />
-              <span>
-                Khóa đang để {course.durationMinutes} phút mỗi buổi nên chưa tạo lớp được (ca học cố định {DEFAULT_DURATION_MINUTES} phút).
-                Bấm <strong>Sửa thông tin</strong> rồi lưu lại để chuyển về {DEFAULT_DURATION_MINUTES} phút.
-              </span>
-            </p>
           )}
 
           <PriceLadder course={course} />

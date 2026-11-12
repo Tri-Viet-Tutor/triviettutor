@@ -253,6 +253,10 @@ export interface SessionScheduleProps {
   renderDetail: (session: SessionResponse, hasPendingLeave: boolean) => ReactNode;
   /** Nhãn phụ trên dòng của một buổi (tuỳ chọn) */
   renderBadge?: (session: SessionResponse) => ReactNode;
+  /** Chỉ hiện buổi của lớp này (dùng cho tầng "Danh sách buổi học" của một lớp cụ thể) */
+  classGroupId?: number;
+  /** Nội dung phụ cạnh tiêu đề, ví dụ nút "Lớp học" để quay lại danh sách lớp */
+  headerExtra?: ReactNode;
 }
 
 /** Props của StatusChip */

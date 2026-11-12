@@ -11,6 +11,7 @@ import { portalErrorMessage } from "@/utils/errors";
 import type { AvailabilityEditorProps } from "@/interfaces/portal";
 import { DateField } from "@/components/ui/DateField";
 import { TimeField } from "@/components/ui/TimeField";
+import { Select } from "@/components/ui/Select";
 
 /** Các ca của trung tâm (enum TimeSlot) để chọn nhanh; "CUSTOM" là tự nhập giờ */
 const PRESETS = TIME_SLOT_OPTIONS.map((slot) => {
@@ -124,14 +125,14 @@ export function AvailabilityEditor({ saved, queryKey }: AvailabilityEditorProps)
           <label htmlFor="availability-preset" className={`mb-1.5 ${AUTH_LABEL}`}>
             Ca
           </label>
-          <select id="availability-preset" value={preset} onChange={(event) => setPreset(event.target.value)} className={AUTH_INPUT}>
+          <Select id="availability-preset" value={preset} onChange={(event) => setPreset(event.target.value)} className={AUTH_INPUT}>
             {PRESETS.map((item) => (
               <option key={item.value} value={item.value}>
                 {item.label}
               </option>
             ))}
             <option value={CUSTOM}>Giờ khác…</option>
-          </select>
+          </Select>
         </div>
         {preset === CUSTOM && (
           <div className="grid grid-cols-2 gap-3">

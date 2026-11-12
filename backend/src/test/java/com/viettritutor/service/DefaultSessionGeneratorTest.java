@@ -112,6 +112,7 @@ class DefaultSessionGeneratorTest {
                 4,
                 SchedulePattern.MON_WED_FRI,
                 TimeSlot.SLOT_MORNING,
+                120,
                 null);
     }
 

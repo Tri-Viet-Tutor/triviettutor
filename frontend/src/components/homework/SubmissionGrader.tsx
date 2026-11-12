@@ -3,6 +3,7 @@ import { type FormEvent, useState } from "react";
 import { AuthNotice } from "@/components/auth/AuthNotice";
 import { StatusChip } from "@/components/dashboard/StatusChip";
 import { AttachmentList } from "@/components/homework/AttachmentList";
+import { QuestionMedia } from "@/components/homework/QuestionMedia";
 import { Icon } from "@/components/ui/Icon";
 import { PORTAL_BTN_PRIMARY, PORTAL_CARD, PORTAL_INPUT, PORTAL_LABEL, PORTAL_TEXT_LINK } from "@/constants/classNames";
 import { SUBMISSION_STATUS } from "@/constants/labels";
@@ -101,6 +102,7 @@ export function SubmissionGrader({ homework, submission }: SubmissionGraderProps
                   Câu {index + 1}. <span className="whitespace-pre-line font-normal">{question.prompt}</span>{" "}
                   <span className="text-brand-muted">({formatScore(question.points)} điểm)</span>
                 </p>
+                <QuestionMedia question={question} index={index} />
                 {question.type === "MULTIPLE_CHOICE" ? (
                   <p className={`mt-1.5 flex items-center gap-1.5 text-[14px] ${correct ? "text-emerald-700" : "text-red-700"}`}>
                     <Icon name={correct ? "check_circle" : "cancel"} className="text-[18px]" />

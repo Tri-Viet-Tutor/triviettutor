@@ -64,7 +64,7 @@ public class DefaultSessionGenerator implements SessionGenerator {
                     .sessionNumber(sessionNumber)
                     .sessionDate(expectedDate)
                     .startTime(spec.timeSlot().getStartTime())
-                    .endTime(spec.timeSlot().getEndTime())
+                    .endTime(spec.timeSlot().endTime(spec.durationMinutes()))
                     .status(SessionStatus.SCHEDULED)
                     .meetingUrl(normalizeNullable(spec.meetingUrl()))
                     .build());
@@ -85,7 +85,7 @@ public class DefaultSessionGenerator implements SessionGenerator {
     private void verifyMatches(Session existing, LocalDate expectedDate, SessionGenerationSpec spec) {
         if (!expectedDate.equals(existing.getSessionDate())
                 || !spec.timeSlot().getStartTime().equals(existing.getStartTime())
-                || !spec.timeSlot().getEndTime().equals(existing.getEndTime())) {
+                || !spec.timeSlot().endTime(spec.durationMinutes()).equals(existing.getEndTime())) {
             throw mismatch("Session " + existing.getSessionNumber() + " does not match the requested pattern/slot");
         }
     }

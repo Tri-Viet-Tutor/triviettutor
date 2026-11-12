@@ -2,13 +2,18 @@ import { useState } from "react";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
 import { SessionSchedule } from "@/components/dashboard/SessionSchedule";
 import { StatusChip } from "@/components/dashboard/StatusChip";
+import { TutorClassList } from "@/components/tutor/TutorClassList";
+import { TutorClassRoster } from "@/components/tutor/TutorClassRoster";
 import { TutorSessionDetail } from "@/components/tutor/TutorSessionDetail";
 import { TutorTimetable } from "@/components/tutor/TutorTimetable";
 import { Icon } from "@/components/ui/Icon";
-import { FOCUS_RING } from "@/constants/classNames";
+import { FOCUS_RING, PORTAL_BTN_GHOST } from "@/constants/classNames";
 import { useUserId } from "@/hooks/usePortalData";
 import { useNow } from "@/hooks/useNow";
+import { displayCode } from "@/utils/classes";
 import { needsAttendance, teacherOf } from "@/utils/sessions";
+
+type ClassSubView = "sessions" | "roster";
 
 type View = "timetable" | "list";
 
@@ -25,6 +30,9 @@ export function TutorSchedulePage() {
   const now = useNow();
   const tutorId = useUserId();
   const [view, setView] = useState<View>("timetable");
+  // Tầng "Lớp học" trong chế độ Danh sách: chưa chọn lớp (null) thì hiện danh sách lớp trước
+  const [selectedClass, setSelectedClass] = useState<number | null>(null);
+  const [classSubView, setClassSubView] = useState<ClassSubView>("sessions");
 
   const switcher = (
     <div role="tablist" aria-label="Cách xem lịch" className="flex rounded-xl bg-slate-100 p-1">
@@ -47,14 +55,89 @@ export function TutorSchedulePage() {
   );
 
   if (view === "list") {
+    // Chưa chọn lớp: hiện tầng "Lớp học" trước, bấm vào một lớp mới xuống "Danh sách buổi học" của lớp đó
+    if (selectedClass === null) {
+      return (
+        <div>
+          <PortalPageHeader
+            icon="school"
+            title="Lớp học"
+            description="Chọn một lớp để xem danh sách buổi học, điểm danh, bài tập và tài liệu của lớp đó."
+            action={switcher}
+          />
+          <TutorClassList now={now} onSelect={setSelectedClass} />
+        </div>
+      );
+    }
+
+    const classBack = (
+      <button
+        type="button"
+        onClick={() => {
+          setSelectedClass(null);
+          setClassSubView("sessions");
+        }}
+        className={PORTAL_BTN_GHOST}
+      >
+        <Icon name="arrow_back" className="text-[18px]" />
+        Lớp học
+      </button>
+    );
+    const classTabs = (
+      <div role="tablist" aria-label="Nội dung lớp" className="flex rounded-xl bg-slate-100 p-1">
+        {([
+          { value: "sessions" as const, label: "Danh sách buổi học", icon: "view_agenda" },
+          { value: "roster" as const, label: "Danh sách học viên", icon: "groups" },
+        ]).map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            role="tab"
+            aria-selected={classSubView === option.value}
+            onClick={() => setClassSubView(option.value)}
+            className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-[13.5px] font-semibold transition-colors ${FOCUS_RING} ${
+              classSubView === option.value ? "bg-white text-brand-navy shadow-sm" : "text-brand-muted hover:text-brand-navy"
+            }`}
+          >
+            <Icon name={option.icon} className="text-[17px]" />
+            {option.label}
+          </button>
+        ))}
+      </div>
+    );
+
+    if (classSubView === "roster") {
+      return (
+        <div>
+          <PortalPageHeader
+            icon="groups"
+            title={`Danh sách học viên — ${displayCode("class", selectedClass)}`}
+            action={
+              <div className="flex flex-wrap items-center gap-2">
+                {classBack}
+                {classTabs}
+              </div>
+            }
+          />
+          <TutorClassRoster classGroupId={selectedClass} now={now} />
+        </div>
+      );
+    }
+
     return (
       <div>
-        <div className="mb-4 flex justify-end">{switcher}</div>
         <SessionSchedule
-          title="Lịch dạy"
+          title={`Danh sách buổi học — ${displayCode("class", selectedClass)}`}
           now={now}
-          emptyTitle="Bạn chưa có buổi dạy nào."
-          emptyDescription="Lịch dạy sẽ hiện ở đây sau khi trung tâm phân công lớp cho bạn."
+          classGroupId={selectedClass}
+          emptyTitle="Lớp này chưa có buổi dạy nào."
+          emptyDescription="Lịch dạy sẽ hiện ở đây sau khi trung tâm xếp buổi cho lớp."
+          headerExtra={
+            <>
+              {classBack}
+              {classTabs}
+            </>
+          }
           renderBadge={(session) =>
             needsAttendance(session, tutorId, now) ? (
               <StatusChip tone="amber" icon="fact_check">

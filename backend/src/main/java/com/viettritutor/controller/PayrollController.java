@@ -40,4 +40,13 @@ public class PayrollController {
             @RequestParam(defaultValue="20") int size,@Parameter(hidden=true) @CurrentUser User actor) {
         return ApiResponse.ok(disputes.decorate(payroll.mine(year,month,page,size,actor),actor));
     }
+    @GetMapping("/tutor/payroll/estimate") @PreAuthorize("hasRole('TUTOR')")
+    @Operation(summary="Estimate the tutor's pay for months the centre has not finalized yet",
+            description="PAYR-02 dashboard figures. Only the authenticated tutor. Returns one DRAFT line per unfinalized "
+                    + "month (current month and up to five earlier ones), computed from completed sessions at the tutor's "
+                    + "current base salary and session rate, so the amounts can still change. Finalized months are not "
+                    + "repeated here; read them from GET /tutor/payroll. Empty when the tutor has no salary configured.")
+    public ApiResponse<java.util.List<PayrollLineResponse>> myEstimate(@Parameter(hidden=true) @CurrentUser User actor) {
+        return ApiResponse.ok(payroll.myEstimate(actor));
+    }
 }

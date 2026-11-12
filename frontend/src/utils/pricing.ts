@@ -3,7 +3,7 @@ import { COURSES } from "@/constants/courses";
 import { ENROLLMENT_WINDOWS, FEE_RANGE } from "@/constants/pricing";
 import type { Course } from "@/interfaces/course";
 import type { EnrollmentFilter, EnrollmentStatus, EnrollmentWindow, ShopFilters, ShopSort } from "@/interfaces/pricing";
-import { diffDays, formatDayMonth } from "@/utils/date";
+import { diffDays, formatDate } from "@/utils/date";
 import { normalizeText } from "@/utils/text";
 
 /* Hàm tính trạng thái đợt đăng ký, lịch học và lọc / sắp xếp khóa học. */
@@ -24,7 +24,7 @@ export function enrollmentStatus(window: EnrollmentWindow, today: Date): Enrollm
 export function enrollmentStatusLabel(window: EnrollmentWindow, today: Date): string {
   switch (enrollmentStatus(window, today)) {
     case "UPCOMING":
-      return `Mở từ ${formatDayMonth(window.opens)}`;
+      return `Mở từ ${formatDate(window.opens)}`;
     case "OPEN": {
       const daysLeft = diffDays(today, window.deadline);
       return daysLeft === 0 ? "Chốt hôm nay" : `Đang mở - còn ${daysLeft} ngày`;

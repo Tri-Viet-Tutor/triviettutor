@@ -1,5 +1,6 @@
 import { StatusChip } from "@/components/dashboard/StatusChip";
 import { AttachmentList } from "@/components/homework/AttachmentList";
+import { QuestionMedia } from "@/components/homework/QuestionMedia";
 import { Icon } from "@/components/ui/Icon";
 import { PORTAL_CARD, PORTAL_LABEL, PORTAL_TEXT_LINK } from "@/constants/classNames";
 import { SUBMISSION_STATUS } from "@/constants/labels";
@@ -67,6 +68,7 @@ export function SubmissionResult({ homework, submission }: SubmissionResultProps
                   <p className="font-semibold text-brand-ink">
                     Câu {index + 1}. <span className="whitespace-pre-line font-normal">{question.prompt}</span>
                   </p>
+                  <QuestionMedia question={question} index={index} />
                   <p className="mt-1.5 whitespace-pre-line text-brand-ink">
                     {question.type === "MULTIPLE_CHOICE"
                       ? (() => {

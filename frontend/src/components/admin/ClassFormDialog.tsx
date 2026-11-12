@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { Icon } from "@/components/ui/Icon";
 import { AUTH_ERROR, FOCUS_RING, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
-import { DELIVERY_MODE_OPTIONS, SCHEDULE_PATTERN_OPTIONS, TIME_SLOT_OPTIONS } from "@/constants/classOptions";
+import { DELIVERY_MODE_OPTIONS, SCHEDULE_PATTERN_OPTIONS, TIME_SLOT_OPTIONS, timeSlotRange } from "@/constants/classOptions";
 import { weekdayMatchesPattern, patternWeekdayLabel } from "@/utils/classes";
 import { coursePricePerSession, gradeLabel, subjectLabel } from "@/constants/management";
 import { useAdminUsers } from "@/hooks/useAdminData";
@@ -16,6 +16,7 @@ import { portalErrorMessage } from "@/utils/errors";
 import type { AdminClassResponse, ClassType, CreateClassRequest, DeliveryMode, SchedulePattern, TimeSlot } from "@/interfaces/api";
 import type { ClassFormDialogProps } from "@/interfaces/admin";
 import { DateField } from "@/components/ui/DateField";
+import { Select } from "@/components/ui/Select";
 
 const CLASS_TYPE_OPTIONS: { value: ClassType; label: string; hint: string }[] = [
   { value: "GROUP", label: "Lớp nhóm", hint: "2 – 8 học viên" },
@@ -76,15 +77,15 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: ClassFormDialogProps) {
   const courses = useAdminCourses({ active: true, size: 100 });
   const tutors = useAdminUsers({ role: "ROLE_TUTOR", size: 100 });
-  const defaultStart = toIsoDate(addDays(startOfToday(), 14));
   const [courseId, setCourseId] = useState<number | "">("");
   const [tutorId, setTutorId] = useState<number | "">("");
   const [classType, setClassType] = useState<ClassType>("GROUP");
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("OFFLINE");
   const [pattern, setPattern] = useState<SchedulePattern>("MON_WED_FRI");
   const [slot, setSlot] = useState<TimeSlot>("SLOT_EVENING");
-  const [startDate, setStartDate] = useState(defaultStart);
-  const [deadline, setDeadline] = useState(() => toIsoDate(addDays(parseIsoDate(defaultStart), -3)));
+  // Để trống, không gợi ý sẵn ngày nào — admin tự chọn ngày khai giảng phù hợp
+  const [startDate, setStartDate] = useState("");
+  const [deadline, setDeadline] = useState("");
   // Chưa tự chọn hạn đăng ký thì hạn đi theo ngày khai giảng (3 ngày trước)
   const [deadlineTouched, setDeadlineTouched] = useState(false);
   const [meetingUrl, setMeetingUrl] = useState("");
@@ -108,6 +109,11 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
     [startDate, pattern, sessionCount],
   );
   const classPrice = course && sessionCount > 0 ? Math.round(coursePricePerSession(course) * sessionCount) : null;
+  // Giờ tan của ca phụ thuộc thời lượng khóa đã chọn, không phải lúc nào cũng 2 tiếng
+  const slotOptions = useMemo(
+    () => TIME_SLOT_OPTIONS.map((option) => ({ ...option, hint: timeSlotRange(option.value, course?.durationMinutes) })),
+    [course?.durationMinutes],
+  );
 
   function changeStart(value: string) {
     setStartDate(value);
@@ -166,7 +172,7 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
                   {course ? `${course.name} - ${subjectLabel(course.subject)} ${gradeLabel(course.gradeLevel)}` : "Đang tải…"}
                 </div>
               ) : (
-                <select
+                <Select
                   id="class-course"
                   value={courseId}
                   onChange={(event) => setCourseId(event.target.value ? Number(event.target.value) : "")}
@@ -178,14 +184,14 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
                       {item.name} - {subjectLabel(item.subject)} {gradeLabel(item.gradeLevel)}
                     </option>
                   ))}
-                </select>
+                </Select>
               )}
             </div>
             <div className="min-w-0">
               <label htmlFor="class-tutor" className={PORTAL_LABEL}>
                 Gia sư phụ trách
               </label>
-              <select
+              <Select
                 id="class-tutor"
                 value={tutorId}
                 onChange={(event) => setTutorId(event.target.value ? Number(event.target.value) : "")}
@@ -197,7 +203,7 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
                     {tutor.fullName}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -233,7 +239,7 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
             onChange={setPattern}
             options={SCHEDULE_PATTERN_OPTIONS.map(({ value, label }) => ({ value, label }))}
           />
-          <Segmented label="Ca học" value={slot} onChange={setSlot} options={TIME_SLOT_OPTIONS} />
+          <Segmented label="Ca học" value={slot} onChange={setSlot} options={slotOptions} />
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <label htmlFor="class-sessions" className={PORTAL_LABEL}>
@@ -258,12 +264,14 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
                 id="class-start"
                 value={startDate}
                 min={toIsoDate(addDays(startOfToday(), 1))}
+                disabledDate={(iso) => !weekdayMatchesPattern(iso, pattern)}
                 onChange={(value) => changeStart(value)}
                 className={PORTAL_INPUT}
               />
+              <p className="mt-1 text-[12px] text-brand-muted">Chỉ chọn được {patternWeekdayLabel(pattern)}, đúng lịch học đã chọn ở trên.</p>
               {startDate && !weekdayMatchesPattern(startDate, pattern) && (
                 <p className="mt-1 text-[12px] font-medium text-amber-700">
-                  Ngày này không rơi vào {patternWeekdayLabel(pattern)} — buổi đầu sẽ tự dời sang ngày khớp gần nhất.
+                  Lịch học vừa đổi, ngày đang chọn không còn khớp {patternWeekdayLabel(pattern)}. Chọn lại ngày khai giảng nhé.
                 </p>
               )}
             </div>
@@ -282,7 +290,7 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
                 }}
                 className={PORTAL_INPUT}
               />
-              {!deadlineTouched && <p className="mt-1 text-[12px] text-brand-muted">Mặc định 3 ngày trước khai giảng</p>}
+              {!deadlineTouched && <p className="mt-1 text-[12px] text-brand-muted">Mặc định lùi 3 ngày trước khai giảng.</p>}
             </div>
           </div>
         </Section>
@@ -294,7 +302,7 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
             {endDate && <span>- dự kiến kết thúc {formatDate(parseIsoDate(endDate))}</span>}
             {classPrice !== null && (
               <span>
-                - học phí 1 kèm 1 <strong className="font-semibold">{formatVnd(classPrice)}</strong>
+                - {classType === "GROUP" ? "học phí gốc" : "học phí 1 kèm 1"}: <strong className="font-semibold">{formatVnd(classPrice)}</strong>
               </span>
             )}
           </p>

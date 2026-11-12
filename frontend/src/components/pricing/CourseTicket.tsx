@@ -6,7 +6,7 @@ import { COURSES } from "@/constants/courses";
 import { SESSION_LENGTH_LABEL, WEEKLY_SESSIONS_LABEL } from "@/constants/pricing";
 import { ROUTES } from "@/constants/routes";
 import { formatVnd } from "@/utils/currency";
-import { formatDayMonth } from "@/utils/date";
+import { formatDate } from "@/utils/date";
 import { courseSchedule, enrollmentStatus, enrollmentStatusLabel, enrollmentWindowOf } from "@/utils/pricing";
 import type { CourseTicketProps } from "@/interfaces/pricing";
 
@@ -65,7 +65,7 @@ export function CourseTicket({
           {upcoming && (
             <>
               <span aria-hidden="true">/</span>
-              Khai giảng {formatDayMonth(upcoming.starts)}
+              Khai giảng {formatDate(upcoming.starts)}
               <span
                 className={`rounded-full px-2 py-0.5 text-[12px] font-semibold ${
                   status === "OPEN" ? "bg-emerald-50 text-emerald-800" : "bg-brand-orange/20 text-brand-navyDeep"
@@ -121,7 +121,7 @@ export function CourseTicket({
           >
             <Icon name="expand_more" className="text-[19px] transition-transform duration-200 group-open:rotate-180" />
             Lộ trình {course.steps.length} chặng
-            {upcoming && ` - chốt đăng ký ${formatDayMonth(upcoming.deadline)}`}
+            {upcoming && ` - chốt đăng ký ${formatDate(upcoming.deadline)}`}
           </summary>
           <ol className="mt-3 space-y-2">
             {course.steps.map((step, index) => (

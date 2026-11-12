@@ -71,7 +71,10 @@ export function StudentTimetable({ now }: { now: Date }) {
   const dayIsos = days.map(toIsoDate);
   const todayIso = toIsoDate(now);
   const weekSessions = sessions.filter((session) => dayIsos.includes(session.date));
-  const slots = [...new Set([...SLOTS, ...weekSessions.map(slotOf)])].sort();
+  const sessionSlots = [...new Set(weekSessions.map(slotOf))];
+  // Khóa ngắn hơn 2 tiếng có khung giờ riêng, nên chỉ kẻ thêm ca mặc định nào chưa có buổi nào cùng giờ bắt đầu
+  const sessionStarts = new Set(sessionSlots.map((slot) => slot.slice(0, 5)));
+  const slots = [...sessionSlots, ...SLOTS.filter((slot) => !sessionStarts.has(slot.slice(0, 5)))].sort();
   const next = sessions
     .filter((session) => session.status === "SCHEDULED" && new Date(`${session.date}T${session.startTime}`) > now)
     .sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`))[0];
