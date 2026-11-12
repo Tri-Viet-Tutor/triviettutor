@@ -557,6 +557,16 @@ export interface AvailableTutorResponse {
   conflicts: ScheduleConflictResponse[];
 }
 
+/** dto.assignment.TutorScheduleAvailabilityRequest
+ * POST /admin/tutors/available
+ */
+export interface TutorScheduleAvailabilityRequest {
+    schedulePattern: SchedulePattern;
+    timeSlot: TimeSlot;
+    startDate: IsoDate;
+    totalSessions: number;
+}
+
 /** dto.assignment.AssignTutorRequest — POST /admin/classes/{classId}/assign */
 export interface AssignTutorRequest {
   tutorId: number;
@@ -958,18 +968,16 @@ export interface AdminClassesQuery {
 
 /** dto.classgroup.CreateClassRequest — POST /admin/classes */
 export interface CreateClassRequest {
-  courseId: number;
-  classType: ClassType;
-  deliveryMode: DeliveryMode;
-  schedulePattern: SchedulePattern;
-  timeSlot: TimeSlot;
-  startDate: IsoDate;
-  enrollmentDeadline?: IsoDate;
-  meetingUrl?: string;
-  /** Gia sư phụ trách, phân công ngay khi mở lớp (backend kiểm tra trùng lịch) */
-  tutorId?: number;
-  /** Số buổi của lớp (1 – 200) */
-  totalSessions?: number;
+    courseId: number;
+    tutorId: number;
+    totalSessions: number;
+    classType: ClassType;
+    deliveryMode: DeliveryMode;
+    schedulePattern: SchedulePattern;
+    timeSlot: TimeSlot;
+    startDate: IsoDate;
+    enrollmentDeadline?: IsoDate;
+    meetingUrl?: string;
 }
 
 /** PATCH /admin/classes/{classId}/status */

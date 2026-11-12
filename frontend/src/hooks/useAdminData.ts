@@ -4,6 +4,12 @@ import type { AdminLeaveRequestsQuery, AdminSessionsQuery, AdminUsersQuery, Role
 import { useAdminClasses } from "@/hooks/useManagementData";
 import { fetchAdminLeaveRequests, fetchAdminSessions, fetchAdminUsers, fetchSession } from "@/services/admin";
 import { displayCode } from "@/utils/classes";
+import type {
+    TutorScheduleAvailabilityRequest,
+    AvailableTutorResponse,
+} from "@/interfaces/api";
+
+import { fetchAvailableTutorsForSchedule } from "@/services/admin";
 
 /** Khóa cache của khu quản trị — tất cả nằm dưới "admin" nên sau một thao tác chỉ cần làm mới cả nhóm này */
 export const adminKeys = {
@@ -15,6 +21,9 @@ export const adminKeys = {
   availableTutors: (classId: number) => ["admin", "available-tutors", classId] as const,
   substituteTutors: (sessionId: number) => ["admin", "substitute-tutors", sessionId] as const,
   tutorBoard: (from: string, to: string) => ["admin", "tutor-board", from, to] as const,
+    availableTutorsForSchedule: (
+        schedule: TutorScheduleAvailabilityRequest
+    ) => ["admin", "available-tutors-schedule", schedule] as const,
 };
 
 /** Danh sách người dùng (có phân trang); giữ dữ liệu cũ trong lúc tải trang mới để danh sách không nhảy */
@@ -101,4 +110,16 @@ export function useUserCounts(): Record<Role, number | undefined> {
 export function useRefreshAdmin() {
   const queryClient = useQueryClient();
   return () => queryClient.invalidateQueries({ queryKey: adminKeys.all });
+}
+
+export function useAvailableTutorsForSchedule(
+    schedule: TutorScheduleAvailabilityRequest,
+    enabled = true
+) {
+    return useQuery({
+        queryKey: adminKeys.availableTutorsForSchedule(schedule),
+        queryFn: () => fetchAvailableTutorsForSchedule(schedule),
+        enabled,
+        staleTime: 0,
+    });
 }

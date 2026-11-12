@@ -2,25 +2,15 @@ package com.viettritutor.service.impl;
 
 import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.entity.ClassGroup;
+import com.viettritutor.entity.Enrollment;
 import com.viettritutor.entity.LeaveRequest;
 import com.viettritutor.entity.Session;
-import com.viettritutor.enums.AssignmentStatus;
-import com.viettritutor.enums.ClassStatus;
-import com.viettritutor.enums.ClassType;
-import com.viettritutor.enums.LeaveResolution;
-import com.viettritutor.enums.SessionChangeType;
-import com.viettritutor.enums.SessionStatus;
+import com.viettritutor.enums.*;
 import com.viettritutor.repository.ClassGroupRepository;
+import com.viettritutor.repository.EnrollmentRepository;
 import com.viettritutor.repository.SessionRepository;
 import com.viettritutor.repository.TutorAssignmentRepository;
-import com.viettritutor.service.ClassAuditService;
-import com.viettritutor.service.ClassLifecycle;
-import com.viettritutor.service.ClassQueryService;
-import com.viettritutor.service.ClassScheduleService;
-import com.viettritutor.service.ClassTeachingCompletedEvent;
-import com.viettritutor.service.PayrollGuard;
-import com.viettritutor.service.SessionLifecycleService;
-import com.viettritutor.service.SessionOperationSupport;
+import com.viettritutor.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -59,6 +49,7 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
     private final Optional<ClassLifecycle> classLifecycle;
     private final ApplicationEventPublisher eventPublisher;
     private final ClassGroupRepository classGroupRepository;
+    private final ClassCancellationService classCancellationService;
     private final Optional<ClassAuditService> classAuditService;
     private final Optional<TutorAssignmentRepository> tutorAssignments;
     private final ClassQueryService classQueryService;
@@ -66,6 +57,9 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
     private final ClassScheduleService classSchedule;
     private final Optional<PayrollGuard> payrollGuard;
     private final TransactionTemplate transaction;
+    private final EnrollmentRepository enrollments;
+    private final EnrollmentPaymentSupport support;
+    private final EnrollmentRefundService refundService;
     /** Sessions already reported as blocked by a finalized payroll period, so each is warned about once. */
     private final Set<Long> payrollBlockedSessions = ConcurrentHashMap.newKeySet();
 
@@ -139,9 +133,11 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
 
     @Override
     public int evaluateRegistrationDeadlines() {
-        LocalDate today = LocalDate.now(clock);
-        return forEachInOwnTransaction("evaluateRegistrationDeadlines",
-                classGroupRepository.findIdsByStatus(ClassStatus.ENROLLING), id -> evaluateDeadline(id, today));
+        return forEachInOwnTransaction(
+                "evaluateRegistrationDeadlines",
+                classGroupRepository.findIdsByStatus(ClassStatus.ENROLLING),
+                classCancellationService::cancelIfNotEnoughStudents
+        );
     }
 
     private boolean startClass(Long classGroupId, LocalDateTime now) {
@@ -183,51 +179,43 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
         return true;
     }
 
-    private boolean evaluateDeadline(Long classGroupId, LocalDate today) {
-        ClassGroup classGroup = classGroupRepository.findForUpdate(classGroupId).orElse(null);
-        if (classGroup == null || classGroup.getStatus() != ClassStatus.ENROLLING) {
-            return false;
-        }
-        LocalDate deadline = classGroup.getEnrollmentDeadline();
-        if (deadline == null || !today.isAfter(deadline)) {
-            return false;
-        }
+//    private boolean evaluateDeadline(Long classGroupId, LocalDate today) {
+//        ClassGroup classGroup = classGroupRepository.findForUpdate(classGroupId).orElse(null);
+//        if (classGroup == null || classGroup.getStatus() != ClassStatus.ENROLLING) {
+//            return false;
+//        }
+//        LocalDate deadline = classGroup.getEnrollmentDeadline();
+//        if (deadline == null || !today.isAfter(deadline)) {
+//            return false;
+//        }
+//
+//        long students = classQueryService.students(classGroupId);
+//        if (students == 0) {
+//            cancelEmptyClass(classGroup, deadline);
+//            return true;
+//        }
+//        if (students == 1 && classGroup.getClassType() == ClassType.GROUP) {
+//            failToOpenClass(classGroup, deadline, students);
+//            return true;
+//        }
+//        // GROUP with >= 2 students or ONE_ON_ONE with its student: ready for Admin tutor assignment (ASSIGNED).
+//        log.info("Class {} has {} enrollments after deadline {}; eligible and ready for tutor assignment",
+//                classGroupId, students, deadline);
+//        return false;
+//    }
 
-        long students = classQueryService.students(classGroupId);
-        if (students == 0) {
-            cancelEmptyClass(classGroup, deadline);
-            return true;
-        }
-        if (students == 1 && classGroup.getClassType() == ClassType.GROUP) {
-            classGroup.setStatus(ClassStatus.FAILED_TO_OPEN);
-            releaseTutor(classGroupId, "Failed to open: only 1 enrollment after deadline");
-            classGroupRepository.save(classGroup);
-            log.warn("Class {} failed to open: registration deadline {} crossed with only 1 enrollment. Admin remediation required (reopen, refund, or convert).",
-                    classGroupId, deadline);
-            audit(classGroupId, ClassStatus.ENROLLING, ClassStatus.FAILED_TO_OPEN, Map.of(
-                    "reason", "Only 1 enrollment after deadline",
-                    "deadline", deadline.toString(),
-                    "enrolledCount", 1));
-            return true;
-        }
-        // GROUP with >= 2 students or ONE_ON_ONE with its student: ready for Admin tutor assignment (ASSIGNED).
-        log.info("Class {} has {} enrollments after deadline {}; eligible and ready for tutor assignment",
-                classGroupId, students, deadline);
-        return false;
-    }
-
-    private void cancelEmptyClass(ClassGroup classGroup, LocalDate deadline) {
-        // Same path as the manual cancel: session changes are audited and no ACTIVE assignment remains.
-        classSchedule.cancelClass(classGroup, null, EMPTY_CLASS_REASON);
-        classGroup.setStatus(ClassStatus.CANCELLED);
-        classGroupRepository.save(classGroup);
-        audit(classGroup.getId(), ClassStatus.ENROLLING, ClassStatus.CANCELLED, Map.of(
-                "reason", EMPTY_CLASS_REASON,
-                "deadline", deadline.toString(),
-                "enrolledCount", 0));
-        log.info("Class {} auto-cancelled: 0 enrollments reached after registration deadline {}",
-                classGroup.getId(), deadline);
-    }
+//    private void cancelEmptyClass(ClassGroup classGroup, LocalDate deadline) {
+//        // Same path as the manual cancel: session changes are audited and no ACTIVE assignment remains.
+//        classSchedule.cancelClass(classGroup, null, EMPTY_CLASS_REASON);
+//        classGroup.setStatus(ClassStatus.CANCELLED);
+//        classGroupRepository.save(classGroup);
+//        audit(classGroup.getId(), ClassStatus.ENROLLING, ClassStatus.CANCELLED, Map.of(
+//                "reason", EMPTY_CLASS_REASON,
+//                "deadline", deadline.toString(),
+//                "enrolledCount", 0));
+//        log.info("Class {} auto-cancelled: 0 enrollments reached after registration deadline {}",
+//                classGroup.getId(), deadline);
+//    }
 
     /**
      * Runs each item in its own transaction so one failing class or session never rolls back
@@ -314,5 +302,80 @@ public class SessionLifecycleServiceImpl implements SessionLifecycleService {
                     }
                     sessionRepository.saveAll(sessions);
                 });
+    }
+
+    private void failToOpenClass(
+            ClassGroup classGroup,
+            LocalDate deadline,
+            long enrolledCount
+    ) {
+        Long classId = classGroup.getId();
+
+        // Lock học viên theo thứ tự ID tăng dần.
+        List<Enrollment> preliminary = enrollments
+                .findByClassGroupIdAndStatusOrderByStudentId(
+                        classId,
+                        EnrollmentStatus.ACTIVE
+                );
+
+        Long[] studentIds = preliminary.stream()
+                .map(Enrollment::getStudentId)
+                .distinct()
+                .sorted()
+                .toArray(Long[]::new);
+
+        if (studentIds.length > 0) {
+            support.lockPeople(studentIds);
+        }
+
+        // Đọc lại Enrollment sau khi đã lock.
+        List<Enrollment> activeEnrollments =
+                enrollments.findActiveForUpdate(
+                        classId,
+                        EnrollmentStatus.ACTIVE
+                );
+
+        // Giải phóng tutor assignment và session slots.
+        releaseTutor(
+                classId,
+                "Failed to open: insufficient enrollment"
+        );
+
+        // Hủy sessions và assignment còn hiệu lực.
+        classSchedule.cancelClass(
+                classGroup,
+                null,
+                "Failed to open: insufficient enrollment"
+        );
+
+        // Đổi trạng thái lớp.
+        classGroup.setStatus(ClassStatus.FAILED_TO_OPEN);
+        classGroupRepository.save(classGroup);
+
+        // Hoàn tiền 100% cho tất cả học viên ACTIVE.
+        for (Enrollment enrollment : activeEnrollments) {
+            refundService.refundForClassCancellation(
+                    enrollment.getId(),
+                    "Automatic refund: class failed to open due to insufficient enrollment"
+            );
+        }
+
+        audit(
+                classId,
+                ClassStatus.ENROLLING,
+                ClassStatus.FAILED_TO_OPEN,
+                Map.of(
+                        "reason", "Insufficient enrollment after deadline",
+                        "deadline", deadline.toString(),
+                        "enrolledCount", enrolledCount,
+                        "automated", true
+                )
+        );
+
+        log.warn(
+                "Class {} failed to open and {} active enrollments were refunded",
+                classId,
+                activeEnrollments.size()
+        );
     }
 }

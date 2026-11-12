@@ -273,4 +273,38 @@ public class TutorAssignmentServiceImpl implements TutorAssignmentService {
         }
         return false;
     }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AvailableTutorResponse> availableTutorsForSchedule(
+            TutorScheduleAvailabilityRequest request
+    ) {
+        if (request.startDate() == null
+                || !request.startDate().isAfter(LocalDate.now(clock))
+                || request.totalSessions() == null
+                || request.totalSessions() < 1
+                || request.totalSessions() > 200) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_CLASS_CONFIGURATION
+            );
+        }
+
+        List<Session> requested = scheduleService.plannedSessions(
+                request.startDate(),
+                request.schedulePattern(),
+                request.timeSlot(),
+                request.totalSessions()
+        );
+
+        List<Session> future = futureSessions(requested);
+        requireFutureSessions(future);
+
+        return rank(
+                userRepository.findByRoleOrderByIdAsc("ROLE_TUTOR"),
+                future,
+                slot -> true
+        );
+    }
+
 }

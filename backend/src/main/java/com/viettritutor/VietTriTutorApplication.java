@@ -2,6 +2,7 @@ package com.viettritutor;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -23,6 +24,7 @@ import java.nio.file.Path;
 @EnableAsync
 @EnableScheduling
 @SpringBootApplication
+@ConfigurationPropertiesScan
 public class VietTriTutorApplication {
 
     public static void main(String[] args) {

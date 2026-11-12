@@ -58,6 +58,36 @@ public class ClassScheduleService {
         return planned;
     }
 
+    public List<Session> plannedSessions(
+            LocalDate startDate,
+            SchedulePattern pattern,
+            TimeSlot timeSlot,
+            int totalSessions
+    ) {
+        if (startDate == null || pattern == null || timeSlot == null
+                || totalSessions < 1 || totalSessions > 200) {
+            throw new BusinessException(ErrorCode.INVALID_CLASS_CONFIGURATION);
+        }
+
+        List<LocalDate> dates = calculator.calculate(
+                startDate, pattern, totalSessions
+        );
+
+        List<Session> planned = new ArrayList<>();
+
+        for (int index = 0; index < dates.size(); index++) {
+            planned.add(Session.builder()
+                    .sessionNumber(index + 1)
+                    .sessionDate(dates.get(index))
+                    .startTime(timeSlot.getStartTime())
+                    .endTime(timeSlot.getEndTime())
+                    .status(SessionStatus.SCHEDULED)
+                    .build());
+        }
+
+        return planned;
+    }
+
     public void requireConfigured(ClassGroup c) {
         if (c.getCourse() == null || c.getStartDate() == null || c.getTotalSessions() == null
                 || c.getSchedulePattern() == null || c.getTimeSlot() == null) {
@@ -147,5 +177,33 @@ public class ClassScheduleService {
     private boolean untaughtInSession(Session s) {
         return s.getStatus() == SessionStatus.IN_SESSION && s.getTeachingConfirmedAt() == null
                 && s.getTeachingConfirmedBy() == null && !attendance.existsBySessionId(s.getId());
+    }
+
+    /**
+     * Cancels a class that failed to open and releases its tutor slots
+     * so the class can be reopened later.
+     *
+     * Caller holds the class lock and sets the class status.
+     */
+    public void failToOpenClass(ClassGroup c, String reason) {
+        cancelSessions(c, null, reason);
+
+        // Terminate active tutor assignment.
+        assignments.findByClassGroupIdAndStatus(
+                c.getId(),
+                AssignmentStatus.ACTIVE
+        ).ifPresent(a -> {
+            a.setStatus(AssignmentStatus.TERMINATED);
+            a.setTerminatedBy(null);
+            a.setTerminatedAt(OffsetDateTime.now(clock));
+            a.setTerminationReason(reason);
+        });
+
+        // Release tutor slots so the class can be reopened.
+        for (Session s : sessions.findClassSessionsForUpdate(c.getId())) {
+            s.setScheduledTutorId(null);
+            s.setActualTutorId(null);
+            s.setActualTutorOverridden(false);
+        }
     }
 }
