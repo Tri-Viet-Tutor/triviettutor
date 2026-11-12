@@ -1196,65 +1196,79 @@ export default function ClassroomPage() {
                   )}
                 </div>
 
-                {participants
-                  .filter((p) => !p.isSelf)
-                  .map((p) => (
-                    <div
-                      key={p.id}
-                      className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 p-3"
-                    >
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-semibold text-slate-300">{p.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`rounded px-1.5 py-0.5 text-xs font-medium ${
-                              p.micEnabled
-                                ? "bg-emerald-500/20 text-emerald-300"
-                                : "bg-rose-500/20 text-rose-300"
-                            }`}
-                          >
-                            {p.micEnabled ? "Mic Bật" : "Mic Tắt"}
-                          </span>
-                          {p.handRaised && (
-                            <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-xs text-amber-300 animate-pulse">
-                              Đang giơ tay
+                {participants.filter((p) => !p.isSelf).length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-6 rounded-xl border border-dashed border-slate-850 bg-slate-900/40 text-center">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 text-slate-400 mb-2">
+                      <Icon name="person" className="text-[20px]" />
+                    </div>
+                    <p className="text-xs font-semibold text-slate-300">
+                      Chưa có thành viên nào khác vào phòng
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-1 max-w-[220px]">
+                      Khi có người tham gia, video và trạng thái sẽ tự động xuất hiện tại đây theo thời gian thực.
+                    </p>
+                  </div>
+                ) : (
+                  participants
+                    .filter((p) => !p.isSelf)
+                    .map((p) => (
+                      <div
+                        key={p.id}
+                        className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 p-3"
+                      >
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-semibold text-slate-300">{p.name}</span>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                                p.micEnabled
+                                  ? "bg-emerald-500/20 text-emerald-300"
+                                  : "bg-rose-500/20 text-rose-300"
+                              }`}
+                            >
+                              {p.micEnabled ? "Mic Bật" : "Mic Tắt"}
                             </span>
+                            {p.handRaised && (
+                              <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-xs text-amber-300 animate-pulse">
+                                Đang giơ tay
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-1 items-center justify-center py-4">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 text-slate-300 font-bold border border-slate-700">
+                            {p.role === "TUTOR" ? "GS" : "HS"}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between border-t border-slate-800 pt-2 text-xs">
+                          <span className="text-slate-400">
+                            {p.role === "TUTOR" ? "Gia sư phụ trách" : "Học sinh"}
+                          </span>
+                          {(isTutor || isAdmin) && p.role === "STUDENT" && (
+                            <div className="flex items-center gap-1.5">
+                              {p.micEnabled ? (
+                                <button
+                                  onClick={() => handleHostMuteParticipant(p.id)}
+                                  className="rounded bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-rose-500 transition shadow"
+                                >
+                                  Tắt mic
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleHostRequestUnmute(p.id)}
+                                  className="rounded bg-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-600 hover:text-white transition"
+                                >
+                                  Yêu cầu bật mic
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
-
-                      <div className="flex flex-1 items-center justify-center py-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 text-slate-300 font-bold border border-slate-700">
-                          {p.role === "TUTOR" ? "GS" : "HS"}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between border-t border-slate-800 pt-2 text-xs">
-                        <span className="text-slate-400">
-                          {p.role === "TUTOR" ? "Gia sư phụ trách" : "Học sinh"}
-                        </span>
-                        {(isTutor || isAdmin) && p.role === "STUDENT" && (
-                          <div className="flex items-center gap-1.5">
-                            {p.micEnabled ? (
-                              <button
-                                onClick={() => handleHostMuteParticipant(p.id)}
-                                className="rounded bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-rose-500 transition shadow"
-                              >
-                                Tắt mic
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleHostRequestUnmute(p.id)}
-                                className="rounded bg-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-600 hover:text-white transition"
-                              >
-                                Yêu cầu bật mic
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                )}
               </div>
             </div>
           </div>
@@ -1379,20 +1393,7 @@ export default function ClassroomPage() {
 
         {/* Raise Hand Toggle */}
         <button
-          onClick={() => {
-            setHandRaised((prev) => {
-              const next = !prev;
-              if (user?.id) {
-                setHandRaisedIds((ids) => {
-                  const copy = new Set(ids);
-                  if (next) copy.add(user.id);
-                  else copy.delete(user.id);
-                  return copy;
-                });
-              }
-              return next;
-            });
-          }}
+          onClick={toggleHandRaise}
           className={`flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-semibold transition ${
             handRaised
               ? "bg-amber-500 text-slate-950 font-bold"
