@@ -9,7 +9,7 @@ import { ROUTES } from "@/constants/routes";
 import { walletService } from "@/services/walletService";
 import { useAuthStore } from "@/stores/authStore";
 import { formatVnd } from "@/utils/currency";
-import { readTopup, saveTopup, walletError } from "@/utils/wallet";
+import { clearTopup, readTopup, saveTopup, walletError } from "@/utils/wallet";
 import type { TopupAttempt } from "@/interfaces/wallet";
 import { displayCode } from "@/utils/classes";
 
@@ -51,6 +51,14 @@ function WalletContent({ userId, fullName }: { userId: number; fullName: string 
     refetchInterval: (q) => (q.state.data?.status === "PENDING" && q.state.dataUpdateCount < 21 ? 3000 : false),
   });
   const topup = detail.data ?? (returning ? returned.data : undefined);
+
+  useEffect(() => {
+    if (detail.isError) {
+      clearTopup(userId);
+      setActiveId(null);
+      attempt.current = null;
+    }
+  }, [detail.isError, userId]);
   const reconcile = useMutation({
     mutationFn: (id: number) => walletService.reconcileTopup(id),
     onSuccess: (value) => {

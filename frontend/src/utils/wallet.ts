@@ -40,3 +40,12 @@ export function saveTopup(userId: number, attempt: TopupAttempt): void {
     // Signed return still recovers the top-up.
   }
 }
+
+// Xóa lần nạp tiền đang chờ khỏi trình duyệt
+export function clearTopup(userId: number): void {
+  try {
+    sessionStorage.removeItem(`wallet-topup-${userId}`);
+  } catch {
+    // Ignore
+  }
+}
