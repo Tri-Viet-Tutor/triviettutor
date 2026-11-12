@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -597,30 +598,34 @@ public class MeetingServiceImpl implements MeetingService {
         }
 
         try {
-            Path targetDir = Paths.get(recordingDir);
+            Path targetDir = Paths.get(recordingDir).toAbsolutePath().normalize();
             Files.createDirectories(targetDir);
 
             String fileName = "audio-session-" + sessionId + "-" + System.currentTimeMillis() + "." + extension;
             Path filePath = targetDir.resolve(fileName);
-            file.transferTo(filePath.toFile());
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
             String recordingUrl = "/api/v1/meetings/sessions/" + sessionId + "/recording";
 
             if (meetingSessionLogRepository != null) {
-                String roomName = "classroom-session-" + sessionId;
-                MeetingSessionLog sLog = meetingSessionLogRepository.findBySessionId(roomName)
-                        .orElse(MeetingSessionLog.builder()
-                                .sessionId(roomName)
-                                .roomName(roomName)
-                                .classGroupId(session.getClassGroupId())
-                                .scheduleId(session.getId())
-                                .hostUserId(teachingTutorId(session))
-                                .status("COMPLETED")
-                                .startTime(Instant.now())
-                                .build());
-                sLog.setRecordingUrl(recordingUrl);
-                meetingSessionLogRepository.save(sLog);
-                log.info("Saved audio recording for session {} into MongoDB with URL {}", sessionId, recordingUrl);
+                try {
+                    String roomName = "classroom-session-" + sessionId;
+                    MeetingSessionLog sLog = meetingSessionLogRepository.findBySessionId(roomName)
+                            .orElse(MeetingSessionLog.builder()
+                                    .sessionId(roomName)
+                                    .roomName(roomName)
+                                    .classGroupId(session.getClassGroupId())
+                                    .scheduleId(session.getId())
+                                    .hostUserId(teachingTutorId(session))
+                                    .status("COMPLETED")
+                                    .startTime(Instant.now())
+                                    .build());
+                    sLog.setRecordingUrl(recordingUrl);
+                    meetingSessionLogRepository.save(sLog);
+                    log.info("Saved audio recording for session {} into MongoDB with URL {}", sessionId, recordingUrl);
+                } catch (Exception mongoEx) {
+                    log.warn("Could not save recording metadata to MongoDB for session {}: {}", sessionId, mongoEx.getMessage());
+                }
             }
 
             return recordingUrl;
@@ -643,7 +648,7 @@ public class MeetingServiceImpl implements MeetingService {
         validateAndResolveRole(session, session.getClassGroupId(), currentUser);
 
         try {
-            Path targetDir = Paths.get(recordingDir);
+            Path targetDir = Paths.get(recordingDir).toAbsolutePath().normalize();
             if (!Files.exists(targetDir)) {
                 throw new BusinessException(ErrorCode.FILE_NOT_FOUND, "Chưa có bản ghi âm cho buổi học này");
             }

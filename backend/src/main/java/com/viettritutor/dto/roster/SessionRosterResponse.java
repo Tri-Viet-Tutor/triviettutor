@@ -24,6 +24,9 @@ public record SessionRosterResponse(
         @Schema(description = "Tên gia sư phụ trách")
         String tutorName,
 
+        @Schema(description = "Thông tin chi tiết gia sư phụ trách")
+        SessionRosterTutor tutor,
+
         @Schema(description = "Danh sách học viên đăng ký trong buổi học")
         List<SessionRosterStudent> students
 ) {}

@@ -26,7 +26,7 @@ export interface SessionRosterStudent {
   studentId: number;
   fullName: string;
   avatarUrl?: string | null;
-  isPresent: boolean; // Trạng thái tính toán realtime: có mặt trong phòng hay không
+  isPresent?: boolean; // Trạng thái tính toán realtime: có mặt trong phòng hay không
   micEnabled?: boolean;
   cameraEnabled?: boolean;
   handRaised?: boolean;
@@ -37,9 +37,9 @@ export interface SessionRosterResponse {
   classGroupId: number;
   courseTitle: string;
   sessionNumber: number;
-  tutor: {
+  tutor?: {
     tutorId: number;
     fullName: string;
-  };
+  } | null;
   students: SessionRosterStudent[];
 }

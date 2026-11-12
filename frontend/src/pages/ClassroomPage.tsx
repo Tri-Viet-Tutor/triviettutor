@@ -2,13 +2,14 @@ import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getSessionMeetingToken, getSessionMeetingLogs, uploadMeetingRecording } from "../services/meeting";
 import { MeetingTokenResponse, MeetingSessionLogsResponse } from "../interfaces/api";
-import { ClassroomParticipant, MeetingSignalPayload } from "../interfaces/meetingSignal.contract";
+import { ClassroomParticipant, MeetingSignalPayload, WhiteboardStrokePayload } from "../interfaces/meetingSignal.contract";
 import { getSessionRoster } from "../services/rosterService";
 import type { SessionRosterResponse } from "../interfaces/classRoster.contract";
 import { ClassroomParticipantsSidebar } from "../components/classroom/ClassroomParticipantsSidebar";
 import { useAuthStore } from "../stores/authStore";
 import { portalErrorMessage } from "../utils/errors";
 import { ConfirmDialog } from "@/components/dashboard/ConfirmDialog";
+import { Icon } from "@/components/ui/Icon";
 
 export default function ClassroomPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -25,13 +26,14 @@ export default function ClassroomPage() {
   const [screenSharing, setScreenSharing] = useState(false);
   const [showWhiteboard, setShowWhiteboard] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [showParticipants, setShowParticipants] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
 
   // Danh sách người học trong phòng & hiện diện trực tiếp
   const [sessionRoster, setSessionRoster] = useState<SessionRosterResponse | null>(null);
   const [onlineParticipantIds, setOnlineParticipantIds] = useState<Set<number>>(new Set());
-  const [tutorOnline, setTutorOnline] = useState<boolean>(true);
+  const [tutorOnline, setTutorOnline] = useState<boolean>(false);
   const [mutedStudentIds, setMutedStudentIds] = useState<Set<number>>(new Set());
   const [handRaisedIds, setHandRaisedIds] = useState<Set<number>>(new Set());
 
@@ -78,6 +80,7 @@ export default function ClassroomPage() {
 
   // Whiteboard Canvas State
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const lastDrawPosRef = useRef<{ x: number; y: number } | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawColor, setDrawColor] = useState("#2563eb");
   const brushSize = 3;
@@ -129,32 +132,15 @@ export default function ClassroomPage() {
       .then((roster) => {
         if (isMounted) {
           setSessionRoster(roster);
-          // Mặc định đánh dấu người dùng hiện tại là online
-          if (user?.id) {
-            setOnlineParticipantIds((prev) => new Set(prev).add(user.id));
-          }
-          if (user?.role === "ROLE_STUDENT" && user?.id) {
+          if (user?.id && user?.role === "ROLE_STUDENT") {
             setOnlineParticipantIds((prev) => new Set(prev).add(user.id));
           }
         }
       })
-      .catch(() => {
+      .catch((err) => {
         if (isMounted) {
-          // Fallback dữ liệu cấu trúc chuẩn cho môi trường kiểm thử
-          setSessionRoster({
-            sessionId: Number(sessionId),
-            classGroupId: 1,
-            courseTitle: "Toán 12 Chuyên Đề Hàm Số & Khảo Sát Đồ Thị",
-            sessionNumber: 3,
-            tutor: { tutorId: 1, fullName: "Thầy Trần Minh Hoàng" },
-            students: [
-              { studentId: 101, fullName: "Nguyễn Văn An", avatarUrl: null },
-              { studentId: 102, fullName: "Trần Thị Mai", avatarUrl: null },
-              { studentId: 103, fullName: "Lê Quốc Bảo", avatarUrl: null },
-            ],
-          });
-          // Trong môi trường preview, giả lập 2 học viên đang online
-          setOnlineParticipantIds(new Set([101, 102]));
+          console.warn("Could not load session roster:", err);
+          setSessionRoster(null);
         }
       });
 

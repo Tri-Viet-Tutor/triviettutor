@@ -160,6 +160,8 @@ public class ClassRosterService {
 
         String courseTitle = classGroup.getCourse() != null ? classGroup.getCourse().getTitle() : ("Lớp " + classGroup.getClassCode());
 
+        SessionRosterTutor tutorObj = tutorId != null ? new SessionRosterTutor(tutorId, tutorName) : null;
+
         return new SessionRosterResponse(
                 session.getId(),
                 classGroupId,
@@ -167,6 +169,7 @@ public class ClassRosterService {
                 session.getSessionNumber(),
                 tutorId,
                 tutorName,
+                tutorObj,
                 rosterStudents
         );
     }
