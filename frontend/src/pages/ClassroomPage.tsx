@@ -27,9 +27,9 @@ export default function ClassroomPage() {
   const roleLabel = isTutor ? "Gia sư" : isAdmin ? "Quản trị viên" : "Học sinh";
   const currentUserName = user?.fullName || (isHost ? (meetingData?.tutorName || "Gia sư") : "Học sinh");
 
-  // Classroom media states
-  const [micEnabled, setMicEnabled] = useState(true);
-  const [cameraEnabled, setCameraEnabled] = useState(true);
+  // Classroom media states - Mặc định tắt micro và camera khi tham gia phòng học
+  const [micEnabled, setMicEnabled] = useState(false);
+  const [cameraEnabled, setCameraEnabled] = useState(false);
   const [screenSharing, setScreenSharing] = useState(false);
   const [showWhiteboard, setShowWhiteboard] = useState(false);
   const [activeSidePanel, setActiveSidePanel] = useState<"participants" | "chat" | null>(null);
@@ -42,7 +42,7 @@ export default function ClassroomPage() {
   const [onlineParticipantIds, setOnlineParticipantIds] = useState<Set<number>>(new Set());
   const [tutorOnline, setTutorOnline] = useState<boolean>(false);
   const [mutedStudentIds, setMutedStudentIds] = useState<Set<number>>(new Set());
-  const [handRaisedIds, setHandRaisedIds] = useState<Set<number>>(new Set());
+  const [handRaisedIds, setHandRaisedIds] = useState<Set<number | string>>(new Set());
 
   // Host Remote Controls & Participants State
   const [participants, setParticipants] = useState<ClassroomParticipant[]>([]);
@@ -94,12 +94,20 @@ export default function ClassroomPage() {
   const [sessionLogs, setSessionLogs] = useState<MeetingSessionLogsResponse | null>(null);
 
   // Whiteboard Canvas State
+  type WhiteboardTool = "pen" | "eraser" | "text";
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastDrawPosRef = useRef<{ x: number; y: number } | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [activeTool, setActiveTool] = useState<WhiteboardTool>("pen");
+  const isEraser = activeTool === "eraser";
   const [drawColor, setDrawColor] = useState("#2563eb");
   const brushSize = 3;
-  const [isEraser, setIsEraser] = useState(false);
+  const [fontSize, setFontSize] = useState<number>(24);
+  const [floatingText, setFloatingText] = useState<{
+    x: number;
+    y: number;
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!sessionId) {
@@ -177,6 +185,13 @@ export default function ClassroomPage() {
             stream.getTracks().forEach((t) => t.stop());
             return;
           }
+          // Mặc định tắt các track âm thanh và hình ảnh khi mới tham gia phòng
+          stream.getAudioTracks().forEach((t) => {
+            t.enabled = false;
+          });
+          stream.getVideoTracks().forEach((t) => {
+            t.enabled = false;
+          });
           acquired = stream;
           setLocalStream(stream);
           if (localVideoRef.current) {
@@ -184,10 +199,7 @@ export default function ClassroomPage() {
           }
         })
         .catch((err) => {
-          console.warn("Webcam/mic not available or permission denied:", err);
-          if (active) {
-            setMediaPermissionDenied(true);
-          }
+          console.warn("Webcam/mic not available or access deferred:", err);
         });
     }
 
@@ -371,6 +383,22 @@ export default function ClassroomPage() {
         ctx.lineTo(stroke.toX, stroke.toY);
         ctx.stroke();
         ctx.restore();
+      } else if (signal.action === "WHITEBOARD_TEXT" && signal.drawText) {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        const { x, y, text, color, fontSize: textFontSize } = signal.drawText;
+        ctx.save();
+        ctx.font = `bold ${textFontSize || 24}px sans-serif`;
+        ctx.fillStyle = color || "#0f172a";
+        ctx.textBaseline = "top";
+        const lines = text.split("\n");
+        const lineH = (textFontSize || 24) * 1.25;
+        lines.forEach((line, idx) => {
+          ctx.fillText(line, x, y + idx * lineH);
+        });
+        ctx.restore();
       } else if (signal.action === "WHITEBOARD_CLEAR") {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -412,7 +440,10 @@ export default function ClassroomPage() {
       } else if (signal.action === "UPDATE_MEDIA_STATE") {
         setParticipants((prev) =>
           prev.map((p) => {
-            if (p.id === signal.senderId) {
+            const isMatch =
+              p.id === signal.senderId ||
+              (p.role !== "TUTOR" && signal.senderRole !== "TUTOR" && !p.isSelf);
+            if (isMatch) {
               return {
                 ...p,
                 micEnabled: signal.micEnabled !== undefined ? signal.micEnabled : p.micEnabled,
@@ -423,31 +454,51 @@ export default function ClassroomPage() {
             return p;
           })
         );
+        const senderStr = String(signal.senderId);
         const numId = Number(signal.senderId);
-        if (!isNaN(numId) && numId > 0) {
-          if (signal.handRaised) {
-            setHandRaisedIds((prev) => new Set(prev).add(numId));
-          } else {
-            setHandRaisedIds((prev) => {
-              const next = new Set(prev);
-              next.delete(numId);
-              return next;
-            });
-          }
-          if (signal.micEnabled === false) {
-            setMutedStudentIds((prev) => new Set(prev).add(numId));
-          } else if (signal.micEnabled === true) {
-            setMutedStudentIds((prev) => {
-              const next = new Set(prev);
-              next.delete(numId);
-              return next;
-            });
-          }
+        if (signal.handRaised !== undefined) {
+          setHandRaisedIds((prev) => {
+            const next = new Set(prev);
+            if (signal.handRaised) {
+              next.add(senderStr);
+              if (!isNaN(numId) && numId > 0) next.add(numId);
+              if (sessionRoster?.students[0]) {
+                next.add(sessionRoster.students[0].studentId);
+                next.add(String(sessionRoster.students[0].studentId));
+              }
+            } else {
+              next.delete(senderStr);
+              if (!isNaN(numId) && numId > 0) next.delete(numId);
+              if (sessionRoster?.students[0]) {
+                next.delete(sessionRoster.students[0].studentId);
+                next.delete(String(sessionRoster.students[0].studentId));
+              }
+            }
+            return next;
+          });
+        }
+        if (signal.micEnabled !== undefined) {
+          setMutedStudentIds((prev) => {
+            const next = new Set(prev);
+            if (signal.micEnabled === false) {
+              if (!isNaN(numId) && numId > 0) next.add(numId);
+              if (sessionRoster?.students[0]) next.add(sessionRoster.students[0].studentId);
+            } else if (signal.micEnabled === true) {
+              if (!isNaN(numId) && numId > 0) next.delete(numId);
+              if (sessionRoster?.students[0]) next.delete(sessionRoster.students[0].studentId);
+            }
+            return next;
+          });
         }
       }
     },
     [cameraEnabled, handRaised, localStream, meetingData, micEnabled, sendMeetingSignal, user]
   );
+
+  const handleIncomingSignalRef = useRef(handleIncomingSignal);
+  useEffect(() => {
+    handleIncomingSignalRef.current = handleIncomingSignal;
+  });
 
   // Gắn luồng Remote Tutor Video vào thẻ video của Học sinh
   useEffect(() => {
@@ -517,13 +568,17 @@ export default function ClassroomPage() {
           foundTutor = true;
         }
 
+        const isRemoteHandRaised =
+          handRaisedIds.has(rp.identity) ||
+          handRaisedIds.has(Number(rp.identity));
+
         remotes.push({
           id: rp.identity,
           name: rp.name || "Thành viên",
           role: metaRole as ClassroomParticipant["role"],
           micEnabled: rp.isMicrophoneEnabled,
           cameraEnabled: rp.isCameraEnabled,
-          handRaised: false,
+          handRaised: isRemoteHandRaised,
           isSelf: false,
         });
 
@@ -656,7 +711,7 @@ export default function ClassroomPage() {
         const decoder = new TextDecoder();
         const jsonStr = decoder.decode(payload);
         const signal = JSON.parse(jsonStr) as MeetingSignalPayload;
-        handleIncomingSignal(signal);
+        handleIncomingSignalRef.current?.(signal);
       } catch (err) {
         console.warn("Could not decode LiveKit data payload:", err);
       }
@@ -673,7 +728,7 @@ export default function ClassroomPage() {
     broadcastChannelRef.current = channel;
     if (channel) {
       channel.onmessage = (event: MessageEvent<MeetingSignalPayload>) => {
-        handleIncomingSignal(event.data);
+        handleIncomingSignalRef.current?.(event.data);
       };
     }
 
@@ -704,8 +759,8 @@ export default function ClassroomPage() {
         broadcastChannelRef.current = null;
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ chạy lại khi phòng / người dùng đổi, không theo từng lần bật tắt mic, camera
-  }, [sessionId, meetingData, user, handleIncomingSignal, sendMeetingSignal]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- kết nối một lần duy nhất cho phiên học, không tái kết nối khi đổi media hay giơ tay
+  }, [sessionId, meetingData?.serverUrl, meetingData?.token, user?.id]);
 
   const toggleMic = async () => {
     const nextState = !micEnabled;
@@ -720,6 +775,18 @@ export default function ClassroomPage() {
       localStream.getAudioTracks().forEach((t) => {
         t.enabled = nextState;
       });
+    } else if (nextState && typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        setLocalStream((prev) => {
+          if (!prev) return stream;
+          stream.getAudioTracks().forEach((t) => prev.addTrack(t));
+          return prev;
+        });
+      } catch (err) {
+        console.warn("Could not acquire mic:", err);
+        setMediaPermissionDenied(true);
+      }
     }
     setMicEnabled(nextState);
     if (hostMutedNotice) {
@@ -806,6 +873,21 @@ export default function ClassroomPage() {
       localStream.getVideoTracks().forEach((t) => {
         t.enabled = nextCam;
       });
+    } else if (nextCam && typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+        setLocalStream((prev) => {
+          if (!prev) return stream;
+          stream.getVideoTracks().forEach((t) => prev.addTrack(t));
+          return prev;
+        });
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+      } catch (err) {
+        console.warn("Could not acquire camera:", err);
+        setMediaPermissionDenied(true);
+      }
     }
     setCameraEnabled(nextCam);
 
@@ -830,17 +912,20 @@ export default function ClassroomPage() {
   const toggleHandRaise = () => {
     const nextHand = !handRaised;
     setHandRaised(nextHand);
-    if (user?.id) {
-      setHandRaisedIds((ids) => {
-        const copy = new Set(ids);
-        if (nextHand) copy.add(user.id);
-        else copy.delete(user.id);
-        return copy;
-      });
-    }
-
     const isHost = meetingData?.role === "TUTOR" || meetingData?.role === "ADMIN";
     const currentUserId = String(user?.id || (isHost ? "tutor" : "student"));
+
+    setHandRaisedIds((ids) => {
+      const copy = new Set(ids);
+      if (nextHand) {
+        if (user?.id) copy.add(user.id);
+        copy.add(currentUserId);
+      } else {
+        if (user?.id) copy.delete(user.id);
+        copy.delete(currentUserId);
+      }
+      return copy;
+    });
 
     sendMeetingSignal({
       action: "UPDATE_MEDIA_STATE",
@@ -908,38 +993,75 @@ export default function ClassroomPage() {
     }
   };
 
+  const getCanvasPoint = (e: React.MouseEvent<HTMLCanvasElement>): { x: number; y: number } | null => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return null;
+
+    const canvasAspect = canvas.width / canvas.height;
+    const boxAspect = rect.width / rect.height;
+
+    let renderWidth = rect.width;
+    let renderHeight = rect.height;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (boxAspect > canvasAspect) {
+      renderWidth = rect.height * canvasAspect;
+      offsetX = (rect.width - renderWidth) / 2;
+    } else {
+      renderHeight = rect.width / canvasAspect;
+      offsetY = (rect.height - renderHeight) / 2;
+    }
+
+    const clientXRel = e.clientX - rect.left - offsetX;
+    const clientYRel = e.clientY - rect.top - offsetY;
+
+    if (clientXRel < 0 || clientXRel > renderWidth || clientYRel < 0 || clientYRel > renderHeight) {
+      return null;
+    }
+
+    const x = (clientXRel / renderWidth) * canvas.width;
+    const y = (clientYRel / renderHeight) * canvas.height;
+    return { x, y };
+  };
+
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const pt = getCanvasPoint(e);
+    if (!pt) return;
+
+    if (activeTool === "text") {
+      setFloatingText({
+        x: pt.x,
+        y: pt.y,
+        text: "",
+      });
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-
-    lastDrawPosRef.current = { x, y };
+    lastDrawPosRef.current = pt;
     ctx.beginPath();
-    ctx.moveTo(x, y);
+    ctx.moveTo(pt.x, pt.y);
     setIsDrawing(true);
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
+    if (!isDrawing || activeTool === "text") return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
+    const pt = getCanvasPoint(e);
+    if (!pt) return;
 
-    const prevPos = lastDrawPosRef.current || { x, y };
+    const prevPos = lastDrawPosRef.current || pt;
 
     ctx.lineWidth = isEraser ? 24 : brushSize;
     ctx.lineCap = "round";
@@ -947,7 +1069,7 @@ export default function ClassroomPage() {
 
     ctx.beginPath();
     ctx.moveTo(prevPos.x, prevPos.y);
-    ctx.lineTo(x, y);
+    ctx.lineTo(pt.x, pt.y);
     ctx.stroke();
 
     const isHost = meetingData?.role === "TUTOR" || meetingData?.role === "ADMIN";
@@ -961,20 +1083,68 @@ export default function ClassroomPage() {
       drawStroke: {
         fromX: prevPos.x,
         fromY: prevPos.y,
-        toX: x,
-        toY: y,
+        toX: pt.x,
+        toY: pt.y,
         color: drawColor,
         size: brushSize,
         isEraser: isEraser,
       },
     });
 
-    lastDrawPosRef.current = { x, y };
+    lastDrawPosRef.current = pt;
   };
 
   const stopDrawing = () => {
     setIsDrawing(false);
     lastDrawPosRef.current = null;
+  };
+
+  const commitFloatingText = () => {
+    if (!floatingText || !floatingText.text.trim()) {
+      setFloatingText(null);
+      return;
+    }
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      setFloatingText(null);
+      return;
+    }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      setFloatingText(null);
+      return;
+    }
+
+    const { x, y, text } = floatingText;
+    ctx.save();
+    ctx.font = `bold ${fontSize}px sans-serif`;
+    ctx.fillStyle = drawColor;
+    ctx.textBaseline = "top";
+    const lines = text.split("\n");
+    const lineH = fontSize * 1.25;
+    lines.forEach((line, idx) => {
+      ctx.fillText(line, x, y + idx * lineH);
+    });
+    ctx.restore();
+
+    const isHost = meetingData?.role === "TUTOR" || meetingData?.role === "ADMIN";
+    const currentUserId = String(user?.id || (isHost ? "tutor" : "student"));
+
+    sendMeetingSignal({
+      action: "WHITEBOARD_TEXT",
+      senderId: currentUserId,
+      senderRole: meetingData?.role || "TUTOR",
+      timestamp: Date.now(),
+      drawText: {
+        x,
+        y,
+        text,
+        color: drawColor,
+        fontSize,
+      },
+    });
+
+    setFloatingText(null);
   };
 
   const clearCanvas = () => {
@@ -984,6 +1154,7 @@ export default function ClassroomPage() {
     if (!ctx) return;
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    setFloatingText(null);
 
     const isHost = meetingData?.role === "TUTOR" || meetingData?.role === "ADMIN";
     const currentUserId = String(user?.id || (isHost ? "tutor" : "student"));
@@ -1240,9 +1411,13 @@ export default function ClassroomPage() {
     sessionRoster?.students[0]?.fullName ||
     "Học sinh";
   const studentMicOn = studentParticipant?.micEnabled ?? false;
-  const studentHandRaised =
-    studentParticipant?.handRaised ??
-    (sessionRoster?.students[0] ? handRaisedIds.has(sessionRoster.students[0].studentId) : false);
+  const studentHandRaised = Boolean(
+    participants.some((p) => !p.isSelf && p.role !== "TUTOR" && p.handRaised) ||
+    studentParticipant?.handRaised ||
+    (studentParticipant && (handRaisedIds.has(studentParticipant.id) || handRaisedIds.has(Number(studentParticipant.id)))) ||
+    (sessionRoster?.students && sessionRoster.students.some((s) => handRaisedIds.has(s.studentId) || handRaisedIds.has(String(s.studentId)))) ||
+    (isTutor && handRaisedIds.size > 0)
+  );
 
   const handleCopyRoomCode = () => {
     if (meetingData?.roomName) {
@@ -1277,19 +1452,28 @@ export default function ClassroomPage() {
           </div>
         </div>
 
-        {/* Center: Clean Room Code */}
-        <div className="hidden md:flex items-center gap-2 rounded-full bg-slate-900/80 border border-white/10 px-3 py-1 text-xs">
-          <span className="text-slate-400">Phòng:</span>
-          <span className="font-mono text-indigo-300 font-semibold">{meetingData.roomName}</span>
-          <button
-            type="button"
-            onClick={handleCopyRoomCode}
-            className="ml-1 text-slate-400 hover:text-white transition flex items-center gap-1"
-            title="Sao chép mã phòng"
-          >
-            <Icon name={copiedRoomCode ? "check" : "content_copy"} className="text-sm text-indigo-400" />
-            {copiedRoomCode && <span className="text-[10px] text-emerald-400 font-medium">Đã chép!</span>}
-          </button>
+        {/* Center: Clean Room Code & Hand Raised Alert */}
+        <div className="flex items-center gap-2">
+          {studentHandRaised && (
+            <div className="flex items-center gap-1.5 rounded-full bg-amber-500/20 border border-amber-500/40 px-3 py-1 text-xs text-amber-300 font-bold animate-pulse shadow-sm">
+              <Icon name="pan_tool" className="text-sm text-amber-400" />
+              <span>Học sinh đang giơ tay</span>
+            </div>
+          )}
+
+          <div className="hidden md:flex items-center gap-2 rounded-full bg-slate-900/80 border border-white/10 px-3 py-1 text-xs">
+            <span className="text-slate-400">Phòng:</span>
+            <span className="font-mono text-indigo-300 font-semibold">{meetingData.roomName}</span>
+            <button
+              type="button"
+              onClick={handleCopyRoomCode}
+              className="ml-1 text-slate-400 hover:text-white transition flex items-center gap-1"
+              title="Sao chép mã phòng"
+            >
+              <Icon name={copiedRoomCode ? "check" : "content_copy"} className="text-sm text-indigo-400" />
+              {copiedRoomCode && <span className="text-[10px] text-emerald-400 font-medium">Đã chép!</span>}
+            </button>
+          </div>
         </div>
 
         {/* Right Actions */}
@@ -1412,13 +1596,16 @@ export default function ClassroomPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-slate-300 mr-1 flex items-center gap-1">
                       <Icon name="draw" className="text-xs text-indigo-400" />
-                      Bảng vẽ:
+                      Công cụ:
                     </span>
                     <button
                       type="button"
-                      onClick={() => setIsEraser(false)}
+                      onClick={() => {
+                        setActiveTool("pen");
+                        setFloatingText(null);
+                      }}
                       className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-                        !isEraser ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
+                        activeTool === "pen" ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
                       }`}
                     >
                       <Icon name="edit" className="text-xs" />
@@ -1426,16 +1613,55 @@ export default function ClassroomPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setIsEraser(true)}
+                      onClick={() => {
+                        setActiveTool("text");
+                      }}
                       className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-                        isEraser ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
+                        activeTool === "text" ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      <Icon name="text_fields" className="text-xs" />
+                      Văn bản
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTool("eraser");
+                        setFloatingText(null);
+                      }}
+                      className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                        activeTool === "eraser" ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
                       }`}
                     >
                       <Icon name="auto_fix_normal" className="text-xs" />
                       Tẩy xóa
                     </button>
 
-                    {!isEraser && (
+                    {activeTool === "text" && (
+                      <div className="flex items-center gap-1 ml-2 border-l border-slate-700 pl-2">
+                        <span className="text-[11px] text-slate-400">Cỡ chữ:</span>
+                        {[
+                          { size: 18, label: "Nhỏ" },
+                          { size: 24, label: "Vừa" },
+                          { size: 32, label: "Lớn" },
+                        ].map((opt) => (
+                          <button
+                            key={opt.size}
+                            type="button"
+                            onClick={() => setFontSize(opt.size)}
+                            className={`rounded px-1.5 py-0.5 text-[11px] font-semibold transition ${
+                              fontSize === opt.size
+                                ? "bg-indigo-600 text-white"
+                                : "bg-slate-800 text-slate-400 hover:text-slate-200"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {activeTool !== "eraser" && (
                       <div className="flex items-center gap-1.5 ml-2 border-l border-slate-700 pl-2">
                         {["#2563eb", "#dc2626", "#16a34a", "#0f172a"].map((c) => (
                           <button
@@ -1473,20 +1699,85 @@ export default function ClassroomPage() {
               )}
             </div>
 
-            {/* Canvas Area */}
-            <div className="flex-1 bg-white overflow-hidden flex items-center justify-center p-2">
-              <canvas
-                ref={canvasRef}
-                width={1280}
-                height={720}
-                onMouseDown={isTutor || isAdmin ? startDrawing : undefined}
-                onMouseMove={isTutor || isAdmin ? draw : undefined}
-                onMouseUp={isTutor || isAdmin ? stopDrawing : undefined}
-                onMouseLeave={isTutor || isAdmin ? stopDrawing : undefined}
-                className={`h-full w-full object-contain border border-slate-200 rounded-xl shadow-sm ${
-                  isTutor || isAdmin ? "cursor-crosshair" : "cursor-default pointer-events-none"
-                }`}
-              />
+            {/* Canvas Area with exact 16:9 aspect ratio container to eliminate cursor offset */}
+            <div className="flex-1 bg-slate-950 overflow-hidden flex items-center justify-center p-2 relative select-none">
+              <div className="relative aspect-video max-w-full max-h-full w-full h-auto flex items-center justify-center shadow-lg rounded-xl overflow-hidden border border-slate-800 bg-white">
+                <canvas
+                  ref={canvasRef}
+                  width={1280}
+                  height={720}
+                  onMouseDown={isTutor || isAdmin ? startDrawing : undefined}
+                  onMouseMove={isTutor || isAdmin ? draw : undefined}
+                  onMouseUp={isTutor || isAdmin ? stopDrawing : undefined}
+                  onMouseLeave={isTutor || isAdmin ? stopDrawing : undefined}
+                  className={`w-full h-full block touch-none ${
+                    activeTool === "text"
+                      ? "cursor-text"
+                      : activeTool === "eraser"
+                      ? "cursor-cell"
+                      : isTutor || isAdmin
+                      ? "cursor-crosshair"
+                      : "cursor-default pointer-events-none"
+                  }`}
+                />
+
+                {/* Floating text input on whiteboard */}
+                {floatingText && (
+                  <div
+                    className="absolute z-30 flex flex-col gap-1 p-1.5 bg-white/95 backdrop-blur rounded-lg shadow-2xl border-2 border-indigo-500"
+                    style={{
+                      left: `${Math.min(75, Math.max(2, (floatingText.x / 1280) * 100))}%`,
+                      top: `${Math.min(80, Math.max(2, (floatingText.y / 720) * 100))}%`,
+                      transform: "translate(-2px, -2px)",
+                      maxWidth: "90%",
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <textarea
+                      autoFocus
+                      rows={2}
+                      value={floatingText.text}
+                      onChange={(e) =>
+                        setFloatingText((prev) => (prev ? { ...prev, text: e.target.value } : null))
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          commitFloatingText();
+                        } else if (e.key === "Escape") {
+                          setFloatingText(null);
+                        }
+                      }}
+                      placeholder="Nhập nội dung (Enter để chèn, Esc để hủy)..."
+                      style={{
+                        color: drawColor,
+                        fontSize: `${Math.max(13, Math.round(fontSize * 0.65))}px`,
+                        lineHeight: 1.3,
+                      }}
+                      className="w-64 sm:w-80 rounded border border-slate-300 p-2 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-inner resize"
+                    />
+                    <div className="flex items-center justify-between gap-1 pt-0.5">
+                      <span className="text-[10px] text-slate-500 italic">Enter: chèn | Esc: hủy</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setFloatingText(null)}
+                          className="rounded px-2 py-0.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition"
+                        >
+                          Hủy
+                        </button>
+                        <button
+                          type="button"
+                          onClick={commitFloatingText}
+                          className="rounded bg-indigo-600 px-2.5 py-0.5 text-[11px] font-bold text-white hover:bg-indigo-700 transition"
+                        >
+                          Chèn chữ
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -1961,9 +2252,18 @@ export default function ClassroomPage() {
           aria-label="Danh sách người tham gia"
         >
           <Icon name="groups" className="text-[20px]" />
-          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-500 px-1 text-[9px] font-bold text-white">
-            {sessionRoster ? onlineParticipantIds.size + (tutorOnline ? 1 : 0) : participants.length}
-          </span>
+          {studentHandRaised ? (
+            <span
+              className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-bold text-slate-950 border border-slate-900 animate-pulse shadow"
+              title="Có học sinh giơ tay"
+            >
+              <Icon name="pan_tool" className="text-[9px]" />
+            </span>
+          ) : (
+            <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-500 px-1 text-[9px] font-bold text-white">
+              {sessionRoster ? onlineParticipantIds.size + (tutorOnline ? 1 : 0) : participants.length}
+            </span>
+          )}
         </button>
 
         {/* Chat Button */}

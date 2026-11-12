@@ -19,7 +19,8 @@ export type MeetingSignalAction =
   | "UPDATE_MEDIA_STATE"
   | "CHAT_MESSAGE"
   | "WHITEBOARD_DRAW"
-  | "WHITEBOARD_CLEAR";
+  | "WHITEBOARD_CLEAR"
+  | "WHITEBOARD_TEXT";
 
 export interface WhiteboardStrokePayload {
   fromX: number;
@@ -29,6 +30,14 @@ export interface WhiteboardStrokePayload {
   color: string;
   size: number;
   isEraser: boolean;
+}
+
+export interface WhiteboardTextPayload {
+  x: number;
+  y: number;
+  text: string;
+  color: string;
+  fontSize: number;
 }
 
 export interface MeetingChatMessagePayload {
@@ -55,4 +64,5 @@ export interface MeetingSignalPayload {
   participantsList?: ClassroomParticipant[];
   chatMessage?: MeetingChatMessagePayload;
   drawStroke?: WhiteboardStrokePayload;
+  drawText?: WhiteboardTextPayload;
 }

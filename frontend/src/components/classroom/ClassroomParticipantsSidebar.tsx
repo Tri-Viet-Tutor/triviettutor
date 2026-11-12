@@ -10,7 +10,7 @@ interface ClassroomParticipantsSidebarProps {
   onlineParticipantIds: Set<number>;
   tutorInfo?: { tutorId: number; fullName: string } | null;
   tutorOnline: boolean;
-  handRaisedIds: Set<number>;
+  handRaisedIds: Set<number | string>;
   mutedStudentIds: Set<number>;
   onToggleMuteStudent?: (studentId: number) => void;
   onMuteAll?: () => void;
@@ -101,7 +101,7 @@ export function ClassroomParticipantsSidebar({
           ) : (
             <ul className="space-y-2">
               {presentStudents.map((st) => {
-                const isHandRaised = handRaisedIds.has(st.studentId);
+                const isHandRaised = handRaisedIds.has(st.studentId) || handRaisedIds.has(String(st.studentId));
                 const isMuted = mutedStudentIds.has(st.studentId);
                 return (
                   <li
