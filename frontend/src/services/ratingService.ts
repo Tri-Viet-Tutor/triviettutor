@@ -2,10 +2,11 @@ import type { ApiResponse } from "@/interfaces/dto";
 import { api, unwrap } from "@/services/apiClient";
 import type { TutorRating, TutorRatingSummary } from "@/interfaces/dto";
 
-// GET /tutors/{tutorId}/my-rating — đánh giá của tôi cho gia sư; chưa đánh giá (404) thì trả null
-export async function fetchMyRating(tutorId: number): Promise<TutorRating | null> {
+// GET /tutors/{tutorId}/my-rating — đánh giá của tôi cho gia sư (theo lớp nếu có); chưa đánh giá (404) thì trả null
+export async function fetchMyRating(tutorId: number, classGroupId?: number | null): Promise<TutorRating | null> {
   try {
-    return unwrap(await api.get<ApiResponse<TutorRating>>(`/tutors/${tutorId}/my-rating`));
+    const params = classGroupId ? { classGroupId } : undefined;
+    return unwrap(await api.get<ApiResponse<TutorRating>>(`/tutors/${tutorId}/my-rating`, { params }));
   } catch (error) {
     if ((error as { response?: { status?: number } }).response?.status === 404) return null;
     throw error;
@@ -22,8 +23,8 @@ export async function fetchTutorRatings(tutorId: number): Promise<TutorRating[]>
   return unwrap(await api.get<ApiResponse<TutorRating[]>>(`/tutors/${tutorId}/ratings`));
 }
 
-// POST /tutors/{tutorId}/ratings — mỗi học viên đánh giá mỗi gia sư một lần
-export async function createRating(tutorId: number, input: { rating: number; comment?: string }): Promise<TutorRating> {
+// POST /tutors/{tutorId}/ratings — học viên đánh giá gia sư theo lớp (không gửi lớp thì backend tự chọn lớp đang học)
+export async function createRating(tutorId: number, input: { classGroupId?: number; rating: number; comment?: string }): Promise<TutorRating> {
   return unwrap(await api.post<ApiResponse<TutorRating>>(`/tutors/${tutorId}/ratings`, input));
 }
 

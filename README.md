@@ -87,7 +87,7 @@ Fill in `.env` (it is git-ignored, never commit it):
 | `DB_USERNAME` | `postgres.fwoxupsupabpepgveqhr` (session pooler user) |
 | `DB_PASSWORD` | Database password, shared privately by the team lead |
 | `JWT_SECRET`  | Any random string of 32+ bytes (`openssl rand -hex 32`); use the same value as the team if tokens must be shared |
-| `MONGODB_URI` | MongoDB Atlas connection string (meeting history). Required in Docker |
+| `MONGODB_URI` | MongoDB connection string (local host: `mongodb://localhost:27017/triviettutor`, Docker: `mongodb://mongodb:27017/triviettutor`) |
 
 Use the **session pooler**, not the direct host `db.<ref>.supabase.co` (IPv6 only, usually
 unreachable from Docker Desktop) and not the transaction pooler on port `6543` (breaks

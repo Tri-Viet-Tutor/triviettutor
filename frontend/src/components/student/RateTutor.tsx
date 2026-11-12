@@ -59,10 +59,25 @@ function StarPicker({ value, onChange }: { value: number; onChange: (value: numb
 
 // Khung bật lên để chấm sao gia sư: 1-5 sao, nhận xét không bắt buộc.
 // Chưa đánh giá thì gửi mới (POST /tutors/{id}/ratings); đã có thì sửa (PUT /ratings/{id}) hoặc xóa.
-export function RateTutorDialog({ tutor, onClose }: { tutor: StudentTutor | null; onClose: () => void }) {
+export function RateTutorDialog({
+  tutor,
+  classGroupId,
+  onClose,
+}: {
+  tutor: StudentTutor | null;
+  // Lớp được đánh giá; bỏ trống mà gia sư chỉ dạy tôi một lớp thì lấy lớp đó
+  classGroupId?: number | null;
+  onClose: () => void;
+}) {
   const cache = useQueryClient();
   const tutorId = tutor?.id ?? 0;
-  const mine = useQuery({ queryKey: ["my-rating", tutorId], queryFn: () => fetchMyRating(tutorId), retry: false, enabled: tutor !== null });
+  const classId = classGroupId ?? (tutor?.classes.length === 1 ? tutor.classes[0].id : undefined);
+  const mine = useQuery({
+    queryKey: ["my-rating", tutorId, classId ?? "all"],
+    queryFn: () => fetchMyRating(tutorId, classId),
+    retry: false,
+    enabled: tutor !== null,
+  });
   const [stars, setStars] = useState(0);
   const [comment, setComment] = useState("");
   const [done, setDone] = useState("");
@@ -84,7 +99,7 @@ export function RateTutorDialog({ tutor, onClose }: { tutor: StudentTutor | null
   const save = useMutation({
     mutationFn: () => {
       const input = { rating: stars, ...(comment.trim() ? { comment: comment.trim() } : {}) };
-      return mine.data ? updateRating(mine.data.id, input) : createRating(tutorId, input);
+      return mine.data ? updateRating(mine.data.id, input) : createRating(tutorId, { ...input, ...(classId ? { classGroupId: classId } : {}) });
     },
     onSuccess: () => {
       setDone(mine.data ? "Đã cập nhật đánh giá." : "Cảm ơn bạn đã đánh giá!");

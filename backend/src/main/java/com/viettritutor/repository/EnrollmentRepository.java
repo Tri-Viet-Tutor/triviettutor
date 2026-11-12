@@ -2,6 +2,7 @@ package com.viettritutor.repository;
 
 import com.viettritutor.entity.Enrollment;
 import com.viettritutor.enums.EnrollmentStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
@@ -26,4 +27,43 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long>, J
     boolean existsStudentTaughtByTutor(@Param("studentId") Long studentId,
                                        @Param("tutorId") Long tutorId,
                                        @Param("enrollmentStatus") EnrollmentStatus enrollmentStatus);
+
+    @Query("""
+            select e.classGroupId from Enrollment e, TutorAssignment a
+            where e.studentId = :studentId and e.status = :enrollmentStatus
+              and a.classGroupId = e.classGroupId and a.tutorId = :tutorId
+            """)
+    List<Long> findClassGroupIdsByStudentAndTutor(
+            @Param("studentId") Long studentId,
+            @Param("tutorId") Long tutorId,
+            @Param("enrollmentStatus") EnrollmentStatus enrollmentStatus
+    );
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+    SELECT e
+    FROM Enrollment e
+    WHERE e.classGroupId = :classGroupId
+      AND e.status = :status
+    ORDER BY e.studentId
+    """)
+    List<Enrollment> findActiveForUpdate(
+            @Param("classGroupId") Long classGroupId,
+            @Param("status") EnrollmentStatus status
+    );
+
+    @Query("""
+    select count(e) > 0
+    from Enrollment e, TutorAssignment a
+    where e.studentId = :studentId
+      and e.classGroupId = :classGroupId
+      and e.status = :enrollmentStatus
+      and a.classGroupId = e.classGroupId
+      and a.tutorId = :tutorId
+    """)
+    boolean existsStudentEnrolledInClassTaughtByTutor(
+            @Param("studentId") Long studentId,
+            @Param("classGroupId") Long classGroupId,
+            @Param("tutorId") Long tutorId,
+            @Param("enrollmentStatus") EnrollmentStatus enrollmentStatus
+    );
 }

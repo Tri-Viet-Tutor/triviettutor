@@ -105,5 +105,7 @@ export function useRefreshMine() {
       queryClient.invalidateQueries({ queryKey: ["me", userId] }),
       queryClient.invalidateQueries({ queryKey: ["wallet", userId] }),
       queryClient.invalidateQueries({ queryKey: ["wallet-history", userId] }),
+      queryClient.invalidateQueries({ queryKey: ["tuition-classes"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin", "classes"] }),
     ]);
 }

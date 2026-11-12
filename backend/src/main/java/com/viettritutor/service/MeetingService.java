@@ -1,5 +1,6 @@
 package com.viettritutor.service;
 
+import com.viettritutor.dto.meeting.MeetingRecordingInfoResponse;
 import com.viettritutor.dto.meeting.MeetingSessionLogsResponse;
 import com.viettritutor.dto.meeting.MeetingTokenResponse;
 import com.viettritutor.entity.User;
@@ -29,5 +30,20 @@ public interface MeetingService {
      * Retrieve MongoDB meeting audit logs and participant presence for a session.
      */
     MeetingSessionLogsResponse getSessionMeetingLogs(Long sessionId, User currentUser);
+
+    /**
+     * Upload and save an audio voice recording for a meeting session.
+     */
+    String saveMeetingAudioRecording(Long sessionId, org.springframework.web.multipart.MultipartFile file, User currentUser);
+
+    /**
+     * Retrieve the audio recording resource for streaming or download.
+     */
+    org.springframework.core.io.Resource getMeetingAudioRecording(Long sessionId, User currentUser);
+
+    /**
+     * Retrieve recording metadata and availability status for a session.
+     */
+    MeetingRecordingInfoResponse getMeetingRecordingInfo(Long sessionId, User currentUser);
 }
 

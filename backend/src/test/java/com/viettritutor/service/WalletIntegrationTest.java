@@ -1,4 +1,5 @@
 package com.viettritutor.service;
+import com.viettritutor.service.impl.VnpayApiClientImpl;
 
 import com.fasterxml.jackson.databind.*;
 import com.viettritutor.entity.*;
@@ -70,7 +71,7 @@ class WalletIntegrationTest {
         @Override public Instant instant() { return value; }
     }
     /** Stands in for the VNPay merchant API; the real client still signs requests and verifies the reply. */
-    static class FakeGateway extends com.viettritutor.service.VnpayApiClient {
+    static class FakeGateway extends com.viettritutor.service.impl.VnpayApiClientImpl {
         volatile Map<String, Object> reply;
         FakeGateway(com.viettritutor.config.VnpayProperties p, VnpaySignature s) { super(p, s); }
         @Override protected Map<String, Object> post(Map<String, String> body) { return reply; }

@@ -11,6 +11,7 @@ import com.viettritutor.enums.LeaveResolution;
 import com.viettritutor.enums.SessionChangeType;
 import com.viettritutor.enums.SessionStatus;
 import com.viettritutor.repository.ClassGroupRepository;
+import com.viettritutor.repository.EnrollmentRepository;
 import com.viettritutor.repository.SessionRepository;
 import com.viettritutor.service.impl.SessionLifecycleServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +47,8 @@ class SessionLifecycleServiceTest {
     @Mock
     private ClassGroupRepository classGroupRepository;
     @Mock
+    private ClassCancellationService classCancellationService;
+    @Mock
     private ClassAuditService classAuditService;
     @Mock
     private ClassQueryService classQueryService;
@@ -55,15 +58,34 @@ class SessionLifecycleServiceTest {
     private ClassScheduleService classSchedule;
     @Mock
     private PayrollGuard payrollGuard;
+    @Mock
+    private EnrollmentRepository enrollmentRepository;
+    @Mock
+    private EnrollmentPaymentSupport enrollmentPaymentSupport;
+    @Mock
+    private EnrollmentRefundService enrollmentRefundService;
 
     private SessionLifecycleService service;
 
     @BeforeEach
     void setUp() {
         service = new SessionLifecycleServiceImpl(
-                repository, CLOCK, Optional.of(classLifecycle), eventPublisher,
-                classGroupRepository, Optional.of(classAuditService), Optional.empty(), classQueryService, operations,
-                classSchedule, Optional.of(payrollGuard), new TransactionTemplate(mock(PlatformTransactionManager.class)));
+                repository,
+                CLOCK,
+                Optional.of(classLifecycle),
+                eventPublisher,
+                classGroupRepository,
+                classCancellationService,
+                Optional.of(classAuditService),
+                Optional.empty(),
+                classQueryService,
+                operations,
+                classSchedule,
+                Optional.of(payrollGuard),
+                new TransactionTemplate(mock(PlatformTransactionManager.class)),
+                enrollmentRepository,
+                enrollmentPaymentSupport,
+                enrollmentRefundService);
     }
 
     // ---------------------------------------------------------------- session advancement

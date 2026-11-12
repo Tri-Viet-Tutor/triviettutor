@@ -4,7 +4,6 @@ import { PortalEmpty, PortalError, PortalLoading } from "@/components/dashboard/
 import { StatTile } from "@/components/dashboard/StatTile";
 import { useState } from "react";
 import { StatusChip } from "@/components/dashboard/StatusChip";
-import { PayrollDispute } from "@/components/tutor/PayrollDispute";
 import { Icon } from "@/components/ui/Icon";
 import { PORTAL_BTN_SECONDARY, PORTAL_CARD } from "@/constants/classNames";
 import { PAYROLL_STATUS } from "@/constants/labels";
@@ -204,7 +203,6 @@ export function TutorPayrollPage() {
                       </StatusChip>
                     </div>
                   </div>
-                  <PayrollDispute line={line} />
                   <details className="mt-3 border-t border-brand-sandLine pt-3">
                     <summary className="cursor-pointer text-[13.5px] font-semibold text-brand-navy">Xem các buổi đã dạy</summary>
                     <div className="mt-2">

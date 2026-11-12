@@ -23,6 +23,7 @@ import type {
   SubstituteRequest,
   UpdateTutorProfileRequest,
   UpdateUserStatusRequest,
+  TutorScheduleAvailabilityRequest,
 } from "@/interfaces/dto";
 import { api, unwrap } from "@/services/apiClient";
 
@@ -178,4 +179,19 @@ export async function assignTutor(classId: number, tutorId: number): Promise<Ass
 // PUT /admin/classes/{classId}/reassign — đổi gia sư chính của lớp, kèm lý do
 export async function reassignTutor(classId: number, tutorId: number, reason: string): Promise<AssignmentResponse> {
   return unwrap(await api.put<ApiResponse<AssignmentResponse>>(`/admin/classes/${classId}/reassign`, { tutorId, reason }));
+}
+
+/**
+ * POST /admin/tutors/available
+ * Tìm gia sư không bị trùng lịch với lịch lớp dự kiến.
+ */
+export async function fetchAvailableTutorsForSchedule(
+    request: TutorScheduleAvailabilityRequest
+): Promise<AvailableTutorResponse[]> {
+    return unwrap(
+        await api.post<ApiResponse<AvailableTutorResponse[]>>(
+            "/admin/tutors/available",
+            request
+        )
+    );
 }

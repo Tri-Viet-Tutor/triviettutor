@@ -64,9 +64,10 @@ public class TutorRatingController {
     @Operation(summary = "My rating of a tutor")
     public ApiResponse<TutorRatingResponse> getMyRating(
             @PathVariable Long tutorId,
+            @RequestParam(required = false) Long classGroupId,
             Authentication authentication
     ) {
-        return ApiResponse.ok(tutorRatingService.getMyRating(tutorId, authentication.getName()));
+        return ApiResponse.ok(tutorRatingService.getMyRating(tutorId, classGroupId, authentication.getName()));
     }
 
     @PutMapping("/ratings/{ratingId}")

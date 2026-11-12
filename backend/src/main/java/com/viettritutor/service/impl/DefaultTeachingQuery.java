@@ -65,8 +65,8 @@ public class DefaultTeachingQuery implements TeachingQuery {
             if (Objects.equals(tutorId, actual)) {
                 Set<Long> roster = expected.getOrDefault(session.getId(), Set.of());
                 boolean valid = session.getStatus() == SessionStatus.COMPLETED && session.isAttendanceLocked()
-                        && !session.isAttendanceNeedsReview() && session.isAttendanceRosterCaptured() && !roster.isEmpty()
-                        && recorded.getOrDefault(session.getId(), Set.of()).containsAll(roster)
+                        && !session.isAttendanceNeedsReview() && session.isAttendanceRosterCaptured()
+                        && (roster.isEmpty() || recorded.getOrDefault(session.getId(), Set.of()).containsAll(roster))
                         && Objects.equals(tutorId, session.getTaughtByTutorId()) && session.getTeachingConfirmedAt() != null;
                 if (valid) completed.add(item); else unfinalized.add(item);
             } else if (Objects.equals(tutorId, session.getScheduledTutorId())

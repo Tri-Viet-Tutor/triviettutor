@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PortalDialog } from "@/components/dashboard/PortalDialog";
+import { queryKeys } from "@/constants/queryKeys";
 import { Icon } from "@/components/ui/Icon";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { AUTH_ERROR, FOCUS_RING, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY } from "@/constants/classNames";
@@ -62,10 +63,24 @@ export function TransferClassDialog({
     if (open) setTargetId(null);
   }, [open, enrollment?.enrollmentId]);
 
+  const queryClient = useQueryClient();
+
   const move = useMutation({
     mutationFn: () => transferEnrollment(enrollment!.enrollmentId, targetId!),
+    meta: {
+      invalidates: [
+        queryKeys.me.all(userId),
+        queryKeys.me.enrollments(userId),
+        queryKeys.me.sessions(userId),
+        queryKeys.me.wallet(userId),
+        queryKeys.me.walletHistory(userId),
+        queryKeys.catalog.classes,
+      ],
+    },
     onSuccess: () => {
       const target = targets.find((item) => item.id === targetId);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.me.all(userId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.catalog.classes });
       onDone(`Đã đổi sang lớp ${target?.classCode ?? "mới"}. Lịch học đã cập nhật theo lớp mới.`);
     },
   });

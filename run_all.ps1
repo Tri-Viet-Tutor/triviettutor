@@ -1,3 +1,9 @@
+param(
+    [switch]$Playwright,
+    [switch]$PlaywrightUI,
+    [switch]$BackendTest
+)
+
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $Host.UI.RawUI.WindowTitle = "VietTriTutor - Startup Script"
 
@@ -56,13 +62,13 @@ function Import-SampleData {
     }
 
     # Uu tien chay qua Docker PostgreSQL neu container dang chay hoac chay truc tiep psql
-    $dockerRunning = $false
+    $pgContainerRunning = $false
     try {
-        $null = docker info 2>&1
-        if ($LASTEXITCODE -eq 0) { $dockerRunning = $true }
-    } catch { $dockerRunning = $false }
+        $containerId = docker compose ps --status running -q postgres 2>$null
+        if ($containerId) { $pgContainerRunning = $true }
+    } catch { $pgContainerRunning = $false }
 
-    if ($dockerRunning) {
+    if ($pgContainerRunning) {
         # Copy sql file vao container va thuc thi
         $targetInContainer = "/tmp/" + (Split-Path $dataFile -Leaf)
         docker compose cp "$dataFile" "postgres:$targetInContainer" 2>$null | Out-Null
@@ -74,6 +80,52 @@ function Import-SampleData {
             $env:PGPASSWORD = $dbPass
             psql -h localhost -U $dbUser -d $dbName -f "$dataFile" 2>$null | Out-Null
             Write-Host " - Da nap du lieu vao PostgreSQL host thanh cong!" -ForegroundColor Green
+        } else {
+            Write-Host " - [CANH BAO] Khong the nap du lieu vao PostgreSQL (Container postgres khong chay va khong tim thay psql tren host)." -ForegroundColor Yellow
+        }
+    }
+}
+
+# Ham nap dataset mau cho MongoDB
+function Import-MongoSampleData {
+    param($mongoFile)
+
+    if (-not (Test-Path -LiteralPath $mongoFile)) {
+        Write-Host " - Khong tim thay file du lieu MongoDB: $mongoFile" -ForegroundColor DarkGray
+        return
+    }
+
+    Write-Host " - Dang nap dataset mau MongoDB: $(Split-Path $mongoFile -Leaf) ..." -ForegroundColor Cyan
+
+    $mongoDb = "triviettutor"
+    $envFile = Join-Path $rootDir ".env"
+    if (Test-Path $envFile) {
+        foreach ($line in (Get-Content -LiteralPath $envFile)) {
+            if ($line -match '^\s*MONGODB_DATABASE\s*=\s*(.+)$') { $mongoDb = $Matches[1].Trim() }
+            elseif ($line -match '^\s*LOCAL_MONGO_DATABASE\s*=\s*(.+)$') { $mongoDb = $Matches[1].Trim() }
+        }
+    }
+
+    $mongoContainerRunning = $false
+    try {
+        $containerId = docker compose ps --status running -q mongodb 2>$null
+        if ($containerId) { $mongoContainerRunning = $true }
+    } catch { $mongoContainerRunning = $false }
+
+    if ($mongoContainerRunning) {
+        $targetInContainer = "/tmp/" + (Split-Path $mongoFile -Leaf)
+        docker compose cp "$mongoFile" "mongodb:$targetInContainer" 2>$null | Out-Null
+        docker compose exec -T mongodb mongosh $mongoDb "$targetInContainer" 2>$null | Out-Null
+        Write-Host " - Da nap du lieu vao MongoDB container thanh cong!" -ForegroundColor Green
+    } else {
+        if (Get-Command mongosh -ErrorAction SilentlyContinue) {
+            mongosh "mongodb://localhost:27017/$mongoDb" "$mongoFile" 2>$null | Out-Null
+            Write-Host " - Da nap du lieu vao MongoDB host thanh cong!" -ForegroundColor Green
+        } elseif (Get-Command mongo -ErrorAction SilentlyContinue) {
+            mongo "mongodb://localhost:27017/$mongoDb" "$mongoFile" 2>$null | Out-Null
+            Write-Host " - Da nap du lieu vao MongoDB host thanh cong!" -ForegroundColor Green
+        } else {
+            Write-Host " - MongoDB host san sang (Backend se tu dong seed du lieu neu can)." -ForegroundColor DarkGray
         }
     }
 }
@@ -112,38 +164,52 @@ do {
         }
     }
 
-    # 3. Kiem tra Database (PC vs Docker)
-    Write-Host "`n[3/6] Dang kiem tra Database PostgreSQL..." -ForegroundColor Yellow
-    $dbTest = Test-NetConnection -ComputerName "127.0.0.1" -Port 5432 -WarningAction SilentlyContinue -InformationLevel Quiet
-    if ($dbTest) {
-        Write-Host " - PostgreSQL dang chay tren port 5432 cua PC." -ForegroundColor Green
-        $dockerAvailable = $false
-        try {
-            $null = docker info 2>&1
-            if ($LASTEXITCODE -eq 0) { $dockerAvailable = $true }
-        } catch { $dockerAvailable = $false }
-    } else {
-        # Kiem tra xem Docker daemon co dang hoat dong khong
-        $dockerRunning = $false
-        try {
-            $null = docker info 2>&1
-            if ($LASTEXITCODE -eq 0) { $dockerRunning = $true }
-        } catch { $dockerRunning = $false }
+    # 3. Kiem tra Database (PostgreSQL & MongoDB: PC vs Docker)
+    Write-Host "`n[3/6] Dang kiem tra Database (PostgreSQL & MongoDB)..." -ForegroundColor Yellow
 
+    # Kiem tra xem Docker daemon co dang hoat dong khong
+    $dockerRunning = $false
+    try {
+        $null = docker info 2>&1
+        if ($LASTEXITCODE -eq 0) { $dockerRunning = $true }
+    } catch { $dockerRunning = $false }
+    $dockerAvailable = $dockerRunning
+
+    $pgRunning = Test-NetConnection -ComputerName "127.0.0.1" -Port 5432 -WarningAction SilentlyContinue -InformationLevel Quiet
+    $mongoRunning = Test-NetConnection -ComputerName "127.0.0.1" -Port 27017 -WarningAction SilentlyContinue -InformationLevel Quiet
+
+    if ($pgRunning) {
+        Write-Host " - PostgreSQL dang chay tren port 5432 cua PC." -ForegroundColor Green
+    }
+    if ($mongoRunning) {
+        Write-Host " - MongoDB dang chay tren port 27017 cua PC." -ForegroundColor Green
+    }
+
+    if (-not $pgRunning -or -not $mongoRunning) {
         if (-not $dockerRunning) {
+            $missingDbs = @()
+            if (-not $pgRunning) { $missingDbs += "PostgreSQL (5432)" }
+            if (-not $mongoRunning) { $missingDbs += "MongoDB (27017)" }
             Write-Host "`n=======================================================" -ForegroundColor Red
-            Write-Host "[LOI] Khong tim thay PostgreSQL tren PC va Docker chua duoc mo!" -ForegroundColor Red
+            Write-Host "[LOI] Khong tim thay $($missingDbs -join ' va ') tren PC va Docker chua duoc mo!" -ForegroundColor Red
             Write-Host "-> Vui long khoi dong Docker Desktop truoc khi chay script nay." -ForegroundColor Yellow
             Write-Host "=======================================================" -ForegroundColor Red
             Read-Host "`nNhan Enter de thoat"
             exit 1
         }
 
-        $dockerAvailable = $true
-        Write-Host " - Khoi dong PostgreSQL qua Docker Compose..." -ForegroundColor Cyan
-        docker compose up -d postgres
+        if (-not $pgRunning) {
+            Write-Host " - Khoi dong PostgreSQL qua Docker Compose..." -ForegroundColor Cyan
+            docker compose up -d postgres
+        }
+        if (-not $mongoRunning) {
+            Write-Host " - Khoi dong MongoDB qua Docker Compose..." -ForegroundColor Cyan
+            docker compose up -d mongodb
+        }
         Start-Sleep -Seconds 3
-        Write-Host " - PostgreSQL container san sang!" -ForegroundColor Green
+
+        if (-not $pgRunning) { Write-Host " - PostgreSQL container san sang!" -ForegroundColor Green }
+        if (-not $mongoRunning) { Write-Host " - MongoDB container san sang!" -ForegroundColor Green }
     }
 
     # 4. Khoi dong Backend (Spring Boot :8080)
@@ -174,13 +240,39 @@ do {
 
     # Nap dataset mau sau khi DB/Backend san sang
     $dataCandidates = @(
-        (Join-Path $rootDir "data\sample_data.sql"),
-        (Join-Path $rootDir "backend\src\main\resources\data\sample_data.sql")
+        (Join-Path $rootDir "backend\src\main\resources\data\R__sample_data.sql"),
+        (Join-Path $rootDir "data\R__sample_data.sql"),
+        (Join-Path $rootDir "backend\src\main\resources\data\sample_data.sql"),
+        (Join-Path $rootDir "data\sample_data.sql")
     )
     $foundDataFile = $dataCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
     if ($foundDataFile) {
-        Write-Host "`n[*] Dang kiem tra va cap nhat du lieu mau vao Database..." -ForegroundColor Yellow
+        Write-Host "`n[*] Dang kiem tra va cap nhat du lieu mau vao Database PostgreSQL..." -ForegroundColor Yellow
         Import-SampleData -dataFile $foundDataFile
+
+        # Nap them file sample data meeting neu co
+        $meetingCandidates = @(
+            (Join-Path $rootDir "backend\src\main\resources\data\R__z_meeting_sample_data.sql"),
+            (Join-Path $rootDir "data\R__z_meeting_sample_data.sql")
+        )
+        $foundMeetingFile = $meetingCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+        if ($foundMeetingFile) {
+            Import-SampleData -dataFile $foundMeetingFile
+        }
+    } else {
+        Write-Host "`n[*] Bo qua buoc nap dataset PostgreSQL (khong tim thay file R__sample_data.sql hoac sample_data.sql)." -ForegroundColor DarkGray
+    }
+
+    $mongoCandidates = @(
+        (Join-Path $rootDir "data\mongo_seed.js"),
+        (Join-Path $rootDir "backend\src\main\resources\data\mongo_seed.js")
+    )
+    $foundMongoFile = $mongoCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if ($foundMongoFile) {
+        Write-Host "`n[*] Dang kiem tra va cap nhat du lieu mau vao Database MongoDB..." -ForegroundColor Yellow
+        Import-MongoSampleData -mongoFile $foundMongoFile
+    } else {
+        Write-Host "`n[*] Bo qua buoc nap dataset MongoDB (khong tim thay file mongo_seed.js)." -ForegroundColor DarkGray
     }
 
     # 5. Khoi dong Frontend (React + Vite :5173)
@@ -222,22 +314,59 @@ do {
     Write-Host " - Mobile Metro:   http://localhost:8081 (scan QR via Expo Go)" -ForegroundColor Cyan
     Write-Host "===================================================" -ForegroundColor Cyan
 
-    Write-Host "`n=========================================================================" -ForegroundColor Magenta
-    Write-Host " [r] + Enter : KHOI DONG LAI TOAN BO (Restart services)" -ForegroundColor Yellow
-    Write-Host " [Enter]     : DONG CAC CUA SO VA THOAT (Stop & Exit)" -ForegroundColor Red
-    Write-Host "=========================================================================" -ForegroundColor Magenta
+    # Xu ly cac tham so dong lenh neu duoc truyen
+    if ($BackendTest) {
+        Write-Host "`n[*] Tu dong chay tat ca Unit Test Backend tren cua so moi..." -ForegroundColor Cyan
+        $mvnTestCmd = if (Test-Path "$rootDir\backend\mvnw.cmd") { "mvnw.cmd test" } else { "mvn test" }
+        Start-Process cmd.exe -WorkingDirectory "$rootDir\backend" -ArgumentList "/k title VietTriTutor - Backend Unit Tests && $mvnTestCmd"
+    } elseif ($PlaywrightUI) {
+        Write-Host "`n[*] Tu dong khoi dong giao dien Playwright UI..." -ForegroundColor Cyan
+        Start-Process cmd.exe -WorkingDirectory "$rootDir\frontend" -ArgumentList "/k title VietTriTutor - Playwright UI && npm run test:e2e:ui"
+    } elseif ($Playwright) {
+        Write-Host "`n[*] Tu dong chay Playwright E2E Headed..." -ForegroundColor Cyan
+        Start-Process cmd.exe -WorkingDirectory "$rootDir\frontend" -ArgumentList "/k title VietTriTutor - Playwright Headed && npm run test:e2e:headed"
+    }
 
-    $inputChoice = Read-Host "`nNhap lua chon cua ban"
+    $inMenu = $true
+    $shouldRestart = $false
 
-    # Dong toan bo cac cua so truoc
-    Stop-AllServices -backend $backendProcess -frontend $frontendProcess -mobile $mobileProcess
+    while ($inMenu) {
+        Write-Host "`n=========================================================================" -ForegroundColor Magenta
+        Write-Host " [r] + Enter : KHOI DONG LAI TOAN BO (Restart services)" -ForegroundColor Yellow
+        Write-Host " [d] + Enter : CHAY DEMO VAO LOP (Login -> Meet: Thay Hung va Minh Anh)" -ForegroundColor Green
+        Write-Host " [b] + Enter : CHAY TAT CA UNIT TEST BACKEND (Maven Test)" -ForegroundColor Cyan
+        Write-Host " [p] + Enter : MO GIAO DIEN PLAYWRIGHT UI (E2E Test Runner)" -ForegroundColor Cyan
+        Write-Host " [t] + Enter : CHAY PLAYWRIGHT HEADED (E2E Headed Mode)" -ForegroundColor Cyan
+        Write-Host " [Enter]     : DONG CAC CUA SO VA THOAT (Stop & Exit)" -ForegroundColor Red
+        Write-Host "=========================================================================" -ForegroundColor Magenta
 
-    if ($inputChoice.Trim() -ieq "r") {
-        Write-Host "`n[RESTART] Dang khoi dong lai tat ca cac dich vu sau 2 giay..." -ForegroundColor Yellow
-        Start-Sleep -Seconds 2
-        $shouldRestart = $true
-    } else {
-        $shouldRestart = $false
+        $inputChoice = Read-Host "`nNhap lua chon cua ban"
+        $choice = if ($inputChoice) { $inputChoice.Trim() } else { "" }
+
+        if ($choice -ieq "b") {
+            Write-Host "`n[*] Dang chay tat ca Unit Test Backend tren cua so moi..." -ForegroundColor Cyan
+            $mvnTestCmd = if (Test-Path "$rootDir\backend\mvnw.cmd") { "mvnw.cmd test" } else { "mvn test" }
+            Start-Process cmd.exe -WorkingDirectory "$rootDir\backend" -ArgumentList "/k title VietTriTutor - Backend Unit Tests && $mvnTestCmd"
+        } elseif ($choice -ieq "d") {
+            Write-Host "`n[*] Dang chay Demo Dang nhap va Vao lop tren 2 trinh duyet tach biet..." -ForegroundColor Green
+            Start-Process cmd.exe -WorkingDirectory "$rootDir\frontend" -ArgumentList "/k title VietTriTutor - Demo Login to Meeting && npm run test:demo"
+        } elseif ($choice -ieq "p") {
+            Write-Host "`n[*] Dang khoi dong giao dien Playwright UI tren cua so moi..." -ForegroundColor Cyan
+            Start-Process cmd.exe -WorkingDirectory "$rootDir\frontend" -ArgumentList "/k title VietTriTutor - Playwright UI && npm run test:e2e:ui"
+        } elseif ($choice -ieq "t") {
+            Write-Host "`n[*] Dang chay Playwright E2E Headed tren cua so moi..." -ForegroundColor Cyan
+            Start-Process cmd.exe -WorkingDirectory "$rootDir\frontend" -ArgumentList "/k title VietTriTutor - Playwright Headed && npm run test:e2e:headed"
+        } elseif ($choice -ieq "r") {
+            $inMenu = $false
+            Stop-AllServices -backend $backendProcess -frontend $frontendProcess -mobile $mobileProcess
+            Write-Host "`n[RESTART] Dang khoi dong lai tat ca cac dich vu sau 2 giay..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 2
+            $shouldRestart = $true
+        } else {
+            $inMenu = $false
+            Stop-AllServices -backend $backendProcess -frontend $frontendProcess -mobile $mobileProcess
+            $shouldRestart = $false
+        }
     }
 
 } while ($shouldRestart)

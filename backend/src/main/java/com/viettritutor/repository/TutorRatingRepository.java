@@ -21,6 +21,10 @@ public interface TutorRatingRepository
             Long tutorId
     );
 
+    boolean existsByStudent_IdAndClassGroup_Id(Long studentId, Long classGroupId);
+
+    Optional<TutorRating> findByStudent_IdAndClassGroup_Id(Long studentId, Long classGroupId);
+
     List<TutorRating> findAllByTutor_IdOrderByCreatedAtDesc(
             Long tutorId
     );

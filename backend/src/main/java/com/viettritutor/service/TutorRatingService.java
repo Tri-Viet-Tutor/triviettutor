@@ -37,4 +37,10 @@ public interface TutorRatingService {
             Long tutorId,
             String studentEmail
     );
+
+    TutorRatingResponse getMyRating(
+            Long tutorId,
+            Long classGroupId,
+            String studentEmail
+    );
 }

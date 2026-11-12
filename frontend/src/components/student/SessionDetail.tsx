@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { StatusChip } from "@/components/dashboard/StatusChip";
 import { SessionHomeworkList } from "@/components/student/SessionHomeworkList";
+import { SessionRecordingPlayer } from "@/components/dashboard/SessionRecordingPlayer";
 import { Icon } from "@/components/ui/Icon";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { ATTENDANCE_STATUS } from "@/constants/labels";
@@ -126,6 +127,12 @@ export function SessionDetail({ session, now, hasPendingLeave }: SessionDetailPr
       )}
 
       <SessionHomeworkList sessionId={session.sessionId} />
+
+      {started && session.status !== "CANCELLED" && (
+        <div className="mt-3">
+          <SessionRecordingPlayer sessionId={session.sessionId} />
+        </div>
+      )}
 
       {(canJoin || canLeave || hasPendingLeave) && (
         <div className="mt-4 flex flex-wrap items-center gap-2.5">

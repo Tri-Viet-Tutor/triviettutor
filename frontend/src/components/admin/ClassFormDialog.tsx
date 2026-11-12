@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { Icon } from "@/components/ui/Icon";
 import { AUTH_ERROR, FOCUS_RING, PORTAL_BTN_PRIMARY, PORTAL_BTN_SECONDARY, PORTAL_INPUT, PORTAL_LABEL } from "@/constants/classNames";
 import { DELIVERY_MODE_OPTIONS, SCHEDULE_PATTERN_OPTIONS, TIME_SLOT_OPTIONS, TIME_SLOT_START, timeSlotRange } from "@/constants/classOptions";
 import { weekdayMatchesPattern, patternWeekdayLabel } from "@/utils/classes";
 import { coursePricePerSession, gradeLabel, subjectLabel } from "@/constants/management";
-import { useAdminUsers } from "@/hooks/useAdminData";
 import { useAdminCourses } from "@/hooks/useManagementData";
-import { createClass } from "@/services/managementService";
+import { createClass, getAvailableTutorsForSchedule } from "@/services/managementService";
 import { estimatedEndDate } from "@/utils/classes";
 import { formatVnd } from "@/utils/currency";
 import { addDays, formatDate, parseIsoDate, startOfToday, toIsoDate } from "@/utils/date";
@@ -77,7 +76,6 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 // Hộp thoại mở lớp mới từ một khóa học đang bán (POST /admin/classes), kèm gia sư phụ trách.
 export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: ClassFormDialogProps) {
   const courses = useAdminCourses({ active: true, size: 100 });
-  const tutors = useAdminUsers({ role: "ROLE_TUTOR", size: 100 });
   const [courseId, setCourseId] = useState<number | "">("");
   const [tutorId, setTutorId] = useState<number | "">("");
   const [classType, setClassType] = useState<ClassType>("GROUP");
@@ -103,8 +101,52 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
   // Mở từ "Tạo lớp đầu tiên ngay sau khi lưu" ở form khóa học: đã biết sẵn khóa, không cần chọn lại
   const lockedToCourse = initialCourseId !== undefined;
 
-  const course = courses.data?.content.find((item) => item.id === courseId);
+  // id khóa học là number — so sánh trực tiếp (trước đây so với BigInt nên không bao giờ khớp)
+  const course = courseId === "" ? undefined : courses.data?.content?.find((item) => Number(item.id) === courseId);
+
   const sessionCount = Number(sessions) || 0;
+    const validSchedule =
+        Boolean(startDate) &&
+        weekdayMatchesPattern(startDate, pattern) &&
+        Number.isInteger(sessionCount) &&
+        sessionCount >= 1 &&
+        sessionCount <= 200;
+
+    const availableTutorsQuery = useQuery({
+        queryKey: [
+            "available-tutors-for-schedule",
+            pattern,
+            slot,
+            startDate,
+            sessionCount,
+        ],
+        queryFn: () =>
+            getAvailableTutorsForSchedule({
+                schedulePattern: pattern,
+                timeSlot: slot,
+                startDate,
+                totalSessions: sessionCount,
+            }),
+        enabled: open && validSchedule,
+        staleTime: 0,
+    });
+
+    const availableTutors = useMemo(
+        () => (availableTutorsQuery.data ?? []).filter((tutor) => tutor.available),
+        [availableTutorsQuery.data],
+    );
+
+    useEffect(() => {
+        if (!availableTutorsQuery.isSuccess) return;
+
+        const stillAvailable = availableTutors.some(
+            (tutor) => tutor.tutorId === tutorId,
+        );
+
+        if (tutorId !== "" && !stillAvailable) {
+            setTutorId("");
+        }
+    }, [availableTutorsQuery.isSuccess, availableTutors, tutorId]);
   const endDate = useMemo(
     () => (startDate && sessionCount > 0 ? estimatedEndDate(startDate, pattern, sessionCount) : null),
     [startDate, pattern, sessionCount],
@@ -137,30 +179,38 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (courseId === "") return setFormError("Hãy chọn khóa học.");
-    if (tutorId === "") return setFormError("Hãy chọn gia sư phụ trách lớp.");
-    const sessionError = validateSessionCount(sessionCount);
-    if (sessionError) return setFormError(sessionError);
     if (!startDate) return setFormError("Hãy chọn ngày khai giảng.");
     if (!weekdayMatchesPattern(startDate, pattern)) {
       return setFormError(`Ngày khai giảng phải rơi vào ${patternWeekdayLabel(pattern)} (đúng lịch học đã chọn).`);
     }
+    if (!availableTutorsQuery.isSuccess || availableTutorsQuery.isFetching) {
+      return setFormError("Vui lòng đợi hệ thống kiểm tra lịch gia sư.");
+    }
+    if (tutorId === "" || !availableTutors.some((tutor) => tutor.tutorId === tutorId)) {
+      return setFormError("Hãy chọn một gia sư đang khả dụng với lịch học này.");
+    }
+    const sessionError = validateSessionCount(sessionCount);
+    if (sessionError) return setFormError(sessionError);
     const deadlineError = validateEnrollmentDeadline(deadline, startDate);
     if (deadlineError) return setFormError(deadlineError);
     const linkError = validateHttpsUrl(meetingUrl, "Link lớp học");
     if (linkError) return setFormError(linkError);
     setFormError(null);
-    save.mutate({
-      courseId,
-      tutorId,
-      totalSessions: sessionCount,
-      classType,
-      deliveryMode,
-      schedulePattern: pattern,
-      timeSlot: slot,
-      startDate,
-      enrollmentDeadline: deadline || undefined,
-      meetingUrl: deliveryMode === "ONLINE" ? meetingUrl.trim() || undefined : undefined,
-    });
+      const request: CreateClassRequest = {
+          courseId,
+          tutorId,
+          totalSessions: sessionCount,
+          classType,
+          deliveryMode,
+          schedulePattern: pattern,
+          timeSlot: slot,
+          startDate,
+          ...(deadline ? { enrollmentDeadline: deadline } : {}),
+          ...(deliveryMode === "ONLINE" && meetingUrl.trim()
+              ? { meetingUrl: meetingUrl.trim() }
+              : {}),
+      };
+    save.mutate(request);
   }
 
   return (
@@ -180,7 +230,11 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
               </label>
               {lockedToCourse ? (
                 <div className={`${PORTAL_INPUT} flex items-center bg-brand-sand/50 text-brand-ink`}>
-                  {course ? `${course.name} - ${subjectLabel(course.subject)} ${gradeLabel(course.gradeLevel)}` : "Đang tải…"}
+                  {course
+                    ? `${course.name} - ${subjectLabel(course.subject)} ${gradeLabel(course.gradeLevel)}`
+                    : courses.isPending
+                      ? "Đang tải…"
+                      : "Không tìm thấy khóa học (khóa chưa mở bán?)"}
                 </div>
               ) : (
                 <Select
@@ -206,20 +260,43 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
                 id="class-tutor"
                 value={tutorId}
                 onChange={(event) => setTutorId(event.target.value ? Number(event.target.value) : "")}
+                disabled={!validSchedule || availableTutorsQuery.isFetching || availableTutorsQuery.isError}
                 className={PORTAL_INPUT}
               >
-                <option value="">{tutors.isPending ? "Đang tải…" : "Chọn gia sư"}</option>
-                {tutors.data?.content.map((tutor) => (
-                  <option key={tutor.id} value={tutor.id}>
-                    {tutor.fullName}
+                <option value="">
+                  {!validSchedule
+                    ? "Chọn ngày khai giảng để xem gia sư"
+                    : availableTutorsQuery.isFetching
+                      ? "Đang kiểm tra lịch gia sư…"
+                      : availableTutorsQuery.isError
+                        ? "Không thể tải danh sách gia sư"
+                        : availableTutors.length === 0
+                          ? "Không có gia sư khả dụng"
+                          : "Chọn gia sư"}
+                </option>
+                {availableTutors.map((tutor) => (
+                  <option key={tutor.tutorId} value={tutor.tutorId}>
+                    {tutor.tutorName}
                   </option>
                 ))}
               </Select>
+
+              {availableTutorsQuery.isError && (
+                <p className="mt-1 text-[12px] text-red-600">
+                  Không thể kiểm tra lịch gia sư. Vui lòng thử lại.
+                </p>
+              )}
+
+              {availableTutorsQuery.isSuccess && availableTutors.length === 0 && (
+                <p className="mt-1 text-[12px] text-amber-700">
+                  Không có gia sư nào phù hợp với lịch học này.
+                </p>
+              )}
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Segmented label="Loại lớp" value={classType} onChange={setClassType} options={CLASS_TYPE_OPTIONS} />
-            <Segmented
+            <Segmented<ClassType> label="Loại lớp" value={classType} onChange={setClassType} options={CLASS_TYPE_OPTIONS} />
+            <Segmented<DeliveryMode>
               label="Hình thức"
               value={deliveryMode}
               onChange={setDeliveryMode}
@@ -244,13 +321,13 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
         </Section>
 
         <Section title="Lịch học">
-          <Segmented
+          <Segmented<SchedulePattern>
             label="Ngày học trong tuần"
             value={pattern}
             onChange={setPattern}
             options={SCHEDULE_PATTERN_OPTIONS.map(({ value, label }) => ({ value, label }))}
           />
-          <Segmented label="Ca học" value={slot} onChange={setSlot} options={slotOptions} />
+          <Segmented<TimeSlot> label="Ca học" value={slot} onChange={setSlot} options={slotOptions} />
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <label htmlFor="class-sessions" className={PORTAL_LABEL}>
@@ -330,8 +407,18 @@ export function ClassFormDialog({ open, onClose, onSaved, initialCourseId }: Cla
           <button type="button" onClick={onClose} className={PORTAL_BTN_SECONDARY}>
             Hủy
           </button>
-          <button type="submit" disabled={save.isPending} className={PORTAL_BTN_PRIMARY}>
-            {save.isPending ? "Đang mở lớp…" : "Mở lớp"}
+            <button
+                type="submit"
+                disabled={
+                    save.isPending ||
+                    !validSchedule ||
+                    availableTutorsQuery.isFetching ||
+                    !availableTutorsQuery.isSuccess ||
+                    !availableTutors.some((tutor) => tutor.tutorId === tutorId)
+                }
+                className={PORTAL_BTN_PRIMARY}
+            >
+            {save.isPending ? "Đang mở lớp…" : "Mở lớp" }
           </button>
         </div>
       </form>

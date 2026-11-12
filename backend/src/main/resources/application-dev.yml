@@ -32,7 +32,7 @@ spring:
 app:
   jwt:
     secret: ${JWT_SECRET:dev_secret_at_least_32_chars_long_!!}
-    expiration-ms: 86400000
+    expiration-ms: ${JWT_EXPIRATION_MS:7776000000} # 90 days (7776000 seconds)
 
 logging:
   level:

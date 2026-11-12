@@ -1,12 +1,15 @@
 package com.viettritutor.service;
 
 import com.viettritutor.common.exception.*;
+import com.viettritutor.config.SystemProperties;
 import com.viettritutor.dto.payment.*;
 import com.viettritutor.entity.*;
 import com.viettritutor.enums.*;
 import com.viettritutor.repository.*;
 import jakarta.persistence.*;
 import lombok.RequiredArgsConstructor;
+import com.viettritutor.notification.event.ClassRefundEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +31,14 @@ public class EnrollmentRefundService {
     private final MockPaymentPolicy mockPolicy;
     private final OrderRefundSync orderRefunds;
     private final WalletService wallet;
+    private final SystemProperties systemProperties;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private UserRepository users;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ClassGroupRepository classGroups;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public void cancel(Long enrollmentId, String reason, User student) {
@@ -109,6 +120,121 @@ public class EnrollmentRefundService {
         enrollment.setCancelledBy(actor.getId());
         learning.deactivate(enrollment.getId(), LearningScheduleStatus.CANCELLED);
         orderRefunds.refresh(payment);
+
+        if (eventPublisher != null && users != null && classGroups != null) {
+            String className = classGroups.findById(enrollment.getClassGroupId())
+                    .map(ClassGroup::getClassCode).orElse("Lớp học #" + enrollment.getClassGroupId());
+            User student = users.findById(payment.getStudentId()).orElse(null);
+            if (student != null) {
+                eventPublisher.publishEvent(new ClassRefundEvent(
+                        student.getId(),
+                        student.getEmail(),
+                        student.getFullName(),
+                        className,
+                        amount,
+                        reason.trim(),
+                        walletPayment ? "Ví học viên" : "Hoàn tiền hệ thống"
+                ));
+            }
+        }
+
         return refund;
     }
+
+    @Transactional
+    public void refundForClassCancellation(Long enrollmentId, String reason) {
+        Enrollment enrollment = find(enrollmentId);
+
+        // Khóa học viên trước khi thay đổi số dư ví.
+        support.lockPeople(enrollment.getStudentId());
+
+        // Khóa enrollment để tránh xử lý đồng thời.
+        entityManager.refresh(enrollment, LockModeType.PESSIMISTIC_WRITE);
+
+        if (enrollment.getStatus() != EnrollmentStatus.ACTIVE) {
+            throw new BusinessException(ErrorCode.REFUND_ALREADY_SETTLED);
+        }
+
+        // Không được tạo refund thứ hai cho cùng enrollment.
+        if (refunds.findByEnrollmentId(enrollmentId).isPresent()) {
+            throw new BusinessException(ErrorCode.REFUND_ALREADY_SETTLED);
+        }
+
+        Payment payment = payments.findById(enrollment.getPaymentId())
+                .orElseThrow();
+
+        entityManager.refresh(payment, LockModeType.PESSIMISTIC_WRITE);
+
+        if (payment.getStatus() != PaymentStatus.COMPLETED
+                || payment.getRefundedAmount().signum() != 0) {
+            throw new BusinessException(ErrorCode.REFUND_ALREADY_SETTLED);
+        }
+
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("Refund reason must not be blank");
+        }
+
+        Long systemAdminId = systemProperties.adminId();
+
+        if (systemAdminId == null) {
+            throw new IllegalStateException("SYSTEM_ADMIN_ID is not configured");
+        }
+
+        BigDecimal amount = payment.getAmount();
+
+        if (amount == null || amount.signum() <= 0) {
+            throw new BusinessException(ErrorCode.INVALID_REFUND_PERCENTAGE);
+        }
+
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        String normalizedReason = reason.trim();
+
+        // Tạo refund record.
+        Refund refund = refunds.saveAndFlush(
+                Refund.builder()
+                        .enrollmentId(enrollment.getId())
+                        .paymentId(payment.getId())
+                        .paidAmount(amount)
+                        .amount(amount)
+                        .percentage(100)
+                        .reason(normalizedReason)
+                        .actorId(systemAdminId)
+                        .transactionRef("WALLET-REFUND-" + UUID.randomUUID())
+                        .createdAt(now)
+                        .completedAt(now)
+                        .build()
+        );
+
+        // Luôn hoàn tiền vào ví nội bộ, bất kể payment ban đầu là WALLET,
+        // MOCK hay VNPay.
+        wallet.post(
+                payment.getStudentId(),
+                "REFUND",
+                amount,
+                null,
+                null,
+                refund.getId(),
+                normalizedReason
+        );
+
+        // Cập nhật payment.
+        payment.setRefundedAmount(amount);
+        payment.setStatus(PaymentStatus.REFUNDED);
+
+        // Cập nhật enrollment.
+        enrollment.setStatus(EnrollmentStatus.REFUNDED);
+        enrollment.setCancelledAt(now);
+        enrollment.setCancellationReason(normalizedReason);
+        enrollment.setCancelledBy(systemProperties.adminId());
+
+        // Hủy lịch học liên quan.
+        learning.deactivate(
+                enrollment.getId(),
+                LearningScheduleStatus.CANCELLED
+        );
+
+        // Đồng bộ trạng thái order nếu payment thuộc một order.
+        orderRefunds.refresh(payment);
+    }
+
 }

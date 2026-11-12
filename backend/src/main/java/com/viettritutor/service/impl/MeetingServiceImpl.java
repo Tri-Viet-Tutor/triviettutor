@@ -4,6 +4,7 @@ import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.common.exception.ErrorCode;
 import com.viettritutor.document.MeetingParticipantLog;
 import com.viettritutor.document.MeetingSessionLog;
+import com.viettritutor.dto.meeting.MeetingRecordingInfoResponse;
 import com.viettritutor.dto.meeting.MeetingSessionLogsResponse;
 import com.viettritutor.dto.meeting.MeetingTokenResponse;
 import com.viettritutor.entity.ClassGroup;
@@ -23,17 +24,26 @@ import livekit.LivekitWebhook;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -57,6 +67,9 @@ public class MeetingServiceImpl implements MeetingService {
 
     @Value("${livekit.api.secret:secret}")
     private String livekitApiSecret;
+
+    @Value("${app.meetings.recording-dir:uploads/recordings}")
+    private String recordingDir;
 
     private final SessionRepository sessionRepository;
     private final ClassGroupRepository classGroupRepository;
@@ -547,6 +560,175 @@ public class MeetingServiceImpl implements MeetingService {
                 .sessionLog(sessionLog)
                 .participantLogs(participantLogs)
                 .totalParticipants(participantLogs != null ? participantLogs.size() : 0)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public String saveMeetingAudioRecording(Long sessionId, MultipartFile file, User currentUser) {
+        if (currentUser == null) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));
+
+        boolean isAdmin = ROLE_ADMIN.equals(currentUser.getRole());
+        boolean isTeachingTutor = currentUser.getId().equals(teachingTutorId(session));
+        if (!isAdmin && !isTeachingTutor) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "Chỉ gia sư phụ trách hoặc Admin mới có quyền lưu bản ghi âm");
+        }
+
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_FILE, "Tệp âm thanh ghi âm không được rỗng");
+        }
+
+        long maxSizeBytes = 50L * 1024 * 1024; // 50 MB
+        if (file.getSize() > maxSizeBytes) {
+            throw new BusinessException(ErrorCode.INVALID_FILE, "Tệp ghi âm vượt quá dung lượng cho phép (tối đa 50 MB)");
+        }
+
+        String originalName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "recording.webm";
+        String extension = "webm";
+        int dot = originalName.lastIndexOf('.');
+        if (dot >= 0) {
+            String ext = originalName.substring(dot + 1).toLowerCase(Locale.ROOT);
+            if (Set.of("webm", "ogg", "mp3", "wav", "m4a", "aac", "mp4").contains(ext)) {
+                extension = ext;
+            }
+        }
+
+        try {
+            Path targetDir = Paths.get(recordingDir).toAbsolutePath().normalize();
+            Files.createDirectories(targetDir);
+
+            String fileName = "audio-session-" + sessionId + "-" + System.currentTimeMillis() + "." + extension;
+            Path filePath = targetDir.resolve(fileName);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            String recordingUrl = "/api/v1/meetings/sessions/" + sessionId + "/recording";
+
+            if (meetingSessionLogRepository != null) {
+                try {
+                    String roomName = "classroom-session-" + sessionId;
+                    MeetingSessionLog sLog = meetingSessionLogRepository.findBySessionId(roomName)
+                            .orElse(MeetingSessionLog.builder()
+                                    .sessionId(roomName)
+                                    .roomName(roomName)
+                                    .classGroupId(session.getClassGroupId())
+                                    .scheduleId(session.getId())
+                                    .hostUserId(teachingTutorId(session))
+                                    .status("COMPLETED")
+                                    .startTime(Instant.now())
+                                    .build());
+                    sLog.setRecordingUrl(recordingUrl);
+                    meetingSessionLogRepository.save(sLog);
+                    log.info("Saved audio recording for session {} into MongoDB with URL {}", sessionId, recordingUrl);
+                } catch (Exception mongoEx) {
+                    log.warn("Could not save recording metadata to MongoDB for session {}: {}", sessionId, mongoEx.getMessage());
+                }
+            }
+
+            return recordingUrl;
+        } catch (IOException e) {
+            log.error("Failed to save audio recording file for session {}: {}", sessionId, e.getMessage(), e);
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "Không thể lưu tệp âm thanh bản ghi");
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Resource getMeetingAudioRecording(Long sessionId, User currentUser) {
+        if (currentUser == null) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));
+
+        validateAndResolveRole(session, session.getClassGroupId(), currentUser);
+
+        try {
+            Path targetDir = Paths.get(recordingDir).toAbsolutePath().normalize();
+            if (!Files.exists(targetDir)) {
+                throw new BusinessException(ErrorCode.FILE_NOT_FOUND, "Chưa có bản ghi âm cho buổi học này");
+            }
+
+            String prefix = "audio-session-" + sessionId + "-";
+            Path latestFile;
+            try (Stream<Path> stream = Files.list(targetDir)) {
+                latestFile = stream
+                        .filter(p -> p.getFileName().toString().startsWith(prefix))
+                        .max(Comparator.comparingLong(p -> p.toFile().lastModified()))
+                        .orElse(null);
+            }
+
+            if (latestFile == null || !Files.exists(latestFile)) {
+                throw new BusinessException(ErrorCode.FILE_NOT_FOUND, "Chưa có bản ghi âm cho buổi học này");
+            }
+
+            return new FileSystemResource(latestFile);
+        } catch (IOException e) {
+            log.error("Error reading audio recording for session {}: {}", sessionId, e.getMessage(), e);
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "Lỗi khi đọc bản ghi âm");
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MeetingRecordingInfoResponse getMeetingRecordingInfo(Long sessionId, User currentUser) {
+        if (currentUser == null) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SESSION_NOT_FOUND));
+
+        validateAndResolveRole(session, session.getClassGroupId(), currentUser);
+
+        String recordingUrl = null;
+        String fileName = null;
+        boolean hasRecording = false;
+
+        try {
+            Path targetDir = Paths.get(recordingDir).toAbsolutePath().normalize();
+            if (Files.exists(targetDir)) {
+                String prefix = "audio-session-" + sessionId + "-";
+                try (Stream<Path> stream = Files.list(targetDir)) {
+                    Path latestFile = stream
+                            .filter(p -> p.getFileName().toString().startsWith(prefix))
+                            .max(Comparator.comparingLong(p -> p.toFile().lastModified()))
+                            .orElse(null);
+
+                    if (latestFile != null && Files.exists(latestFile)) {
+                        hasRecording = true;
+                        fileName = latestFile.getFileName().toString();
+                        recordingUrl = "/api/v1/meetings/sessions/" + sessionId + "/recording";
+                    }
+                }
+            }
+        } catch (IOException e) {
+            log.warn("Error scanning recordings folder for session {}: {}", sessionId, e.getMessage());
+        }
+
+        if (!hasRecording && meetingSessionLogRepository != null) {
+            try {
+                String roomName = "classroom-session-" + sessionId;
+                MeetingSessionLog sLog = meetingSessionLogRepository.findBySessionId(roomName).orElse(null);
+                if (sLog != null && sLog.getRecordingUrl() != null && !sLog.getRecordingUrl().isBlank()) {
+                    hasRecording = true;
+                    recordingUrl = sLog.getRecordingUrl();
+                }
+            } catch (Exception e) {
+                log.warn("Error checking MongoDB recording info for session {}: {}", sessionId, e.getMessage());
+            }
+        }
+
+        return MeetingRecordingInfoResponse.builder()
+                .sessionId(sessionId)
+                .hasRecording(hasRecording)
+                .recordingUrl(recordingUrl)
+                .fileName(fileName)
                 .build();
     }
 }

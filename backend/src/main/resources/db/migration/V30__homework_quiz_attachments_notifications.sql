@@ -4,12 +4,18 @@
 
 -- Existing homework keeps its old behaviour: always open, no password, no late work.
 ALTER TABLE homeworks
-    ADD COLUMN open_at TIMESTAMP WITH TIME ZONE,
-    ADD COLUMN access_password_hash VARCHAR(100),
-    ADD COLUMN allow_late_submission BOOLEAN NOT NULL DEFAULT FALSE,
-    ADD CONSTRAINT homeworks_open_before_due CHECK (open_at IS NULL OR open_at < due_at);
+    ADD COLUMN IF NOT EXISTS open_at TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN IF NOT EXISTS access_password_hash VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS allow_late_submission BOOLEAN NOT NULL DEFAULT FALSE;
 
-CREATE TABLE homework_questions (
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'homeworks_open_before_due') THEN
+        ALTER TABLE homeworks ADD CONSTRAINT homeworks_open_before_due CHECK (open_at IS NULL OR open_at < due_at);
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS homework_questions (
     id BIGSERIAL PRIMARY KEY,
     homework_id BIGINT NOT NULL REFERENCES homeworks(id) ON DELETE RESTRICT,
     position INT NOT NULL CHECK (position >= 0),
@@ -26,9 +32,9 @@ CREATE TABLE homework_questions (
 -- Submissions may now hold only answers or attachments, and multiple-choice-only
 -- quizzes are graded by the system without a grader.
 ALTER TABLE homework_submissions
-    ADD COLUMN late_seconds BIGINT CHECK (late_seconds > 0),
-    ADD COLUMN auto_score NUMERIC(10,2) CHECK (auto_score >= 0),
-    ADD COLUMN auto_graded BOOLEAN NOT NULL DEFAULT FALSE;
+    ADD COLUMN IF NOT EXISTS late_seconds BIGINT CHECK (late_seconds > 0),
+    ADD COLUMN IF NOT EXISTS auto_score NUMERIC(10,2) CHECK (auto_score >= 0),
+    ADD COLUMN IF NOT EXISTS auto_graded BOOLEAN NOT NULL DEFAULT FALSE;
 
 DO $$
 DECLARE c record;
@@ -41,13 +47,21 @@ BEGIN
     END LOOP;
 END $$;
 
-ALTER TABLE homework_submissions
-    ADD CONSTRAINT homework_submissions_submitted_state CHECK (status = 'IN_PROGRESS' OR submitted_at IS NOT NULL),
-    ADD CONSTRAINT homework_submissions_grade_state CHECK (
-        (status = 'GRADED' AND score IS NOT NULL AND graded_at IS NOT NULL AND (graded_by IS NOT NULL OR auto_graded))
-        OR (status <> 'GRADED' AND score IS NULL AND feedback IS NULL AND graded_by IS NULL AND graded_at IS NULL AND NOT auto_graded));
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'homework_submissions_submitted_state') THEN
+        ALTER TABLE homework_submissions
+            ADD CONSTRAINT homework_submissions_submitted_state CHECK (status = 'IN_PROGRESS' OR submitted_at IS NOT NULL);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'homework_submissions_grade_state') THEN
+        ALTER TABLE homework_submissions
+            ADD CONSTRAINT homework_submissions_grade_state CHECK (
+                (status = 'GRADED' AND score IS NOT NULL AND graded_at IS NOT NULL AND (graded_by IS NOT NULL OR auto_graded))
+                OR (status <> 'GRADED' AND score IS NULL AND feedback IS NULL AND graded_by IS NULL AND graded_at IS NULL AND NOT auto_graded));
+    END IF;
+END $$;
 
-CREATE TABLE homework_answers (
+CREATE TABLE IF NOT EXISTS homework_answers (
     id BIGSERIAL PRIMARY KEY,
     submission_id BIGINT NOT NULL REFERENCES homework_submissions(id) ON DELETE RESTRICT,
     question_id BIGINT NOT NULL REFERENCES homework_questions(id) ON DELETE RESTRICT,
@@ -57,15 +71,15 @@ CREATE TABLE homework_answers (
     UNIQUE (submission_id, question_id)
 );
 
-CREATE TABLE submission_attachments (
+CREATE TABLE IF NOT EXISTS submission_attachments (
     id BIGSERIAL PRIMARY KEY,
     submission_id BIGINT NOT NULL REFERENCES homework_submissions(id) ON DELETE RESTRICT,
     file_id BIGINT NOT NULL UNIQUE REFERENCES learning_files(id) ON DELETE RESTRICT,
     uploaded_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
-CREATE INDEX idx_submission_attachments_submission ON submission_attachments(submission_id, id);
+CREATE INDEX IF NOT EXISTS idx_submission_attachments_submission ON submission_attachments(submission_id, id);
 
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type VARCHAR(40) NOT NULL,
@@ -75,7 +89,7 @@ CREATE TABLE notifications (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     read_at TIMESTAMP WITH TIME ZONE
 );
-CREATE INDEX idx_notifications_user ON notifications(user_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, id DESC);
 
 ALTER TABLE homework_questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE homework_answers ENABLE ROW LEVEL SECURITY;

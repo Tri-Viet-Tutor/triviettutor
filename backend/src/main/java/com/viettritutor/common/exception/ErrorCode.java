@@ -201,6 +201,7 @@ public enum ErrorCode {
     MISSING_REQUEST_PART (HttpStatus.BAD_REQUEST, "A required request parameter or file is missing"),
     FILE_TOO_LARGE (HttpStatus.PAYLOAD_TOO_LARGE, "The uploaded file is too large"),
     UNSUPPORTED_MEDIA_TYPE (HttpStatus.UNSUPPORTED_MEDIA_TYPE, "This Content-Type is not supported for this resource"),
+    INTERNAL_ERROR (HttpStatus.INTERNAL_SERVER_ERROR, "An internal server error occurred"),
 
     // ── Assistant chatbot ─────────────────────────────────────────
     ASSISTANT_RATE_LIMITED (HttpStatus.TOO_MANY_REQUESTS, "Too many assistant questions; try again later"),

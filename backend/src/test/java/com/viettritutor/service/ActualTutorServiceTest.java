@@ -1,4 +1,5 @@
 package com.viettritutor.service;
+import com.viettritutor.service.impl.ActualTutorServiceImpl;
 
 import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.common.exception.ErrorCode;
@@ -59,7 +60,7 @@ class ActualTutorServiceTest {
     void setUp() {
         SessionOperationSupport operations = new SessionOperationSupport(classRepository, sessionRepository, userRepository,
                 leaveRepository, sessionChanges, Optional.of(payrollGuard), entityManager, CLOCK);
-        service = new ActualTutorService(operations, conflicts, attendanceChanges, Optional.of(payrollGuard), CLOCK);
+        service = new ActualTutorServiceImpl(operations, conflicts, attendanceChanges, Optional.of(payrollGuard), CLOCK);
         classGroup = ClassGroup.builder().id(CLASS_ID).classType(ClassType.GROUP).status(ClassStatus.IN_PROGRESS).build();
         // Ended at 19:00 today, completed and locked early by an admin.
         session = Session.builder().id(SESSION_ID).classGroupId(CLASS_ID).sessionNumber(3)

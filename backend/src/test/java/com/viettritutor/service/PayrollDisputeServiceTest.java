@@ -1,4 +1,5 @@
 package com.viettritutor.service;
+import com.viettritutor.service.impl.PayrollDisputeServiceImpl;
 
 import com.viettritutor.common.api.PageResponse;
 import com.viettritutor.common.exception.BusinessException;
@@ -12,6 +13,8 @@ import com.viettritutor.enums.PayrollStatus;
 import com.viettritutor.repository.PayrollDisputeRepository;
 import com.viettritutor.repository.PayrollLineRepository;
 import com.viettritutor.repository.UserRepository;
+import com.viettritutor.notification.event.PayrollDisputeEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -43,13 +46,15 @@ class PayrollDisputeServiceTest {
     @Mock private PayrollService payroll;
     @Mock private UserRepository users;
     @Mock private PayrollDisputeMailer mailer;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     private PayrollDisputeService service;
     private User tutor;
 
     @BeforeEach
     void setUp() {
-        service = new PayrollDisputeService(disputes, lines, payroll, users, mailer, CLOCK);
+        service = new PayrollDisputeServiceImpl(disputes, lines, payroll, users, mailer, CLOCK);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "eventPublisher", eventPublisher);
         tutor = User.builder().id(10L).fullName("Tutor One").role("ROLE_TUTOR").build();
         TransactionSynchronizationManager.initSynchronization();
     }
@@ -142,9 +147,14 @@ class PayrollDisputeServiceTest {
         assertThat(result.getDisputeReason()).isEqualTo("Thiếu hai buổi dạy ngày 12");
         assertThat(result.getDisputedAt()).isNotNull();
 
-        verifyNoInteractions(mailer);
-        TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
-        verify(mailer).notifyAdmins(List.of("active@x.vn"), "Tutor One", 2026, 10, "6500000", "Thiếu hai buổi dạy ngày 12");
+        ArgumentCaptor<PayrollDisputeEvent> eventCaptor = ArgumentCaptor.forClass(PayrollDisputeEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        PayrollDisputeEvent publishedEvent = eventCaptor.getValue();
+        assertThat(publishedEvent.tutorId()).isEqualTo(10L);
+        assertThat(publishedEvent.year()).isEqualTo(2026);
+        assertThat(publishedEvent.month()).isEqualTo(10);
+        assertThat(publishedEvent.reason()).isEqualTo("Thiếu hai buổi dạy ngày 12");
+        assertThat(publishedEvent.adminEmails()).containsExactly("active@x.vn");
     }
 
     @Test

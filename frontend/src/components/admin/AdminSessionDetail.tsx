@@ -3,6 +3,7 @@ import { type FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 import { AdminActualTutorForm } from "@/components/admin/AdminActualTutorForm";
 import { AdminAttendancePanel } from "@/components/admin/AdminAttendancePanel";
+import { SessionRecordingPlayer } from "@/components/dashboard/SessionRecordingPlayer";
 import { MakeupForm } from "@/components/admin/MakeupForm";
 import { ReasonForm } from "@/components/admin/ReasonForm";
 import { AuthNotice } from "@/components/auth/AuthNotice";
@@ -141,6 +142,12 @@ export function AdminSessionDetail({ session, now }: AdminSessionDetailProps) {
           ) : (
             <p className="text-[14.5px] text-brand-muted">Buổi học chưa bắt đầu nên chưa điểm danh được.</p>
           )}
+        </section>
+      )}
+
+      {started && !cancelled && (
+        <section aria-label="Bản ghi âm buổi học">
+          <SessionRecordingPlayer sessionId={session.sessionId} />
         </section>
       )}
 

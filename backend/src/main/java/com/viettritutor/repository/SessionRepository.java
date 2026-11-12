@@ -34,6 +34,20 @@ public interface SessionRepository extends JpaRepository<Session, Long>, JpaSpec
 
     List<Session> findBySessionDateBetweenOrderBySessionDateAscStartTimeAscIdAsc(LocalDate from, LocalDate to);
 
+    @Query("""
+        select s from Session s
+        where s.sessionDate = :date
+          and s.status = com.viettritutor.enums.SessionStatus.SCHEDULED
+          and s.startTime >= :fromTime
+          and s.startTime <= :toTime
+          and s.reminderSentAt is null
+        order by s.startTime, s.id
+        """)
+    List<Session> findUpcomingSessionsForReminder(
+            @Param("date") LocalDate date,
+            @Param("fromTime") LocalTime fromTime,
+            @Param("toTime") LocalTime toTime);
+
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Session s where s.sessionDate between :from and :to order by s.id")
@@ -62,14 +76,20 @@ public interface SessionRepository extends JpaRepository<Session, Long>, JpaSpec
     List<Session> findClassSessionsForUpdate(@Param("classGroupId") Long classGroupId);
 
     @Query("""
-            select s from Session s
-            where s.status <> com.viettritutor.enums.SessionStatus.CANCELLED
-              and coalesce(s.actualTutorId, s.scheduledTutorId) = :tutorId
-              and s.sessionDate between :from and :to
-            order by s.sessionDate, s.startTime, s.id
-            """)
-    List<Session> findTutorCommitments(@Param("tutorId") Long tutorId,
-                                     @Param("from") LocalDate from, @Param("to") LocalDate to);
+    select s from Session s
+    where s.status <> com.viettritutor.enums.SessionStatus.CANCELLED
+      and (
+          s.scheduledTutorId = :tutorId
+          or s.actualTutorId = :tutorId
+      )
+      and s.sessionDate between :from and :to
+    order by s.sessionDate, s.startTime, s.id
+    """)
+    List<Session> findTutorCommitments(
+            @Param("tutorId") Long tutorId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to
+    );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Session s where s.classGroupId = :classGroupId and s.originalSession is null order by s.sessionNumber")

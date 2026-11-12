@@ -1,6 +1,7 @@
 import { Fragment, useState } from "react";
 import { Link } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/constants/queryKeys";
 import { PayrollReconciliation } from "@/components/dashboard/PayrollReconciliation";
 import { PortalDialog } from "@/components/dashboard/PortalDialog";
 import { PortalPageHeader } from "@/components/dashboard/PortalPageHeader";
@@ -42,6 +43,7 @@ export function AdminPayrollPage() {
   const [error, setError] = useState<string | null>(null);
   // Gia sư đang mở danh sách buổi dạy
   const [expanded, setExpanded] = useState<number | null>(null);
+  const queryClient = useQueryClient();
   const payroll = usePayroll(period.year, period.month);
   const refresh = useRefreshAdmin();
   // Tháng kế tiếp nằm ở tương lai thì không cho chuyển tới
@@ -52,9 +54,18 @@ export function AdminPayrollPage() {
 
   const finalize = useMutation({
     mutationFn: () => finalizePayroll(period.year, period.month, newIdempotencyKey()),
+    meta: {
+      invalidates: [
+        queryKeys.admin.payroll(period.year, period.month),
+        queryKeys.admin.allPayroll,
+        queryKeys.admin.all,
+      ],
+    },
     onSuccess: () => {
       setConfirming(false);
       void refresh();
+      void queryClient.invalidateQueries({ queryKey: queryKeys.admin.payroll(period.year, period.month) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.admin.allPayroll });
     },
     onError: (err) => setError(portalErrorMessage(err, "Chưa chốt được bảng lương. Vui lòng thử lại.")),
   });

@@ -5,9 +5,11 @@ import com.viettritutor.common.exception.ErrorCode;
 import com.viettritutor.dto.rating.TutorRatingRequest;
 import com.viettritutor.dto.rating.TutorRatingResponse;
 import com.viettritutor.dto.rating.TutorRatingSummaryResponse;
+import com.viettritutor.entity.ClassGroup;
 import com.viettritutor.entity.TutorRating;
 import com.viettritutor.entity.User;
 import com.viettritutor.enums.EnrollmentStatus;
+import com.viettritutor.repository.ClassGroupRepository;
 import com.viettritutor.repository.EnrollmentRepository;
 import com.viettritutor.repository.TutorRatingRepository;
 import com.viettritutor.repository.UserRepository;
@@ -22,6 +24,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +36,7 @@ public class TutorRatingServiceImpl implements TutorRatingService {
     private final TutorRatingRepository tutorRatingRepository;
     private final UserRepository userRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final ClassGroupRepository classGroupRepository;
 
     @Override
     public TutorRatingResponse createRating(
@@ -43,17 +47,46 @@ public class TutorRatingServiceImpl implements TutorRatingService {
         User student = findUserByEmail(studentEmail);
         User tutor = findTutorById(tutorId);
 
-        if (tutorRatingRepository.existsByStudent_IdAndTutor_Id(student.getId(), tutorId)) {
-            throw new BusinessException(ErrorCode.RATING_ALREADY_EXISTS);
+        Long classGroupId = request.classGroupId();
+        if (classGroupId == null) {
+            List<Long> enrolledClasses = enrollmentRepository.findClassGroupIdsByStudentAndTutor(
+                    student.getId(), tutorId, EnrollmentStatus.ACTIVE);
+            if (!enrolledClasses.isEmpty()) {
+                classGroupId = enrolledClasses.get(0);
+            }
         }
+
+        if (classGroupId == null) {
+            throw new BusinessException(ErrorCode.CLASS_NOT_FOUND);
+        }
+
+        ClassGroup classGroup = classGroupRepository.findById(classGroupId).orElse(null);
 
         // Only students actually taught by this tutor may rate: an ACTIVE enrollment in a
         // class the tutor is or was assigned to (a replaced tutor still taught the class).
         // Enrollments stay ACTIVE after the class completes, so finished classes count too.
-        boolean taught = enrollmentRepository.existsStudentTaughtByTutor(
-                student.getId(), tutorId, EnrollmentStatus.ACTIVE);
+        boolean taught = enrollmentRepository.existsStudentEnrolledInClassTaughtByTutor(
+                student.getId(),
+                classGroupId,
+                tutorId,
+                EnrollmentStatus.ACTIVE
+        );
         if (!taught) {
             throw new BusinessException(ErrorCode.RATING_NOT_ELIGIBLE);
+        }
+
+        // Idempotent upsert: if the student already rated this class, update the existing review
+        Optional<TutorRating> existingRating = tutorRatingRepository.findByStudent_IdAndClassGroup_Id(
+                student.getId(), classGroupId);
+        if (existingRating.isPresent()) {
+            TutorRating existing = existingRating.get();
+            existing.setRating(request.rating());
+            existing.setComment(request.comment());
+            existing.setUpdatedAt(LocalDateTime.now());
+            if (existing.getClassGroup() == null && classGroup != null) {
+                existing.setClassGroup(classGroup);
+            }
+            return toResponse(tutorRatingRepository.save(existing));
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -61,6 +94,7 @@ public class TutorRatingServiceImpl implements TutorRatingService {
         TutorRating rating = TutorRating.builder()
                 .student(student)
                 .tutor(tutor)
+                .classGroup(classGroup)
                 .rating(request.rating())
                 .comment(request.comment())
                 .createdAt(now)
@@ -70,7 +104,7 @@ public class TutorRatingServiceImpl implements TutorRatingService {
         try {
             return toResponse(tutorRatingRepository.saveAndFlush(rating));
         } catch (DataIntegrityViolationException ex) {
-            // Concurrent duplicate hit uk_tutor_review_student_tutor
+            // Concurrent duplicate hit uk_tutor_review_student_class
             throw new BusinessException(ErrorCode.RATING_ALREADY_EXISTS);
         }
     }
@@ -127,13 +161,20 @@ public class TutorRatingServiceImpl implements TutorRatingService {
     @Override
     @Transactional(readOnly = true)
     public TutorRatingResponse getMyRating(Long tutorId, String studentEmail) {
+        return getMyRating(tutorId, null, studentEmail);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TutorRatingResponse getMyRating(Long tutorId, Long classGroupId, String studentEmail) {
         User student = findUserByEmail(studentEmail);
 
-        TutorRating rating = tutorRatingRepository
-                .findByStudent_IdAndTutor_Id(student.getId(), tutorId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.RATING_NOT_FOUND));
+        java.util.Optional<TutorRating> rating = classGroupId != null
+                ? tutorRatingRepository.findByStudent_IdAndClassGroup_Id(student.getId(), classGroupId)
+                : tutorRatingRepository.findByStudent_IdAndTutor_Id(student.getId(), tutorId);
 
-        return toResponse(rating);
+        return rating.map(this::toResponse)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RATING_NOT_FOUND));
     }
 
     private User findUserByEmail(String email) {
@@ -160,10 +201,17 @@ public class TutorRatingServiceImpl implements TutorRatingService {
     }
 
     private TutorRatingResponse toResponse(TutorRating rating) {
+        ClassGroup classGroup = rating.getClassGroup();
+
         return new TutorRatingResponse(
                 rating.getId(),
                 rating.getStudent().getId(),
                 rating.getTutor().getId(),
+                classGroup != null ? classGroup.getId() : null,
+                classGroup != null ? classGroup.getClassCode() : null,
+                classGroup != null && classGroup.getCourse() != null
+                        ? classGroup.getCourse().getSubject()
+                        : null,
                 rating.getRating(),
                 rating.getComment(),
                 rating.getCreatedAt(),
