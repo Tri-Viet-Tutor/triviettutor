@@ -18,7 +18,8 @@ export const learningKeys = {
   studentHomeworks: (userId: number | undefined, query: StudentHomeworksQuery) =>
     ["me", userId, "learning", "student-homeworks", query] as const,
   ratingSummary: (tutorId: number) => ["tutor-rating", tutorId, "summary"] as const,
-  myRating: (userId: number | undefined, tutorId: number) => ["me", userId, "tutor-rating", tutorId] as const,
+  myRating: (userId: number | undefined, tutorId: number, classGroupId?: number | null) =>
+    ["me", userId, "tutor-rating", tutorId, classGroupId ?? "all"] as const,
 };
 
 /** Bài tập của một buổi; chỉ tải khi `enabled` */
@@ -60,12 +61,12 @@ export function useTutorRatingSummary(tutorId: number | null) {
   });
 }
 
-/** Đánh giá của tôi cho một gia sư (null nếu chưa đánh giá) */
-export function useMyTutorRating(tutorId: number | null) {
+/** Đánh giá của tôi cho một gia sư theo lớp (null nếu chưa đánh giá) */
+export function useMyTutorRating(tutorId: number | null, classGroupId?: number | null) {
   const userId = useUserId();
   return useQuery({
-    queryKey: learningKeys.myRating(userId, tutorId ?? 0),
-    queryFn: () => fetchMyTutorRating(tutorId as number),
+    queryKey: learningKeys.myRating(userId, tutorId ?? 0, classGroupId),
+    queryFn: () => fetchMyTutorRating(tutorId as number, classGroupId),
     enabled: tutorId !== null,
   });
 }

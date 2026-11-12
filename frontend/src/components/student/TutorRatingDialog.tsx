@@ -32,13 +32,13 @@ export function TutorRatingBadge({ tutorId }: TutorRatingBadgeProps) {
 }
 
 /**
- * Hộp thoại "Đánh giá gia sư": chọn 1–5 sao và viết nhận xét.
+ * Hộp thoại "Đánh giá gia sư": chọn 1–5 sao và viết nhận xét theo từng lớp học.
  * Đã đánh giá trước đó thì điền sẵn và lưu bằng PUT /ratings/{id}; chưa thì tạo mới bằng POST /tutors/{id}/ratings.
  */
-export function TutorRatingDialog({ tutorId, onClose }: TutorRatingDialogProps) {
+export function TutorRatingDialog({ tutorId, classGroupId, className, onClose }: TutorRatingDialogProps) {
   const userId = useUserId();
   const queryClient = useQueryClient();
-  const mine = useMyTutorRating(tutorId);
+  const mine = useMyTutorRating(tutorId, classGroupId);
   const summary = useTutorRatingSummary(tutorId);
   const [stars, setStars] = useState(0);
   const [comment, setComment] = useState("");
@@ -50,13 +50,14 @@ export function TutorRatingDialog({ tutorId, onClose }: TutorRatingDialogProps) 
     setError(null);
     setStars(existing ? Math.round(Number(existing.rating)) : 0);
     setComment(existing?.comment ?? "");
-  }, [tutorId, existing]);
+  }, [tutorId, classGroupId, existing]);
 
   const save = useMutation({
     mutationFn: (request: TutorRatingRequest) =>
       existing ? updateTutorRating(existing.id, request) : createTutorRating(tutorId as number, request),
     onSuccess: (saved) => {
-      queryClient.setQueryData(learningKeys.myRating(userId, saved.tutorId), saved);
+      queryClient.setQueryData(learningKeys.myRating(userId, saved.tutorId, classGroupId), saved);
+      void queryClient.invalidateQueries({ queryKey: ["tutor-ratings", saved.tutorId] });
       void queryClient.invalidateQueries({ queryKey: learningKeys.ratingSummary(saved.tutorId) });
       onClose();
     },
@@ -66,8 +67,15 @@ export function TutorRatingDialog({ tutorId, onClose }: TutorRatingDialogProps) 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (stars < 1) return setError("Hãy chọn số sao.");
+    if (!existing && !classGroupId) {
+      return setError("Thiếu thông tin lớp học cần đánh giá.");
+    }
     setError(null);
-    save.mutate({ rating: stars, ...(comment.trim() ? { comment: comment.trim() } : {}) });
+    save.mutate({
+      ...(classGroupId ? { classGroupId } : {}),
+      rating: stars,
+      ...(comment.trim() ? { comment: comment.trim() } : {}),
+    });
   }
 
   return (
@@ -75,7 +83,13 @@ export function TutorRatingDialog({ tutorId, onClose }: TutorRatingDialogProps) 
       open={tutorId !== null}
       onClose={onClose}
       title={summary.data?.tutorName ? `Đánh giá gia sư ${summary.data.tutorName}` : "Đánh giá gia sư"}
-      description={existing ? "Bạn đã đánh giá gia sư này; có thể sửa lại bất cứ lúc nào." : "Chia sẻ cảm nhận của bạn về gia sư."}
+      description={
+        className
+          ? `Lớp: ${className}. ${existing ? "Bạn đã đánh giá; có thể sửa lại bất cứ lúc nào." : "Chia sẻ cảm nhận của bạn về gia sư."}`
+          : existing
+            ? "Bạn đã đánh giá gia sư này; có thể sửa lại bất cứ lúc nào."
+            : "Chia sẻ cảm nhận của bạn về gia sư."
+      }
       widthClassName="max-w-[480px]"
     >
       {mine.isPending ? (
@@ -84,6 +98,12 @@ export function TutorRatingDialog({ tutorId, onClose }: TutorRatingDialogProps) 
         <p className="text-[14.5px] text-brand-muted">{portalErrorMessage(mine.error, "Không tải được đánh giá của bạn.")}</p>
       ) : (
         <form noValidate onSubmit={handleSubmit} className="space-y-4">
+          {className && (
+            <div className="flex items-center gap-2 rounded-xl bg-brand-sand/60 px-3 py-2 text-[13px] text-brand-ink">
+              <Icon name="menu_book" className="text-[16px] text-brand-navy" />
+              <span>Đánh giá cho: <strong className="font-semibold text-brand-navy">{className}</strong></span>
+            </div>
+          )}
           <div>
             <span id="rating-stars" className={PORTAL_LABEL}>
               Mức độ hài lòng

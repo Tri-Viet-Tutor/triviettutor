@@ -54,7 +54,7 @@ export function StudentEnrollmentsPage() {
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [ratingTutorId, setRatingTutorId] = useState<number | null>(null);
+  const [ratingTarget, setRatingTarget] = useState<{ tutorId: number; classGroupId: number; className: string } | null>(null);
   const [transferring, setTransferring] = useState<EnrollmentResponse | null>(null);
   const userId = useUserId();
   const queryClient = useQueryClient();
@@ -295,7 +295,15 @@ export function StudentEnrollmentsPage() {
                         <Icon name="person" className="text-[19px] text-brand-navy" />
                         <TutorRatingBadge tutorId={tutorId} />
                       </span>
-                      <button type="button" onClick={() => setRatingTutorId(tutorId)} className={PORTAL_BTN_GHOST}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const cInfo = classById.get(item.classGroupId);
+                          const cName = cInfo?.courseName || cInfo?.classCode || `Lớp ${displayCode("class", item.classGroupId)}`;
+                          setRatingTarget({ tutorId, classGroupId: item.classGroupId, className: cName });
+                        }}
+                        className={PORTAL_BTN_GHOST}
+                      >
                         <Icon name="star" className="text-[18px]" />
                         Đánh giá gia sư
                       </button>
@@ -351,7 +359,12 @@ export function StudentEnrollmentsPage() {
         </ul>
       )}
 
-      <TutorRatingDialog tutorId={ratingTutorId} onClose={() => setRatingTutorId(null)} />
+      <TutorRatingDialog
+        tutorId={ratingTarget?.tutorId ?? null}
+        classGroupId={ratingTarget?.classGroupId ?? null}
+        className={ratingTarget?.className ?? null}
+        onClose={() => setRatingTarget(null)}
+      />
 
       <TransferClassDialog
         enrollment={transferring}

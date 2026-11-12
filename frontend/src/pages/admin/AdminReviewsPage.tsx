@@ -217,6 +217,23 @@ export function AdminReviewsPage() {
                               </span>
                               <span className="text-[12px] text-brand-muted">{new Date(item.updatedAt ?? item.createdAt).toLocaleDateString("vi-VN")}</span>
                             </div>
+                            {/* Thông tin lớp học và môn học */}
+                            {((item.classCode || item.classGroupId) || item.subjectName) && (
+                              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                {(item.classCode || item.classGroupId) && (
+                                  <span className="inline-flex items-center gap-1 rounded-md bg-brand-tint px-2 py-0.5 text-[11.5px] font-semibold text-brand-navy">
+                                    <Icon name="menu_book" className="text-[13px]" />
+                                    Lớp: {item.classCode || (item.classGroupId ? displayCode("class", item.classGroupId) : "")}
+                                  </span>
+                                )}
+                                {item.subjectName && (
+                                  <span className="inline-flex items-center gap-1 rounded-md bg-brand-sand px-2 py-0.5 text-[11.5px] font-medium text-brand-ink">
+                                    <Icon name="school" className="text-[13px]" />
+                                    {item.subjectName}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                             {item.comment?.trim() ? (
                               <p className="mt-2 text-[13.5px] leading-relaxed text-brand-ink">“{item.comment}”</p>
                             ) : (

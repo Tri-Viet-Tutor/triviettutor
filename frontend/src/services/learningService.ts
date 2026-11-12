@@ -91,9 +91,10 @@ export async function fetchTutorRatingSummary(tutorId: number): Promise<TutorRat
 }
 
 /** GET /tutors/{tutorId}/my-rating — đánh giá của tôi; chưa đánh giá (404 RATING_NOT_FOUND) thì trả null */
-export async function fetchMyTutorRating(tutorId: number): Promise<TutorRatingResponse | null> {
+export async function fetchMyTutorRating(tutorId: number, classGroupId?: number | null): Promise<TutorRatingResponse | null> {
   try {
-    return unwrap(await api.get<ApiResponse<TutorRatingResponse>>(`/tutors/${tutorId}/my-rating`));
+    const params = classGroupId ? { classGroupId } : undefined;
+    return unwrap(await api.get<ApiResponse<TutorRatingResponse>>(`/tutors/${tutorId}/my-rating`, { params }));
   } catch (error) {
     if (getApiError(error).errorCode === "RATING_NOT_FOUND" || (isAxiosError(error) && error.response?.status === 404)) return null;
     throw error;

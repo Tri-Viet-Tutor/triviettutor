@@ -27,6 +27,17 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long>, J
     boolean existsStudentTaughtByTutor(@Param("studentId") Long studentId,
                                        @Param("tutorId") Long tutorId,
                                        @Param("enrollmentStatus") EnrollmentStatus enrollmentStatus);
+
+    @Query("""
+            select e.classGroupId from Enrollment e, TutorAssignment a
+            where e.studentId = :studentId and e.status = :enrollmentStatus
+              and a.classGroupId = e.classGroupId and a.tutorId = :tutorId
+            """)
+    List<Long> findClassGroupIdsByStudentAndTutor(
+            @Param("studentId") Long studentId,
+            @Param("tutorId") Long tutorId,
+            @Param("enrollmentStatus") EnrollmentStatus enrollmentStatus
+    );
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
     SELECT e

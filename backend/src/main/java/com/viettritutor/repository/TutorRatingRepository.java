@@ -14,13 +14,17 @@ public interface TutorRatingRepository
 
     boolean existsByStudent_IdAndTutor_Id(
             Long studentId,
-            Long classGroupId
+            Long tutorId
     );
 
     Optional<TutorRating> findByStudent_IdAndTutor_Id(
             Long studentId,
-            Long classGroupId
+            Long tutorId
     );
+
+    boolean existsByStudent_IdAndClassGroup_Id(Long studentId, Long classGroupId);
+
+    Optional<TutorRating> findByStudent_IdAndClassGroup_Id(Long studentId, Long classGroupId);
 
     List<TutorRating> findAllByTutor_IdOrderByCreatedAtDesc(
             Long tutorId

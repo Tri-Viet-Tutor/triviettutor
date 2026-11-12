@@ -45,8 +45,8 @@ public class TutorRating {
     @JoinColumn(name = "tutor_id", nullable = false)
     private User tutor;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "class_group_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "class_group_id")
     private ClassGroup classGroup;
 
     @DecimalMin("1.0")

@@ -99,6 +99,7 @@ export interface StudentHomeworksQuery {
 
 /** dto.rating.TutorRatingRequest — điểm 1.0–5.0 */
 export interface TutorRatingRequest {
+  classGroupId?: number;
   rating: number;
   comment?: string;
 }
@@ -108,9 +109,9 @@ export interface TutorRatingResponse {
   id: number;
   studentId: number;
   tutorId: number;
-  classGroupId: number;
-  classCode: string;
-  subjectName: string;
+  classGroupId: number | null;
+  classCode: string | null;
+  subjectName: string | null;
   rating: number;
   comment: string | null;
   createdAt: string;
@@ -163,6 +164,10 @@ export interface StudentHomeworkCardProps {
 export interface TutorRatingDialogProps {
   /** Mã tài khoản gia sư được đánh giá; null thì hộp thoại đóng */
   tutorId: number | null;
+  /** Mã nhóm lớp học viên đánh giá */
+  classGroupId?: number | null;
+  /** Tên hoặc mã lớp học hiển thị trên form */
+  className?: string | null;
   onClose: () => void;
 }
 
