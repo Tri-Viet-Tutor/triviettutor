@@ -402,7 +402,7 @@ function ClassRowCard({
   const tutor = item.tutorName ?? (item.tutorId ? `Gia sư ${displayCode("tutor", item.tutorId)}` : null);
 
   return (
-    <tr className={`border-t border-brand-sandLine ${selected ? "bg-brand-tint/50" : "hover:bg-brand-sand/50"} ${menuOpen ? "relative z-20" : ""}`}>
+    <tr className={`border-t border-brand-sandLine ${selected ? "bg-brand-tint/50" : "hover:bg-brand-sand/50"}`}>
       <td className="h-14 px-4 py-2 align-middle">
         <span className={`text-[14px] font-bold tabular-nums ${closed ? "text-brand-muted" : "text-brand-navy"}`}>
           {displayCode("class", item.id)}

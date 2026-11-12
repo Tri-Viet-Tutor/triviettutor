@@ -388,7 +388,7 @@ function CourseRow({
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <tr className={`border-t border-brand-sandLine ${selected ? "bg-brand-tint/50" : "hover:bg-brand-sand/50"} ${menuOpen ? "relative z-20" : ""}`}>
+    <tr className={`border-t border-brand-sandLine ${selected ? "bg-brand-tint/50" : "hover:bg-brand-sand/50"}`}>
       <td className="h-14 px-4 py-2 align-middle">
         <span className={`text-[14px] font-bold tabular-nums ${course.active ? "text-brand-navy" : "text-brand-muted"}`}>{displayCode("course", course.id)}</span>
       </td>
@@ -417,7 +417,7 @@ function CourseRow({
       <td className="border-l border-brand-sandLine px-4 py-2 align-middle">
         <SaleBadge active={course.active} />
       </td>
-      <td className="relative border-l border-brand-sandLine px-2 py-2 text-center align-middle">
+      <td className="border-l border-brand-sandLine px-2 py-2 text-center align-middle">
         <RowMenu
           label={`khóa ${course.name}`}
           open={menuOpen}

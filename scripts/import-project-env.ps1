@@ -14,7 +14,7 @@ function Import-ProjectEnvironment {
         }
         $key = $Matches[1]
         $value = $Matches[2].Trim()
-        if ($key -notmatch '^(DB_[A-Z0-9_]+|LOCAL_DB_[A-Z0-9_]+|MONGODB_[A-Z0-9_]+|LOCAL_MONGO_[A-Z0-9_]+|JWT_SECRET|APP_PROFILE|SERVER_PORT|SERVER_FORWARD_HEADERS_STRATEGY|CORS_ALLOWED_ORIGINS|FRONTEND_URL|MAIL_USERNAME|APP_GG_PASSWORD|SPRING_MAIL_[A-Z0-9_]+|VNPAY_[A-Z0-9_]+|PAYMENT_[A-Z0-9_]+|WALLET_[A-Z0-9_]+)$') {
+        if ($key -notmatch '^(DB_[A-Z0-9_]+|LOCAL_DB_[A-Z0-9_]+|MONGODB_[A-Z0-9_]+|LOCAL_MONGO_[A-Z0-9_]+|JWT_SECRET|APP_PROFILE|SERVER_PORT|SERVER_FORWARD_HEADERS_STRATEGY|CORS_ALLOWED_ORIGINS|FRONTEND_URL|MAIL_USERNAME|APP_GG_PASSWORD|SPRING_MAIL_[A-Z0-9_]+|VNPAY_[A-Z0-9_]+|PAYMENT_[A-Z0-9_]+|WALLET_[A-Z0-9_]+|FLYWAY_[A-Z0-9_]+)$') {
             continue
         }
         if ($value.Length -ge 2 -and (
