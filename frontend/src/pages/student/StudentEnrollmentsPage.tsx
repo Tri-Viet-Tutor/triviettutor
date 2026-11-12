@@ -22,7 +22,7 @@ import {
 import { ENROLLMENT_STATUS } from "@/constants/labels";
 import { ROUTES } from "@/constants/routes";
 import { useMyEnrollments, useRefreshMine } from "@/hooks/useManagementData";
-import { useUserId } from "@/hooks/usePortalData";
+import { useMySessions, useUserId } from "@/hooks/usePortalData";
 import { queryKeys } from "@/constants/queryKeys";
 import { cancelEnrollment } from "@/services/managementService";
 import { getTuitionClass } from "@/services/tuitionPaymentService";

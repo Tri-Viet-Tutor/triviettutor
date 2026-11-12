@@ -1,5 +1,8 @@
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getMeetingRecordingInfo } from "@/services/meeting";
+import { api } from "@/services/api";
+import { useAuthStore } from "@/stores/authStore";
 import { Icon } from "@/components/ui/Icon";
 
 interface SessionRecordingPlayerProps {
@@ -13,12 +16,70 @@ export function SessionRecordingPlayer({
   className = "",
   showWhenEmpty = false,
 }: SessionRecordingPlayerProps) {
+  const token = useAuthStore((state) => state.token);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["session-recording", sessionId],
     queryFn: () => getMeetingRecordingInfo(sessionId),
     enabled: sessionId > 0,
     staleTime: 60 * 1000,
   });
+
+  const downloadName = data?.fileName || `buoi_hoc_${sessionId}_recording.webm`;
+  const audioSrcWithToken = data?.recordingUrl
+    ? `${data.recordingUrl}${token ? `?token=${encodeURIComponent(token)}` : ""}`
+    : "";
+
+  useEffect(() => {
+    let active = true;
+    let createdUrl: string | null = null;
+
+    if (data?.hasRecording && data?.recordingUrl) {
+      api
+        .get(data.recordingUrl, { responseType: "blob" })
+        .then((res) => {
+          if (active) {
+            createdUrl = URL.createObjectURL(res.data);
+            setBlobUrl(createdUrl);
+          }
+        })
+        .catch((err) => {
+          console.warn("Could not pre-fetch audio blob, falling back to direct URL with token:", err);
+        });
+    }
+
+    return () => {
+      active = false;
+      if (createdUrl) {
+        URL.revokeObjectURL(createdUrl);
+      }
+    };
+  }, [data?.hasRecording, data?.recordingUrl]);
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!data?.recordingUrl || isDownloading) return;
+
+    setIsDownloading(true);
+    try {
+      const response = await api.get(data.recordingUrl, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", downloadName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Lỗi khi tải file qua api, chuyển hướng sang link trực tiếp:", err);
+      window.open(audioSrcWithToken, "_blank");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   // State 1: Loading
   if (isLoading) {
@@ -75,7 +136,7 @@ export function SessionRecordingPlayer({
   }
 
   // State 4 & 5: Default and Active Playback
-  const downloadName = data.fileName || `buoi_hoc_${sessionId}_recording.webm`;
+  const finalAudioSrc = blobUrl || audioSrcWithToken;
 
   return (
     <section
@@ -89,22 +150,24 @@ export function SessionRecordingPlayer({
             Bản ghi âm buổi học
           </h4>
         </div>
-        <a
-          href={data.recordingUrl}
-          download={downloadName}
-          className="inline-flex items-center gap-1 text-[12px] font-semibold text-brand-navy hover:text-brand-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-orange rounded px-1.5 py-0.5 transition-colors"
+        <button
+          type="button"
+          onClick={handleDownload}
+          disabled={isDownloading}
+          className="inline-flex items-center gap-1 text-[12px] font-semibold text-brand-navy hover:text-brand-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-orange rounded px-1.5 py-0.5 transition-colors disabled:opacity-50"
           title="Tải tệp ghi âm về máy"
         >
           <Icon name="download" className="text-sm" />
-          <span>Tải tệp</span>
-        </a>
+          <span>{isDownloading ? "Đang tải..." : "Tải tệp"}</span>
+        </button>
       </div>
 
       <div className="rounded-lg bg-brand-sand/50 p-2">
         <audio
+          key={finalAudioSrc}
           controls
           className="w-full h-8 outline-none focus-visible:ring-2 focus-visible:ring-brand-orange rounded"
-          src={data.recordingUrl}
+          src={finalAudioSrc}
           preload="metadata"
           aria-label="Trình phát bản ghi âm bài giảng"
         />

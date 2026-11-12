@@ -1024,17 +1024,32 @@ export default function ClassroomPage() {
     } as MeetingSignalPayload);
   };
 
-  const startVoiceRecording = async () => {
+  const startVoiceRecording = async (isAuto = false) => {
     try {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        return;
+      }
+
       let streamToRecord: MediaStream | null = null;
       if (localStream && localStream.getAudioTracks().length > 0) {
         streamToRecord = new MediaStream(localStream.getAudioTracks());
       } else if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
-        streamToRecord = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        try {
+          streamToRecord = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        } catch (mediaErr) {
+          if (!isAuto) {
+            alert("Không tìm thấy micro khả dụng để ghi âm. Vui lòng cấp quyền truy cập micro cho trình duyệt.");
+          } else {
+            console.warn("Auto recording: could not access microphone:", mediaErr);
+          }
+          return;
+        }
       }
 
       if (!streamToRecord) {
-        alert("Không tìm thấy micro khả dụng để ghi âm.");
+        if (!isAuto) {
+          alert("Không tìm thấy micro khả dụng để ghi âm.");
+        }
         return;
       }
 
@@ -1076,7 +1091,11 @@ export default function ClassroomPage() {
       mediaRecorderRef.current = recorder;
       setIsRecordingVoice(true);
       setRecordingSeconds(0);
-      setRecordingSaveNotice(null);
+      if (isAuto) {
+        setRecordingSaveNotice("Buổi học đã tự động bắt đầu ghi âm.");
+      } else {
+        setRecordingSaveNotice(null);
+      }
 
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
@@ -1086,7 +1105,9 @@ export default function ClassroomPage() {
       }, 1000);
     } catch (err) {
       console.error("Không thể khởi động ghi âm:", err);
-      alert("Không thể khởi động ghi âm. Vui lòng cấp quyền truy cập micro cho trình duyệt.");
+      if (!isAuto) {
+        alert("Không thể khởi động ghi âm. Vui lòng cấp quyền truy cập micro cho trình duyệt.");
+      }
     }
   };
 
@@ -1101,11 +1122,52 @@ export default function ClassroomPage() {
     setIsRecordingVoice(false);
   };
 
+  // Tự động bắt đầu ghi âm khi buổi học bắt đầu kết nối (dành cho Gia sư hoặc Admin)
+  const hasAutoStartedRecordingRef = useRef(false);
+  useEffect(() => {
+    if (
+      livekitState === ConnectionState.Connected &&
+      (isTutor || isAdmin) &&
+      !isRecordingVoice &&
+      !hasAutoStartedRecordingRef.current
+    ) {
+      hasAutoStartedRecordingRef.current = true;
+      startVoiceRecording(true).catch((err) => {
+        console.warn("Tự động ghi âm chưa khởi động được:", err);
+      });
+    }
+  }, [livekitState, isTutor, isAdmin, isRecordingVoice]);
+
   const [confirmLeave, setConfirmLeave] = useState(false);
   const handleLeave = () => setConfirmLeave(true);
-  const leaveRoom = () => {
-    if (isRecordingVoice) {
-      stopVoiceRecording();
+  const leaveRoom = async () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      setIsSavingRecording(true);
+      await new Promise<void>((resolve) => {
+        const recorder = mediaRecorderRef.current;
+        if (!recorder) {
+          resolve();
+          return;
+        }
+        recorder.onstop = async () => {
+          const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+          if (audioBlob.size > 0 && sessionId) {
+            try {
+              await uploadMeetingRecording(Number(sessionId), audioBlob);
+            } catch (err) {
+              console.error("Lỗi khi tự động lưu bản ghi âm khi kết thúc buổi học:", err);
+            }
+          }
+          resolve();
+        };
+        recorder.stop();
+      });
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+      setIsRecordingVoice(false);
+      setIsSavingRecording(false);
     }
     if (localStream) {
       localStream.getTracks().forEach((t) => t.stop());
@@ -1156,149 +1218,170 @@ export default function ClassroomPage() {
 
   const isTutor = meetingData.role === "TUTOR";
   const isAdmin = meetingData.role === "ADMIN";
+  const isHost = isTutor || isAdmin;
   const roleLabel = isTutor ? "Gia sư" : isAdmin ? "Quản trị viên" : "Học sinh";
+  const currentUserName = user?.fullName || (isHost ? (meetingData.tutorName || "Gia sư") : "Học sinh");
+
+  const hasOnlineStudent = onlineParticipantIds.size > 0 || participants.some((p) => !p.isSelf && p.role !== "TUTOR");
+  const studentParticipant = participants.find((p) => !p.isSelf && p.role !== "TUTOR");
+  const studentName =
+    sessionRoster?.students.find((s) => onlineParticipantIds.has(s.studentId))?.fullName ||
+    studentParticipant?.name ||
+    sessionRoster?.students[0]?.fullName ||
+    "Học sinh";
+  const studentMicOn = studentParticipant?.micEnabled ?? false;
+  const studentHandRaised =
+    studentParticipant?.handRaised ??
+    (sessionRoster?.students[0] ? handRaisedIds.has(sessionRoster.students[0].studentId) : false);
+
+  const handleCopyRoomCode = () => {
+    if (meetingData?.roomName) {
+      navigator.clipboard.writeText(meetingData.roomName);
+      setCopiedRoomCode(true);
+      setTimeout(() => setCopiedRoomCode(false), 2000);
+    }
+  };
 
   return (
-    <div className="flex h-screen flex-col bg-slate-950 text-slate-100 overflow-hidden select-none">
-      {/* ── Top Bar ──────────────────────────────────────────────────────── */}
-      <header className="flex h-14 items-center justify-between border-b border-slate-800 bg-slate-900 px-4">
+    <div className="flex h-screen flex-col bg-[#0b0c0e] text-slate-100 overflow-hidden select-none font-sans">
+      {/* ── Top Bar (Minimalist Google Meet Style) ─────────────────────────── */}
+      <header className="flex h-14 items-center justify-between border-b border-white/5 bg-[#12141a] px-4 z-20 flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Live</span>
+          <div className="flex items-center gap-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-400">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="tracking-wide">Trực tiếp</span>
           </div>
+
+          <div className="h-4 w-px bg-white/10" />
+
+          <div className="flex items-center gap-2">
+            <h1 className="text-sm font-bold text-slate-100 leading-tight">
+              {meetingData.courseTitle}
+            </h1>
+            <span className="text-xs font-semibold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+              Buổi {meetingData.sessionNumber}
+            </span>
+            <span className="hidden sm:inline-flex rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-medium text-slate-300 border border-slate-700">
+              {roleLabel}
+            </span>
+          </div>
+        </div>
+
+        {/* Center: Clean Room Code */}
+        <div className="hidden md:flex items-center gap-2 rounded-full bg-slate-900/80 border border-white/10 px-3 py-1 text-xs">
+          <span className="text-slate-400">Phòng:</span>
+          <span className="font-mono text-indigo-300 font-semibold">{meetingData.roomName}</span>
+          <button
+            type="button"
+            onClick={handleCopyRoomCode}
+            className="ml-1 text-slate-400 hover:text-white transition flex items-center gap-1"
+            title="Sao chép mã phòng"
+          >
+            <Icon name={copiedRoomCode ? "check" : "content_copy"} className="text-sm text-indigo-400" />
+            {copiedRoomCode && <span className="text-[10px] text-emerald-400 font-medium">Đã chép!</span>}
+          </button>
+        </div>
+
+        {/* Right Actions */}
+        <div className="flex items-center gap-2">
           {isRecordingVoice && (
-            <div className="flex items-center gap-1.5 rounded-full bg-rose-500/20 border border-rose-500/40 px-2.5 py-0.5 text-xs text-rose-300 font-semibold animate-pulse">
+            <div className="flex items-center gap-1.5 rounded-full bg-rose-500/10 border border-rose-500/30 px-3 py-1 text-xs text-rose-300 font-semibold animate-pulse">
               <span className="h-2 w-2 rounded-full bg-rose-500" />
               <span>Ghi âm: {Math.floor(recordingSeconds / 60).toString().padStart(2, "0")}:{(recordingSeconds % 60).toString().padStart(2, "0")}</span>
             </div>
           )}
-          <div className="h-4 w-px bg-slate-700" />
-          <div>
-            <h1 className="text-sm font-bold text-slate-100 leading-tight">
-              {meetingData.courseTitle} — Buổi {meetingData.sessionNumber}
-            </h1>
-            <p className="text-xs text-slate-400">
-              Phòng: <code className="text-indigo-400 font-mono">{meetingData.roomName}</code> • Vai trò:{" "}
-              <span className="font-semibold text-amber-300">{roleLabel}</span>
-            </p>
+
+          <div
+            className="flex items-center gap-1.5 rounded-full bg-slate-900/80 border border-white/10 px-2.5 py-1 text-xs"
+            title={livekitState === ConnectionState.Connected ? "Kết nối LiveKit SFU ổn định" : "Đang kết nối lại..."}
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                livekitState === ConnectionState.Connected
+                  ? "bg-emerald-400 animate-pulse"
+                  : livekitState === ConnectionState.Connecting
+                  ? "bg-amber-400 animate-ping"
+                  : "bg-rose-400"
+              }`}
+            />
+            <span className="text-[11px] text-slate-400 hidden lg:inline">
+              {livekitState === ConnectionState.Connected ? "Mạng tốt" : "Đang kết nối"}
+            </span>
           </div>
-        </div>
-
-        {/* View mode toggle & Actions */}
-        <div className="flex items-center gap-2">
-          {(isTutor || isAdmin) && (
-            <button
-              onClick={handleHostMuteAll}
-              className="flex items-center gap-1.5 rounded-lg bg-rose-600/20 border border-rose-500/40 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-600/30 hover:text-white transition"
-              title="Tắt micro toàn bộ học sinh trong phòng"
-            >
-              Tắt tất cả mic
-            </button>
-          )}
 
           {(isTutor || isAdmin) && (
             <button
+              type="button"
               onClick={loadMeetingLogs}
-              className="flex items-center gap-1.5 rounded-lg bg-slate-800 border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition"
+              className="flex items-center gap-1.5 rounded-xl bg-slate-800/80 border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition"
               title="Xem nhật ký tham gia MongoDB Atlas"
             >
-              📋 Nhật ký phòng học
+              <Icon name="history_edu" className="text-sm text-indigo-400" />
+              <span className="hidden sm:inline">Nhật ký</span>
             </button>
           )}
 
           <button
+            type="button"
             onClick={() => setShowWhiteboard((prev) => !prev)}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
               showWhiteboard
-                ? "bg-indigo-600 text-white shadow"
-                : "bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700"
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/30"
+                : "bg-slate-800/80 text-slate-300 hover:bg-slate-700 border border-slate-700"
             }`}
           >
-            ✏️ {showWhiteboard ? "Ẩn Bảng Trắng" : "Mở Bảng Trắng"}
-          </button>
-
-          <button
-            onClick={() => setShowParticipants((prev) => !prev)}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-              showParticipants
-                ? "bg-indigo-600 text-white shadow"
-                : "bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700"
-            }`}
-            title="Mở danh sách người tham gia trực tiếp"
-          >
-            👥 Người tham gia {sessionRoster ? `(${onlineParticipantIds.size + (tutorOnline ? 1 : 0)}/${sessionRoster.students.length + 1})` : `(${participants.length})`}
-          </button>
-
-          <button
-            onClick={() => {
-              setShowChat((prev) => {
-                const next = !prev;
-                if (next) setUnreadChatCount(0);
-                return next;
-              });
-            }}
-            className={`relative flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-              showChat
-                ? "bg-indigo-600 text-white shadow"
-                : "bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700"
-            }`}
-          >
-            💬 Chat
-            {unreadChatCount > 0 && !showChat && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white animate-pulse">
-                {unreadChatCount}
-              </span>
-            )}
-          </button>
-
-
-          <button
-            onClick={handleLeave}
-            className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-500 transition shadow"
-          >
-            🚪 Rời phòng
+            <Icon name="draw" className="text-sm" />
+            <span>{showWhiteboard ? "Ẩn bảng" : "Bảng vẽ"}</span>
           </button>
         </div>
       </header>
 
       {/* Voice Recording Save Notice Banner */}
       {recordingSaveNotice && (
-        <div className="bg-emerald-950/90 border-b border-emerald-800 px-4 py-2 text-xs text-emerald-300 flex items-center justify-between z-20">
+        <div className="bg-emerald-950/80 border-b border-emerald-800/60 px-4 py-2 text-xs text-emerald-300 flex items-center justify-between z-20 backdrop-blur-sm">
           <div className="flex items-center gap-2">
-            <span>🎙️</span>
+            <Icon name="mic" className="text-sm text-emerald-400" />
             <span>{recordingSaveNotice}</span>
           </div>
           <button
+            type="button"
             onClick={() => setRecordingSaveNotice(null)}
             className="text-emerald-400 hover:text-white font-bold ml-2 text-xs"
+            aria-label="Đóng thông báo"
           >
-            ✕
+            <Icon name="close" className="text-sm" />
           </button>
         </div>
       )}
 
       {/* Permission Denied Notice Banner */}
       {mediaPermissionDenied && (
-        <div className="bg-amber-900/40 border-b border-amber-800 px-4 py-1.5 text-xs text-amber-300 flex items-center justify-between">
-          <span>⚠️ Thiết bị webcam/micro chưa được cấp quyền truy cập. Bạn vẫn có thể xem bảng trắng và trò chuyện.</span>
+        <div className="bg-amber-950/80 border-b border-amber-800/60 px-4 py-2 text-xs text-amber-300 flex items-center justify-between z-20 backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <Icon name="warning" className="text-sm text-amber-400" />
+            <span>Thiết bị webcam/micro chưa được cấp quyền truy cập. Bạn vẫn có thể xem bảng trắng và trò chuyện.</span>
+          </div>
           <button
+            type="button"
             onClick={() => setMediaPermissionDenied(false)}
             className="text-amber-400 hover:text-white text-xs font-bold"
+            aria-label="Đóng cảnh báo"
           >
-            ✕
+            <Icon name="close" className="text-sm" />
           </button>
         </div>
       )}
 
       {/* Host Muted Notice Banner */}
       {hostMutedNotice && (
-        <div className="bg-rose-950/90 border-b border-rose-800 px-4 py-2 text-xs text-rose-200 flex items-center justify-between z-20">
+        <div className="bg-rose-950/80 border-b border-rose-800/60 px-4 py-2 text-xs text-rose-200 flex items-center justify-between z-20 backdrop-blur-sm">
           <div className="flex items-center gap-2">
+            <Icon name="info" className="text-sm text-rose-400" />
             <span className="font-semibold text-rose-300">[Thông báo]</span>
             <span>{hostMutedNotice}</span>
           </div>
           <button
+            type="button"
             onClick={() => setHostMutedNotice(null)}
             className="text-rose-400 hover:text-white font-bold ml-2 text-xs"
           >
@@ -1307,40 +1390,47 @@ export default function ClassroomPage() {
         </div>
       )}
 
-      {/* ── Main Workspace: Whiteboard & Video Conference ──────────────────── */}
+      {/* ── Main Workspace: Adaptive Stage & Unified Drawer ──────────────── */}
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Left: Whiteboard Section */}
+        {/* Whiteboard Canvas Stage */}
         {showWhiteboard && (
-          <div className="flex flex-1 flex-col border-r border-slate-800 bg-slate-900">
+          <div className="flex flex-1 flex-col border-r border-slate-800 bg-[#121316]">
             {/* Whiteboard Toolbar */}
-            <div className="flex h-11 items-center justify-between border-b border-slate-800 bg-slate-850 px-3">
+            <div className="flex h-11 items-center justify-between border-b border-slate-800 bg-[#181a20] px-3">
               {(isTutor || isAdmin) ? (
                 <>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-slate-300 mr-1">Bảng vẽ:</span>
+                    <span className="text-xs font-medium text-slate-300 mr-1 flex items-center gap-1">
+                      <Icon name="draw" className="text-xs text-indigo-400" />
+                      Bảng vẽ:
+                    </span>
                     <button
+                      type="button"
                       onClick={() => setIsEraser(false)}
-                      className={`rounded px-2.5 py-1 text-xs font-medium transition ${
+                      className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition ${
                         !isEraser ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
                       }`}
                     >
+                      <Icon name="edit" className="text-xs" />
                       Bút viết
                     </button>
                     <button
+                      type="button"
                       onClick={() => setIsEraser(true)}
-                      className={`rounded px-2.5 py-1 text-xs font-medium transition ${
+                      className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition ${
                         isEraser ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
                       }`}
                     >
+                      <Icon name="auto_fix_normal" className="text-xs" />
                       Tẩy xóa
                     </button>
 
-                    {/* Color pickers */}
                     {!isEraser && (
-                      <div className="flex items-center gap-1.5 ml-2 border-l border-slate-750 pl-2">
+                      <div className="flex items-center gap-1.5 ml-2 border-l border-slate-700 pl-2">
                         {["#2563eb", "#dc2626", "#16a34a", "#0f172a"].map((c) => (
                           <button
                             key={c}
+                            type="button"
                             onClick={() => setDrawColor(c)}
                             style={{ backgroundColor: c }}
                             className={`h-5 w-5 rounded-full border-2 transition ${
@@ -1354,8 +1444,9 @@ export default function ClassroomPage() {
 
                   <div className="flex items-center gap-2">
                     <button
+                      type="button"
                       onClick={clearCanvas}
-                      className="rounded bg-slate-800 px-2.5 py-1 text-xs text-slate-300 hover:bg-rose-900/40 hover:text-rose-300 transition"
+                      className="rounded-lg bg-slate-800 px-2.5 py-1 text-xs text-slate-300 hover:bg-rose-900/40 hover:text-rose-300 transition"
                     >
                       Xóa toàn bộ
                     </button>
@@ -1363,8 +1454,9 @@ export default function ClassroomPage() {
                 </>
               ) : (
                 <div className="flex items-center justify-between w-full">
-                  <span className="rounded bg-indigo-500/20 px-2.5 py-1 text-xs text-indigo-300 font-semibold flex items-center gap-1.5">
-                    <span>👁️</span> Bảng bài giảng của gia sư (Chế độ xem)
+                  <span className="rounded-lg bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 text-xs text-indigo-300 font-semibold flex items-center gap-1.5">
+                    <Icon name="visibility" className="text-sm" />
+                    Bảng bài giảng của gia sư (Chế độ xem)
                   </span>
                   <span className="text-xs text-slate-400">Chỉ gia sư có quyền viết và xóa</span>
                 </div>
@@ -1381,7 +1473,7 @@ export default function ClassroomPage() {
                 onMouseMove={isTutor || isAdmin ? draw : undefined}
                 onMouseUp={isTutor || isAdmin ? stopDrawing : undefined}
                 onMouseLeave={isTutor || isAdmin ? stopDrawing : undefined}
-                className={`h-full w-full object-contain border border-slate-200 rounded shadow-sm ${
+                className={`h-full w-full object-contain border border-slate-200 rounded-xl shadow-sm ${
                   isTutor || isAdmin ? "cursor-crosshair" : "cursor-default pointer-events-none"
                 }`}
               />
@@ -1389,378 +1481,514 @@ export default function ClassroomPage() {
           </div>
         )}
 
-        {/* Video Conference Section */}
-        <div className={`flex flex-col ${showWhiteboard ? "w-96 border-l border-slate-800" : "flex-1"} bg-slate-950`}>
-          <div className="flex-1 p-3 overflow-y-auto">
-            <div className="grid h-full grid-cols-1 gap-3">
-              {/* Main Tile / Screen Share or Tutor Video */}
-              <div className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-800 bg-slate-900 p-3 shadow-lg">
-                <div className="flex items-center justify-between z-10">
-                  <span className="rounded-full bg-indigo-600/80 px-2.5 py-0.5 text-xs font-semibold text-white">
-                    {screenSharing || remoteScreenTrack
-                      ? "Màn hình đang chia sẻ"
-                      : isTutor
-                      ? "Màn hình của bạn (Gia sư)"
-                      : `Gia sư: ${meetingData.tutorName || "Thầy phụ trách"}`}
-                  </span>
-                  {micEnabled && (
-                    <span className="flex items-center gap-1 text-xs text-emerald-400 bg-slate-900/80 px-2 py-0.5 rounded">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" /> Mic Bật
-                    </span>
-                  )}
-                </div>
-
-                {/* Video Container */}
-                <div className="flex flex-1 items-center justify-center relative overflow-hidden my-2 rounded-lg bg-black">
-                  {screenSharing && screenStream ? (
-                    <video
-                      ref={screenVideoRef}
-                      autoPlay
-                      playsInline
-                      className="h-full w-full object-contain rounded"
-                    />
-                  ) : remoteScreenTrack ? (
-                    <video
-                      ref={remoteScreenVideoRef}
-                      autoPlay
-                      playsInline
-                      className="h-full w-full object-contain rounded"
-                    />
-                  ) : isTutor ? (
-                    cameraEnabled ? (
-                      <video
-                        ref={localVideoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className="h-full w-full object-cover rounded mirror"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center text-slate-500">
-                        <Icon name="videocam_off" className="text-3xl mb-1" />
-                        <p className="mt-2 text-xs">Camera của bạn đã tắt</p>
-                      </div>
-                    )
-                  ) : remoteTutorTrack ? (
-                    <video
-                      ref={remoteTutorVideoRef}
-                      autoPlay
-                      playsInline
-                      className="h-full w-full object-cover rounded"
-                    />
-                  ) : tutorOnline ? (
-                    <div className="flex flex-col items-center text-center">
-                      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-400 text-3xl font-bold border-2 border-indigo-500/30">
-                        GS
-                      </div>
-                      <p className="mt-3 text-sm font-semibold text-slate-200">
-                        {meetingData.tutorName || "Gia sư phụ trách"}
-                      </p>
-                      <p className="text-xs text-slate-400">Gia sư đang trong phòng (Camera tắt)</p>
-                    </div>
+        {/* Video Area */}
+        <div className={`flex flex-col ${showWhiteboard ? "w-80 lg:w-96 border-l border-slate-800 bg-[#0e0f14]" : "flex-1 bg-[#0c0d11]"} overflow-hidden`}>
+          {showWhiteboard ? (
+            /* Whiteboard Side Video Column */
+            <div className="flex-1 p-3 overflow-y-auto space-y-3">
+              {/* Tutor Tile */}
+              <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-900 border border-white/10 shadow-md flex items-center justify-center">
+                {isTutor ? (
+                  cameraEnabled ? (
+                    <video ref={localVideoRef} autoPlay playsInline muted className="h-full w-full object-cover mirror" />
                   ) : (
-                    <div className="flex flex-col items-center text-center text-slate-400">
-                      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-800 text-slate-500 text-3xl font-bold border border-slate-700">
-                        GS
-                      </div>
-                      <p className="mt-3 text-sm font-semibold text-slate-300">
-                        {meetingData.tutorName || "Gia sư phụ trách"}
-                      </p>
-                      <p className="text-xs text-amber-400/90 mt-1">Gia sư chưa vào phòng học</p>
+                    <div className="flex flex-col items-center text-slate-500">
+                      <Icon name="videocam_off" className="text-2xl mb-1" />
+                      <span className="text-[11px]">Camera tắt</span>
                     </div>
-                  )}
-
-                  {/* Floating Self Preview cho Học sinh */}
-                  {!isTutor && cameraEnabled && (
-                    <div className="absolute bottom-3 right-3 z-20 h-24 w-36 overflow-hidden rounded-lg border border-slate-700 bg-slate-900/90 shadow-xl">
-                      <video
-                        ref={localVideoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className="h-full w-full object-cover mirror"
-                      />
-                      <span className="absolute bottom-1 left-1.5 rounded bg-black/70 px-1 py-0.5 text-[10px] text-slate-200">
-                        Camera của bạn
-                      </span>
+                  )
+                ) : remoteTutorTrack ? (
+                  <video ref={remoteTutorVideoRef} autoPlay playsInline className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center text-slate-400">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600/20 text-indigo-400 font-bold text-xs border border-indigo-500/30">
+                      GS
                     </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-800 pt-2">
-                  <span>Chất lượng: 1080p @ 30fps</span>
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <span
-                      className={`h-2 w-2 rounded-full ${
-                        livekitState === ConnectionState.Connected
-                          ? "bg-emerald-400 animate-pulse"
-                          : livekitState === ConnectionState.Connecting
-                          ? "bg-amber-400 animate-ping"
-                          : "bg-rose-400"
-                      }`}
-                    />
-                    {livekitState === ConnectionState.Connected
-                      ? "LiveKit SFU: Trực tuyến"
-                      : livekitState === ConnectionState.Connecting
-                      ? "LiveKit SFU: Đang kết nối..."
-                      : "LiveKit SFU: Ngoại tuyến"}
-                  </span>
+                    <span className="text-xs font-semibold text-slate-200 mt-1">{meetingData.tutorName || "Gia sư"}</span>
+                    <span className="text-[10px] text-slate-400">{tutorOnline ? "Camera tắt" : "Chưa vào phòng"}</span>
+                  </div>
+                )}
+                <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-lg bg-black/60 backdrop-blur-md px-2 py-0.5 text-[10px] text-white">
+                  <span className="font-medium truncate max-w-[120px]">{isTutor ? currentUserName : (meetingData.tutorName || "Gia sư")}</span>
+                  <span className="text-indigo-300 font-semibold">(Gia sư)</span>
+                  <Icon name={isTutor ? (micEnabled ? "mic" : "mic_off") : "mic"} className="text-xs text-emerald-400" />
                 </div>
               </div>
 
-              {/* Secondary Participant Tiles */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-300 px-1">
-                  <span>Thành viên trong phòng ({participants.length})</span>
-                  {(isTutor || isAdmin) && (
-                    <button
-                      onClick={handleHostMuteAll}
-                      className="rounded bg-rose-600/20 border border-rose-500/40 px-2 py-0.5 text-xs text-rose-300 hover:bg-rose-600/30 hover:text-white transition"
-                    >
-                      Tắt tất cả mic
-                    </button>
-                  )}
-                </div>
-
-                {participants.filter((p) => !p.isSelf).length === 0 ? (
-                  <div className="flex flex-col items-center justify-center p-6 rounded-xl border border-dashed border-slate-850 bg-slate-900/40 text-center">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 text-slate-400 mb-2">
-                      <Icon name="person" className="text-[20px]" />
+              {/* Student Tile */}
+              <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-900 border border-white/10 shadow-md flex items-center justify-center">
+                {!isTutor ? (
+                  cameraEnabled ? (
+                    <video ref={localVideoRef} autoPlay playsInline muted className="h-full w-full object-cover mirror" />
+                  ) : (
+                    <div className="flex flex-col items-center text-slate-500">
+                      <Icon name="videocam_off" className="text-2xl mb-1" />
+                      <span className="text-[11px]">Camera tắt</span>
                     </div>
-                    <p className="text-xs font-semibold text-slate-300">
-                      Chưa có thành viên nào khác vào phòng
-                    </p>
-                    <p className="text-[11px] text-slate-400 mt-1 max-w-[220px]">
-                      Khi có người tham gia, video và trạng thái sẽ tự động xuất hiện tại đây theo thời gian thực.
-                    </p>
+                  )
+                ) : remoteStudentTrack ? (
+                  <video ref={remoteStudentVideoRef} autoPlay playsInline className="h-full w-full object-cover" />
+                ) : hasOnlineStudent ? (
+                  <div className="flex flex-col items-center text-slate-400">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 text-slate-300 font-bold text-xs border border-slate-700">
+                      {studentName.slice(0, 2).toUpperCase()}
+                    </div>
+                    <span className="text-xs font-semibold text-slate-200 mt-1">{studentName}</span>
+                    <span className="text-[10px] text-slate-400">Camera tắt</span>
                   </div>
                 ) : (
-                  participants
-                    .filter((p) => !p.isSelf)
-                    .map((p) => (
-                      <div
-                        key={p.id}
-                        className="relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 p-3"
-                      >
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-semibold text-slate-300">{p.name}</span>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`rounded px-1.5 py-0.5 text-xs font-medium ${
-                                p.micEnabled
-                                  ? "bg-emerald-500/20 text-emerald-300"
-                                  : "bg-rose-500/20 text-rose-300"
-                              }`}
-                            >
-                              {p.micEnabled ? "Mic Bật" : "Mic Tắt"}
-                            </span>
-                            {p.handRaised && (
-                              <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-xs text-amber-300 animate-pulse">
-                                Đang giơ tay
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex flex-1 items-center justify-center py-4">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 text-slate-300 font-bold border border-slate-700">
-                            {p.role === "TUTOR" ? "GS" : "HS"}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between border-t border-slate-800 pt-2 text-xs">
-                          <span className="text-slate-400">
-                            {p.role === "TUTOR" ? "Gia sư phụ trách" : "Học sinh"}
-                          </span>
-                          {(isTutor || isAdmin) && p.role === "STUDENT" && (
-                            <div className="flex items-center gap-1.5">
-                              {p.micEnabled ? (
-                                <button
-                                  onClick={() => handleHostMuteParticipant(p.id)}
-                                  className="rounded bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-rose-500 transition shadow"
-                                >
-                                  Tắt mic
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleHostRequestUnmute(p.id)}
-                                  className="rounded bg-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-600 hover:text-white transition"
-                                >
-                                  Yêu cầu bật mic
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))
+                  <div className="flex flex-col items-center text-slate-500 p-2 text-center">
+                    <Icon name="person" className="text-2xl text-slate-600 mb-1" />
+                    <span className="text-xs text-slate-400">Chờ học sinh vào...</span>
+                  </div>
+                )}
+                <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-lg bg-black/60 backdrop-blur-md px-2 py-0.5 text-[10px] text-white">
+                  <span className="font-medium truncate max-w-[120px]">{!isTutor ? currentUserName : studentName}</span>
+                  <span className="text-slate-400">(Học sinh)</span>
+                  <Icon
+                    name={!isTutor ? (micEnabled ? "mic" : "mic_off") : (studentMicOn ? "mic" : "mic_off")}
+                    className={`text-xs ${(!isTutor ? micEnabled : studentMicOn) ? "text-emerald-400" : "text-rose-400"}`}
+                  />
+                </div>
+                {studentHandRaised && (
+                  <div className="absolute top-2 right-2 rounded-full bg-amber-500 text-slate-950 font-bold px-2 py-0.5 text-[10px] flex items-center gap-1 shadow animate-pulse">
+                    <Icon name="pan_tool" className="text-xs" />
+                    <span>Giơ tay</span>
+                  </div>
                 )}
               </div>
             </div>
-          </div>
-        </div>
+          ) : (
+            /* Central Presentation or Dynamic Video Classroom Grid */
+            <div className="flex-1 h-full p-4 flex items-center justify-center overflow-hidden">
+              {screenSharing || remoteScreenTrack ? (
+                /* Screen Share Presentation Stage */
+                <div className="relative w-full h-[76vh] max-h-[820px] rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl flex items-center justify-center">
+                  {screenSharing && screenStream ? (
+                    <video ref={screenVideoRef} autoPlay playsInline className="h-full w-full object-contain" />
+                  ) : remoteScreenTrack ? (
+                    <video ref={remoteScreenVideoRef} autoPlay playsInline className="h-full w-full object-contain" />
+                  ) : null}
 
-
-        {/* Right: In-Class Chat Sidebar */}
-        {showChat && (
-          <div className="flex w-80 flex-col border-l border-slate-800 bg-slate-900">
-            <div className="flex h-11 items-center justify-between border-b border-slate-800 px-4">
-              <span className="text-xs font-bold text-slate-200 uppercase tracking-wide">Trò chuyện trong lớp</span>
-              <button onClick={() => setShowChat(false)} className="text-slate-400 hover:text-white text-sm">
-                ✕
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-3 space-y-3">
-              {chatMessages.map((msg, idx) => (
-                <div key={idx} className={`flex flex-col ${msg.isMe ? "items-end" : "items-start"}`}>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-0.5">
-                    <span className="font-semibold text-slate-300">{msg.sender}</span>
-                    <span>{msg.time}</span>
+                  <div className="absolute top-4 left-4 z-10 flex items-center gap-2 rounded-xl bg-black/60 backdrop-blur-md px-3 py-1.5 text-xs text-white border border-white/10">
+                    <Icon name="screen_share" className="text-sm text-indigo-400" />
+                    <span className="font-semibold">{screenSharing ? "Màn hình của bạn" : "Màn hình đang chia sẻ"}</span>
                   </div>
-                  <div
-                    className={`max-w-[85%] rounded-lg px-3 py-1.5 text-xs ${
-                      msg.isMe ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-200 border border-slate-700"
-                    }`}
-                  >
-                    {msg.text}
+
+                  {cameraEnabled && (
+                    <div className="absolute bottom-4 right-4 z-20 h-28 w-44 overflow-hidden rounded-xl border border-white/20 bg-slate-900/90 shadow-2xl">
+                      <video ref={localVideoRef} autoPlay playsInline muted className="h-full w-full object-cover mirror" />
+                      <div className="absolute bottom-1.5 left-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white">
+                        {currentUserName} (Bạn)
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : ((isTutor && !hasOnlineStudent) || (!isTutor && !tutorOnline)) ? (
+                /* 1-Person Spotlight Waiting Card */
+                <div className="relative w-full max-w-4xl h-[72vh] rounded-2xl overflow-hidden bg-[#14161c] border border-white/10 shadow-2xl flex items-center justify-center">
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full bg-slate-900/90 backdrop-blur-md border border-white/10 px-4 py-1.5 text-xs text-slate-300 shadow-xl">
+                    <span className="h-2 w-2 rounded-full bg-amber-400 animate-ping" />
+                    <span>{isTutor ? "Đang chờ học sinh tham gia phòng học" : "Đang chờ gia sư vào phòng học"}</span>
+                  </div>
+
+                  {cameraEnabled ? (
+                    <video ref={localVideoRef} autoPlay playsInline muted className="h-full w-full object-cover mirror" />
+                  ) : (
+                    <div className="flex flex-col items-center text-center p-6">
+                      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-indigo-600/20 text-indigo-400 font-bold text-3xl border border-indigo-500/30 mb-3 shadow-inner">
+                        {currentUserName.slice(0, 2).toUpperCase()}
+                      </div>
+                      <p className="text-base font-bold text-slate-100">{currentUserName}</p>
+                      <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                        <Icon name="videocam_off" className="text-sm" />
+                        Camera của bạn đang tắt
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 text-xs text-white">
+                    <span className="font-semibold">{currentUserName}</span>
+                    <span className="text-[10px] bg-indigo-500/20 text-indigo-300 font-bold px-2 py-0.5 rounded-full border border-indigo-500/30">
+                      {roleLabel}
+                    </span>
+                    <Icon name={micEnabled ? "mic" : "mic_off"} className={micEnabled ? "text-emerald-400 text-sm" : "text-rose-400 text-sm"} />
                   </div>
                 </div>
-              ))}
+              ) : (
+                /* 1-on-1 Balanced Split View (50/50 Stage) */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[72vh] w-full max-w-6xl mx-auto items-center">
+                  {/* Tutor Card */}
+                  <div className="relative h-full w-full rounded-2xl overflow-hidden bg-[#14161c] border border-white/10 shadow-2xl flex items-center justify-center">
+                    {isTutor ? (
+                      cameraEnabled ? (
+                        <video ref={localVideoRef} autoPlay playsInline muted className="h-full w-full object-cover mirror" />
+                      ) : (
+                        <div className="flex flex-col items-center text-center p-6">
+                          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-indigo-600/20 text-indigo-400 font-bold text-2xl border border-indigo-500/30 mb-2">
+                            GS
+                          </div>
+                          <p className="text-sm font-bold text-slate-200">{currentUserName}</p>
+                          <p className="text-xs text-slate-400 mt-1">Camera đang tắt</p>
+                        </div>
+                      )
+                    ) : remoteTutorTrack ? (
+                      <video ref={remoteTutorVideoRef} autoPlay playsInline className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center text-center p-6">
+                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-indigo-600/20 text-indigo-400 font-bold text-2xl border border-indigo-500/30 mb-2">
+                          GS
+                        </div>
+                        <p className="text-sm font-bold text-slate-200">{meetingData.tutorName || "Gia sư phụ trách"}</p>
+                        <p className="text-xs text-slate-400 mt-1">Camera đang tắt</p>
+                      </div>
+                    )}
+
+                    <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 text-xs text-white">
+                      <span className="font-semibold">{isTutor ? currentUserName : (meetingData.tutorName || "Gia sư phụ trách")}</span>
+                      <span className="text-[10px] bg-indigo-500/20 text-indigo-300 font-bold px-2 py-0.5 rounded-full border border-indigo-500/30">
+                        Gia sư
+                      </span>
+                      <Icon
+                        name={isTutor ? (micEnabled ? "mic" : "mic_off") : "mic"}
+                        className={isTutor ? (micEnabled ? "text-emerald-400 text-sm" : "text-rose-400 text-sm") : "text-emerald-400 text-sm"}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Student Card */}
+                  <div className="relative h-full w-full rounded-2xl overflow-hidden bg-[#14161c] border border-white/10 shadow-2xl flex items-center justify-center">
+                    {!isTutor ? (
+                      cameraEnabled ? (
+                        <video ref={localVideoRef} autoPlay playsInline muted className="h-full w-full object-cover mirror" />
+                      ) : (
+                        <div className="flex flex-col items-center text-center p-6">
+                          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-800 text-slate-300 font-bold text-2xl border border-slate-700 mb-2">
+                            {currentUserName.slice(0, 2).toUpperCase()}
+                          </div>
+                          <p className="text-sm font-bold text-slate-200">{currentUserName}</p>
+                          <p className="text-xs text-slate-400 mt-1">Camera đang tắt</p>
+                        </div>
+                      )
+                    ) : remoteStudentTrack ? (
+                      <video ref={remoteStudentVideoRef} autoPlay playsInline className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center text-center p-6">
+                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-800 text-slate-300 font-bold text-2xl border border-slate-700 mb-2">
+                          {studentName.slice(0, 2).toUpperCase()}
+                        </div>
+                        <p className="text-sm font-bold text-slate-200">{studentName}</p>
+                        <p className="text-xs text-slate-400 mt-1">Camera đang tắt</p>
+                      </div>
+                    )}
+
+                    <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 text-xs text-white">
+                      <span className="font-semibold">{!isTutor ? currentUserName : studentName}</span>
+                      <span className="text-[10px] bg-slate-800 text-slate-300 font-bold px-2 py-0.5 rounded-full border border-slate-700">
+                        Học sinh
+                      </span>
+                      <Icon
+                        name={!isTutor ? (micEnabled ? "mic" : "mic_off") : (studentMicOn ? "mic" : "mic_off")}
+                        className={(!isTutor ? micEnabled : studentMicOn) ? "text-emerald-400 text-sm" : "text-rose-400 text-sm"}
+                      />
+                    </div>
+
+                    {studentHandRaised && (
+                      <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 rounded-full bg-amber-500 text-slate-950 font-bold px-3 py-1 text-xs shadow-lg animate-bounce">
+                        <Icon name="pan_tool" className="text-sm" />
+                        <span>Đang giơ tay</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Right Drawer: Unified Tabs for Participants & Chat ────────── */}
+        {activeSidePanel && (
+          <aside
+            aria-label="Thanh tiện ích lớp học"
+            className="flex w-84 sm:w-96 flex-col border-l border-slate-800 bg-[#12141a] text-slate-100 shadow-2xl z-20 flex-shrink-0"
+          >
+            {/* Tab Switcher Header */}
+            <div className="flex h-14 items-center justify-between border-b border-slate-800 px-4 bg-[#161820]">
+              <div className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setActiveSidePanel("participants")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    activeSidePanel === "participants"
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <Icon name="groups" className="text-sm" />
+                  <span>
+                    Thành viên (
+                    {sessionRoster
+                      ? onlineParticipantIds.size + (tutorOnline ? 1 : 0)
+                      : participants.length}
+                    )
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSidePanel("chat");
+                    setUnreadChatCount(0);
+                  }}
+                  className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    activeSidePanel === "chat"
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <Icon name="chat" className="text-sm" />
+                  <span>Trò chuyện</span>
+                  {unreadChatCount > 0 && activeSidePanel !== "chat" && (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                      {unreadChatCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveSidePanel(null)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition"
+                aria-label="Đóng bảng bên"
+              >
+                <Icon name="close" className="text-base" />
+              </button>
             </div>
 
-            <form onSubmit={handleSendMessage} className="border-t border-slate-800 p-2 flex gap-1.5">
-              <input
-                type="text"
-                value={inputMsg}
-                onChange={(e) => setInputMsg(e.target.value)}
-                placeholder="Nhắn tin cho cả lớp..."
-                className="flex-1 rounded-lg bg-slate-800 px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            {/* Participants Tab Content */}
+            {activeSidePanel === "participants" && (
+              <ClassroomParticipantsSidebar
+                embedded={true}
+                isOpen={true}
+                onClose={() => setActiveSidePanel(null)}
+                isTutor={isTutor}
+                isAdmin={isAdmin}
+                students={sessionRoster?.students ?? []}
+                onlineParticipantIds={onlineParticipantIds}
+                tutorInfo={
+                  sessionRoster?.tutor
+                    ? { tutorId: sessionRoster.tutor.tutorId, fullName: sessionRoster.tutor.fullName }
+                    : meetingData.tutorName
+                    ? { tutorId: 1, fullName: meetingData.tutorName }
+                    : null
+                }
+                tutorOnline={tutorOnline}
+                handRaisedIds={handRaisedIds}
+                mutedStudentIds={mutedStudentIds}
+                onToggleMuteStudent={(stId) => {
+                  const isCurrentlyMuted = mutedStudentIds.has(stId);
+                  if (isCurrentlyMuted) {
+                    handleHostRequestUnmute(String(stId));
+                  } else {
+                    setMutedStudentIds((prev) => new Set(prev).add(stId));
+                    handleHostMuteParticipant(String(stId));
+                  }
+                }}
+                onMuteAll={handleHostMuteAll}
               />
-              <button
-                type="submit"
-                className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500"
-              >
-                Gửi
-              </button>
-            </form>
-          </div>
-        )}
+            )}
 
-        {/* Right: Participants Sidebar */}
-        <ClassroomParticipantsSidebar
-          isOpen={showParticipants}
-          onClose={() => setShowParticipants(false)}
-          isTutor={isTutor}
-          isAdmin={isAdmin}
-          students={sessionRoster?.students ?? []}
-          onlineParticipantIds={onlineParticipantIds}
-          tutorInfo={
-            sessionRoster?.tutor
-              ? { tutorId: sessionRoster.tutor.tutorId, fullName: sessionRoster.tutor.fullName }
-              : meetingData.tutorName
-              ? { tutorId: 1, fullName: meetingData.tutorName }
-              : null
-          }
-          tutorOnline={tutorOnline}
-          handRaisedIds={handRaisedIds}
-          mutedStudentIds={mutedStudentIds}
-          onToggleMuteStudent={(stId) => {
-            setMutedStudentIds((prev) => {
-              const next = new Set(prev);
-              if (next.has(stId)) next.delete(stId);
-              else next.add(stId);
-              return next;
-            });
-            handleHostMuteParticipant(String(stId));
-          }}
-        />
+            {/* Chat Tab Content */}
+            {activeSidePanel === "chat" && (
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {chatMessages.length === 0 ? (
+                    <div className="py-12 text-center text-xs text-slate-500 italic">
+                      Chưa có tin nhắn nào trong buổi học.
+                    </div>
+                  ) : (
+                    chatMessages.map((msg, idx) => (
+                      <div key={idx} className={`flex flex-col ${msg.isMe ? "items-end" : "items-start"}`}>
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mb-0.5">
+                          <span className="font-semibold text-slate-300">{msg.sender}</span>
+                          <span>{msg.time}</span>
+                        </div>
+                        <div
+                          className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed ${
+                            msg.isMe
+                              ? "bg-indigo-600 text-white rounded-tr-sm shadow-sm"
+                              : "bg-slate-800/90 text-slate-200 border border-slate-700/60 rounded-tl-sm"
+                          }`}
+                        >
+                          {msg.text}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <form onSubmit={handleSendMessage} className="border-t border-slate-800 p-3 flex gap-2 bg-[#161820]">
+                  <input
+                    type="text"
+                    value={inputMsg}
+                    onChange={(e) => setInputMsg(e.target.value)}
+                    placeholder="Nhắn tin cho cả lớp..."
+                    className="flex-1 rounded-xl bg-slate-900 border border-slate-750 px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!inputMsg.trim()}
+                    className="rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed px-3.5 py-2 text-xs font-semibold text-white transition flex items-center justify-center"
+                    aria-label="Gửi tin nhắn"
+                  >
+                    <Icon name="send" className="text-sm" />
+                  </button>
+                </form>
+              </div>
+            )}
+          </aside>
+        )}
       </div>
 
-      {/* ── Control Footer ─────────────────────────────────────────────────── */}
-      <footer className="flex h-16 items-center justify-center gap-3 border-t border-slate-800 bg-slate-900 px-4">
+      {/* ── Floating Pill Dock (Bottom Google Meet Style) ────────────────── */}
+      <footer className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 rounded-full bg-slate-900/90 backdrop-blur-xl border border-white/10 px-4 py-2 shadow-2xl">
         {/* Mic Toggle */}
         <button
+          type="button"
           onClick={toggleMic}
-          className={`flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-semibold transition ${
+          className={`h-11 w-11 rounded-full flex items-center justify-center transition-all ${
             micEnabled
               ? "bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700"
-              : "bg-rose-600/20 text-rose-400 border border-rose-500/30"
+              : "bg-rose-600 text-white shadow-lg shadow-rose-900/40 hover:bg-rose-500"
           }`}
-          title={micEnabled ? "Tắt Mic" : "Bật Mic"}
+          title={micEnabled ? "Tắt micro" : "Bật micro"}
+          aria-label={micEnabled ? "Tắt micro" : "Bật micro"}
         >
-          <span>{micEnabled ? "🎙️ Mic Bật" : "🔇 Mic Tắt"}</span>
+          <Icon name={micEnabled ? "mic" : "mic_off"} className="text-[20px]" />
         </button>
 
         {/* Camera Toggle */}
         <button
+          type="button"
           onClick={toggleCamera}
-          className={`flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-semibold transition ${
+          className={`h-11 w-11 rounded-full flex items-center justify-center transition-all ${
             cameraEnabled
               ? "bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700"
-              : "bg-rose-600/20 text-rose-400 border border-rose-500/30"
+              : "bg-rose-600 text-white shadow-lg shadow-rose-900/40 hover:bg-rose-500"
           }`}
-          title={cameraEnabled ? "Tắt Camera" : "Bật Camera"}
+          title={cameraEnabled ? "Tắt camera" : "Bật camera"}
+          aria-label={cameraEnabled ? "Tắt camera" : "Bật camera"}
         >
-          <span>{cameraEnabled ? "📷 Cam Bật" : "🚫 Cam Tắt"}</span>
+          <Icon name={cameraEnabled ? "videocam" : "videocam_off"} className="text-[20px]" />
         </button>
 
         {/* Screen Share Toggle */}
         <button
+          type="button"
           onClick={toggleScreenShare}
-          className={`flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-semibold transition ${
+          className={`h-11 w-11 rounded-full flex items-center justify-center transition-all ${
             screenSharing
-              ? "bg-emerald-600 text-white"
+              ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/40 hover:bg-indigo-500"
               : "bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700"
           }`}
-          title="Chia sẻ màn hình"
+          title={screenSharing ? "Dừng chia sẻ màn hình" : "Chia sẻ màn hình"}
+          aria-label={screenSharing ? "Dừng chia sẻ màn hình" : "Chia sẻ màn hình"}
         >
-          <span>🖥️ {screenSharing ? "Dừng chia sẻ" : "Chia sẻ màn hình"}</span>
+          <Icon name={screenSharing ? "stop_screen_share" : "screen_share"} className="text-[20px]" />
         </button>
 
         {/* Raise Hand Toggle */}
         <button
+          type="button"
           onClick={toggleHandRaise}
-          className={`flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-semibold transition ${
+          className={`h-11 w-11 rounded-full flex items-center justify-center transition-all ${
             handRaised
-              ? "bg-amber-500 text-slate-950 font-bold"
+              ? "bg-amber-500 text-slate-950 font-bold shadow-lg shadow-amber-900/40 hover:bg-amber-400"
               : "bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700"
           }`}
-          title="Giơ tay phát biểu"
+          title={handRaised ? "Hạ tay xuống" : "Giơ tay phát biểu"}
+          aria-label={handRaised ? "Hạ tay xuống" : "Giơ tay phát biểu"}
         >
-          <span>✋ {handRaised ? "Hạ tay xuống" : "Giơ tay"}</span>
+          <Icon name="pan_tool" className="text-[20px]" />
         </button>
 
-        {/* Voice Record Toggle (Tutor & Admin) */}
+        {/* Voice Recording (Tutor / Admin) */}
         {(isTutor || isAdmin) && (
           <button
+            type="button"
             onClick={isRecordingVoice ? stopVoiceRecording : startVoiceRecording}
             disabled={isSavingRecording}
-            className={`flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-semibold transition ${
+            className={`h-11 w-11 rounded-full flex items-center justify-center transition-all ${
               isRecordingVoice
-                ? "bg-rose-600 text-white animate-pulse"
+                ? "bg-rose-600 text-white animate-pulse shadow-lg shadow-rose-900/50"
                 : "bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700"
             }`}
-            title={isRecordingVoice ? "Dừng ghi âm buổi học" : "Bắt đầu ghi âm buổi học"}
-          >
-            <span>
-              {isSavingRecording
-                ? "⏳ Đang lưu ghi âm..."
+            title={
+              isSavingRecording
+                ? "Đang lưu ghi âm..."
                 : isRecordingVoice
-                ? "⏹️ Dừng ghi âm"
-                : "🎙️ Ghi âm buổi học"}
-            </span>
+                ? "Dừng ghi âm buổi học"
+                : "Bắt đầu ghi âm buổi học"
+            }
+            aria-label="Ghi âm buổi học"
+          >
+            <Icon name="fiber_manual_record" className="text-[20px]" />
           </button>
         )}
 
-        <div className="h-6 w-px bg-slate-800 mx-2" />
+        <div className="h-6 w-px bg-white/10 mx-1" />
 
-        {/* Leave Classroom */}
+        {/* Participants Button */}
         <button
-          onClick={handleLeave}
-          className="flex h-10 items-center gap-2 rounded-xl bg-rose-600 px-5 text-xs font-bold text-white hover:bg-rose-500 transition shadow"
+          type="button"
+          onClick={() => setActiveSidePanel((prev) => (prev === "participants" ? null : "participants"))}
+          className={`h-11 w-11 rounded-full flex items-center justify-center relative transition-all ${
+            activeSidePanel === "participants"
+              ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/40"
+              : "bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700"
+          }`}
+          title="Danh sách người tham gia"
+          aria-label="Danh sách người tham gia"
         >
-          <span>Rời phòng</span>
+          <Icon name="groups" className="text-[20px]" />
+          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-500 px-1 text-[9px] font-bold text-white">
+            {sessionRoster ? onlineParticipantIds.size + (tutorOnline ? 1 : 0) : participants.length}
+          </span>
+        </button>
+
+        {/* Chat Button */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSidePanel((prev) => (prev === "chat" ? null : "chat"));
+            setUnreadChatCount(0);
+          }}
+          className={`h-11 w-11 rounded-full flex items-center justify-center relative transition-all ${
+            activeSidePanel === "chat"
+              ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/40"
+              : "bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700"
+          }`}
+          title="Trò chuyện trong lớp"
+          aria-label="Trò chuyện trong lớp"
+        >
+          <Icon name="chat" className="text-[20px]" />
+          {unreadChatCount > 0 && activeSidePanel !== "chat" && (
+            <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white animate-pulse">
+              {unreadChatCount}
+            </span>
+          )}
+        </button>
+
+        {/* Leave Classroom Button */}
+        <button
+          type="button"
+          onClick={handleLeave}
+          className="h-11 px-5 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs flex items-center gap-1.5 transition shadow-lg shadow-rose-950/40 ml-1"
+          title="Rời phòng học"
+          aria-label="Rời phòng học"
+        >
+          <Icon name="call_end" className="text-[18px]" />
+          <span className="hidden sm:inline">Rời phòng</span>
         </button>
       </footer>
 
@@ -1777,7 +2005,7 @@ export default function ClassroomPage() {
                 onClick={() => setShowLogsModal(false)}
                 className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
               >
-                ✕
+                <Icon name="close" className="text-base" />
               </button>
             </div>
 
@@ -1812,7 +2040,7 @@ export default function ClassroomPage() {
                     <div className="rounded-lg bg-indigo-950/40 border border-indigo-800/60 p-4 space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-base">🎙️</span>
+                          <Icon name="mic" className="text-base text-indigo-400" />
                           <span className="text-xs font-bold text-indigo-300 uppercase tracking-wide">
                             Bản ghi âm buổi học (Voice Record)
                           </span>
@@ -1834,7 +2062,7 @@ export default function ClassroomPage() {
                     </div>
                   ) : (
                     <div className="rounded-lg bg-slate-800/40 border border-slate-750 p-3 text-xs text-slate-400 flex items-center justify-between">
-                      <span>🎙️ Chưa có bản ghi âm được lưu cho buổi học này.</span>
+                      <span>Chưa có bản ghi âm được lưu cho buổi học này.</span>
                       {(isTutor || isAdmin) && (
                         <span className="text-[11px] text-amber-400">Bấm nút Ghi âm ở thanh công cụ trong khi dạy để tự động ghi.</span>
                       )}

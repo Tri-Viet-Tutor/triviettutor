@@ -1,4 +1,3 @@
-import React from "react";
 import { Icon } from "@/components/ui/Icon";
 import type { SessionRosterStudent } from "@/interfaces/classRoster.contract";
 
