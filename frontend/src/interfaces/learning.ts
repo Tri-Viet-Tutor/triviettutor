@@ -108,6 +108,9 @@ export interface TutorRatingResponse {
   id: number;
   studentId: number;
   tutorId: number;
+  classGroupId: number;
+  classCode: string;
+  subjectName: string;
   rating: number;
   comment: string | null;
   createdAt: string;

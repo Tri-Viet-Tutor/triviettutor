@@ -6,6 +6,9 @@ export interface TutorRating {
   id: number;
   studentId: number;
   tutorId: number;
+  classGroupId: number | null;
+  classCode: string | null;
+  subjectName: string | null;
   rating: number;
   comment: string | null;
   createdAt: string;

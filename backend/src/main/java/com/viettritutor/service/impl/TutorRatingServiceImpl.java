@@ -5,9 +5,11 @@ import com.viettritutor.common.exception.ErrorCode;
 import com.viettritutor.dto.rating.TutorRatingRequest;
 import com.viettritutor.dto.rating.TutorRatingResponse;
 import com.viettritutor.dto.rating.TutorRatingSummaryResponse;
+import com.viettritutor.entity.ClassGroup;
 import com.viettritutor.entity.TutorRating;
 import com.viettritutor.entity.User;
 import com.viettritutor.enums.EnrollmentStatus;
+import com.viettritutor.repository.ClassGroupRepository;
 import com.viettritutor.repository.EnrollmentRepository;
 import com.viettritutor.repository.TutorRatingRepository;
 import com.viettritutor.repository.UserRepository;
@@ -33,6 +35,7 @@ public class TutorRatingServiceImpl implements TutorRatingService {
     private final TutorRatingRepository tutorRatingRepository;
     private final UserRepository userRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final ClassGroupRepository classGroupRepository;
 
     @Override
     public TutorRatingResponse createRating(
@@ -43,15 +46,23 @@ public class TutorRatingServiceImpl implements TutorRatingService {
         User student = findUserByEmail(studentEmail);
         User tutor = findTutorById(tutorId);
 
-        if (tutorRatingRepository.existsByStudent_IdAndTutor_Id(student.getId(), tutorId)) {
+        if (tutorRatingRepository.existsByStudent_IdAndClassGroup_Id(
+                student.getId(), request.classGroupId())) {
             throw new BusinessException(ErrorCode.RATING_ALREADY_EXISTS);
         }
+
+        ClassGroup classGroup = classGroupRepository.findById(request.classGroupId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.CLASS_NOT_FOUND));
 
         // Only students actually taught by this tutor may rate: an ACTIVE enrollment in a
         // class the tutor is or was assigned to (a replaced tutor still taught the class).
         // Enrollments stay ACTIVE after the class completes, so finished classes count too.
-        boolean taught = enrollmentRepository.existsStudentTaughtByTutor(
-                student.getId(), tutorId, EnrollmentStatus.ACTIVE);
+        boolean taught = enrollmentRepository.existsStudentEnrolledInClassTaughtByTutor(
+                student.getId(),
+                request.classGroupId(),
+                tutorId,
+                EnrollmentStatus.ACTIVE
+        );
         if (!taught) {
             throw new BusinessException(ErrorCode.RATING_NOT_ELIGIBLE);
         }
@@ -61,6 +72,7 @@ public class TutorRatingServiceImpl implements TutorRatingService {
         TutorRating rating = TutorRating.builder()
                 .student(student)
                 .tutor(tutor)
+                .classGroup(classGroup)
                 .rating(request.rating())
                 .comment(request.comment())
                 .createdAt(now)
@@ -70,7 +82,7 @@ public class TutorRatingServiceImpl implements TutorRatingService {
         try {
             return toResponse(tutorRatingRepository.saveAndFlush(rating));
         } catch (DataIntegrityViolationException ex) {
-            // Concurrent duplicate hit uk_tutor_review_student_tutor
+            // Concurrent duplicate hit uk_tutor_review_student_class
             throw new BusinessException(ErrorCode.RATING_ALREADY_EXISTS);
         }
     }
@@ -160,10 +172,17 @@ public class TutorRatingServiceImpl implements TutorRatingService {
     }
 
     private TutorRatingResponse toResponse(TutorRating rating) {
+        ClassGroup classGroup = rating.getClassGroup();
+
         return new TutorRatingResponse(
                 rating.getId(),
                 rating.getStudent().getId(),
                 rating.getTutor().getId(),
+                classGroup != null ? classGroup.getId() : null,
+                classGroup != null ? classGroup.getClassCode() : null,
+                classGroup != null && classGroup.getCourse() != null
+                        ? classGroup.getCourse().getSubject()
+                        : null,
                 rating.getRating(),
                 rating.getComment(),
                 rating.getCreatedAt(),

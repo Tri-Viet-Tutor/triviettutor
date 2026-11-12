@@ -5,6 +5,7 @@ import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 
 public record TutorRatingRequest(
+        @NotNull Long classGroupId,
         @NotNull
         @DecimalMin("1.0")
         @DecimalMax("5.0")
