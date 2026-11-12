@@ -1,4 +1,5 @@
 package com.viettritutor.service.impl;
+import com.viettritutor.notification.event.ClassTeachingCompletedEvent;
 
 import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.entity.ClassGroup;

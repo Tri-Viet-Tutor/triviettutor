@@ -1,9 +1,11 @@
 
 package com.viettritutor.controller;
 
+import com.viettritutor.common.exception.BusinessException;
+import com.viettritutor.common.exception.ErrorCode;
+import com.viettritutor.dto.user.AvatarImageResponse;
 import com.viettritutor.dto.user.AvatarResponse;
 import com.viettritutor.entity.User;
-import com.viettritutor.repository.UserRepository;
 import com.viettritutor.service.AvatarService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
@@ -19,7 +21,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class MeAvatarController {
 
     private final AvatarService avatarService;
-    private final UserRepository userRepository;
 
     // Upload hoặc thay avatar của user đang đăng nhập
     @PostMapping(
@@ -50,14 +51,17 @@ public class MeAvatarController {
     public ResponseEntity<byte[]> getAvatar(
             @PathVariable Long id
     ) {
-        return userRepository.findById(id)
-                .filter(user -> user.getAvatar() != null)
-                .map(user -> ResponseEntity.ok()
-                        .contentType(MediaType.parseMediaType(
-                                user.getAvatarContentType()
-                        ))
-                        .cacheControl(CacheControl.noCache())
-                        .body(user.getAvatar()))
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        try {
+            AvatarImageResponse image = avatarService.getAvatar(id);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(image.contentType()))
+                    .cacheControl(CacheControl.noCache())
+                    .body(image.data());
+        } catch (BusinessException ex) {
+            if (ex.getErrorCode() == ErrorCode.USER_NOT_FOUND || ex.getErrorCode() == ErrorCode.AVATAR_NOT_FOUND) {
+                return ResponseEntity.notFound().build();
+            }
+            throw ex;
+        }
     }
 }

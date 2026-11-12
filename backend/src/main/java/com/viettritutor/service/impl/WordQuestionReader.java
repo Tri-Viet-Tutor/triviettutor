@@ -1,6 +1,6 @@
-package com.viettritutor.service;
+package com.viettritutor.service.impl;
 
-import com.viettritutor.service.HomeworkQuestionImportService.Cell2;
+import com.viettritutor.service.impl.HomeworkQuestionImportServiceImpl.Cell2;
 import org.apache.poi.hwpf.HWPFDocument;
 import org.apache.poi.hwpf.extractor.WordExtractor;
 import org.apache.poi.hwpf.usermodel.Paragraph;
@@ -176,7 +176,7 @@ final class WordQuestionReader {
 
     /** A table whose first row is a question header, as spreadsheet rows; null when it is some other table */
     static Result table(List<List<String>> rows) {
-        if (rows.isEmpty() || rows.get(0).stream().noneMatch(cell -> "prompt".equals(HomeworkQuestionImportService.column(cell))))
+        if (rows.isEmpty() || rows.get(0).stream().noneMatch(cell -> "prompt".equals(HomeworkQuestionImportServiceImpl.column(cell))))
             return null;
         return new Result(rows.stream().map(row -> row.stream().map(Cell2::of).toList()).toList(), null);
     }
@@ -302,7 +302,7 @@ final class WordQuestionReader {
         for (String line : Normalizer.normalize(raw == null ? "" : raw, Normalizer.Form.NFC).split("\\R")) {
             line = line.replace(' ', ' ').replace('\t', ' ').strip();
             if (line.isEmpty()) continue;
-            String plain = HomeworkQuestionImportService.plain(line);
+            String plain = HomeworkQuestionImportServiceImpl.plain(line);
 
             String[] keyValue = keyValue(line);
             if (keyValue != null && keyValue[0].equals("publish")) { b.publish.add(keyValue[1]); continue; }
@@ -402,7 +402,7 @@ final class WordQuestionReader {
 
     /** Section headings: "PHẦN A. …", "DẠNG 2: …", "I. LÝ THUYẾT", or any line written all in capitals */
     static boolean isHeading(String line) {
-        String plain = HomeworkQuestionImportService.plain(line);
+        String plain = HomeworkQuestionImportServiceImpl.plain(line);
         if (plain.matches("^(phan|dang|chuong|muc|chu de)\\s+([a-z]|\\d+|[ivx]+)\\b.*")) return true;
         if (line.matches("^[IVX]{1,5}\\s*[.)\\-–].*")) return true;
         long letters = line.codePoints().filter(Character::isLetter).count();
@@ -442,7 +442,7 @@ final class WordQuestionReader {
     }
 
     private static boolean isEssay(String[] question) {
-        String type = HomeworkQuestionImportService.plain(question[TYPE]);
+        String type = HomeworkQuestionImportServiceImpl.plain(question[TYPE]);
         return type.equals("tu luan") || type.equals("tl") || type.equals("essay");
     }
 
@@ -464,7 +464,7 @@ final class WordQuestionReader {
         int colon = line.indexOf(':');
         if (colon < 0) colon = line.indexOf('：');
         if (colon <= 0 || colon > 30) return null;
-        String key = HomeworkQuestionImportService.plain(line.substring(0, colon));
+        String key = HomeworkQuestionImportServiceImpl.plain(line.substring(0, colon));
         String value = line.substring(colon + 1).strip();
         if (Set.of("dap an", "dap an dung", "answer", "key").contains(key)) return new String[] {"answer", value};
         if (Set.of("diem", "so diem", "points", "point").contains(key)) return new String[] {"points", value};
@@ -477,7 +477,7 @@ final class WordQuestionReader {
 
     /** "(tự luận, 2 điểm)" → type and points on the row; false when the brackets hold neither */
     private static boolean details(String inside, String[] row) {
-        String p = HomeworkQuestionImportService.plain(inside);
+        String p = HomeworkQuestionImportServiceImpl.plain(inside);
         boolean used = false;
         if (p.contains("tu luan") || p.contains("essay")) { row[TYPE] = "tự luận"; used = true; }
         else if (p.contains("trac nghiem")) { row[TYPE] = "trắc nghiệm"; used = true; }

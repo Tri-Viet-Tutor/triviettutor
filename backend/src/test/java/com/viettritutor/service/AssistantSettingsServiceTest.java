@@ -1,4 +1,6 @@
 package com.viettritutor.service;
+import com.viettritutor.service.impl.GeminiClientImpl;
+import com.viettritutor.service.impl.AssistantSettingsServiceImpl;
 
 import com.viettritutor.common.exception.BusinessException;
 import com.viettritutor.config.AssistantProperties;
@@ -34,7 +36,7 @@ class AssistantSettingsServiceTest {
             store.put(inv.getArgument(0), inv.getArgument(1));
             return null;
         });
-        service = new AssistantSettingsService(settings, properties, cipher);
+        service = new AssistantSettingsServiceImpl(settings, properties, cipher);
     }
 
     @Test
@@ -98,7 +100,7 @@ class AssistantSettingsServiceTest {
     @Test
     @DisplayName("The Gemini client refuses to run without any key")
     void clientNeedsKey() {
-        GeminiClient client = new GeminiClient(properties, service);
+        GeminiClient client = new GeminiClientImpl(properties, service);
         assertThatThrownBy(client::requireConfigured).isInstanceOf(BusinessException.class);
         service.update("db-key-987654", null, new User());
         client.requireConfigured();

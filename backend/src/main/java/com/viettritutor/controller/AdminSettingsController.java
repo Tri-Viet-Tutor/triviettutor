@@ -6,7 +6,6 @@ import com.viettritutor.dto.settings.AssistantSettingsDto;
 import com.viettritutor.dto.settings.AttendanceSettingsDto;
 import com.viettritutor.entity.AppSetting;
 import com.viettritutor.entity.User;
-import com.viettritutor.repository.UserRepository;
 import com.viettritutor.security.CurrentUser;
 import com.viettritutor.service.AppSettingService;
 import com.viettritutor.service.AssistantSettingsService;
@@ -27,7 +26,6 @@ import java.util.stream.Stream;
 @Tag(name="Admin settings",description="Settings an admin changes at runtime without redeploying.")
 public class AdminSettingsController {
     private final AppSettingService settings;
-    private final UserRepository users;
     private final AssistantSettingsService assistant;
     private final AssistantProperties assistantProperties;
 
@@ -81,7 +79,6 @@ public class AdminSettingsController {
     }
 
     private String updatedBy(AppSetting saved) {
-        return saved==null || saved.getUpdatedBy()==null ? null
-                : users.findById(saved.getUpdatedBy()).map(User::getFullName).orElse(null);
+        return saved == null ? null : settings.updatedByName(saved.getUpdatedBy());
     }
 }

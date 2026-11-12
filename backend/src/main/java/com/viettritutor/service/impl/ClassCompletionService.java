@@ -1,4 +1,6 @@
-package com.viettritutor.service;
+package com.viettritutor.service.impl;
+import com.viettritutor.service.*;
+import com.viettritutor.service.ClassLifecycle;
 
 import com.viettritutor.entity.Session;
 import com.viettritutor.enums.*;
@@ -14,6 +16,7 @@ public class ClassCompletionService implements ClassLifecycle {
     private final ClassGroupRepository classes;
     private final SessionRepository sessions;
 
+    @Override
     public boolean allObligationsCompleted(Long id) {
         List<Session> all = sessions.findByClassGroupIdOrderBySessionNumberAsc(id);
         var originals = all.stream().filter(s -> s.getOriginalSession() == null).toList();

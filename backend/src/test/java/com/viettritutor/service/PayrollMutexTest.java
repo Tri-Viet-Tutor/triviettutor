@@ -1,4 +1,5 @@
 package com.viettritutor.service;
+import com.viettritutor.service.impl.PayrollServiceImpl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -170,7 +171,7 @@ class PayrollMutexTest {
 
         @BeforeEach
         void setUp() {
-            payrollService = new PayrollService(
+            payrollService = new PayrollServiceImpl(
                     periodRepository,
                     lineRepository,
                     keyRepository,
